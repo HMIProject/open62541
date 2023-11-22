@@ -1,0 +1,7 @@
+[package]
+name = "open62541"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+open62541-sys = { path = "../open62541-sys" }
