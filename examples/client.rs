@@ -6,13 +6,15 @@ fn main() -> Result<(), &'static str> {
 
     let mut client = Client::new("opc.tcp://opcuademo.sterfive.com:26543").ok_or("connect")?;
 
-    let node_id = ua::NodeId::new_numeric(0, 2258).ok_or("create NodeId")?;
+    let node_id = ua::NodeId::new_numeric(0, 2256).ok_or("create node ID")?;
 
-    println!("Reading node ID {node_id:?}");
+    println!("Reading attributes from node ID {node_id:?}");
 
-    let value = client.read_value(&node_id).ok_or("read CurrentTime")?;
+    let read_node_id = client.read_node_id(&node_id).ok_or("read node ID")?;
+    let read_value = client.read_value(&node_id).ok_or("read value")?;
 
-    println!("CurrentTime: {value:?}");
+    println!("node ID: {read_node_id:?}");
+    println!("value: {read_value:?}");
 
     Ok(())
 }

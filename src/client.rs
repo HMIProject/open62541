@@ -2,8 +2,9 @@ use std::ffi::CString;
 
 use log::info;
 use open62541_sys::{
-    UA_AttributeId_UA_ATTRIBUTEID_VALUE, UA_ClientConfig_setDefault, UA_Client_connect,
-    UA_Client_getConfig, __UA_Client_readAttribute, UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_VARIANT,
+    UA_AttributeId_UA_ATTRIBUTEID_NODEID, UA_AttributeId_UA_ATTRIBUTEID_VALUE,
+    UA_ClientConfig_setDefault, UA_Client_connect, UA_Client_getConfig, __UA_Client_readAttribute,
+    UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_NODEID, UA_TYPES_VARIANT,
 };
 
 use crate::ua;
@@ -50,6 +51,28 @@ impl Client {
         let client = ClientBuilder::new()?;
 
         client.connect(endpoint_url)
+    }
+
+    #[must_use]
+    pub fn read_node_id(&mut self, node_id: &ua::NodeId) -> Option<ua::NodeId> {
+        let mut output = ua::NodeId::new();
+        let data_type = unsafe { &UA_TYPES[UA_TYPES_NODEID as usize] };
+
+        let result = unsafe {
+            __UA_Client_readAttribute(
+                self.0.as_mut_ptr(),
+                node_id.as_ptr(),
+                UA_AttributeId_UA_ATTRIBUTEID_NODEID,
+                output.as_mut_ptr().cast(),
+                data_type,
+            )
+        };
+
+        if result != UA_STATUSCODE_GOOD {
+            return None;
+        }
+
+        Some(output)
     }
 
     #[must_use]
