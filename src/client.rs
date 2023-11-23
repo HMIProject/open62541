@@ -5,7 +5,7 @@ use open62541_sys::{
     UA_Client_getConfig, __UA_Client_readAttribute, UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_VARIANT,
 };
 
-use crate::{NodeId, Variant};
+use crate::ua;
 
 pub struct DisconnectedClient {
     client: ll::Client,
@@ -53,9 +53,9 @@ impl Client {
         client.connect(endpoint_url)
     }
 
-    pub fn read_value(&mut self, node_id: NodeId) -> Option<Variant> {
+    pub fn read_value(&mut self, node_id: ua::NodeId) -> Option<ua::Variant> {
         let attribute_id = UA_AttributeId_UA_ATTRIBUTEID_VALUE;
-        let out = Variant::new()?;
+        let out = ua::Variant::new()?;
         let out_data_type = unsafe { &UA_TYPES[UA_TYPES_VARIANT as usize] };
 
         let result = unsafe {

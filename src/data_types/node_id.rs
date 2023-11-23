@@ -6,6 +6,8 @@ use open62541_sys::{
     UA_STATUSCODE_GOOD,
 };
 
+use crate::ua;
+
 pub struct NodeId(UA_NodeId);
 
 impl NodeId {
@@ -46,7 +48,7 @@ impl Drop for NodeId {
 
 impl fmt::Debug for NodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut output = ll::String::new();
+        let mut output = ua::String::new();
 
         let result = unsafe { UA_NodeId_print(self.as_ptr(), output.as_mut()) };
 
@@ -57,43 +59,6 @@ impl fmt::Debug for NodeId {
         match output.to_string() {
             Some(string) => f.write_str(&string),
             None => f.write_str("NodeId"),
-        }
-    }
-}
-
-mod ll {
-    use std::string::String as StdString;
-
-    use log::debug;
-    use open62541_sys::{UA_String, UA_String_clear, UA_STRING_NULL};
-
-    pub struct String(UA_String);
-
-    impl String {
-        pub fn new() -> Self {
-            String(unsafe { UA_STRING_NULL })
-        }
-
-        pub fn to_string(&self) -> Option<StdString> {
-            if self.0.length == 0 || self.0.data.is_null() {
-                return Some(StdString::new());
-            }
-
-            let slice = unsafe { std::slice::from_raw_parts(self.0.data, self.0.length) };
-
-            StdString::from_utf8(slice.into()).ok()
-        }
-
-        pub unsafe fn as_mut(&mut self) -> *mut UA_String {
-            &mut self.0 as *mut UA_String
-        }
-    }
-
-    impl Drop for String {
-        fn drop(&mut self) {
-            debug!("Dropping UA_String");
-
-            unsafe { UA_String_clear(self.as_mut()) }
         }
     }
 }

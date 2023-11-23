@@ -1,5 +1,8 @@
 mod client;
-mod node_id;
-mod variant;
+mod data_types;
 
-pub use crate::{client::Client, node_id::NodeId, variant::Variant};
+pub use crate::client::Client;
+
+pub mod ua {
+    pub use crate::data_types::{node_id::NodeId, string::String, variant::Variant};
+}

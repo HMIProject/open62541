@@ -1,4 +1,4 @@
-use open62541::{Client, NodeId};
+use open62541::{ua, Client};
 use simple_logger::SimpleLogger;
 
 fn main() -> Result<(), &'static str> {
@@ -6,7 +6,7 @@ fn main() -> Result<(), &'static str> {
 
     let mut client = Client::new("opc.tcp://opcuademo.sterfive.com:26543").ok_or("connect")?;
 
-    let node_id = NodeId::new_numeric(0, 2258).ok_or("create NodeId")?;
+    let node_id = ua::NodeId::new_numeric(0, 2258).ok_or("create NodeId")?;
 
     println!("Reading node ID {:?}", node_id);
 
