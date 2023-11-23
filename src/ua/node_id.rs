@@ -72,7 +72,7 @@ impl fmt::Debug for NodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut output = ua::String::new();
 
-        let result = unsafe { UA_NodeId_print(self.as_ptr(), output.as_mut()) };
+        let result = unsafe { UA_NodeId_print(self.as_ptr(), output.as_ptr()) };
 
         if result != UA_STATUSCODE_GOOD {
             return f.write_str("NodeId");

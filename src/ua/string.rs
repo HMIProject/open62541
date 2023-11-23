@@ -17,18 +17,15 @@ impl String {
         std::str::from_utf8(slice).ok()
     }
 
-    /// # Safety
-    ///
-    /// TODO
     #[must_use]
-    pub unsafe fn as_mut(&mut self) -> *mut UA_String {
+    pub fn as_ptr(&mut self) -> *mut UA_String {
         ptr::addr_of_mut!(self.0)
     }
 }
 
 impl Drop for String {
     fn drop(&mut self) {
-        unsafe { UA_String_clear(self.as_mut()) }
+        unsafe { UA_String_clear(self.as_ptr()) }
     }
 }
 
