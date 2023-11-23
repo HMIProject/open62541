@@ -1,4 +1,4 @@
-use std::{ptr, string::String as StdString};
+use std::{ptr, slice};
 
 use open62541_sys::{UA_String, UA_String_clear, UA_STRING_NULL};
 
@@ -11,14 +11,10 @@ impl String {
     }
 
     #[must_use]
-    pub fn to_string(&self) -> Option<StdString> {
-        if self.0.length == 0 || self.0.data.is_null() {
-            return Some(StdString::new());
-        }
+    pub fn as_str(&self) -> Option<&str> {
+        let slice = unsafe { slice::from_raw_parts(self.0.data, self.0.length) };
 
-        let slice = unsafe { std::slice::from_raw_parts(self.0.data, self.0.length) };
-
-        StdString::from_utf8(slice.into()).ok()
+        std::str::from_utf8(slice).ok()
     }
 
     /// # Safety
