@@ -18,15 +18,18 @@ impl NodeId {
 
     #[must_use]
     pub fn new_numeric(ns_index: u16, identifier: u32) -> Option<Self> {
-        let node_id = unsafe { UA_NODEID_NUMERIC(ns_index, identifier) };
+        let ua_node_id = unsafe { UA_NODEID_NUMERIC(ns_index, identifier) };
 
-        debug_assert_eq!(node_id.identifierType, UA_NodeIdType_UA_NODEIDTYPE_NUMERIC);
+        debug_assert_eq!(
+            ua_node_id.identifierType,
+            UA_NodeIdType_UA_NODEIDTYPE_NUMERIC
+        );
 
-        if node_id.identifierType != UA_NodeIdType_UA_NODEIDTYPE_NUMERIC {
+        if ua_node_id.identifierType != UA_NodeIdType_UA_NODEIDTYPE_NUMERIC {
             return None;
         }
 
-        Some(Self(node_id))
+        Some(Self(ua_node_id))
     }
 
     #[must_use]
@@ -35,30 +38,43 @@ impl NodeId {
 
         // Technically, string allocation may fail but `UA_NODEID_STRING_ALLOC` doesn't tell us that
         // when it happens. Instead, we end up with a well-defined node ID that has an empty string.
-        let node_id = unsafe { UA_NODEID_STRING_ALLOC(ns_index, chars.as_ptr()) };
+        let ua_node_id = unsafe { UA_NODEID_STRING_ALLOC(ns_index, chars.as_ptr()) };
 
-        debug_assert_eq!(node_id.identifierType, UA_NodeIdType_UA_NODEIDTYPE_STRING);
+        debug_assert_eq!(
+            ua_node_id.identifierType,
+            UA_NodeIdType_UA_NODEIDTYPE_STRING
+        );
 
-        if node_id.identifierType != UA_NodeIdType_UA_NODEIDTYPE_STRING
-            || unsafe { node_id.identifier.string.length } == 0
-        {
+        if ua_node_id.identifierType != UA_NodeIdType_UA_NODEIDTYPE_STRING {
             return None;
         }
 
-        Some(Self(node_id))
+        let string = &unsafe { ua_node_id.identifier.string };
+
+        if string.data.is_null() || string.length == 0 {
+            debug_assert!(string.data.is_null());
+
+            return None;
+        }
+
+        Some(Self(ua_node_id))
     }
 
     #[must_use]
     pub const fn as_ptr(&self) -> *const UA_NodeId {
         ptr::addr_of!(self.0)
     }
+
+    #[must_use]
+    pub(crate) fn as_mut_ptr(&mut self) -> *mut UA_NodeId {
+        ptr::addr_of_mut!(self.0)
+    }
 }
 
 impl Drop for NodeId {
     fn drop(&mut self) {
-        let node_id = ptr::addr_of_mut!(self.0);
-
-        unsafe { UA_NodeId_clear(node_id) }
+        // `UA_NodeId_clear` matches owned inner type.
+        unsafe { UA_NodeId_clear(self.as_mut_ptr()) }
     }
 }
 
@@ -72,7 +88,7 @@ impl fmt::Debug for NodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut output = ua::String::new();
 
-        let result = unsafe { UA_NodeId_print(self.as_ptr(), output.as_ptr()) };
+        let result = unsafe { UA_NodeId_print(self.as_ptr(), output.as_mut_ptr()) };
 
         if result != UA_STATUSCODE_GOOD {
             return f.write_str("NodeId");

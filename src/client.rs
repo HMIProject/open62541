@@ -9,16 +9,14 @@ use open62541_sys::{
 use crate::ua;
 
 #[allow(clippy::module_name_repetitions)]
-pub struct ClientBuilder {
-    client: ua::Client,
-}
+pub struct ClientBuilder(ua::Client);
 
 impl ClientBuilder {
     pub fn new() -> Option<Self> {
-        let mut client = ua::Client::new()?;
+        let mut ua_client = ua::Client::new()?;
 
         let result = unsafe {
-            let config = UA_Client_getConfig(client.as_ptr());
+            let config = UA_Client_getConfig(ua_client.as_mut_ptr());
             UA_ClientConfig_setDefault(config)
         };
 
@@ -26,7 +24,7 @@ impl ClientBuilder {
             return None;
         }
 
-        Some(Self { client })
+        Some(Self(ua_client))
     }
 
     pub fn connect(mut self, endpoint_url: &str) -> Option<Client> {
@@ -34,21 +32,17 @@ impl ClientBuilder {
 
         let endpoint_url = CString::new(endpoint_url).ok()?;
 
-        let result = unsafe { UA_Client_connect(self.client.as_ptr(), endpoint_url.as_ptr()) };
+        let result = unsafe { UA_Client_connect(self.0.as_mut_ptr(), endpoint_url.as_ptr()) };
 
         if result != UA_STATUSCODE_GOOD {
             return None;
         }
 
-        Some(Client {
-            client: self.client,
-        })
+        Some(Client(self.0))
     }
 }
 
-pub struct Client {
-    client: ua::Client,
-}
+pub struct Client(ua::Client);
 
 impl Client {
     #[must_use]
@@ -60,17 +54,16 @@ impl Client {
 
     #[must_use]
     pub fn read_value(&mut self, node_id: &ua::NodeId) -> Option<ua::Variant> {
-        let attribute_id = UA_AttributeId_UA_ATTRIBUTEID_VALUE;
-        let mut out = ua::Variant::new()?;
-        let out_data_type = unsafe { &UA_TYPES[UA_TYPES_VARIANT as usize] };
+        let mut output = ua::Variant::new()?;
+        let data_type = unsafe { &UA_TYPES[UA_TYPES_VARIANT as usize] };
 
         let result = unsafe {
             __UA_Client_readAttribute(
-                self.client.as_ptr(),
+                self.0.as_mut_ptr(),
                 node_id.as_ptr(),
-                attribute_id,
-                out.as_ptr().cast(),
-                out_data_type,
+                UA_AttributeId_UA_ATTRIBUTEID_VALUE,
+                output.as_mut_ptr().cast(),
+                data_type,
             )
         };
 
@@ -78,6 +71,6 @@ impl Client {
             return None;
         }
 
-        Some(out)
+        Some(output)
     }
 }
