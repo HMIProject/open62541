@@ -6,6 +6,7 @@ use open62541_sys::{UA_Variant, UA_Variant_clear, UA_Variant_delete, UA_Variant_
 pub struct Variant(NonNull<UA_Variant>);
 
 impl Variant {
+    #[must_use]
     pub fn new() -> Option<Self> {
         debug!("Creating UA_Variant");
 
@@ -16,6 +17,7 @@ impl Variant {
         Some(Variant(variant))
     }
 
+    #[must_use]
     pub const fn as_ptr(&self) -> *mut UA_Variant {
         self.0.as_ptr()
     }

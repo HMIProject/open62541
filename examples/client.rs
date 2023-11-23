@@ -8,11 +8,11 @@ fn main() -> Result<(), &'static str> {
 
     let node_id = ua::NodeId::new_numeric(0, 2258).ok_or("create NodeId")?;
 
-    println!("Reading node ID {:?}", node_id);
+    println!("Reading node ID {node_id:?}");
 
-    let value = client.read_value(node_id).ok_or("read CurrentTime")?;
+    let value = client.read_value(&node_id).ok_or("read CurrentTime")?;
 
-    println!("CurrentTime: {:?}", value);
+    println!("CurrentTime: {value:?}");
 
     Ok(())
 }

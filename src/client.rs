@@ -1,4 +1,4 @@
-use std::ffi::{c_void, CString};
+use std::ffi::CString;
 
 use open62541_sys::{
     UA_AttributeId_UA_ATTRIBUTEID_VALUE, UA_ClientConfig_setDefault, UA_Client_connect,
@@ -7,11 +7,12 @@ use open62541_sys::{
 
 use crate::ua;
 
-pub struct DisconnectedClient {
+#[allow(clippy::module_name_repetitions)]
+pub struct ClientBuilder {
     client: ll::Client,
 }
 
-impl DisconnectedClient {
+impl ClientBuilder {
     pub fn new() -> Option<Self> {
         let client = ll::Client::new()?;
 
@@ -24,7 +25,7 @@ impl DisconnectedClient {
             return None;
         }
 
-        Some(DisconnectedClient { client })
+        Some(ClientBuilder { client })
     }
 
     pub fn connect(self, endpoint_url: &str) -> Option<Client> {
@@ -47,13 +48,15 @@ pub struct Client {
 }
 
 impl Client {
+    #[must_use]
     pub fn new(endpoint_url: &str) -> Option<Self> {
-        let client = DisconnectedClient::new()?;
+        let client = ClientBuilder::new()?;
 
         client.connect(endpoint_url)
     }
 
-    pub fn read_value(&mut self, node_id: ua::NodeId) -> Option<ua::Variant> {
+    #[must_use]
+    pub fn read_value(&mut self, node_id: &ua::NodeId) -> Option<ua::Variant> {
         let attribute_id = UA_AttributeId_UA_ATTRIBUTEID_VALUE;
         let out = ua::Variant::new()?;
         let out_data_type = unsafe { &UA_TYPES[UA_TYPES_VARIANT as usize] };
@@ -63,7 +66,7 @@ impl Client {
                 self.client.as_ptr(),
                 node_id.as_ptr(),
                 attribute_id,
-                out.as_ptr() as *mut c_void,
+                out.as_ptr().cast(),
                 out_data_type,
             )
         };

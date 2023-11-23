@@ -9,3 +9,16 @@ open62541-sys = { path = "../open62541-sys" }
 
 [dev-dependencies]
 simple_logger = "4.2.0"
+
+[lints.rust]
+warnings = "warn"
+future_incompatible = "warn"
+let_underscore = "warn"
+nonstandard_style = "warn"
+rust_2018_compatibility = "warn"
+rust_2018_idioms = "warn"
+rust_2021_compatibility = "warn"
+unused = "warn"
+
+[lints.clippy]
+pedantic = "warn"

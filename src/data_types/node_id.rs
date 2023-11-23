@@ -1,4 +1,4 @@
-use std::{ffi::CString, fmt};
+use std::{ffi::CString, fmt, ptr};
 
 use log::debug;
 use open62541_sys::{
@@ -11,6 +11,7 @@ use crate::ua;
 pub struct NodeId(UA_NodeId);
 
 impl NodeId {
+    #[must_use]
     pub fn new_numeric(ns_index: u16, identifier: u32) -> Option<Self> {
         debug!("Creating numeric UI_NodeId");
 
@@ -19,6 +20,7 @@ impl NodeId {
         Some(NodeId(node_id))
     }
 
+    #[must_use]
     pub fn new_string(ns_index: u16, chars: &str) -> Option<Self> {
         debug!("Creating string UI_NodeId");
 
@@ -31,8 +33,9 @@ impl NodeId {
         Some(NodeId(node_id))
     }
 
+    #[must_use]
     pub const fn as_ptr(&self) -> *const UA_NodeId {
-        &self.0 as *const UA_NodeId
+        ptr::addr_of!(self.0)
     }
 }
 
@@ -40,7 +43,7 @@ impl Drop for NodeId {
     fn drop(&mut self) {
         debug!("Dropping UI_NodeId");
 
-        let node_id = &mut self.0 as *mut UA_NodeId;
+        let node_id = ptr::addr_of_mut!(self.0);
 
         unsafe { UA_NodeId_clear(node_id) }
     }
