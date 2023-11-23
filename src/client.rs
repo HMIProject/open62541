@@ -25,7 +25,7 @@ impl ClientBuilder {
             return None;
         }
 
-        Some(ClientBuilder { client })
+        Some(Self { client })
     }
 
     pub fn connect(self, endpoint_url: &str) -> Option<Client> {

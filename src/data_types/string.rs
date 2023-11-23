@@ -7,7 +7,7 @@ pub struct String(UA_String);
 impl String {
     #[must_use]
     pub fn new() -> Self {
-        String(unsafe { UA_STRING_NULL })
+        Self(unsafe { UA_STRING_NULL })
     }
 
     #[must_use]
@@ -34,6 +34,6 @@ impl Drop for String {
 
 impl Default for String {
     fn default() -> Self {
-        String::new()
+        Self::new()
     }
 }

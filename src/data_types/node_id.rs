@@ -26,7 +26,7 @@ impl NodeId {
             return None;
         }
 
-        Some(NodeId(node_id))
+        Some(Self(node_id))
     }
 
     #[must_use]
@@ -45,7 +45,7 @@ impl NodeId {
             return None;
         }
 
-        Some(NodeId(node_id))
+        Some(Self(node_id))
     }
 
     #[must_use]
@@ -64,7 +64,7 @@ impl Drop for NodeId {
 
 impl Default for NodeId {
     fn default() -> Self {
-        NodeId::new()
+        Self::new()
     }
 }
 

@@ -14,7 +14,7 @@ impl Variant {
 
         unsafe { UA_Variant_clear(variant.as_ptr()) };
 
-        Some(Variant(variant))
+        Some(Self(variant))
     }
 
     #[must_use]
@@ -33,6 +33,7 @@ impl Drop for Variant {
 
 impl fmt::Debug for Variant {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO
         f.write_str("Variant")
     }
 }
