@@ -1,5 +1,6 @@
 mod array;
 mod client;
+mod data_value;
 mod node_id;
 mod read_request;
 mod read_response;
@@ -12,8 +13,9 @@ use std::ptr::NonNull;
 use open62541_sys::{UA_DataType, UA_TYPES};
 
 pub use self::{
-    array::Array, client::Client, node_id::NodeId, read_request::ReadRequest,
-    read_response::ReadResponse, read_value_id::ReadValueId, string::String, variant::Variant,
+    array::Array, client::Client, data_value::DataValue, node_id::NodeId,
+    read_request::ReadRequest, read_response::ReadResponse, read_value_id::ReadValueId,
+    string::String, variant::Variant,
 };
 
 pub trait DataType {

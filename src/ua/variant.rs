@@ -1,38 +1,75 @@
-use std::{fmt, ptr::NonNull};
+use std::{fmt, mem, ptr};
 
 use open62541_sys::{
-    UA_Variant, UA_Variant_delete, UA_Variant_new, UA_print, UA_STATUSCODE_GOOD, UA_TYPES,
-    UA_TYPES_VARIANT,
+    UA_Variant, UA_Variant_clear, UA_Variant_copy, UA_Variant_init, UA_print, UA_STATUSCODE_GOOD,
+    UA_TYPES, UA_TYPES_VARIANT,
 };
 
 use crate::ua;
 
-pub struct Variant(NonNull<UA_Variant>);
+pub struct Variant(UA_Variant);
 
 impl Variant {
+    #[allow(dead_code)]
     #[must_use]
-    pub fn new() -> Option<Self> {
-        // `UA_Variant_new` matches `UA_Variant_delete`.
-        let ua_variant = NonNull::new(unsafe { UA_Variant_new() })?;
-
-        Some(Self(ua_variant))
+    pub fn new() -> Self {
+        let mut variant = unsafe { mem::MaybeUninit::<UA_Variant>::zeroed().assume_init() };
+        unsafe { UA_Variant_init(ptr::addr_of_mut!(variant)) }
+        Self(variant)
     }
 
-    #[must_use]
+    /// Copies value from `src`.
+    #[allow(dead_code)]
+    pub(crate) fn from(src: &UA_Variant) -> Self {
+        let mut dst = Self::new();
+        let result = unsafe { UA_Variant_copy(src, dst.as_mut_ptr()) };
+        assert_eq!(result, UA_STATUSCODE_GOOD);
+        dst
+    }
+
+    /// Takes ownership of `src`.
+    #[allow(dead_code)]
+    pub(crate) fn from_inner(src: UA_Variant) -> Self {
+        Variant(src)
+    }
+
+    #[allow(dead_code)]
+    pub(crate) const fn as_ref(&self) -> &UA_Variant {
+        &self.0
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn as_mut(&mut self) -> &mut UA_Variant {
+        &mut self.0
+    }
+
+    #[allow(dead_code)]
     pub(crate) const fn as_ptr(&self) -> *const UA_Variant {
-        self.0.as_ptr()
+        ptr::addr_of!(self.0)
     }
 
-    #[must_use]
+    #[allow(dead_code)]
     pub(crate) fn as_mut_ptr(&mut self) -> *mut UA_Variant {
-        self.0.as_ptr()
+        ptr::addr_of_mut!(self.0)
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn into_inner(self) -> UA_Variant {
+        let variant = self.0;
+        mem::forget(self);
+        variant
     }
 }
 
 impl Drop for Variant {
     fn drop(&mut self) {
-        // `UA_Variant_delete` matches `UA_Variant_new`.
-        unsafe { UA_Variant_delete(self.as_mut_ptr()) }
+        unsafe { UA_Variant_clear(self.as_mut_ptr()) }
+    }
+}
+
+impl Default for Variant {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

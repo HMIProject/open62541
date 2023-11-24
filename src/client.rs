@@ -60,7 +60,7 @@ impl Client {
             return None;
         }
 
-        Some(ua::ReadResponse::new(response))
+        Some(ua::ReadResponse::from(response))
     }
 
     #[must_use]
@@ -87,7 +87,7 @@ impl Client {
 
     #[must_use]
     pub fn read_value(&mut self, node_id: &ua::NodeId) -> Option<ua::Variant> {
-        let mut output = ua::Variant::new()?;
+        let mut output = ua::Variant::new();
         let data_type = unsafe { &UA_TYPES[UA_TYPES_VARIANT as usize] };
 
         let result = unsafe {

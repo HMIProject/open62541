@@ -1,12 +1,22 @@
-use std::{mem, ptr};
+use std::{mem, ptr, slice};
 
-use open62541_sys::{UA_ReadResponse, UA_ReadResponse_clear};
+use open62541_sys::{UA_ReadResponse, UA_ReadResponse_clear, UA_ReadResponse_init};
+
+use crate::ua;
 
 pub struct ReadResponse(UA_ReadResponse);
 
 impl ReadResponse {
+    #[must_use]
+    pub fn new() -> Self {
+        let mut read_response =
+            unsafe { mem::MaybeUninit::<UA_ReadResponse>::zeroed().assume_init() };
+        unsafe { UA_ReadResponse_init(ptr::addr_of_mut!(read_response)) }
+        Self(read_response)
+    }
+
     /// Takes ownership of `read_response`.
-    pub(crate) fn new(read_response: UA_ReadResponse) -> Self {
+    pub(crate) fn from(read_response: UA_ReadResponse) -> Self {
         ReadResponse(read_response)
     }
 
@@ -36,10 +46,23 @@ impl ReadResponse {
         mem::forget(self);
         read_response
     }
+
+    #[must_use]
+    pub fn results(&self) -> Vec<ua::DataValue> {
+        let results = unsafe { slice::from_raw_parts(self.0.results, self.0.resultsSize) };
+
+        results.iter().map(ua::DataValue::from).collect()
+    }
 }
 
 impl Drop for ReadResponse {
     fn drop(&mut self) {
         unsafe { UA_ReadResponse_clear(self.as_mut_ptr()) }
+    }
+}
+
+impl Default for ReadResponse {
+    fn default() -> Self {
+        Self::new()
     }
 }

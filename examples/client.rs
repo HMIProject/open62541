@@ -25,11 +25,14 @@ fn main() -> Result<(), &'static str> {
         .ok_or("set node ID")?;
 
     let request = ua::ReadRequest::new()
-        .ok_or("create read request")?
         .nodes_to_read(&[nodes_to_read])
         .ok_or("set nodes to read")?;
 
-    let _result = client.read(request).ok_or("read")?;
+    let result = client.read(request).ok_or("read")?;
+
+    for value in result.results().iter() {
+        println!("{:?}", value.value());
+    }
 
     Ok(())
 }

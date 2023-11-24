@@ -11,12 +11,11 @@ pub struct ReadRequest(UA_ReadRequest);
 
 impl ReadRequest {
     #[must_use]
-    pub fn new() -> Option<Self> {
-        let mut request = unsafe { mem::MaybeUninit::<UA_ReadRequest>::zeroed().assume_init() };
-
-        unsafe { UA_ReadRequest_init(addr_of_mut!(request)) }
-
-        Some(Self(request))
+    pub fn new() -> Self {
+        let mut read_request =
+            unsafe { mem::MaybeUninit::<UA_ReadRequest>::zeroed().assume_init() };
+        unsafe { UA_ReadRequest_init(addr_of_mut!(read_request)) }
+        Self(read_request)
     }
 
     #[must_use]
@@ -53,5 +52,11 @@ impl Drop for ReadRequest {
     fn drop(&mut self) {
         // `UA_ReadRequest_clear` matches owned inner type.
         unsafe { UA_ReadRequest_clear(self.as_mut_ptr()) }
+    }
+}
+
+impl Default for ReadRequest {
+    fn default() -> Self {
+        Self::new()
     }
 }
