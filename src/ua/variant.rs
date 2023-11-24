@@ -19,12 +19,12 @@ impl Variant {
     }
 
     #[must_use]
-    pub const fn as_ptr(&self) -> *const UA_Variant {
+    pub(crate) const fn as_ptr(&self) -> *const UA_Variant {
         self.0.as_ptr()
     }
 
     #[must_use]
-    pub fn as_mut_ptr(&mut self) -> *mut UA_Variant {
+    pub(crate) fn as_mut_ptr(&mut self) -> *mut UA_Variant {
         self.0.as_ptr()
     }
 }

@@ -14,7 +14,8 @@ impl Client {
     }
 
     #[must_use]
-    pub const fn as_ptr(&self) -> *const UA_Client {
+    #[allow(dead_code)]
+    pub(crate) const fn as_ptr(&self) -> *const UA_Client {
         self.0.as_ptr()
     }
 

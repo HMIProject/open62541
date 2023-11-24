@@ -18,7 +18,8 @@ impl String {
     }
 
     #[must_use]
-    pub const fn as_ptr(&self) -> *const UA_String {
+    #[allow(dead_code)]
+    pub(crate) const fn as_ptr(&self) -> *const UA_String {
         ptr::addr_of!(self.0)
     }
 

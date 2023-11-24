@@ -61,7 +61,7 @@ impl NodeId {
     }
 
     #[must_use]
-    pub const fn as_ptr(&self) -> *const UA_NodeId {
+    pub(crate) const fn as_ptr(&self) -> *const UA_NodeId {
         ptr::addr_of!(self.0)
     }
 

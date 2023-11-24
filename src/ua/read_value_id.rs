@@ -2,6 +2,7 @@ use std::ptr::{self, NonNull};
 
 use open62541_sys::{
     UA_NodeId_copy, UA_ReadValueId, UA_ReadValueId_delete, UA_ReadValueId_new, UA_STATUSCODE_GOOD,
+    UA_TYPES_READVALUEID,
 };
 
 use crate::ua;
@@ -39,12 +40,13 @@ impl ReadValueId {
     }
 
     #[must_use]
-    pub const fn as_ptr(&self) -> *const UA_ReadValueId {
+    #[allow(dead_code)]
+    pub(crate) const fn as_ptr(&self) -> *const UA_ReadValueId {
         self.0.as_ptr()
     }
 
     #[must_use]
-    pub fn as_mut_ptr(&mut self) -> *mut UA_ReadValueId {
+    pub(crate) fn as_mut_ptr(&mut self) -> *mut UA_ReadValueId {
         self.0.as_ptr()
     }
 }
@@ -53,5 +55,15 @@ impl Drop for ReadValueId {
     fn drop(&mut self) {
         // `UA_ReadValueId_delete` matches `UA_ReadValueId_new`.
         unsafe { UA_ReadValueId_delete(self.as_mut_ptr()) }
+    }
+}
+
+impl ua::DataType for ReadValueId {
+    type Inner = UA_ReadValueId;
+
+    const INNER: u32 = UA_TYPES_READVALUEID;
+
+    fn as_ptr(&self) -> *const Self::Inner {
+        ReadValueId::as_ptr(self)
     }
 }

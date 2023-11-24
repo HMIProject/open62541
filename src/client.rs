@@ -3,8 +3,8 @@ use std::ffi::CString;
 use log::info;
 use open62541_sys::{
     UA_AttributeId_UA_ATTRIBUTEID_NODEID, UA_AttributeId_UA_ATTRIBUTEID_VALUE,
-    UA_ClientConfig_setDefault, UA_Client_connect, UA_Client_getConfig, __UA_Client_readAttribute,
-    UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_NODEID, UA_TYPES_VARIANT,
+    UA_ClientConfig_setDefault, UA_Client_Service_read, UA_Client_connect, UA_Client_getConfig,
+    __UA_Client_readAttribute, UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_NODEID, UA_TYPES_VARIANT,
 };
 
 use crate::ua;
@@ -51,6 +51,16 @@ impl Client {
         let client = ClientBuilder::new()?;
 
         client.connect(endpoint_url)
+    }
+
+    pub fn read(&mut self, request: ua::ReadRequest) -> Option<ua::ReadResponse> {
+        let response = unsafe { UA_Client_Service_read(self.0.as_mut_ptr(), request.into_inner()) };
+
+        if response.responseHeader.serviceResult != UA_STATUSCODE_GOOD {
+            return None;
+        }
+
+        Some(ua::ReadResponse::new(response))
     }
 
     #[must_use]
