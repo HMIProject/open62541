@@ -18,11 +18,8 @@ fn main() -> Result<(), &'static str> {
     println!("value: {read_value:?}");
 
     let nodes_to_read = ua::ReadValueId::new()
-        .ok_or("create read value ID")?
         .attribute_id(UA_AttributeId_UA_ATTRIBUTEID_VALUE)
-        .ok_or("set attribute ID")?
-        .node_id(&read_node_id)
-        .ok_or("set node ID")?;
+        .node_id(&read_node_id);
 
     let request = ua::ReadRequest::new()
         .nodes_to_read(&[nodes_to_read])

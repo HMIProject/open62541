@@ -1,6 +1,9 @@
 use std::{mem, ptr, slice};
 
-use open62541_sys::{UA_ReadResponse, UA_ReadResponse_clear, UA_ReadResponse_init};
+use open62541_sys::{
+    UA_ReadResponse, UA_ReadResponse_clear, UA_ReadResponse_copy, UA_ReadResponse_init,
+    UA_STATUSCODE_GOOD,
+};
 
 use crate::ua;
 
@@ -9,15 +12,26 @@ pub struct ReadResponse(UA_ReadResponse);
 impl ReadResponse {
     #[must_use]
     pub fn new() -> Self {
-        let mut read_response =
-            unsafe { mem::MaybeUninit::<UA_ReadResponse>::zeroed().assume_init() };
-        unsafe { UA_ReadResponse_init(ptr::addr_of_mut!(read_response)) }
-        Self(read_response)
+        let mut inner = unsafe { mem::MaybeUninit::<UA_ReadResponse>::zeroed().assume_init() };
+        unsafe { UA_ReadResponse_init(ptr::addr_of_mut!(inner)) }
+        Self(inner)
     }
 
-    /// Takes ownership of `read_response`.
-    pub(crate) fn from(read_response: UA_ReadResponse) -> Self {
-        ReadResponse(read_response)
+    /// Copies value from `src`.
+    #[allow(dead_code)]
+    pub(crate) fn from(src: &UA_ReadResponse) -> Self {
+        let mut dst = Self::new();
+
+        let result = unsafe { UA_ReadResponse_copy(src, dst.as_mut_ptr()) };
+        assert_eq!(result, UA_STATUSCODE_GOOD);
+
+        dst
+    }
+
+    /// Takes ownership of `src`.
+    #[allow(dead_code)]
+    pub(crate) fn from_inner(src: UA_ReadResponse) -> Self {
+        Self(src)
     }
 
     #[allow(dead_code)]
@@ -42,16 +56,9 @@ impl ReadResponse {
 
     #[allow(dead_code)]
     pub(crate) fn into_inner(self) -> UA_ReadResponse {
-        let read_response = self.0;
+        let inner = self.0;
         mem::forget(self);
-        read_response
-    }
-
-    #[must_use]
-    pub fn results(&self) -> Vec<ua::DataValue> {
-        let results = unsafe { slice::from_raw_parts(self.0.results, self.0.resultsSize) };
-
-        results.iter().map(ua::DataValue::from).collect()
+        inner
     }
 }
 
@@ -64,5 +71,13 @@ impl Drop for ReadResponse {
 impl Default for ReadResponse {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl ReadResponse {
+    #[must_use]
+    pub fn results(&self) -> Vec<ua::DataValue> {
+        let results = unsafe { slice::from_raw_parts(self.0.results, self.0.resultsSize) };
+        results.iter().map(ua::DataValue::from).collect()
     }
 }

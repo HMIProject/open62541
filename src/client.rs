@@ -60,7 +60,7 @@ impl Client {
             return None;
         }
 
-        Some(ua::ReadResponse::from(response))
+        Some(ua::ReadResponse::from_inner(response))
     }
 
     #[must_use]

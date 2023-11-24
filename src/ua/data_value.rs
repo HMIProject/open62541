@@ -9,27 +9,28 @@ use crate::ua;
 pub struct DataValue(UA_DataValue);
 
 impl DataValue {
-    #[allow(dead_code)]
     #[must_use]
     pub fn new() -> Self {
-        let mut data_value = unsafe { mem::MaybeUninit::<UA_DataValue>::zeroed().assume_init() };
-        unsafe { UA_DataValue_init(ptr::addr_of_mut!(data_value)) }
-        Self(data_value)
+        let mut inner = unsafe { mem::MaybeUninit::<UA_DataValue>::zeroed().assume_init() };
+        unsafe { UA_DataValue_init(ptr::addr_of_mut!(inner)) }
+        Self(inner)
     }
 
     /// Copies value from `src`.
     #[allow(dead_code)]
     pub(crate) fn from(src: &UA_DataValue) -> Self {
         let mut dst = Self::new();
+
         let result = unsafe { UA_DataValue_copy(src, dst.as_mut_ptr()) };
         assert_eq!(result, UA_STATUSCODE_GOOD);
+
         dst
     }
 
     /// Takes ownership of `src`.
     #[allow(dead_code)]
     pub(crate) fn from_inner(src: UA_DataValue) -> Self {
-        DataValue(src)
+        Self(src)
     }
 
     #[allow(dead_code)]
@@ -54,14 +55,9 @@ impl DataValue {
 
     #[allow(dead_code)]
     pub(crate) fn into_inner(self) -> UA_DataValue {
-        let data_value = self.0;
+        let inner = self.0;
         mem::forget(self);
-        data_value
-    }
-
-    #[must_use]
-    pub fn value(&self) -> ua::Variant {
-        ua::Variant::from(&self.0.value)
+        inner
     }
 }
 
@@ -74,5 +70,12 @@ impl Drop for DataValue {
 impl Default for DataValue {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl DataValue {
+    #[must_use]
+    pub fn value(&self) -> ua::Variant {
+        ua::Variant::from(&self.0.value)
     }
 }
