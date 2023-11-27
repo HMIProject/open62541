@@ -4,9 +4,7 @@ use std::{
     slice,
 };
 
-use open62541_sys::{
-    UA_Array_appendCopy, UA_Array_delete, UA_Array_new, UA_init, UA_STATUSCODE_GOOD,
-};
+use open62541_sys::{UA_Array_delete, UA_Array_new, UA_copy, UA_init, UA_STATUSCODE_GOOD};
 
 use crate::DataType;
 
@@ -55,37 +53,37 @@ impl<T: DataType> Array<T> {
     ///
     /// Enough memory must be available to allocate array.
     pub fn from_slice(slice: &[T]) -> Self {
-        let mut array = unsafe { UA_Array_new(0, T::data_type()) };
-        let mut size: usize = 0;
+        debug_assert_eq!(T::data_type_ref().memSize() as usize, mem::size_of::<T>());
+        let array = NonNull::new(unsafe { UA_Array_new(slice.len(), T::data_type()) })
+            .expect("create new UA_Array");
 
-        // Add elements one by one. This is not particularly efficient but suffices for now to allow
-        // us to handle errors easier without keeping track of which elements have been initialized.
-        for element in slice {
+        // Clone elements into the array. When this is done, all elements will be initialized. If we
+        // need to stop because of an error, we may still call `UA_Array_delete()` because the array
+        // elements have been zero-initialized by `UA_Array_new()` and `UA_Array_delete()` uses this
+        // (under the hood, this is handled by `UA_clear()` on each element).
+        let dst: &mut [T::Inner] =
+            unsafe { slice::from_raw_parts_mut(array.as_ptr().cast(), slice.len()) };
+        for (src, dst) in slice.iter().zip(dst) {
             let result = unsafe {
-                UA_Array_appendCopy(
-                    ptr::addr_of_mut!(array),
-                    ptr::addr_of_mut!(size),
-                    ptr::addr_of!(*element).cast(),
+                UA_copy(
+                    ptr::addr_of!(*src).cast(),
+                    ptr::addr_of_mut!(*dst).cast(),
                     T::data_type(),
                 )
             };
 
             if result != UA_STATUSCODE_GOOD {
                 // When adding a single element fails, we clean up all elements that have been added
-                // into the array up to this point. This is done by `UA_Array_delete()`.
-                unsafe { UA_Array_delete(array, size, T::data_type()) }
+                // into the array up to this point. This is done by `UA_Array_delete()`. It can also
+                // deal with elements that have not been initialized (cloned from `slice`) yet.
+                unsafe { UA_Array_delete(array.as_ptr(), slice.len(), T::data_type()) }
                 panic!("create new UA_Array")
             }
         }
 
-        let Some(array) = NonNull::new(array) else {
-            unsafe { UA_Array_delete(array, size, T::data_type()) }
-            panic!("create new UA_Array")
-        };
-
         Self {
             ptr: array.cast(),
-            size,
+            size: slice.len(),
         }
     }
 
