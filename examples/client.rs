@@ -60,7 +60,7 @@ fn read_multiple_values(client: &mut Client, node_ids: &[ua::NodeId]) -> anyhow:
     println!("Got {} values from node IDs:", result.len());
 
     for (node_id, value) in node_ids.iter().zip(result.iter()) {
-        println!("- {node_id} -> {}", value.value());
+        println!("- {node_id} -> {:?}", value.value());
     }
 
     Ok(())

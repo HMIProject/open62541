@@ -132,6 +132,11 @@ macro_rules! data_type {
                 Self(dst)
             }
 
+            /// Gives up ownership and returns inner value.
+            ///
+            /// The returned value must be cleared with [`UA_clear`](open62541_sys::UA_clear) to not
+            /// leak any memory. Alternatively, it may be re-wrapped with [`new()`](Self::new) which
+            /// then cleans up when dropped regularly.
             #[allow(dead_code)]
             #[must_use]
             pub(crate) fn into_inner(self) -> open62541_sys::$inner {
