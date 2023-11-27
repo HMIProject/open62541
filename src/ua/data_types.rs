@@ -19,34 +19,42 @@ macro_rules! data_type {
         /// from [`open62541_sys`].
         ///
         /// This owns the wrapped data type. When the wrapper is dropped, its inner value, including
-        /// all contained data, is cleaned up with [`UA_clear`](open62541_sys::UA_clear).
+        /// all contained data, is cleaned up with [`UA_clear()`](open62541_sys::UA_clear()).
         pub struct $name(
             /// Inner value.
             open62541_sys::$inner,
         );
 
         impl $name {
+            #[allow(dead_code)]
+            #[must_use]
             fn data_type() -> *const open62541_sys::UA_DataType {
                 unsafe { open62541_sys::UA_TYPES.get(open62541_sys::$index as usize) }.unwrap()
             }
 
-            /// Creates value initialized with defaults.
-            #[must_use]
-            pub fn new() -> Self {
-                let mut inner = unsafe {
-                    std::mem::MaybeUninit::<open62541_sys::$inner>::zeroed().assume_init()
-                };
-                unsafe {
-                    open62541_sys::UA_init(std::ptr::addr_of_mut!(inner).cast(), Self::data_type())
-                };
-                Self(inner)
-            }
-
-            /// Creates value by cloning value from `src`.
+            /// Creates wrapper by taking ownership of `src`.
             #[allow(dead_code)]
             #[must_use]
-            pub(crate) fn from(src: &open62541_sys::$inner) -> Self {
-                let mut dst = Self::new();
+            pub(crate) fn new(src: open62541_sys::$inner) -> Self {
+                // This takes ownership of the wrapped value. We call `UA_clear()` when the value is
+                // dropped eventually.
+                Self(src)
+            }
+
+            /// Creates wrapper by cloning value from `src`.
+            ///
+            /// The original value must still be cleared with [`UA_clear`](open62541_sys::UA_clear),
+            /// or deleted with [`UA_delete`](open62541_sys::UA_delete) if allocated on the heap, to
+            /// avoid memory leaks. If the original value is only borrowed from another wrapper, the
+            /// wrapper will make sure of this.
+            #[allow(dead_code)]
+            #[must_use]
+            pub(crate) fn new_from(src: &open62541_sys::$inner) -> Self {
+                // `UA_copy()` does not clean up the target before copying into it, so we may use an
+                // uninitialized slice of memory here.
+                let mut dst = unsafe {
+                    std::mem::MaybeUninit::<open62541_sys::$inner>::zeroed().assume_init()
+                };
 
                 let result = unsafe {
                     open62541_sys::UA_copy(
@@ -57,14 +65,7 @@ macro_rules! data_type {
                 };
                 assert_eq!(result, open62541_sys::UA_STATUSCODE_GOOD);
 
-                dst
-            }
-
-            /// Creates value by taking ownership of `src`.
-            #[allow(dead_code)]
-            #[must_use]
-            pub(crate) fn from_inner(src: open62541_sys::$inner) -> Self {
-                Self(src)
+                Self(dst)
             }
 
             #[allow(dead_code)]
@@ -95,6 +96,7 @@ macro_rules! data_type {
             #[must_use]
             pub(crate) fn into_inner(self) -> open62541_sys::$inner {
                 let inner = self.0;
+                // Make sure that `drop()` is not called anymore.
                 std::mem::forget(self);
                 inner
             }
@@ -103,20 +105,30 @@ macro_rules! data_type {
         impl Drop for $name {
             fn drop(&mut self) {
                 unsafe {
-                    open62541_sys::UA_clear(std::ptr::addr_of_mut!(*self).cast(), Self::data_type())
+                    open62541_sys::UA_clear(
+                        std::ptr::addr_of_mut!(self.0).cast(),
+                        Self::data_type(),
+                    )
                 }
             }
         }
 
         impl Default for $name {
+            /// Creates wrapper initialized with defaults.
             fn default() -> Self {
-                Self::new()
+                let mut inner = unsafe {
+                    std::mem::MaybeUninit::<open62541_sys::$inner>::zeroed().assume_init()
+                };
+                unsafe {
+                    open62541_sys::UA_init(std::ptr::addr_of_mut!(inner).cast(), Self::data_type())
+                };
+                Self(inner)
             }
         }
 
         impl Clone for $name {
             fn clone(&self) -> Self {
-                Self::from(&self.0)
+                Self::new_from(&self.0)
             }
         }
     };

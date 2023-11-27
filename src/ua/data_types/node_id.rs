@@ -38,7 +38,6 @@ impl NodeId {
         let string = &unsafe { inner.identifier.string };
         if string.data.is_null() || string.length == 0 {
             debug_assert!(string.data.is_null());
-
             return None;
         }
 
@@ -48,7 +47,7 @@ impl NodeId {
 
 impl fmt::Debug for NodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut output = ua::String::new();
+        let mut output = ua::String::default();
 
         let result = unsafe { UA_NodeId_print(self.as_ptr(), output.as_mut_ptr()) };
         if result != UA_STATUSCODE_GOOD {

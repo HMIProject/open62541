@@ -8,7 +8,7 @@ ua::data_type!(Variant, UA_Variant, UA_TYPES_VARIANT);
 
 impl fmt::Debug for Variant {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut output = ua::String::new();
+        let mut output = ua::String::default();
         let data_type = unsafe { &UA_TYPES[UA_TYPES_VARIANT as usize] };
 
         let result = unsafe { UA_print(self.as_ptr().cast(), data_type, output.as_mut_ptr()) };

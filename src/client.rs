@@ -17,22 +17,6 @@ pub struct ClientBuilder(ua::Client);
 
 impl ClientBuilder {
     #[must_use]
-    pub fn new() -> Option<Self> {
-        let mut ua_client = ua::Client::new()?;
-
-        let result = unsafe {
-            let config = UA_Client_getConfig(ua_client.as_mut_ptr());
-            UA_ClientConfig_setDefault(config)
-        };
-
-        if result != UA_STATUSCODE_GOOD {
-            return None;
-        }
-
-        Some(Self(ua_client))
-    }
-
-    #[must_use]
     pub fn connect(mut self, endpoint_url: &str) -> Option<Client> {
         info!("Connecting to endpoint {endpoint_url}");
 
@@ -45,6 +29,21 @@ impl ClientBuilder {
         }
 
         Some(Client(self.0))
+    }
+}
+
+impl Default for ClientBuilder {
+    fn default() -> Self {
+        let mut inner = ua::Client::default();
+
+        // Clients need to be initialized with config for `UA_Client_connect` to work.
+        let result = unsafe {
+            let config = UA_Client_getConfig(inner.as_mut_ptr());
+            UA_ClientConfig_setDefault(config)
+        };
+        assert!(result == UA_STATUSCODE_GOOD);
+
+        Self(inner)
     }
 }
 
@@ -61,11 +60,13 @@ impl ClientBuilder {
 pub struct Client(ua::Client);
 
 impl Client {
+    /// Creates client connected to endpoint.
+    ///
+    /// If you need more control over the initialization, use [`ClientBuilder`] instead, and turn it
+    /// into [`Client`] by calling [`connect()`](ClientBuilder::connect()).
     #[must_use]
     pub fn new(endpoint_url: &str) -> Option<Self> {
-        let client = ClientBuilder::new()?;
-
-        client.connect(endpoint_url)
+        ClientBuilder::default().connect(endpoint_url)
     }
 
     pub fn read(&mut self, request: ua::ReadRequest) -> Option<ua::ReadResponse> {
@@ -75,12 +76,12 @@ impl Client {
             return None;
         }
 
-        Some(ua::ReadResponse::from_inner(response))
+        Some(ua::ReadResponse::new(response))
     }
 
     #[must_use]
     pub fn read_node_id(&mut self, node_id: &ua::NodeId) -> Option<ua::NodeId> {
-        let mut output = ua::NodeId::new();
+        let mut output = ua::NodeId::default();
         let data_type = unsafe { &UA_TYPES[UA_TYPES_NODEID as usize] };
 
         let result = unsafe {
@@ -102,7 +103,7 @@ impl Client {
 
     #[must_use]
     pub fn read_value(&mut self, node_id: &ua::NodeId) -> Option<ua::Variant> {
-        let mut output = ua::Variant::new();
+        let mut output = ua::Variant::default();
         let data_type = unsafe { &UA_TYPES[UA_TYPES_VARIANT as usize] };
 
         let result = unsafe {

@@ -17,11 +17,11 @@ fn main() -> Result<(), &'static str> {
     println!("node ID: {read_node_id:?}");
     println!("value: {read_value:?}");
 
-    let nodes_to_read = ua::ReadValueId::new()
+    let nodes_to_read = ua::ReadValueId::default()
         .attribute_id(UA_AttributeId_UA_ATTRIBUTEID_VALUE)
         .node_id(&read_node_id);
 
-    let request = ua::ReadRequest::new()
+    let request = ua::ReadRequest::default()
         .nodes_to_read(&[nodes_to_read])
         .ok_or("set nodes to read")?;
 
