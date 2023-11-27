@@ -20,6 +20,7 @@ macro_rules! data_type {
         ///
         /// This owns the wrapped data type. When the wrapper is dropped, its inner value, including
         /// all contained data, is cleaned up with [`UA_clear()`](open62541_sys::UA_clear()).
+        #[repr(transparent)]
         pub struct $name(
             /// Inner value.
             open62541_sys::$inner,
@@ -134,12 +135,8 @@ macro_rules! data_type {
             }
         }
 
-        impl crate::DataType for $name {
+        unsafe impl crate::DataType for $name {
             type Inner = open62541_sys::$inner;
-
-            fn as_ptr(&self) -> *const Self::Inner {
-                $name::as_ptr(self)
-            }
 
             fn data_type() -> *const open62541_sys::UA_DataType {
                 $name::data_type()

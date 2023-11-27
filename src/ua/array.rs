@@ -65,7 +65,7 @@ impl<T: DataType> Array<T> {
                 UA_Array_appendCopy(
                     ptr::addr_of_mut!(array),
                     ptr::addr_of_mut!(size),
-                    element.as_ptr().cast(),
+                    ptr::addr_of!(*element).cast(),
                     T::data_type(),
                 )
             };
@@ -91,7 +91,9 @@ impl<T: DataType> Array<T> {
 
     #[allow(private_interfaces)]
     #[must_use]
-    pub fn as_slice_inner(&self) -> Option<&[T::Inner]> {
+    pub fn as_slice(&self) -> Option<&[T]> {
+        // We may return `&[T]` here instead of `&[T::Inner]` because `T: DataType` guarantees us to
+        // uphold the invariant that we can transmute between the two types.
         Some(unsafe { slice::from_raw_parts(self.ptr.as_ptr().cast(), self.size) })
     }
 
