@@ -4,8 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.75"
 log = "0.4.20"
 open62541-sys = { path = "../open62541-sys" }
+thiserror = "1.0.50"
 
 [dev-dependencies]
 simple_logger = "4.3.0"

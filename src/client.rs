@@ -6,8 +6,20 @@ use open62541_sys::{
     UA_ClientConfig_setDefault, UA_Client_Service_read, UA_Client_connect, UA_Client_getConfig,
     __UA_Client_readAttribute, UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_NODEID, UA_TYPES_VARIANT,
 };
+use thiserror::Error;
 
 use crate::ua;
+
+#[derive(Debug, Error)]
+#[error("{0}")]
+pub struct UaError(ua::StatusCode);
+
+impl UaError {
+    pub fn new(code: u32) -> Self {
+        debug_assert_ne!(code, UA_STATUSCODE_GOOD);
+        Self(ua::StatusCode::new(code))
+    }
+}
 
 /// Builder for [`Client`].
 ///
@@ -16,19 +28,27 @@ use crate::ua;
 pub struct ClientBuilder(ua::Client);
 
 impl ClientBuilder {
-    #[must_use]
-    pub fn connect(mut self, endpoint_url: &str) -> Option<Client> {
+    /// Connects to OPC UA endpoint and returns [`Client`].
+    ///
+    /// # Errors
+    ///
+    /// This fails when the target server is not reachable.
+    ///
+    /// # Panics
+    ///
+    /// The endpoint URL must be a valid C string, i.e. it must not contain any NUL bytes.
+    pub fn connect(mut self, endpoint_url: &str) -> Result<Client, UaError> {
         info!("Connecting to endpoint {endpoint_url}");
 
-        let endpoint_url = CString::new(endpoint_url).ok()?;
+        let endpoint_url =
+            CString::new(endpoint_url).expect("endpoint URL does not contain NUL bytes");
 
         let result = unsafe { UA_Client_connect(self.0.as_mut_ptr(), endpoint_url.as_ptr()) };
-
         if result != UA_STATUSCODE_GOOD {
-            return None;
+            return Err(UaError::new(result));
         }
 
-        Some(Client(self.0))
+        Ok(Client(self.0))
     }
 }
 
@@ -64,23 +84,39 @@ impl Client {
     ///
     /// If you need more control over the initialization, use [`ClientBuilder`] instead, and turn it
     /// into [`Client`] by calling [`connect()`](ClientBuilder::connect()).
-    #[must_use]
-    pub fn new(endpoint_url: &str) -> Option<Self> {
+    ///
+    /// # Errors
+    ///
+    /// See [`ClientBuilder::connect()`].
+    ///
+    /// # Panics
+    ///
+    /// See [`ClientBuilder::connect()`].
+    pub fn new(endpoint_url: &str) -> Result<Self, UaError> {
         ClientBuilder::default().connect(endpoint_url)
     }
 
-    pub fn read(&mut self, request: ua::ReadRequest) -> Option<ua::ReadResponse> {
+    /// Read data from server.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the request cannot be served.
+    pub fn read(&mut self, request: ua::ReadRequest) -> Result<ua::ReadResponse, UaError> {
         let response = unsafe { UA_Client_Service_read(self.0.as_mut_ptr(), request.into_inner()) };
 
         if response.responseHeader.serviceResult != UA_STATUSCODE_GOOD {
-            return None;
+            return Err(UaError::new(response.responseHeader.serviceResult));
         }
 
-        Some(ua::ReadResponse::new(response))
+        Ok(ua::ReadResponse::new(response))
     }
 
-    #[must_use]
-    pub fn read_node_id(&mut self, node_id: &ua::NodeId) -> Option<ua::NodeId> {
+    /// Read node ID attribute from node.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or the node ID attribute cannot be read.
+    pub fn read_node_id(&mut self, node_id: &ua::NodeId) -> Result<ua::NodeId, UaError> {
         let mut output = ua::NodeId::default();
         let data_type = unsafe { &UA_TYPES[UA_TYPES_NODEID as usize] };
 
@@ -95,14 +131,18 @@ impl Client {
         };
 
         if result != UA_STATUSCODE_GOOD {
-            return None;
+            return Err(UaError::new(result));
         }
 
-        Some(output)
+        Ok(output)
     }
 
-    #[must_use]
-    pub fn read_value(&mut self, node_id: &ua::NodeId) -> Option<ua::Variant> {
+    /// Read value attribute from node.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or the value attribute cannot be read.
+    pub fn read_value(&mut self, node_id: &ua::NodeId) -> Result<ua::Variant, UaError> {
         let mut output = ua::Variant::default();
         let data_type = unsafe { &UA_TYPES[UA_TYPES_VARIANT as usize] };
 
@@ -117,9 +157,9 @@ impl Client {
         };
 
         if result != UA_STATUSCODE_GOOD {
-            return None;
+            return Err(UaError::new(result));
         }
 
-        Some(output)
+        Ok(output)
     }
 }
