@@ -2,7 +2,7 @@ mod client;
 mod error;
 pub mod ua;
 
-use std::{ffi::c_void, fmt};
+use std::ffi::c_void;
 
 use open62541_sys::{UA_print, UA_STATUSCODE_GOOD};
 
@@ -64,12 +64,8 @@ pub(crate) unsafe trait DataType {
         (self as *mut Self).cast::<Self::Inner>()
     }
 
-    /// Print value to formatter.
-    ///
-    /// Because string formatting is an infallible operation, this may return `None` when formatting
-    /// cannot be started because of earlier errors. Errors from `f` will be forwarded as `Some(_)`.
     #[must_use]
-    fn print(&self, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+    fn print(&self) -> Option<ua::String> {
         let mut output = ua::String::default();
 
         let result = unsafe {
@@ -84,6 +80,6 @@ pub(crate) unsafe trait DataType {
             return None;
         }
 
-        output.as_str().map(|str| f.write_str(str))
+        Some(output)
     }
 }

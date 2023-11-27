@@ -116,16 +116,26 @@ macro_rules! data_type {
 
         impl std::fmt::Debug for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                crate::DataType::print(self, f).unwrap_or_else(|| f.write_str(stringify!($name)))
+                let output = crate::DataType::print(self);
+                let string = output.as_ref().and_then(|output| output.as_str());
+                f.write_fmt(format_args!(
+                    "{}({})",
+                    stringify!($name),
+                    string.unwrap_or("_")
+                ))
             }
         }
 
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                crate::DataType::print(self, f).unwrap_or_else(|| f.write_str(stringify!($name)))
+                let output = crate::DataType::print(self);
+                let string = output.as_ref().and_then(|output| output.as_str());
+                f.write_str(string.unwrap_or(stringify!($name)))
             }
         }
 
+        // SAFETY: We can transmute between our wrapper type and the contained inner type. This will
+        // be ensured by using `#[repr(transparent)]` above.
         unsafe impl crate::DataType for $name {
             type Inner = open62541_sys::$inner;
 
