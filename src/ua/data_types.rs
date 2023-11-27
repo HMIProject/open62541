@@ -27,12 +27,6 @@ macro_rules! data_type {
         );
 
         impl $name {
-            #[allow(dead_code)]
-            #[must_use]
-            fn data_type() -> *const open62541_sys::UA_DataType {
-                unsafe { open62541_sys::UA_TYPES.get(open62541_sys::$index as usize) }.unwrap()
-            }
-
             /// Creates wrapper by taking ownership of `src`.
             #[allow(dead_code)]
             #[must_use]
@@ -61,7 +55,7 @@ macro_rules! data_type {
                     open62541_sys::UA_copy(
                         (src as *const open62541_sys::$inner).cast::<std::ffi::c_void>(),
                         std::ptr::addr_of_mut!(dst).cast::<std::ffi::c_void>(),
-                        Self::data_type(),
+                        <Self as crate::DataType>::data_type(),
                     )
                 };
                 assert_eq!(result, open62541_sys::UA_STATUSCODE_GOOD);
@@ -86,7 +80,7 @@ macro_rules! data_type {
                 unsafe {
                     open62541_sys::UA_clear(
                         std::ptr::addr_of_mut!(self.0).cast::<std::ffi::c_void>(),
-                        Self::data_type(),
+                        <Self as crate::DataType>::data_type(),
                     )
                 }
             }
@@ -101,7 +95,7 @@ macro_rules! data_type {
                 unsafe {
                     open62541_sys::UA_init(
                         std::ptr::addr_of_mut!(inner).cast::<std::ffi::c_void>(),
-                        Self::data_type(),
+                        <Self as crate::DataType>::data_type(),
                     )
                 };
                 Self(inner)
@@ -140,7 +134,8 @@ macro_rules! data_type {
             type Inner = open62541_sys::$inner;
 
             fn data_type() -> *const open62541_sys::UA_DataType {
-                $name::data_type()
+                // SAFETY: The given index must be valid within `UA_TYPES`.
+                unsafe { open62541_sys::UA_TYPES.get(open62541_sys::$index as usize) }.unwrap()
             }
         }
     };
