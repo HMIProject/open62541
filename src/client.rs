@@ -6,24 +6,12 @@ use open62541_sys::{
     UA_ClientConfig_setDefault, UA_Client_Service_read, UA_Client_connect, UA_Client_getConfig,
     __UA_Client_readAttribute, UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_NODEID, UA_TYPES_VARIANT,
 };
-use thiserror::Error;
 
-use crate::ua;
-
-#[derive(Debug, Error)]
-#[error("{0}")]
-pub struct UaError(ua::StatusCode);
-
-impl UaError {
-    pub fn new(code: u32) -> Self {
-        debug_assert_ne!(code, UA_STATUSCODE_GOOD);
-        Self(ua::StatusCode::new(code))
-    }
-}
+use crate::{ua, Error};
 
 /// Builder for [`Client`].
 ///
-/// Use this to specify additional options before connecting to OPC UA endpoint.
+/// Use this to specify additional options before connecting to an OPC UA endpoint.
 #[allow(clippy::module_name_repetitions)]
 pub struct ClientBuilder(ua::Client);
 
@@ -37,7 +25,7 @@ impl ClientBuilder {
     /// # Panics
     ///
     /// The endpoint URL must be a valid C string, i.e. it must not contain any NUL bytes.
-    pub fn connect(mut self, endpoint_url: &str) -> Result<Client, UaError> {
+    pub fn connect(mut self, endpoint_url: &str) -> Result<Client, Error> {
         info!("Connecting to endpoint {endpoint_url}");
 
         let endpoint_url =
@@ -45,7 +33,7 @@ impl ClientBuilder {
 
         let result = unsafe { UA_Client_connect(self.0.as_mut_ptr(), endpoint_url.as_ptr()) };
         if result != UA_STATUSCODE_GOOD {
-            return Err(UaError::new(result));
+            return Err(Error::new(result));
         }
 
         Ok(Client(self.0))
@@ -67,7 +55,7 @@ impl Default for ClientBuilder {
     }
 }
 
-/// OPC UA client.
+/// Connected OPC UA client.
 ///
 /// This represents an OPC UA client connected to a specific endpoint. Once a client is connected to
 /// an endpoint, it is not possible to switch to another server. Create a new client for that.
@@ -92,7 +80,7 @@ impl Client {
     /// # Panics
     ///
     /// See [`ClientBuilder::connect()`].
-    pub fn new(endpoint_url: &str) -> Result<Self, UaError> {
+    pub fn new(endpoint_url: &str) -> Result<Self, Error> {
         ClientBuilder::default().connect(endpoint_url)
     }
 
@@ -101,11 +89,11 @@ impl Client {
     /// # Errors
     ///
     /// This fails when the request cannot be served.
-    pub fn read(&mut self, request: ua::ReadRequest) -> Result<ua::ReadResponse, UaError> {
+    pub fn read(&mut self, request: ua::ReadRequest) -> Result<ua::ReadResponse, Error> {
         let response = unsafe { UA_Client_Service_read(self.0.as_mut_ptr(), request.into_inner()) };
 
         if response.responseHeader.serviceResult != UA_STATUSCODE_GOOD {
-            return Err(UaError::new(response.responseHeader.serviceResult));
+            return Err(Error::new(response.responseHeader.serviceResult));
         }
 
         Ok(ua::ReadResponse::new(response))
@@ -116,7 +104,7 @@ impl Client {
     /// # Errors
     ///
     /// This fails when the node does not exist or the node ID attribute cannot be read.
-    pub fn read_node_id(&mut self, node_id: &ua::NodeId) -> Result<ua::NodeId, UaError> {
+    pub fn read_node_id(&mut self, node_id: &ua::NodeId) -> Result<ua::NodeId, Error> {
         let mut output = ua::NodeId::default();
         let data_type = unsafe { &UA_TYPES[UA_TYPES_NODEID as usize] };
 
@@ -131,7 +119,7 @@ impl Client {
         };
 
         if result != UA_STATUSCODE_GOOD {
-            return Err(UaError::new(result));
+            return Err(Error::new(result));
         }
 
         Ok(output)
@@ -142,7 +130,7 @@ impl Client {
     /// # Errors
     ///
     /// This fails when the node does not exist or the value attribute cannot be read.
-    pub fn read_value(&mut self, node_id: &ua::NodeId) -> Result<ua::Variant, UaError> {
+    pub fn read_value(&mut self, node_id: &ua::NodeId) -> Result<ua::Variant, Error> {
         let mut output = ua::Variant::default();
         let data_type = unsafe { &UA_TYPES[UA_TYPES_VARIANT as usize] };
 
@@ -157,7 +145,7 @@ impl Client {
         };
 
         if result != UA_STATUSCODE_GOOD {
-            return Err(UaError::new(result));
+            return Err(Error::new(result));
         }
 
         Ok(output)
