@@ -25,9 +25,7 @@ fn main() -> anyhow::Result<()> {
         .attribute_id(UA_AttributeId_UA_ATTRIBUTEID_VALUE)
         .node_id(&read_node_id);
 
-    let request = ua::ReadRequest::default()
-        .nodes_to_read(&[nodes_to_read])
-        .with_context(|| "set nodes to read")?;
+    let request = ua::ReadRequest::default().nodes_to_read(&[nodes_to_read]);
 
     let result = client.read(request).with_context(|| "read")?;
 

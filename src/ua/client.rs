@@ -33,7 +33,7 @@ impl Default for Client {
     /// Creates wrapper initialized with defaults.
     fn default() -> Self {
         // `UA_Client_new()` matches `UA_Client_delete()`.
-        let inner = NonNull::new(unsafe { UA_Client_new() }).unwrap();
+        let inner = NonNull::new(unsafe { UA_Client_new() }).expect("create new UA_Client");
         Self(inner)
     }
 }

@@ -104,6 +104,8 @@ macro_rules! data_type {
 
         impl Drop for $name {
             fn drop(&mut self) {
+                // `UA_clear` resets the data structure, freeing any dynamically allocated memory in
+                // it, no matter how deeply nested.
                 unsafe {
                     open62541_sys::UA_clear(
                         std::ptr::addr_of_mut!(self.0).cast(),
@@ -129,6 +131,18 @@ macro_rules! data_type {
         impl Clone for $name {
             fn clone(&self) -> Self {
                 Self::new_from(&self.0)
+            }
+        }
+
+        impl crate::DataType for $name {
+            type Inner = open62541_sys::$inner;
+
+            fn as_ptr(&self) -> *const Self::Inner {
+                $name::as_ptr(self)
+            }
+
+            fn data_type() -> *const open62541_sys::UA_DataType {
+                $name::data_type()
             }
         }
     };
