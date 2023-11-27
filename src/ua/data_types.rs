@@ -114,6 +114,18 @@ macro_rules! data_type {
             }
         }
 
+        impl std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                crate::DataType::print(self, f).unwrap_or_else(|| f.write_str(stringify!($name)))
+            }
+        }
+
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                crate::DataType::print(self, f).unwrap_or_else(|| f.write_str(stringify!($name)))
+            }
+        }
+
         unsafe impl crate::DataType for $name {
             type Inner = open62541_sys::$inner;
 

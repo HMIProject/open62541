@@ -1,11 +1,11 @@
-use std::{ffi::CString, fmt};
+use std::ffi::CString;
 
 use open62541_sys::{
-    UA_NodeIdType_UA_NODEIDTYPE_NUMERIC, UA_NodeIdType_UA_NODEIDTYPE_STRING, UA_NodeId_print,
-    UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC, UA_STATUSCODE_GOOD,
+    UA_NodeIdType_UA_NODEIDTYPE_NUMERIC, UA_NodeIdType_UA_NODEIDTYPE_STRING, UA_NODEID_NUMERIC,
+    UA_NODEID_STRING_ALLOC,
 };
 
-use crate::{ua, DataType};
+use crate::ua;
 
 ua::data_type!(NodeId, UA_NodeId, UA_TYPES_NODEID);
 
@@ -31,21 +31,5 @@ impl NodeId {
         let inner = unsafe { UA_NODEID_STRING_ALLOC(ns_index, string.as_ptr()) };
         debug_assert_eq!(inner.identifierType, UA_NodeIdType_UA_NODEIDTYPE_STRING);
         Self(inner)
-    }
-}
-
-impl fmt::Debug for NodeId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut output = ua::String::default();
-
-        let result = unsafe { UA_NodeId_print(self.as_ptr(), output.as_mut_ptr()) };
-        if result != UA_STATUSCODE_GOOD {
-            return f.write_str("NodeId");
-        }
-
-        match output.as_str() {
-            Some(str) => f.write_str(str),
-            None => f.write_str("NodeId"),
-        }
     }
 }

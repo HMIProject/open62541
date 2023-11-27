@@ -2,6 +2,10 @@ mod client;
 mod error;
 pub mod ua;
 
+use std::{ffi::c_void, fmt};
+
+use open62541_sys::{UA_print, UA_STATUSCODE_GOOD};
+
 pub use self::{
     client::{Client, ClientBuilder},
     error::Error,
@@ -24,7 +28,10 @@ pub(crate) unsafe trait DataType {
 
     fn data_type() -> *const open62541_sys::UA_DataType;
 
-    #[allow(dead_code)]
+    fn data_type_ref() -> &'static open62541_sys::UA_DataType {
+        unsafe { Self::data_type().as_ref() }.unwrap()
+    }
+
     #[must_use]
     fn as_ref(&self) -> &Self::Inner {
         // This transmutes the value into the inner type through `cast()`. Types that implement this
@@ -34,7 +41,6 @@ pub(crate) unsafe trait DataType {
         unsafe { &*(self as *const Self).cast::<Self::Inner>() }
     }
 
-    #[allow(dead_code)]
     #[must_use]
     fn as_mut(&mut self) -> &mut Self::Inner {
         // This transmutes the value into the inner type through `cast()`. Types that implement this
@@ -44,7 +50,6 @@ pub(crate) unsafe trait DataType {
         unsafe { &mut *(self as *mut Self).cast::<Self::Inner>() }
     }
 
-    #[allow(dead_code)]
     #[must_use]
     fn as_ptr(&self) -> *const Self::Inner {
         // This transmutes the value into the inner type through `cast()`. Types that implement this
@@ -52,7 +57,6 @@ pub(crate) unsafe trait DataType {
         (self as *const Self).cast::<Self::Inner>()
     }
 
-    #[allow(dead_code)]
     #[must_use]
     fn as_mut_ptr(&mut self) -> *mut Self::Inner {
         // This transmutes the value into the inner type through `cast()`. Types that implement this
@@ -60,7 +64,26 @@ pub(crate) unsafe trait DataType {
         (self as *mut Self).cast::<Self::Inner>()
     }
 
-    fn data_type_ref() -> &'static open62541_sys::UA_DataType {
-        unsafe { Self::data_type().as_ref() }.unwrap()
+    /// Print value to formatter.
+    ///
+    /// Because string formatting is an infallible operation, this may return `None` when formatting
+    /// cannot be started because of earlier errors. Errors from `f` will be forwarded as `Some(_)`.
+    #[must_use]
+    fn print(&self, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+        let mut output = ua::String::default();
+
+        let result = unsafe {
+            UA_print(
+                self.as_ptr().cast::<c_void>(),
+                Self::data_type(),
+                output.as_mut_ptr(),
+            )
+        };
+
+        if result != UA_STATUSCODE_GOOD {
+            return None;
+        }
+
+        output.as_str().map(|str| f.write_str(str))
     }
 }

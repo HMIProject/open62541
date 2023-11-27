@@ -37,7 +37,7 @@ fn main() -> anyhow::Result<()> {
 fn read_single_value(client: &mut Client, node_id: &ua::NodeId) -> anyhow::Result<()> {
     let value = client.read_value(&node_id).with_context(|| "read value")?;
 
-    println!("Got value from {node_id:?}: {value:?}");
+    println!("Got value from {node_id}: {value}");
 
     Ok(())
 }
@@ -59,7 +59,7 @@ fn read_multiple_values(client: &mut Client, node_ids: &[ua::NodeId]) -> anyhow:
     println!("Got {} values from node IDs:", result.len());
 
     for (node_id, value) in node_ids.iter().zip(result.iter()) {
-        println!("- {node_id:?} -> {:?}", value.value());
+        println!("- {node_id} -> {}", value.value());
     }
 
     Ok(())
