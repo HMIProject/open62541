@@ -3,7 +3,6 @@ use thiserror::Error;
 
 use crate::ua;
 
-#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Error)]
 #[error("{0}")]
 pub struct Error(ua::StatusCode);
