@@ -8,10 +8,16 @@ use open62541_sys::{UA_Array_appendCopy, UA_Array_delete, UA_Array_new, UA_STATU
 
 use crate::ua;
 
+/// Wrapper for arrays from [`open62541_sys`].
+///
+/// This owns the wrapped data type. When the wrapper is dropped, its inner value is cleaned up with
+/// [`UA_Array_delete()`].
+#[allow(private_bounds)]
 pub struct Array<T>(Option<(usize, NonNull<T::Inner>)>)
 where
     T: ua::DataType;
 
+#[allow(private_bounds)]
 impl<T> Array<T>
 where
     T: ua::DataType,

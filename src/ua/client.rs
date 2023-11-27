@@ -2,12 +2,12 @@ use std::ptr::NonNull;
 
 use open62541_sys::{UA_Client, UA_Client_delete, UA_Client_new};
 
-pub struct Client(NonNull<UA_Client>);
-
 /// Wrapper for [`UA_Client`] from [`open62541_sys`].
 ///
 /// This owns the wrapped data type. When the wrapper is dropped, its inner value is cleaned up with
 /// [`UA_Client_delete()`].
+pub struct Client(NonNull<UA_Client>);
+
 impl Client {
     #[allow(dead_code)]
     #[must_use]

@@ -11,7 +11,7 @@ use open62541_sys::{UA_DataType, UA_TYPES};
 
 pub use self::{array::Array, client::Client, data_types::*, status_code::StatusCode};
 
-pub trait DataType {
+pub(crate) trait DataType {
     type Inner;
 
     /// Index into `UA_TYPES`.
