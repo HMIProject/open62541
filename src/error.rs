@@ -3,6 +3,10 @@ use thiserror::Error;
 
 use crate::ua;
 
+/// Generic error.
+///
+/// This error may be returned from many different OPC UA calls. It represents any status code other
+/// than [`UA_STATUSCODE_GOOD`].
 #[derive(Debug, Error)]
 #[error("{0}")]
 pub struct Error(ua::StatusCode);
