@@ -1,6 +1,6 @@
 use crate::ua;
 
-ua::data_type!(ReadRequest, UA_ReadRequest, UA_TYPES_READREQUEST);
+crate::data_type!(ReadRequest, UA_ReadRequest, UA_TYPES_READREQUEST);
 
 impl ReadRequest {
     #[must_use]

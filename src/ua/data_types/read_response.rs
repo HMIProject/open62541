@@ -2,7 +2,7 @@ use std::slice;
 
 use crate::ua;
 
-ua::data_type!(ReadResponse, UA_ReadResponse, UA_TYPES_READRESPONSE);
+crate::data_type!(ReadResponse, UA_ReadResponse, UA_TYPES_READRESPONSE);
 
 impl ReadResponse {
     #[must_use]

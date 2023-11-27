@@ -1,8 +1,6 @@
 use std::{slice, str};
 
-use crate::ua;
-
-ua::data_type!(String, UA_String, UA_TYPES_STRING);
+crate::data_type!(String, UA_String, UA_TYPES_STRING);
 
 impl String {
     #[must_use]

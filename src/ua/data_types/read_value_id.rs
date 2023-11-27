@@ -4,7 +4,7 @@ use open62541_sys::UA_NodeId_clear;
 
 use crate::ua;
 
-ua::data_type!(ReadValueId, UA_ReadValueId, UA_TYPES_READVALUEID);
+crate::data_type!(ReadValueId, UA_ReadValueId, UA_TYPES_READVALUEID);
 
 impl ReadValueId {
     #[must_use]

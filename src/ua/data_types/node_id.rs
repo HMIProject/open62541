@@ -5,9 +5,7 @@ use open62541_sys::{
     UA_NODEID_STRING_ALLOC,
 };
 
-use crate::ua;
-
-ua::data_type!(NodeId, UA_NodeId, UA_TYPES_NODEID);
+crate::data_type!(NodeId, UA_NodeId, UA_TYPES_NODEID);
 
 impl NodeId {
     /// Creates node ID for numeric identifier.
