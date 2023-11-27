@@ -5,7 +5,7 @@ use open62541_sys::{
     UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC, UA_STATUSCODE_GOOD,
 };
 
-use crate::ua;
+use crate::{ua, DataType};
 
 ua::data_type!(NodeId, UA_NodeId, UA_TYPES_NODEID);
 

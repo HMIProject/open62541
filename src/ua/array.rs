@@ -1,8 +1,4 @@
-use std::{
-    mem,
-    ptr::{self, NonNull},
-    slice,
-};
+use std::{ffi::c_void, mem, ptr::NonNull, slice};
 
 use open62541_sys::{UA_Array_delete, UA_Array_new, UA_copy, UA_init, UA_STATUSCODE_GOOD};
 
@@ -29,19 +25,17 @@ impl<T: DataType> Array<T> {
     pub fn new(size: usize) -> Self {
         debug_assert_eq!(T::data_type_ref().memSize() as usize, mem::size_of::<T>());
         let array = NonNull::new(unsafe { UA_Array_new(size, T::data_type()) })
-            .expect("create new UA_Array");
+            .expect("create new UA_Array")
+            .cast::<T::Inner>();
 
-        // `UA_Array_new` does not default-initialize the array elements.
-        let slice: &mut [T::Inner] =
-            unsafe { slice::from_raw_parts_mut(array.as_ptr().cast(), size) };
+        // `UA_Array_new` does not default-initialize the array elements. Do this manually here, one
+        // element at a time.
+        let slice: &mut [T::Inner] = unsafe { slice::from_raw_parts_mut(array.as_ptr(), size) };
         for element in slice {
-            unsafe { UA_init(ptr::addr_of_mut!(*element).cast(), T::data_type()) }
+            unsafe { UA_init((element as *mut T::Inner).cast::<c_void>(), T::data_type()) }
         }
 
-        Self {
-            ptr: array.cast(),
-            size,
-        }
+        Self { ptr: array, size }
     }
 
     /// Creates new array from existing elements.
@@ -55,44 +49,55 @@ impl<T: DataType> Array<T> {
     pub fn from_slice(slice: &[T]) -> Self {
         debug_assert_eq!(T::data_type_ref().memSize() as usize, mem::size_of::<T>());
         let array = NonNull::new(unsafe { UA_Array_new(slice.len(), T::data_type()) })
-            .expect("create new UA_Array");
+            .expect("create new UA_Array")
+            .cast::<T::Inner>();
 
         // Clone elements into the array. When this is done, all elements will be initialized. If we
         // need to stop because of an error, we may still call `UA_Array_delete()` because the array
         // elements have been zero-initialized by `UA_Array_new()` and `UA_Array_delete()` uses this
         // (under the hood, this is handled by `UA_clear()` on each element).
         let dst: &mut [T::Inner] =
-            unsafe { slice::from_raw_parts_mut(array.as_ptr().cast(), slice.len()) };
+            unsafe { slice::from_raw_parts_mut(array.as_ptr(), slice.len()) };
         for (src, dst) in slice.iter().zip(dst) {
             let result = unsafe {
                 UA_copy(
-                    ptr::addr_of!(*src).cast(),
-                    ptr::addr_of_mut!(*dst).cast(),
+                    src.as_ptr().cast::<c_void>(),
+                    (dst as *mut T::Inner).cast::<c_void>(),
                     T::data_type(),
                 )
             };
 
             if result != UA_STATUSCODE_GOOD {
                 // When adding a single element fails, we clean up all elements that have been added
-                // into the array up to this point. This is done by `UA_Array_delete()`. It can also
-                // deal with elements that have not been initialized (cloned from `slice`) yet.
-                unsafe { UA_Array_delete(array.as_ptr(), slice.len(), T::data_type()) }
+                // into the array up to this point. This is done by `UA_Array_delete()`, which knows
+                // how to deal with elements that have not been initialized yet.
+                unsafe {
+                    UA_Array_delete(array.as_ptr().cast::<c_void>(), slice.len(), T::data_type());
+                }
                 panic!("create new UA_Array")
             }
         }
 
         Self {
-            ptr: array.cast(),
+            ptr: array,
             size: slice.len(),
         }
     }
 
     #[allow(private_interfaces)]
     #[must_use]
-    pub fn as_slice(&self) -> Option<&[T]> {
+    pub fn as_slice(&self) -> &[T] {
         // We may return `&[T]` here instead of `&[T::Inner]` because `T: DataType` guarantees us to
         // uphold the invariant that we can transmute between the two types.
-        Some(unsafe { slice::from_raw_parts(self.ptr.as_ptr().cast(), self.size) })
+        unsafe { slice::from_raw_parts(self.ptr.as_ptr().cast::<T>(), self.size) }
+    }
+
+    #[allow(private_interfaces)]
+    #[must_use]
+    pub fn as_slice_mut(&mut self) -> &mut [T] {
+        // We may return `&[T]` here instead of `&[T::Inner]` because `T: DataType` guarantees us to
+        // uphold the invariant that we can transmute between the two types.
+        unsafe { slice::from_raw_parts_mut(self.ptr.as_ptr().cast::<T>(), self.size) }
     }
 
     #[must_use]
@@ -108,6 +113,12 @@ impl<T: DataType> Drop for Array<T> {
     fn drop(&mut self) {
         // `UA_Array_delete` frees the heap-allocated array, along with any memory held by the array
         // elements.
-        unsafe { UA_Array_delete(self.ptr.as_ptr().cast(), self.size, T::data_type()) }
+        unsafe {
+            UA_Array_delete(
+                self.ptr.as_ptr().cast::<c_void>(),
+                self.size,
+                T::data_type(),
+            );
+        }
     }
 }

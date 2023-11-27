@@ -24,6 +24,42 @@ pub(crate) unsafe trait DataType {
 
     fn data_type() -> *const open62541_sys::UA_DataType;
 
+    #[allow(dead_code)]
+    #[must_use]
+    fn as_ref(&self) -> &Self::Inner {
+        // This transmutes the value into the inner type through `cast()`. Types that implement this
+        // trait guarantee that we can transmute between them and their inner type, so this is okay.
+        //
+        // SAFETY: Dereferencing the pointer is allowed because of this transmutability.
+        unsafe { &*(self as *const Self).cast::<Self::Inner>() }
+    }
+
+    #[allow(dead_code)]
+    #[must_use]
+    fn as_mut(&mut self) -> &mut Self::Inner {
+        // This transmutes the value into the inner type through `cast()`. Types that implement this
+        // trait guarantee that we can transmute between them and their inner type, so this is okay.
+        //
+        // SAFETY: Dereferencing the pointer is allowed because of this transmutability.
+        unsafe { &mut *(self as *mut Self).cast::<Self::Inner>() }
+    }
+
+    #[allow(dead_code)]
+    #[must_use]
+    fn as_ptr(&self) -> *const Self::Inner {
+        // This transmutes the value into the inner type through `cast()`. Types that implement this
+        // trait guarantee that we can transmute between them and their inner type, so this is okay.
+        (self as *const Self).cast::<Self::Inner>()
+    }
+
+    #[allow(dead_code)]
+    #[must_use]
+    fn as_mut_ptr(&mut self) -> *mut Self::Inner {
+        // This transmutes the value into the inner type through `cast()`. Types that implement this
+        // trait guarantee that we can transmute between them and their inner type, so this is okay.
+        (self as *mut Self).cast::<Self::Inner>()
+    }
+
     fn data_type_ref() -> &'static open62541_sys::UA_DataType {
         unsafe { Self::data_type().as_ref() }.unwrap()
     }

@@ -59,38 +59,14 @@ macro_rules! data_type {
 
                 let result = unsafe {
                     open62541_sys::UA_copy(
-                        std::ptr::addr_of!(*src).cast(),
-                        std::ptr::addr_of_mut!(dst).cast(),
+                        (src as *const open62541_sys::$inner).cast::<std::ffi::c_void>(),
+                        std::ptr::addr_of_mut!(dst).cast::<std::ffi::c_void>(),
                         Self::data_type(),
                     )
                 };
                 assert_eq!(result, open62541_sys::UA_STATUSCODE_GOOD);
 
                 Self(dst)
-            }
-
-            #[allow(dead_code)]
-            #[must_use]
-            pub(crate) const fn as_ref(&self) -> &open62541_sys::$inner {
-                &self.0
-            }
-
-            #[allow(dead_code)]
-            #[must_use]
-            pub(crate) fn as_mut(&mut self) -> &mut open62541_sys::$inner {
-                &mut self.0
-            }
-
-            #[allow(dead_code)]
-            #[must_use]
-            pub(crate) const fn as_ptr(&self) -> *const open62541_sys::$inner {
-                std::ptr::addr_of!(self.0)
-            }
-
-            #[allow(dead_code)]
-            #[must_use]
-            pub(crate) fn as_mut_ptr(&mut self) -> *mut open62541_sys::$inner {
-                std::ptr::addr_of_mut!(self.0)
             }
 
             #[allow(dead_code)]
@@ -109,7 +85,7 @@ macro_rules! data_type {
                 // it, no matter how deeply nested.
                 unsafe {
                     open62541_sys::UA_clear(
-                        std::ptr::addr_of_mut!(self.0).cast(),
+                        std::ptr::addr_of_mut!(self.0).cast::<std::ffi::c_void>(),
                         Self::data_type(),
                     )
                 }
@@ -123,7 +99,10 @@ macro_rules! data_type {
                     std::mem::MaybeUninit::<open62541_sys::$inner>::zeroed().assume_init()
                 };
                 unsafe {
-                    open62541_sys::UA_init(std::ptr::addr_of_mut!(inner).cast(), Self::data_type())
+                    open62541_sys::UA_init(
+                        std::ptr::addr_of_mut!(inner).cast::<std::ffi::c_void>(),
+                        Self::data_type(),
+                    )
                 };
                 Self(inner)
             }

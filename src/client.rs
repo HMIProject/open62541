@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::{c_void, CString};
 
 use log::info;
 use open62541_sys::{
@@ -7,7 +7,7 @@ use open62541_sys::{
     __UA_Client_readAttribute, UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_NODEID, UA_TYPES_VARIANT,
 };
 
-use crate::{ua, Error};
+use crate::{ua, DataType, Error};
 
 /// Builder for [`Client`].
 ///
@@ -113,7 +113,7 @@ impl Client {
                 self.0.as_mut_ptr(),
                 node_id.as_ptr(),
                 UA_AttributeId_UA_ATTRIBUTEID_NODEID,
-                output.as_mut_ptr().cast(),
+                output.as_mut_ptr().cast::<c_void>(),
                 data_type,
             )
         };
@@ -139,7 +139,7 @@ impl Client {
                 self.0.as_mut_ptr(),
                 node_id.as_ptr(),
                 UA_AttributeId_UA_ATTRIBUTEID_VALUE,
-                output.as_mut_ptr().cast(),
+                output.as_mut_ptr().cast::<c_void>(),
                 data_type,
             )
         };
