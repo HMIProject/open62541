@@ -3,7 +3,7 @@ use std::{ffi::CStr, fmt};
 use open62541_sys::{UA_StatusCode, UA_StatusCode_name};
 
 /// Wrapper for [`UA_StatusCode`] from [`open62541_sys`].
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct StatusCode(UA_StatusCode);
 
 impl StatusCode {
