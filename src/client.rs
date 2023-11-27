@@ -9,10 +9,14 @@ use open62541_sys::{
 
 use crate::ua;
 
+/// Builder for [`Client`].
+///
+/// Use this to specify additional options before connecting to OPC UA endpoint.
 #[allow(clippy::module_name_repetitions)]
 pub struct ClientBuilder(ua::Client);
 
 impl ClientBuilder {
+    #[must_use]
     pub fn new() -> Option<Self> {
         let mut ua_client = ua::Client::new()?;
 
@@ -28,6 +32,7 @@ impl ClientBuilder {
         Some(Self(ua_client))
     }
 
+    #[must_use]
     pub fn connect(mut self, endpoint_url: &str) -> Option<Client> {
         info!("Connecting to endpoint {endpoint_url}");
 
@@ -43,6 +48,16 @@ impl ClientBuilder {
     }
 }
 
+/// OPC UA client.
+///
+/// This represents an OPC UA client connected to a specific endpoint. Once a client is connected to
+/// an endpoint, it is not possible to switch to another server. Create a new client for that.
+///
+/// Once a connection to the given endpoint is established, the client keeps the connection open and
+/// reconnects if necessary.
+///
+/// If the connection fails unrecoverably, the client is no longer usable. In this case create a new
+/// client if required.
 pub struct Client(ua::Client);
 
 impl Client {
