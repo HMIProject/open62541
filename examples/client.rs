@@ -1,6 +1,12 @@
 use anyhow::Context;
 use open62541::{ua, Client};
-use open62541_sys::UA_AttributeId_UA_ATTRIBUTEID_VALUE;
+use open62541_sys::{
+    UA_AttributeId_UA_ATTRIBUTEID_VALUE, UA_NS0ID_SERVER_SERVERSTATUS,
+    UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
+    UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME,
+    UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
+    UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME,
+};
 use simple_logger::SimpleLogger;
 
 fn main() -> anyhow::Result<()> {
@@ -9,28 +15,51 @@ fn main() -> anyhow::Result<()> {
     let mut client =
         Client::new("opc.tcp://opcuademo.sterfive.com:26543").with_context(|| "connect")?;
 
-    let node_id = ua::NodeId::new_numeric(0, 2256);
+    read_single_value(
+        &mut client,
+        &ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS),
+    )?;
 
-    println!("Reading attributes from node ID {node_id:?}");
+    read_multiple_values(
+        &mut client,
+        &[
+            ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME),
+            ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME),
+            ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME),
+            ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME),
+            ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE),
+        ],
+    )?;
 
-    let read_node_id = client
-        .read_node_id(&node_id)
-        .with_context(|| "read node ID")?;
-    let read_value = client.read_value(&node_id).with_context(|| "read value")?;
+    Ok(())
+}
 
-    println!("node ID: {read_node_id:?}");
-    println!("value: {read_value:?}");
+fn read_single_value(client: &mut Client, node_id: &ua::NodeId) -> anyhow::Result<()> {
+    let value = client.read_value(&node_id).with_context(|| "read value")?;
 
-    let nodes_to_read = ua::ReadValueId::default()
-        .attribute_id(UA_AttributeId_UA_ATTRIBUTEID_VALUE)
-        .node_id(&read_node_id);
+    println!("Got value from {node_id:?}: {value:?}");
 
-    let request = ua::ReadRequest::default().nodes_to_read(&[nodes_to_read]);
+    Ok(())
+}
 
-    let result = client.read(request).with_context(|| "read")?;
+fn read_multiple_values(client: &mut Client, node_ids: &[ua::NodeId]) -> anyhow::Result<()> {
+    let nodes_to_read: Vec<_> = node_ids
+        .iter()
+        .map(|node_id| {
+            ua::ReadValueId::default()
+                .attribute_id(UA_AttributeId_UA_ATTRIBUTEID_VALUE)
+                .node_id(node_id)
+        })
+        .collect();
 
-    for value in result.results().iter() {
-        println!("{:?}", value.value());
+    let request = ua::ReadRequest::default().nodes_to_read(&nodes_to_read);
+
+    let result = client.read(request).with_context(|| "read")?.results();
+
+    println!("Got {} values from node IDs:", result.len());
+
+    for (node_id, value) in node_ids.iter().zip(result.iter()) {
+        println!("- {node_id:?} -> {:?}", value.value());
     }
 
     Ok(())
