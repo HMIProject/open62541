@@ -113,7 +113,7 @@ macro_rules! data_type {
             /// wrapper will make sure of this.
             #[allow(dead_code)]
             #[must_use]
-            pub(crate) fn new_from(src: &open62541_sys::$inner) -> Self {
+            pub(crate) fn from_ref(src: &open62541_sys::$inner) -> Self {
                 // `UA_copy()` does not clean up the target before copying into it, so we may use an
                 // uninitialized slice of memory here.
                 let mut dst = unsafe {
@@ -173,7 +173,7 @@ macro_rules! data_type {
 
         impl Clone for $name {
             fn clone(&self) -> Self {
-                Self::new_from(&self.0)
+                Self::from_ref(&self.0)
             }
         }
 

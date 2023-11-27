@@ -84,6 +84,23 @@ impl<T: DataType> Array<T> {
         }
     }
 
+    /// Crates new array by copying existing raw parts.
+    ///
+    /// This may be used when items need to be copied out of a structure with attributes for pointer
+    /// and size of the included array.
+    ///
+    /// # Panics
+    ///
+    /// Enough memory must be available to allocate array.
+    #[allow(private_interfaces)]
+    #[must_use]
+    pub fn from_raw_parts(ptr: *const T::Inner, size: usize) -> Self {
+        // Here we transmute the pointed-to elements from `T::Inner` to `T`. This is allowed because
+        // `T` implements the trait `DataType`.
+        let slice = unsafe { slice::from_raw_parts(ptr.cast::<T>(), size) };
+        Self::from_slice(slice)
+    }
+
     #[allow(private_interfaces)]
     #[must_use]
     pub fn as_slice(&self) -> &[T] {
