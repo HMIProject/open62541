@@ -221,13 +221,18 @@ impl Client {
     /// # Errors
     ///
     /// This fails when the request cannot be served.
-    pub fn create_data_change(
+    pub fn create_data_change<F: Fn(ua::DataValue) + 'static>(
         &mut self,
         subscription_id: SubscriptionId,
         item: ua::MonitoredItemCreateRequest,
+        callback: F,
     ) -> Result<ua::MonitoredItemCreateResult, Error> {
         // TODO: Allow setting this.
         let timestamps_to_return = UA_TimestampsToReturn_UA_TIMESTAMPSTORETURN_BOTH;
+
+        let callback = CallbackFn(Box::new(callback));
+        let callback_box = Box::new(callback);
+        let callback_ptr = Box::into_raw(callback_box);
 
         let result = unsafe {
             UA_Client_MonitoredItems_createDataChange(
@@ -235,16 +240,49 @@ impl Client {
                 subscription_id.0,
                 timestamps_to_return,
                 item.into_inner(),
-                ptr::null_mut(),
-                None,
-                None,
+                callback_ptr.cast::<c_void>(),
+                Some(extern_callback),
+                Some(extern_delete),
             )
         };
         if result.statusCode != UA_STATUSCODE_GOOD {
             return Err(Error::new(result.statusCode));
         }
 
-        // TODO: Return response.
         Ok(ua::MonitoredItemCreateResult::new(result))
     }
+}
+
+struct CallbackFn(Box<dyn Fn(ua::DataValue)>);
+
+extern "C" fn extern_callback(
+    _client: *mut open62541_sys::UA_Client,
+    _sub_id: open62541_sys::UA_UInt32,
+    _sub_context: *mut c_void,
+    _mon_id: open62541_sys::UA_UInt32,
+    mon_context: *mut c_void,
+    value: *mut open62541_sys::UA_DataValue,
+) {
+    let callback_ptr = mon_context.cast::<CallbackFn>();
+    let callback_box = unsafe { Box::from_raw(callback_ptr) };
+
+    if let Some(value) = unsafe { value.as_ref() } {
+        callback_box.0(ua::DataValue::from_ref(value));
+    }
+
+    let callback_ptr = Box::into_raw(callback_box);
+    debug_assert_eq!(callback_ptr.cast::<c_void>(), mon_context);
+}
+
+extern "C" fn extern_delete(
+    _client: *mut open62541_sys::UA_Client,
+    _sub_id: open62541_sys::UA_UInt32,
+    _sub_context: *mut c_void,
+    _mon_id: open62541_sys::UA_UInt32,
+    mon_context: *mut c_void,
+) {
+    let callback_ptr = mon_context.cast::<CallbackFn>();
+    let callback_box = unsafe { Box::from_raw(callback_ptr) };
+
+    drop(callback_box);
 }

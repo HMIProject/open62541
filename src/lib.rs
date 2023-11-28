@@ -9,5 +9,5 @@ pub use self::{
     error::Error,
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct SubscriptionId(u32);
