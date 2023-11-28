@@ -8,7 +8,7 @@ crate::data_type!(ReadValueId, UA_ReadValueId, UA_TYPES_READVALUEID);
 
 impl ReadValueId {
     #[must_use]
-    pub fn node_id(mut self, node_id: &ua::NodeId) -> Self {
+    pub fn with_node_id(mut self, node_id: &ua::NodeId) -> Self {
         let node_id = node_id.clone();
 
         // Make sure to properly clean up any previous node ID here.
@@ -19,7 +19,7 @@ impl ReadValueId {
     }
 
     #[must_use]
-    pub fn attribute_id(mut self, attribute_id: u32) -> Self {
+    pub fn with_attribute_id(mut self, attribute_id: u32) -> Self {
         self.0.attributeId = attribute_id;
         self
     }

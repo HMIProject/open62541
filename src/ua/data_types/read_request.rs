@@ -4,7 +4,7 @@ crate::data_type!(ReadRequest, UA_ReadRequest, UA_TYPES_READREQUEST);
 
 impl ReadRequest {
     #[must_use]
-    pub fn nodes_to_read(mut self, nodes_to_read: &[ua::ReadValueId]) -> Self {
+    pub fn with_nodes_to_read(mut self, nodes_to_read: &[ua::ReadValueId]) -> Self {
         let array = ua::Array::from_slice(nodes_to_read);
 
         // This transfers ownership from local variable `array` into `self`.

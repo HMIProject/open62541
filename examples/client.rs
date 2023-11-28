@@ -47,12 +47,12 @@ fn read_multiple_values(client: &mut Client, node_ids: &[ua::NodeId]) -> anyhow:
         .iter()
         .map(|node_id| {
             ua::ReadValueId::default()
-                .attribute_id(UA_AttributeId_UA_ATTRIBUTEID_VALUE)
-                .node_id(node_id)
+                .with_attribute_id(UA_AttributeId_UA_ATTRIBUTEID_VALUE)
+                .with_node_id(node_id)
         })
         .collect();
 
-    let request = ua::ReadRequest::default().nodes_to_read(&nodes_to_read);
+    let request = ua::ReadRequest::default().with_nodes_to_read(&nodes_to_read);
 
     let result = client.read(request).with_context(|| "read")?.results();
     let result = result.as_slice();
