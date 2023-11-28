@@ -6,12 +6,13 @@ use std::{
 use log::info;
 use open62541_sys::{
     UA_AttributeId_UA_ATTRIBUTEID_NODEID, UA_AttributeId_UA_ATTRIBUTEID_VALUE,
-    UA_ClientConfig_setDefault, UA_Client_Service_read, UA_Client_Subscriptions_create,
-    UA_Client_Subscriptions_delete, UA_Client_connect, UA_Client_getConfig,
+    UA_ClientConfig_setDefault, UA_Client_MonitoredItems_createDataChange, UA_Client_Service_read,
+    UA_Client_Subscriptions_create, UA_Client_Subscriptions_delete, UA_Client_connect,
+    UA_Client_getConfig, UA_Client_run_iterate, UA_TimestampsToReturn_UA_TIMESTAMPSTORETURN_BOTH,
     __UA_Client_readAttribute, UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_NODEID, UA_TYPES_VARIANT,
 };
 
-use crate::{ua, DataType, Error};
+use crate::{ua, DataType, Error, SubscriptionId};
 
 /// Builder for [`Client`].
 ///
@@ -86,6 +87,26 @@ impl Client {
     /// See [`ClientBuilder::connect()`].
     pub fn new(endpoint_url: &str) -> Result<Self, Error> {
         ClientBuilder::default().connect(endpoint_url)
+    }
+
+    /// Run event loop iteration.
+    ///
+    /// This should be called periodically to process background events and trigger callbacks when a
+    /// message arrives asynchronously.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the request cannot be served.
+    pub fn run_iterate(&mut self) -> Result<(), Error> {
+        // TODO: Allow setting this.
+        let timeout = 500;
+
+        let result = unsafe { UA_Client_run_iterate(self.0.as_mut_ptr(), timeout) };
+        if result != UA_STATUSCODE_GOOD {
+            return Err(Error::new(result));
+        }
+
+        Ok(())
     }
 
     /// Read data from server.
@@ -193,5 +214,37 @@ impl Client {
         }
 
         Ok(ua::DeleteSubscriptionsResponse::new(response))
+    }
+
+    /// Watch monitored item for data change.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the request cannot be served.
+    pub fn create_data_change(
+        &mut self,
+        subscription_id: SubscriptionId,
+        item: ua::MonitoredItemCreateRequest,
+    ) -> Result<ua::MonitoredItemCreateResult, Error> {
+        // TODO: Allow setting this.
+        let timestamps_to_return = UA_TimestampsToReturn_UA_TIMESTAMPSTORETURN_BOTH;
+
+        let result = unsafe {
+            UA_Client_MonitoredItems_createDataChange(
+                self.0.as_mut_ptr(),
+                subscription_id.0,
+                timestamps_to_return,
+                item.into_inner(),
+                ptr::null_mut(),
+                None,
+                None,
+            )
+        };
+        if result.statusCode != UA_STATUSCODE_GOOD {
+            return Err(Error::new(result.statusCode));
+        }
+
+        // TODO: Return response.
+        Ok(ua::MonitoredItemCreateResult::new(result))
     }
 }

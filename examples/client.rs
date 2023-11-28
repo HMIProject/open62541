@@ -83,10 +83,22 @@ fn subscribe_single_value(client: &mut Client, node_id: &ua::NodeId) -> anyhow::
 
     println!("CreateSubscription response: {create_res:?}");
 
+    client.run_iterate().with_context(|| "run iterate")?;
+
+    {
+        let mon_req = ua::MonitoredItemCreateRequest::init_node_id(node_id.clone());
+
+        println!("MonitoredItemCreate request: {mon_req:?}");
+
+        let mon_res = client.create_data_change(create_res.subscription_id(), mon_req)?;
+
+        println!("MonitoredItemCreate result: {mon_res:?}");
+    }
+
+    client.run_iterate().with_context(|| "run iterate")?;
+
     let delete_req = ua::DeleteSubscriptionsRequest::init()
         .with_subscription_ids(&[create_res.subscription_id()]);
-
-    // TODO: Subscribe `node_id`.
 
     println!("DeleteSubscriptions request: {delete_req:?}");
 

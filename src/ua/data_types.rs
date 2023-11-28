@@ -5,6 +5,8 @@ mod create_subscription_respones;
 mod data_value;
 mod delete_subscriptions_request;
 mod delete_subscriptions_response;
+mod monitored_item_create_request;
+mod monitored_item_create_result;
 mod node_id;
 mod read_request;
 mod read_response;
@@ -17,7 +19,9 @@ pub use self::{
     create_subscription_request::CreateSubscriptionRequest,
     create_subscription_respones::CreateSubscriptionResponse, data_value::DataValue,
     delete_subscriptions_request::DeleteSubscriptionsRequest,
-    delete_subscriptions_response::DeleteSubscriptionsResponse, node_id::NodeId,
+    delete_subscriptions_response::DeleteSubscriptionsResponse,
+    monitored_item_create_request::MonitoredItemCreateRequest,
+    monitored_item_create_result::MonitoredItemCreateResult, node_id::NodeId,
     read_request::ReadRequest, read_response::ReadResponse, read_value_id::ReadValueId,
     string::String, uint32::Uint32, variant::Variant,
 };
