@@ -54,12 +54,13 @@ fn read_multiple_values(client: &mut Client, node_ids: &[ua::NodeId]) -> anyhow:
 
     let request = ua::ReadRequest::init().with_nodes_to_read(&nodes_to_read);
 
-    let result = client.read(request).with_context(|| "read")?.results();
-    let result = result.as_slice();
+    let response = client.read(request).with_context(|| "read from client")?;
+    let results = response.results().with_context(|| "get read results")?;
+    let results = results.as_slice();
 
-    println!("Got {} values from node IDs:", result.len());
+    println!("Got {} values from node IDs:", results.len());
 
-    for (node_id, value) in node_ids.iter().zip(result.iter()) {
+    for (node_id, value) in node_ids.iter().zip(results.iter()) {
         println!("- {node_id} -> {:?}", value.value());
     }
 

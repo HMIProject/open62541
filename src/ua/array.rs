@@ -10,6 +10,15 @@ use crate::DataType;
 ///
 /// This owns the wrapped data type. When the wrapper is dropped, its inner value is cleaned up with
 /// [`UA_Array_delete()`] which also recursively cleans up all contained elements in the array.
+///
+/// Arrays in OPC UA can be in one of three states:
+///
+/// 1. Regular arrays with one or more elements
+/// 2. Empty arrays of length zero
+/// 3. Undefined arrays
+///
+/// This type tracks only the first two kinds of arrays. Thus when converting from raw parts, we may
+/// return `None` to indicate that the given array is not defined.
 #[allow(private_bounds)]
 pub struct Array<T: DataType>(State<T>);
 
@@ -17,7 +26,7 @@ pub struct Array<T: DataType>(State<T>);
 ///
 /// This tracks whether the array contains any elements at all. Without elements, [`UA_Array_new()`]
 /// would not return a pointer but the sentinel value [`UA_EMPTY_ARRAY_SENTINEL_`]. We do not handle
-/// the implications of this (mostly non-alignedness) and use explicit separate states instead.
+/// these implications (mostly non-alignedness) but track these states explicitly instead.
 enum State<T: DataType> {
     /// Array of length `0`.
     Empty,
@@ -131,21 +140,30 @@ impl<T: DataType> Array<T> {
     /// Enough memory must be available to allocate array.
     #[allow(private_interfaces)]
     #[must_use]
-    pub fn from_raw_parts(ptr: *const T::Inner, size: usize) -> Self {
+    pub(crate) fn from_raw_parts(ptr: *const T::Inner, size: usize) -> Option<Self> {
         if size == 0 {
+            if ptr.is_null() {
+                // This indicates an undefined array of unknow length. We do not handle this in this
+                // type but return `None` instead.
+                return None;
+            }
+            // Otherwise, we expect the sentinel value to indicate an empty array of length 0. This,
+            // we do handle and may return `Some`.
             debug_assert_eq!(ptr.cast::<c_void>(), unsafe { UA_EMPTY_ARRAY_SENTINEL_ });
-            return Self(State::Empty);
+            return Some(Self(State::Empty));
         }
 
         // We require a proper pointer for safe operation (even when we do not access the pointed-to
         // memory region at all, cf. documentation of `from_raw_parts()`).
+        debug_assert!(!ptr.is_null());
         debug_assert_ne!(ptr.cast::<c_void>(), unsafe { UA_EMPTY_ARRAY_SENTINEL_ });
+
         // Here we transmute the pointed-to elements from `T::Inner` to `T`. This is allowed because
         // `T` implements the trait `DataType`.
         //
         // SAFETY: `size` is non-zero, `array` is a valid pointer (not `UA_EMPTY_ARRAY_SENTINEL_`).
         let slice = unsafe { slice::from_raw_parts(ptr.cast::<T>(), size) };
-        Self::from_slice(slice)
+        Some(Self::from_slice(slice))
     }
 
     #[allow(private_interfaces)]
@@ -202,7 +220,10 @@ impl<T: DataType> Array<T> {
 impl<T: DataType> Drop for Array<T> {
     fn drop(&mut self) {
         match self.0 {
-            State::Empty => {}
+            State::Empty => {
+                // For empty arrays without allocation, we don't need to do anything here.
+            }
+
             State::NonEmpty { ptr, size } => {
                 // `UA_Array_delete()` frees the heap-allocated array, along with any memory held by
                 // the array elements.
