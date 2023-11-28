@@ -59,7 +59,7 @@ pub(crate) unsafe trait DataType {
 
     #[must_use]
     fn print(&self) -> Option<ua::String> {
-        let mut output = ua::String::default();
+        let mut output = ua::String::init();
 
         let result = unsafe {
             UA_print(
@@ -96,6 +96,22 @@ macro_rules! data_type {
         );
 
         impl $name {
+            /// Creates wrapper initialized with defaults.
+            #[allow(dead_code)]
+            #[must_use]
+            pub fn init() -> Self {
+                let mut inner = unsafe {
+                    std::mem::MaybeUninit::<open62541_sys::$inner>::zeroed().assume_init()
+                };
+                unsafe {
+                    open62541_sys::UA_init(
+                        std::ptr::addr_of_mut!(inner).cast::<std::ffi::c_void>(),
+                        <Self as crate::DataType>::data_type(),
+                    )
+                };
+                Self(inner)
+            }
+
             /// Creates wrapper by taking ownership of `src`.
             #[allow(dead_code)]
             #[must_use]
@@ -157,22 +173,6 @@ macro_rules! data_type {
                         <Self as crate::DataType>::data_type(),
                     )
                 }
-            }
-        }
-
-        impl Default for $name {
-            /// Creates wrapper initialized with defaults.
-            fn default() -> Self {
-                let mut inner = unsafe {
-                    std::mem::MaybeUninit::<open62541_sys::$inner>::zeroed().assume_init()
-                };
-                unsafe {
-                    open62541_sys::UA_init(
-                        std::ptr::addr_of_mut!(inner).cast::<std::ffi::c_void>(),
-                        <Self as crate::DataType>::data_type(),
-                    )
-                };
-                Self(inner)
             }
         }
 

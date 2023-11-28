@@ -91,7 +91,6 @@ impl Client {
     /// This fails when the request cannot be served.
     pub fn read(&mut self, request: ua::ReadRequest) -> Result<ua::ReadResponse, Error> {
         let response = unsafe { UA_Client_Service_read(self.0.as_mut_ptr(), request.into_inner()) };
-
         if response.responseHeader.serviceResult != UA_STATUSCODE_GOOD {
             return Err(Error::new(response.responseHeader.serviceResult));
         }
@@ -105,7 +104,7 @@ impl Client {
     ///
     /// This fails when the node does not exist or the node ID attribute cannot be read.
     pub fn read_node_id(&mut self, node_id: &ua::NodeId) -> Result<ua::NodeId, Error> {
-        let mut output = ua::NodeId::default();
+        let mut output = ua::NodeId::init();
         let data_type = unsafe { &UA_TYPES[UA_TYPES_NODEID as usize] };
 
         let result = unsafe {
@@ -117,7 +116,6 @@ impl Client {
                 data_type,
             )
         };
-
         if result != UA_STATUSCODE_GOOD {
             return Err(Error::new(result));
         }
@@ -131,7 +129,7 @@ impl Client {
     ///
     /// This fails when the node does not exist or the value attribute cannot be read.
     pub fn read_value(&mut self, node_id: &ua::NodeId) -> Result<ua::Variant, Error> {
-        let mut output = ua::Variant::default();
+        let mut output = ua::Variant::init();
         let data_type = unsafe { &UA_TYPES[UA_TYPES_VARIANT as usize] };
 
         let result = unsafe {
@@ -143,7 +141,6 @@ impl Client {
                 data_type,
             )
         };
-
         if result != UA_STATUSCODE_GOOD {
             return Err(Error::new(result));
         }
