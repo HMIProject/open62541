@@ -31,6 +31,11 @@ fn main() -> anyhow::Result<()> {
         ],
     )?;
 
+    subscribe_single_value(
+        &mut client,
+        &ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME),
+    )?;
+
     Ok(())
 }
 
@@ -63,6 +68,33 @@ fn read_multiple_values(client: &mut Client, node_ids: &[ua::NodeId]) -> anyhow:
     for (node_id, value) in node_ids.iter().zip(results.iter()) {
         println!("- {node_id} -> {:?}", value.value());
     }
+
+    Ok(())
+}
+
+fn subscribe_single_value(client: &mut Client, node_id: &ua::NodeId) -> anyhow::Result<()> {
+    let create_req = ua::CreateSubscriptionRequest::default();
+
+    println!("CreateSubscription request: {create_req:?}");
+
+    let create_res = client
+        .create_subscription(create_req)
+        .with_context(|| "create subscription")?;
+
+    println!("CreateSubscription response: {create_res:?}");
+
+    let delete_req = ua::DeleteSubscriptionsRequest::init()
+        .with_subscription_ids(&[create_res.subscription_id()]);
+
+    // TODO: Subscribe `node_id`.
+
+    println!("DeleteSubscriptions request: {delete_req:?}");
+
+    let delete_res = client
+        .delete_subscriptions(delete_req)
+        .with_context(|| "delete subscriptions")?;
+
+    println!("DeleteSubscriptions response: {delete_res:?}");
 
     Ok(())
 }

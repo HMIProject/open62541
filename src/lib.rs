@@ -8,3 +8,5 @@ pub use self::{
     client::{Client, ClientBuilder},
     error::Error,
 };
+
+pub struct SubscriptionId(u32);

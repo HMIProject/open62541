@@ -1,9 +1,13 @@
-use std::ffi::{c_void, CString};
+use std::{
+    ffi::{c_void, CString},
+    ptr,
+};
 
 use log::info;
 use open62541_sys::{
     UA_AttributeId_UA_ATTRIBUTEID_NODEID, UA_AttributeId_UA_ATTRIBUTEID_VALUE,
-    UA_ClientConfig_setDefault, UA_Client_Service_read, UA_Client_connect, UA_Client_getConfig,
+    UA_ClientConfig_setDefault, UA_Client_Service_read, UA_Client_Subscriptions_create,
+    UA_Client_Subscriptions_delete, UA_Client_connect, UA_Client_getConfig,
     __UA_Client_readAttribute, UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_NODEID, UA_TYPES_VARIANT,
 };
 
@@ -146,5 +150,48 @@ impl Client {
         }
 
         Ok(output)
+    }
+
+    /// Create subscription.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the request cannot be served.
+    pub fn create_subscription(
+        &mut self,
+        request: ua::CreateSubscriptionRequest,
+    ) -> Result<ua::CreateSubscriptionResponse, Error> {
+        let response = unsafe {
+            UA_Client_Subscriptions_create(
+                self.0.as_mut_ptr(),
+                request.into_inner(),
+                ptr::null_mut(),
+                None,
+                None,
+            )
+        };
+        if response.responseHeader.serviceResult != UA_STATUSCODE_GOOD {
+            return Err(Error::new(response.responseHeader.serviceResult));
+        }
+
+        Ok(ua::CreateSubscriptionResponse::new(response))
+    }
+
+    /// Delete subscriptions.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the request cannot be served.
+    pub fn delete_subscriptions(
+        &mut self,
+        request: ua::DeleteSubscriptionsRequest,
+    ) -> Result<ua::DeleteSubscriptionsResponse, Error> {
+        let response =
+            unsafe { UA_Client_Subscriptions_delete(self.0.as_mut_ptr(), request.into_inner()) };
+        if response.responseHeader.serviceResult != UA_STATUSCODE_GOOD {
+            return Err(Error::new(response.responseHeader.serviceResult));
+        }
+
+        Ok(ua::DeleteSubscriptionsResponse::new(response))
     }
 }
