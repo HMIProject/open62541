@@ -1,5 +1,12 @@
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    sync::mpsc::{self, RecvTimeoutError},
+    time::Duration,
+};
+
 use anyhow::Context;
-use open62541::{ua, Client};
+use open62541::{ua, Client, Error, MonitoredItem, Subscription};
 use open62541_sys::{
     UA_AttributeId_UA_ATTRIBUTEID_VALUE, UA_NS0ID_SERVER_SERVERSTATUS,
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
@@ -12,16 +19,17 @@ use simple_logger::SimpleLogger;
 fn main() -> anyhow::Result<()> {
     SimpleLogger::new().init().unwrap();
 
-    let mut client =
-        Client::new("opc.tcp://opcuademo.sterfive.com:26543").with_context(|| "connect")?;
+    let client = Rc::new(RefCell::new(
+        Client::new("opc.tcp://opcuademo.sterfive.com:26543").with_context(|| "connect")?,
+    ));
 
     read_single_value(
-        &mut client,
+        &mut client.borrow_mut(),
         &ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS),
     )?;
 
     read_multiple_values(
-        &mut client,
+        &mut client.borrow_mut(),
         &[
             ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME),
             ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME),
@@ -31,8 +39,13 @@ fn main() -> anyhow::Result<()> {
         ],
     )?;
 
-    subscribe_single_value(
-        &mut client,
+    subscribe_single_value_raw(
+        &mut client.borrow_mut(),
+        &ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME),
+    )?;
+
+    subscribe_single_value_helpers(
+        &client,
         &ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME),
     )?;
 
@@ -72,7 +85,7 @@ fn read_multiple_values(client: &mut Client, node_ids: &[ua::NodeId]) -> anyhow:
     Ok(())
 }
 
-fn subscribe_single_value(client: &mut Client, node_id: &ua::NodeId) -> anyhow::Result<()> {
+fn subscribe_single_value_raw(client: &mut Client, node_id: &ua::NodeId) -> anyhow::Result<()> {
     let create_req = ua::CreateSubscriptionRequest::default();
 
     println!("CreateSubscription request: {create_req:?}");
@@ -112,4 +125,39 @@ fn subscribe_single_value(client: &mut Client, node_id: &ua::NodeId) -> anyhow::
     println!("DeleteSubscriptions response: {delete_res:?}");
 
     Ok(())
+}
+
+fn subscribe_single_value_helpers(
+    client: &Rc<RefCell<Client>>,
+    node_id: &ua::NodeId,
+) -> anyhow::Result<()> {
+    let subscription = Subscription::new(client)?;
+
+    let monitored_item = MonitoredItem::new(&subscription, node_id)?;
+
+    while let Some(value) = recv_with_iterate(client, monitored_item.rx())? {
+        println!("{node_id} -> {value}");
+    }
+
+    Ok(())
+}
+
+fn recv_with_iterate(
+    client: &Rc<RefCell<Client>>,
+    rx: &mpsc::Receiver<ua::DataValue>,
+) -> Result<Option<ua::DataValue>, Error> {
+    loop {
+        match rx.recv_timeout(Duration::from_millis(50)) {
+            Ok(value) => {
+                return Ok(Some(value));
+            }
+            Err(RecvTimeoutError::Disconnected) => {
+                return Ok(None);
+            }
+            Err(RecvTimeoutError::Timeout) => {
+                client.borrow_mut().run_iterate()?;
+                continue;
+            }
+        };
+    }
 }
