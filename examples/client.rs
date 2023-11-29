@@ -135,8 +135,14 @@ fn subscribe_single_value_helpers(
 
     let monitored_item = MonitoredItem::new(&subscription, node_id)?;
 
+    let mut count = 0;
+
     while let Some(value) = recv_with_iterate(client, monitored_item.rx())? {
         println!("{node_id} -> {value}");
+        count += 1;
+        if count >= 4 {
+            break;
+        }
     }
 
     Ok(())
