@@ -95,6 +95,7 @@ impl Client {
     /// Turns client into [`AsyncClient`].
     ///
     /// The [`AsyncClient`] can be used to access methods in an asynchronous way.
+    #[must_use]
     #[cfg(feature = "tokio")]
     pub fn into_async(self) -> AsyncClient {
         AsyncClient::from_sync(self.0)

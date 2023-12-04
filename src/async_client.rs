@@ -63,8 +63,6 @@ impl AsyncClient {
     }
 
     pub async fn read_value(&self, node_id: ua::NodeId) -> Result<ua::DataValue, Error> {
-        let (tx, rx) = oneshot::channel::<Result<ua::DataValue, Error>>();
-
         type Cb = CallbackOnce<(UA_StatusCode, ua::DataValue)>;
 
         unsafe extern "C" fn callback_c(
@@ -77,17 +75,19 @@ impl AsyncClient {
             Cb::execute(userdata, (status, ua::DataValue::from_ref(&*value)));
         }
 
+        let (tx, rx) = oneshot::channel::<Result<ua::DataValue, Error>>();
+
         let callback = move |(status, value)| {
             debug!("Processing read value response");
 
-            if status != UA_STATUSCODE_GOOD {
-                // TODO: Do not panic here (FFI callback).
-                tx.send(Err(Error::new(status))).unwrap();
-                return;
-            }
-
-            // TODO: Do not panic here (FFI callback).
-            tx.send(Ok(value)).unwrap();
+            // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do
+            // not care if that succeeds, however: the receiver might already have gone out of scope
+            // (when its future has been canceled) and we must not panic in FFI callbacks.
+            let _unused = if status == UA_STATUSCODE_GOOD {
+                tx.send(Ok(value))
+            } else {
+                tx.send(Err(Error::new(status)))
+            };
         };
 
         let result = {
@@ -108,8 +108,10 @@ impl AsyncClient {
             return Err(Error::new(result));
         }
 
-        // TODO: Handle channel error.
-        rx.await.unwrap()
+        // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. Thus, the
+        // sender is only dropped after placing a value into the channel and `rx.await` always finds
+        // this value there.
+        rx.await.expect("callback always sends value")
     }
 }
 
