@@ -13,6 +13,8 @@ use open62541_sys::{
     __UA_Client_readAttribute, UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_NODEID, UA_TYPES_VARIANT,
 };
 
+#[cfg(feature = "tokio")]
+use crate::AsyncClient;
 use crate::{ua, DataType, Error, SubscriptionId};
 
 /// Builder for [`Client`].
@@ -88,6 +90,14 @@ impl Client {
     /// See [`ClientBuilder::connect()`].
     pub fn new(endpoint_url: &str) -> Result<Self, Error> {
         ClientBuilder::default().connect(endpoint_url)
+    }
+
+    /// Turns client into [`AsyncClient`].
+    ///
+    /// The [`AsyncClient`] can be used to access methods in an asynchronous way.
+    #[cfg(feature = "tokio")]
+    pub fn into_async(self) -> AsyncClient {
+        AsyncClient::from_sync(self.0)
     }
 
     /// Run event loop iteration.

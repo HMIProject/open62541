@@ -8,6 +8,10 @@ use open62541_sys::{UA_Client, UA_Client_delete, UA_Client_new};
 /// [`UA_Client_delete()`].
 pub struct Client(NonNull<UA_Client>);
 
+// SAFETY: We know that the underlying `UA_Client` allows access from different threads (at least as
+// long as we do not call functions concurrently).
+unsafe impl Send for Client {}
+
 impl Client {
     #[allow(dead_code)]
     #[must_use]
