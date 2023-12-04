@@ -1,6 +1,5 @@
 use std::{
     ffi::c_void,
-    marker::PhantomData,
     ptr,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -17,7 +16,7 @@ use open62541_sys::{
 };
 use tokio::sync::oneshot;
 
-use crate::{ua, Error};
+use crate::{ua, CallbackOnce, Error};
 
 pub struct AsyncClient {
     client: Arc<Mutex<ua::Client>>,
@@ -64,45 +63,43 @@ impl AsyncClient {
     }
 
     pub async fn read_value(&self, node_id: ua::NodeId) -> Result<ua::DataValue, Error> {
-        type UserdataPkg = Package<Userdata>;
-        struct Userdata {
-            tx: oneshot::Sender<Result<ua::DataValue, Error>>,
-        }
-
         let (tx, rx) = oneshot::channel::<Result<ua::DataValue, Error>>();
 
-        unsafe extern "C" fn callback(
+        type Cb = CallbackOnce<(UA_StatusCode, ua::DataValue)>;
+
+        unsafe extern "C" fn callback_c(
             _client: *mut UA_Client,
             userdata: *mut c_void,
             _request_id: UA_UInt32,
             status: UA_StatusCode,
             value: *mut UA_DataValue,
         ) {
+            Cb::execute(userdata, (status, ua::DataValue::from_ref(&*value)));
+        }
+
+        let callback = move |(status, value)| {
             debug!("Processing read value response");
-            let userdata = UserdataPkg::recv(userdata);
 
             if status != UA_STATUSCODE_GOOD {
                 // TODO: Do not panic here (FFI callback).
-                userdata.tx.send(Err(Error::new(status))).unwrap();
+                tx.send(Err(Error::new(status))).unwrap();
                 return;
             }
 
-            let value = ua::DataValue::from_ref(&*value);
             // TODO: Do not panic here (FFI callback).
-            userdata.tx.send(Ok(value)).unwrap();
-        }
+            tx.send(Ok(value)).unwrap();
+        };
 
         let result = {
             debug!("Reading value attribute of {node_id}");
             let mut client = self.client.lock().unwrap();
-            let userdata = Userdata { tx };
 
             unsafe {
                 UA_Client_readValueAttribute_async(
                     client.as_mut_ptr(),
                     node_id.into_inner(),
-                    Some(callback),
-                    UserdataPkg::send(userdata),
+                    Some(callback_c),
+                    Cb::prepare(callback),
                     ptr::null_mut(),
                 )
             }
@@ -120,19 +117,5 @@ impl Drop for AsyncClient {
     fn drop(&mut self) {
         self.dropped.store(true, Ordering::Release);
         self.loop_handle.thread().unpark();
-    }
-}
-
-pub(crate) struct Package<T>(PhantomData<T>);
-
-impl<T> Package<T> {
-    pub fn send(value: T) -> *mut c_void {
-        let ptr: *mut T = Box::into_raw(Box::new(value));
-        ptr.cast::<c_void>()
-    }
-
-    pub fn recv(raw: *mut c_void) -> T {
-        let ptr: *mut T = raw.cast::<T>();
-        *unsafe { Box::from_raw(ptr) }
     }
 }

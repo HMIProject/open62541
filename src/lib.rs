@@ -1,5 +1,6 @@
 #[cfg(feature = "tokio")]
 mod async_client;
+mod callback;
 mod client;
 mod data_type;
 mod error;
@@ -9,7 +10,10 @@ pub mod ua;
 
 #[cfg(feature = "tokio")]
 pub use self::async_client::AsyncClient;
-pub(crate) use self::data_type::{data_type, DataType};
+pub(crate) use self::{
+    callback::CallbackOnce,
+    data_type::{data_type, DataType},
+};
 pub use self::{
     client::{Client, ClientBuilder},
     error::Error,
