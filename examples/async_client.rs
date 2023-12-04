@@ -1,5 +1,3 @@
-use std::{thread, time::Duration};
-
 use anyhow::Context;
 use futures::future;
 use log::debug;
@@ -12,7 +10,7 @@ use open62541_sys::{
 };
 use simple_logger::SimpleLogger;
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main]
 async fn main() -> anyhow::Result<()> {
     SimpleLogger::new().init().unwrap();
 
@@ -36,13 +34,12 @@ async fn main() -> anyhow::Result<()> {
         client.read_value(starttime),
     ])
     .await;
-
     println!("{results:?}");
+
+    let _subscription = client.create_subscription().await;
 
     debug!("Dropping client");
     drop(client);
-
-    thread::sleep(Duration::from_millis(1000));
 
     Ok(())
 }

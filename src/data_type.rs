@@ -163,6 +163,11 @@ macro_rules! data_type {
             }
         }
 
+        // SAFETY: The types in `open62541` can be sent across thread boundaries. Internally, all of
+        // the internal dynamic allocations contain only their own data (nothing is shared) and they
+        // need not be freed in the same thread where they were allocated.
+        unsafe impl Send for $name {}
+
         impl Drop for $name {
             fn drop(&mut self) {
                 // `UA_clear` resets the data structure, freeing any dynamically allocated memory in
