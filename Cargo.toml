@@ -3,11 +3,12 @@ name = "open62541"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.74.0"
+repository = "https://github.com/HMIProject/open62541.git"
 
 [dependencies]
 anyhow = "1.0.75"
 log = "0.4.20"
-open62541-sys = { git = "ssh://git@github.com/HMIProject/open62541-sys.git", branch = "main" }
+open62541-sys = { git = "https://github.com/HMIProject/open62541-sys.git", branch = "main" }
 thiserror = "1.0.50"
 
 [dev-dependencies]
