@@ -6,7 +6,8 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
     },
-    thread,
+    thread::{self, JoinHandle},
+    time::Duration,
 };
 
 use log::debug;
@@ -21,6 +22,7 @@ use crate::{ua, Error};
 pub struct AsyncClient {
     client: Arc<Mutex<ua::Client>>,
     dropped: Arc<AtomicBool>,
+    loop_handle: JoinHandle<()>,
 }
 
 impl AsyncClient {
@@ -28,7 +30,7 @@ impl AsyncClient {
         let client = Arc::new(Mutex::new(client));
         let dropped = Arc::new(AtomicBool::new(false));
 
-        {
+        let loop_handle = {
             let client = client.clone();
             let dropped = dropped.clone();
 
@@ -38,17 +40,27 @@ impl AsyncClient {
 
                     let result = {
                         let mut client = client.lock().unwrap();
-                        unsafe { UA_Client_run_iterate(client.as_mut_ptr(), 500) }
+                        // Timeout of 0 means we do not block here at all. We don't want to hold the
+                        // mutex longer than necessary (because that would block requests from being
+                        // sent out).
+                        unsafe { UA_Client_run_iterate(client.as_mut_ptr(), 0) }
                     };
                     if result != UA_STATUSCODE_GOOD {
                         break;
                     }
-                }
-                debug!("Finished iterate loop");
-            });
-        }
 
-        Self { client, dropped }
+                    thread::park_timeout(Duration::from_millis(100));
+                }
+
+                debug!("Finished iterate loop");
+            })
+        };
+
+        Self {
+            client,
+            dropped,
+            loop_handle,
+        }
     }
 
     pub async fn read_value(&self, node_id: ua::NodeId) -> Result<ua::DataValue, Error> {
@@ -107,6 +119,7 @@ impl AsyncClient {
 impl Drop for AsyncClient {
     fn drop(&mut self) {
         self.dropped.store(true, Ordering::Release);
+        self.loop_handle.thread().unpark();
     }
 }
 
