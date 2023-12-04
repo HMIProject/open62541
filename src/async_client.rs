@@ -1,5 +1,6 @@
 use std::{
     ffi::c_void,
+    marker::PhantomData,
     ptr,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -51,8 +52,12 @@ impl AsyncClient {
     }
 
     pub async fn read_value(&self, node_id: ua::NodeId) -> Result<ua::DataValue, Error> {
-        type Tx = oneshot::Sender<Result<ua::DataValue, Error>>;
-        let (tx, rx): (Tx, _) = oneshot::channel();
+        type UserdataPkg = Package<Userdata>;
+        struct Userdata {
+            tx: oneshot::Sender<Result<ua::DataValue, Error>>,
+        }
+
+        let (tx, rx) = oneshot::channel::<Result<ua::DataValue, Error>>();
 
         unsafe extern "C" fn callback(
             _client: *mut UA_Client,
@@ -62,30 +67,30 @@ impl AsyncClient {
             value: *mut UA_DataValue,
         ) {
             debug!("Processing read value response");
-            let tx = Box::from_raw(userdata.cast::<Tx>());
+            let userdata = UserdataPkg::recv(userdata);
 
             if status != UA_STATUSCODE_GOOD {
                 // TODO: Do not panic here (FFI callback).
-                tx.send(Err(Error::new(status))).unwrap();
+                userdata.tx.send(Err(Error::new(status))).unwrap();
                 return;
             }
 
             let value = ua::DataValue::from_ref(&*value);
             // TODO: Do not panic here (FFI callback).
-            tx.send(Ok(value)).unwrap();
+            userdata.tx.send(Ok(value)).unwrap();
         }
 
         let result = {
             debug!("Reading value attribute of {node_id}");
             let mut client = self.client.lock().unwrap();
-            let tx = Box::into_raw(Box::new(tx));
+            let userdata = Userdata { tx };
 
             unsafe {
                 UA_Client_readValueAttribute_async(
                     client.as_mut_ptr(),
                     node_id.into_inner(),
                     Some(callback),
-                    tx.cast::<c_void>(),
+                    UserdataPkg::send(userdata),
                     ptr::null_mut(),
                 )
             }
@@ -105,7 +110,7 @@ impl Drop for AsyncClient {
     }
 }
 
-pub(crate) struct Package<T>(Box<T>);
+pub(crate) struct Package<T>(PhantomData<T>);
 
 impl<T> Package<T> {
     pub fn send(value: T) -> *mut c_void {
