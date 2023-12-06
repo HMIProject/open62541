@@ -14,10 +14,9 @@ use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
     UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME,
 };
-use simple_logger::SimpleLogger;
 
 fn main() -> anyhow::Result<()> {
-    SimpleLogger::new().init().unwrap();
+    env_logger::init();
 
     let client = Rc::new(RefCell::new(
         Client::new("opc.tcp://opcuademo.sterfive.com:26543").with_context(|| "connect")?,

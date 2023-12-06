@@ -19,7 +19,7 @@ optional = true
 features = ["macros", "rt", "rt-multi-thread", "sync"]
 
 [dev-dependencies]
-simple_logger = "4.3.0"
+env_logger = "0.10.1"
 
 [features]
 default = ["tokio"]

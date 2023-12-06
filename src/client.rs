@@ -1,16 +1,19 @@
 use std::{
-    ffi::{c_void, CString},
+    ffi::{c_char, c_void, CStr, CString},
     ptr,
 };
 
-use log::info;
+use log::{debug, error, info, trace, warn};
 use open62541_sys::{
     UA_AttributeId_UA_ATTRIBUTEID_NODEID, UA_AttributeId_UA_ATTRIBUTEID_VALUE,
     UA_ClientConfig_setDefault, UA_Client_MonitoredItems_createDataChange,
     UA_Client_MonitoredItems_createDataChanges, UA_Client_Service_read,
     UA_Client_Subscriptions_create, UA_Client_Subscriptions_delete, UA_Client_connect,
-    UA_Client_getConfig, UA_Client_run_iterate, UA_TimestampsToReturn_UA_TIMESTAMPSTORETURN_BOTH,
-    __UA_Client_readAttribute, UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_NODEID, UA_TYPES_VARIANT,
+    UA_Client_getConfig, UA_Client_run_iterate, UA_LogCategory, UA_LogLevel,
+    UA_TimestampsToReturn_UA_TIMESTAMPSTORETURN_BOTH, __UA_Client_readAttribute, va_list,
+    UA_LogLevel_UA_LOGLEVEL_DEBUG, UA_LogLevel_UA_LOGLEVEL_ERROR, UA_LogLevel_UA_LOGLEVEL_FATAL,
+    UA_LogLevel_UA_LOGLEVEL_INFO, UA_LogLevel_UA_LOGLEVEL_TRACE, UA_LogLevel_UA_LOGLEVEL_WARNING,
+    UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_NODEID, UA_TYPES_VARIANT,
 };
 
 #[cfg(feature = "tokio")]
@@ -50,11 +53,46 @@ impl ClientBuilder {
 
 impl Default for ClientBuilder {
     fn default() -> Self {
+        unsafe extern "C" fn no_log(
+            _log_context: *mut c_void,
+            level: UA_LogLevel,
+            _category: UA_LogCategory,
+            msg: *const c_char,
+            _args: va_list,
+        ) {
+            let msg = unsafe { CStr::from_ptr(msg) }.to_string_lossy();
+
+            if level == UA_LogLevel_UA_LOGLEVEL_FATAL {
+                error!("{msg}");
+            } else if level == UA_LogLevel_UA_LOGLEVEL_ERROR {
+                error!("{msg}");
+            } else if level == UA_LogLevel_UA_LOGLEVEL_WARNING {
+                warn!("{msg}");
+            } else if level == UA_LogLevel_UA_LOGLEVEL_INFO {
+                info!("{msg}");
+            } else if level == UA_LogLevel_UA_LOGLEVEL_DEBUG {
+                debug!("{msg}");
+            } else if level == UA_LogLevel_UA_LOGLEVEL_TRACE {
+                trace!("{msg}");
+            } else {
+                // TODO: Handle unexpected level.
+            }
+        }
+
         let mut inner = ua::Client::default();
 
         // Clients need to be initialized with config for `UA_Client_connect` to work.
         let result = unsafe {
             let config = UA_Client_getConfig(inner.as_mut_ptr());
+
+            // Reset existing logger configuration, then replace with custom logger.
+            if let Some(clear) = (*config).logger.clear {
+                clear((*config).logger.context);
+            }
+            (*config).logger.clear = None;
+            (*config).logger.log = Some(no_log);
+            (*config).logger.context = ptr::null_mut();
+
             UA_ClientConfig_setDefault(config)
         };
         assert!(result == UA_STATUSCODE_GOOD);
