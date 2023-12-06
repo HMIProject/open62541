@@ -11,8 +11,7 @@ use std::{
 
 use log::debug;
 use open62541_sys::{
-    UA_Client, UA_Client_Subscriptions_create_async, UA_Client_disconnect,
-    UA_Client_readValueAttribute_async, UA_Client_run_iterate, UA_CreateSubscriptionResponse,
+    UA_Client, UA_Client_disconnect, UA_Client_readValueAttribute_async, UA_Client_run_iterate,
     UA_DataValue, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
 };
 use tokio::sync::oneshot;
@@ -121,66 +120,7 @@ impl AsyncClient {
     }
 
     pub async fn create_subscription(&self) -> Result<AsyncSubscription, Error> {
-        type Cb = CallbackOnce<Result<ua::CreateSubscriptionResponse, UA_StatusCode>>;
-
-        unsafe extern "C" fn callback_c(
-            _client: *mut UA_Client,
-            userdata: *mut c_void,
-            _request_id: UA_UInt32,
-            response: *mut c_void,
-        ) {
-            let response = response.cast::<UA_CreateSubscriptionResponse>();
-            let status = (*response).responseHeader.serviceResult;
-            let result = if status == UA_STATUSCODE_GOOD {
-                Ok(ua::CreateSubscriptionResponse::from_ref(&*response))
-            } else {
-                Err(status)
-            };
-            Cb::execute(userdata, result);
-        }
-
-        let (tx, rx) = oneshot::channel::<Result<AsyncSubscription, Error>>();
-        let client = Arc::downgrade(&self.client);
-
-        let callback = |result: Result<_, _>| {
-            debug!("Processing create subscription response");
-
-            // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do
-            // not care if that succeeds, however: the receiver might already have gone out of scope
-            // (when its future has been canceled) and we must not panic in FFI callbacks.
-            let _unused = tx.send(
-                result
-                    .map(|_| AsyncSubscription { client })
-                    .map_err(Error::new),
-            );
-        };
-
-        let request = ua::CreateSubscriptionRequest::default();
-
-        let result = {
-            let mut client = self.client.lock().unwrap();
-
-            unsafe {
-                UA_Client_Subscriptions_create_async(
-                    client.as_mut_ptr(),
-                    request.into_inner(),
-                    ptr::null_mut(),
-                    None,
-                    None,
-                    Some(callback_c),
-                    Cb::prepare(callback),
-                    ptr::null_mut(),
-                )
-            }
-        };
-        if result != UA_STATUSCODE_GOOD {
-            return Err(Error::new(result));
-        }
-
-        // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. Thus, the
-        // sender is only dropped after placing a value into the channel and `rx.await` always finds
-        // this value there.
-        rx.await.unwrap()
+        AsyncSubscription::new(self.client.clone()).await
     }
 }
 
