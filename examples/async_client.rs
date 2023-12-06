@@ -1,3 +1,5 @@
+use std::{thread, time::Duration};
+
 use anyhow::Context;
 use futures::future;
 use log::debug;
@@ -18,6 +20,15 @@ async fn main() -> anyhow::Result<()> {
         .with_context(|| "connect")?
         .into_async();
 
+    {
+        let node_id = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
+
+        let subscription = client.create_subscription().await?;
+        let _monitored_item = subscription.monitor_item(node_id).await?;
+
+        thread::sleep(Duration::from_millis(1000));
+    }
+
     let builddate = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE);
     let manufacturername =
         ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME);
@@ -35,8 +46,6 @@ async fn main() -> anyhow::Result<()> {
     ])
     .await;
     println!("{results:?}");
-
-    let _subscription = client.create_subscription().await;
 
     debug!("Dropping client");
     drop(client);

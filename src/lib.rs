@@ -1,6 +1,8 @@
 #[cfg(feature = "tokio")]
 mod async_client;
 #[cfg(feature = "tokio")]
+mod async_monitored_item;
+#[cfg(feature = "tokio")]
 mod async_subscription;
 mod callback;
 mod client;
@@ -11,7 +13,10 @@ mod subscription;
 pub mod ua;
 
 #[cfg(feature = "tokio")]
-pub use self::{async_client::AsyncClient, async_subscription::AsyncSubscription};
+pub use self::{
+    async_client::AsyncClient, async_monitored_item::AsyncMonitoredItem,
+    async_subscription::AsyncSubscription,
+};
 pub(crate) use self::{
     callback::CallbackOnce,
     data_type::{data_type, DataType},
