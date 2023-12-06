@@ -24,7 +24,13 @@ async fn main() -> anyhow::Result<()> {
         let node_id = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
 
         let subscription = client.create_subscription().await?;
-        let _monitored_item = subscription.monitor_item(node_id).await?;
+        let mut monitored_item = subscription.monitor_item(node_id).await?;
+
+        thread::spawn(move || {
+            while let Some(value) = monitored_item.next() {
+                println!("{value:?}");
+            }
+        });
 
         thread::sleep(Duration::from_millis(1000));
     }

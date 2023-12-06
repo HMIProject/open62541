@@ -1,7 +1,7 @@
 use std::{
     ffi::c_void,
     ptr,
-    sync::{Arc, Mutex, Weak},
+    sync::{mpsc, Arc, Mutex, Weak},
 };
 
 use futures::channel::oneshot;
@@ -12,11 +12,15 @@ use open62541_sys::{
     UA_CreateMonitoredItemsResponse, UA_DataValue, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
 };
 
-use crate::{callback::CallbackOnce, ua, Error, MonitoredItemId, SubscriptionId};
+use crate::{
+    callback::{CallbackMut, CallbackOnce},
+    ua, Error, MonitoredItemId, SubscriptionId,
+};
 
 pub struct AsyncMonitoredItem {
     client: Weak<Mutex<ua::Client>>,
     monitored_item_id: MonitoredItemId,
+    rx: mpsc::Receiver<ua::DataValue>,
 }
 
 impl AsyncMonitoredItem {
@@ -29,7 +33,7 @@ impl AsyncMonitoredItem {
             .with_subscription_id(subscription_id)
             .with_items_to_create(&[ua::MonitoredItemCreateRequest::init_node_id(node_id)]);
 
-        let response = create_monitored_items(client.clone(), request).await?;
+        let (response, rx) = create_monitored_items(client.clone(), request).await?;
 
         // PANIC: We expect exactly one result for the monitored item we requested above.
         let monitored_item_id = *response.monitored_item_ids().unwrap().get(0).unwrap();
@@ -37,7 +41,13 @@ impl AsyncMonitoredItem {
         Ok(AsyncMonitoredItem {
             client: Arc::downgrade(&client),
             monitored_item_id,
+            rx,
         })
+    }
+
+    // TODO: Make this method async.
+    pub fn next(&mut self) -> Option<ua::DataValue> {
+        self.rx.recv().ok()
     }
 }
 
@@ -57,32 +67,40 @@ impl Drop for AsyncMonitoredItem {
 async fn create_monitored_items(
     client: Arc<Mutex<ua::Client>>,
     request: ua::CreateMonitoredItemsRequest,
-) -> Result<ua::CreateMonitoredItemsResponse, Error> {
+) -> Result<
+    (
+        ua::CreateMonitoredItemsResponse,
+        mpsc::Receiver<ua::DataValue>,
+    ),
+    Error,
+> {
+    type St = CallbackMut<ua::DataValue>;
     type Cb = CallbackOnce<Result<ua::CreateMonitoredItemsResponse, UA_StatusCode>>;
 
     unsafe extern "C" fn notification_callback_c(
         _client: *mut UA_Client,
         _sub_id: UA_UInt32,
-        _sub_context: *mut ::std::os::raw::c_void,
+        _sub_context: *mut c_void,
         _mon_id: UA_UInt32,
-        _mon_context: *mut ::std::os::raw::c_void,
-        _value: *mut UA_DataValue,
+        mon_context: *mut c_void,
+        value: *mut UA_DataValue,
     ) {
         debug!("DataChangeNotificationCallback() was called");
 
-        // TODO
+        let value = ua::DataValue::from_ref(&*value);
+        St::notify(mon_context, value);
     }
 
     unsafe extern "C" fn delete_callback_c(
         _client: *mut UA_Client,
         _sub_id: UA_UInt32,
-        _sub_context: *mut ::std::os::raw::c_void,
+        _sub_context: *mut c_void,
         _mon_id: UA_UInt32,
-        _mon_context: *mut ::std::os::raw::c_void,
+        mon_context: *mut c_void,
     ) {
         debug!("DeleteMonitoredItemCallback() was called");
 
-        // TODO
+        St::delete(mon_context)
     }
 
     unsafe extern "C" fn callback_c(
@@ -104,6 +122,8 @@ async fn create_monitored_items(
     }
 
     let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse, Error>>();
+    // TODO: Think about appropriate buffer size or let the caller decide.
+    let (st_tx, st_rx) = mpsc::sync_channel::<ua::DataValue>(100);
 
     let callback = |result: Result<ua::CreateMonitoredItemsResponse, _>| {
         // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
@@ -116,6 +136,7 @@ async fn create_monitored_items(
         vec![Some(notification_callback_c)];
     let mut delete_callbacks: Vec<UA_Client_DeleteMonitoredItemCallback> =
         vec![Some(delete_callback_c)];
+    let mut contexts: Vec<*mut c_void> = vec![St::prepare(st_tx)];
 
     let result = {
         let mut client = client.lock().unwrap();
@@ -126,7 +147,7 @@ async fn create_monitored_items(
             UA_Client_MonitoredItems_createDataChanges_async(
                 client.as_mut_ptr(),
                 request.into_inner(),
-                ptr::null_mut(),
+                contexts.as_mut_ptr(),
                 notification_callbacks.as_mut_ptr(),
                 delete_callbacks.as_mut_ptr(),
                 Some(callback_c),
@@ -142,7 +163,7 @@ async fn create_monitored_items(
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
     // there.
-    rx.await.unwrap()
+    rx.await.unwrap().map(|response| (response, st_rx))
 }
 
 fn delete_monitored_items(

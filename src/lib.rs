@@ -18,7 +18,7 @@ pub use self::{
     async_subscription::AsyncSubscription,
 };
 pub(crate) use self::{
-    callback::CallbackOnce,
+    callback::{CallbackMut, CallbackOnce},
     data_type::{data_type, DataType},
 };
 pub use self::{
