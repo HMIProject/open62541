@@ -29,18 +29,18 @@ pub(crate) unsafe trait DataType {
     fn as_ref(&self) -> &Self::Inner {
         // This transmutes the value into the inner type through `cast()`. Types that implement this
         // trait guarantee that we can transmute between them and their inner type, so this is okay.
-        //
+        let ptr = (self as *const Self).cast::<Self::Inner>();
         // SAFETY: Dereferencing the pointer is allowed because of this transmutability.
-        unsafe { &*(self as *const Self).cast::<Self::Inner>() }
+        unsafe { ptr.as_ref().unwrap_unchecked() }
     }
 
     #[must_use]
     fn as_mut(&mut self) -> &mut Self::Inner {
         // This transmutes the value into the inner type through `cast()`. Types that implement this
         // trait guarantee that we can transmute between them and their inner type, so this is okay.
-        //
+        let ptr = (self as *mut Self).cast::<Self::Inner>();
         // SAFETY: Dereferencing the pointer is allowed because of this transmutability.
-        unsafe { &mut *(self as *mut Self).cast::<Self::Inner>() }
+        unsafe { ptr.as_mut().unwrap_unchecked() }
     }
 
     #[must_use]

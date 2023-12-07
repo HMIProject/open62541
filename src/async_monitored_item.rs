@@ -98,7 +98,9 @@ async fn create_monitored_items(
     ) {
         debug!("DataChangeNotificationCallback() was called");
 
-        let value = ua::DataValue::from_ref(&*value);
+        // PANIC: We expect pointer to be valid when called.
+        let value = value.as_ref().expect("value is set");
+        let value = ua::DataValue::from_ref(value);
         St::notify(mon_context, Some(value));
     }
 
@@ -125,7 +127,9 @@ async fn create_monitored_items(
         let response = response.cast::<UA_CreateMonitoredItemsResponse>();
         let status = (*response).responseHeader.serviceResult;
         let result = if status == UA_STATUSCODE_GOOD {
-            Ok(ua::CreateMonitoredItemsResponse::from_ref(&*response))
+            // PANIC: We expect pointer to be valid when good.
+            let response = response.as_ref().expect("response is set");
+            Ok(ua::CreateMonitoredItemsResponse::from_ref(response))
         } else {
             Err(status)
         };

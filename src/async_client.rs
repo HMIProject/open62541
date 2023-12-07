@@ -72,7 +72,9 @@ impl AsyncClient {
             value: *mut UA_DataValue,
         ) {
             let result = if status == UA_STATUSCODE_GOOD {
-                Ok(ua::DataValue::from_ref(&*value))
+                // PANIC: We expect pointer to be valid when good.
+                let value = value.as_ref().expect("value is set");
+                Ok(ua::DataValue::from_ref(value))
             } else {
                 Err(status)
             };
@@ -125,7 +127,7 @@ impl AsyncClient {
         let subscription = {
             let mut default_subscription = self.default_subscription.lock().unwrap();
 
-            match &*default_subscription {
+            match default_subscription.as_ref() {
                 Some(subscription) => subscription.clone(),
                 None => {
                     let subscription = Arc::new(self.create_subscription().await?);

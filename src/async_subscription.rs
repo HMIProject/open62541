@@ -74,7 +74,9 @@ async fn create_subscription(
         let response = response.cast::<UA_CreateSubscriptionResponse>();
         let status = (*response).responseHeader.serviceResult;
         let result = if status == UA_STATUSCODE_GOOD {
-            Ok(ua::CreateSubscriptionResponse::from_ref(&*response))
+            // PANIC: We expect pointer to be valid when good.
+            let response = response.as_ref().expect("response is set");
+            Ok(ua::CreateSubscriptionResponse::from_ref(response))
         } else {
             Err(status)
         };
