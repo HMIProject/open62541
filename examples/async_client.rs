@@ -1,7 +1,7 @@
-use std::time::Duration;
+use std::{pin::pin, time::Duration};
 
 use anyhow::Context;
-use futures::future;
+use futures::{future, StreamExt};
 use open62541::{ua, Client};
 use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
@@ -20,6 +20,16 @@ async fn main() -> anyhow::Result<()> {
         .into_async();
 
     println!("Connected successfully");
+
+    let node_id = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
+
+    let monitored_steam = client.watch_value(node_id).await?;
+
+    let mut pinned_stream = pin!(monitored_steam.take(5));
+
+    while let Some(value) = pinned_stream.next().await {
+        println!("{value:?}");
+    }
 
     println!("Creating subscription");
 

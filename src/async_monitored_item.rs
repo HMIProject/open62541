@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Mutex, Weak},
 };
 
-use futures::channel::oneshot;
+use futures::{channel::oneshot, stream, Stream};
 use log::debug;
 use open62541_sys::{
     UA_Client, UA_Client_DataChangeNotificationCallback, UA_Client_DeleteMonitoredItemCallback,
@@ -53,6 +53,12 @@ impl AsyncMonitoredItem {
         self.rx.changed().await.ok()?;
 
         Some(self.rx.borrow().clone().expect("skip initial `None` value"))
+    }
+
+    pub fn into_stream(self) -> impl Stream<Item = ua::DataValue> {
+        stream::unfold(self, move |mut item| async move {
+            item.next().await.map(|value| (value, item))
+        })
     }
 }
 

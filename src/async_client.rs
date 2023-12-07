@@ -5,6 +5,7 @@ use std::{
     time::Duration,
 };
 
+use futures::Stream;
 use log::debug;
 use open62541_sys::{
     UA_Client, UA_Client_disconnect, UA_Client_readValueAttribute_async, UA_Client_run_iterate,
@@ -17,6 +18,7 @@ use crate::{ua, AsyncSubscription, CallbackOnce, Error};
 pub struct AsyncClient {
     client: Arc<Mutex<ua::Client>>,
     background_handle: JoinHandle<()>,
+    default_subscription: Arc<Mutex<Option<Arc<AsyncSubscription>>>>,
 }
 
 impl AsyncClient {
@@ -55,6 +57,7 @@ impl AsyncClient {
         Self {
             client,
             background_handle,
+            default_subscription: Default::default(),
         }
     }
 
@@ -113,6 +116,28 @@ impl AsyncClient {
 
     pub async fn create_subscription(&self) -> Result<AsyncSubscription, Error> {
         AsyncSubscription::new(self.client.clone()).await
+    }
+
+    pub async fn watch_value(
+        &self,
+        node_id: ua::NodeId,
+    ) -> Result<impl Stream<Item = ua::DataValue>, Error> {
+        let subscription = {
+            let mut default_subscription = self.default_subscription.lock().unwrap();
+
+            match &*default_subscription {
+                Some(subscription) => subscription.clone(),
+                None => {
+                    let subscription = Arc::new(self.create_subscription().await?);
+                    *default_subscription = Some(subscription.clone());
+                    subscription
+                }
+            }
+        };
+
+        let monitored_item = subscription.monitor_item(node_id).await?;
+
+        Ok(monitored_item.into_stream())
     }
 }
 
