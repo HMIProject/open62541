@@ -168,6 +168,11 @@ macro_rules! data_type {
         // need not be freed in the same thread where they were allocated.
         unsafe impl Send for $name {}
 
+        // SAFETY: References to our wrapper types may be sent across thread. (The `open62541` types
+        // themselves would not allow this because references are used to pass ownership but we must
+        // unwrap our wrapper types in this case which we do not implement for shared references.)
+        unsafe impl Sync for $name {}
+
         impl Drop for $name {
             fn drop(&mut self) {
                 // `UA_clear` resets the data structure, freeing any dynamically allocated memory in

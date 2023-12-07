@@ -1,11 +1,7 @@
 use std::{
     ffi::c_void,
     ptr,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
-    thread::{self, JoinHandle},
+    sync::{Arc, Mutex},
     time::Duration,
 };
 
@@ -14,29 +10,27 @@ use open62541_sys::{
     UA_Client, UA_Client_disconnect, UA_Client_readValueAttribute_async, UA_Client_run_iterate,
     UA_DataValue, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
 };
-use tokio::sync::oneshot;
+use tokio::{sync::oneshot, task::JoinHandle, time};
 
 use crate::{ua, AsyncSubscription, CallbackOnce, Error};
 
 pub struct AsyncClient {
     client: Arc<Mutex<ua::Client>>,
-    dropped: Arc<AtomicBool>,
-    loop_handle: JoinHandle<()>,
+    background_handle: JoinHandle<()>,
 }
 
 impl AsyncClient {
     pub(crate) fn from_sync(client: ua::Client) -> Self {
         let client = Arc::new(Mutex::new(client));
-        let dropped = Arc::new(AtomicBool::new(false));
 
-        let loop_handle = {
+        let background_handle = {
             let client = client.clone();
-            let dropped = dropped.clone();
 
-            // Run the event loop in a different thread. For callbacks, `UA_Client_run_iterate()` is
-            // to be run periodically in the background and that is what we do here.
-            thread::spawn(move || {
-                while !dropped.load(Ordering::Acquire) {
+            // Run the event loop concurrently (this may be a different thread when using tokio with
+            // `rt-multi-thread`). `UA_Client_run_iterate()` must be run periodically and makes sure
+            // to maintain the connection (e.g. renew session) and run callback handlers.
+            tokio::spawn(async move {
+                loop {
                     debug!("Running iterate");
 
                     let result = {
@@ -52,17 +46,15 @@ impl AsyncClient {
                         break;
                     }
 
-                    thread::park_timeout(Duration::from_millis(100));
+                    // This await point is where `background_handle.abort()` might abort us later.
+                    time::sleep(Duration::from_millis(100)).await;
                 }
-
-                debug!("Finished iterate loop");
             })
         };
 
         Self {
             client,
-            dropped,
-            loop_handle,
+            background_handle,
         }
     }
 
@@ -126,8 +118,7 @@ impl AsyncClient {
 
 impl Drop for AsyncClient {
     fn drop(&mut self) {
-        self.dropped.store(true, Ordering::Release);
-        self.loop_handle.thread().unpark();
+        self.background_handle.abort();
 
         if let Ok(mut client) = self.client.lock() {
             let _unused = unsafe { UA_Client_disconnect(client.as_mut_ptr()) };

@@ -1,4 +1,4 @@
-use std::{thread, time::Duration};
+use std::time::Duration;
 
 use anyhow::Context;
 use futures::future;
@@ -9,8 +9,9 @@ use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
     UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME,
 };
+use tokio::time;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
@@ -34,21 +35,21 @@ async fn main() -> anyhow::Result<()> {
         .await
         .with_context(|| "monitor item")?;
 
-    thread::spawn(move || {
+    tokio::spawn(async move {
         println!("Watching for monitored item values");
-        while let Some(value) = monitored_item.next() {
+        while let Some(value) = monitored_item.next().await {
             println!("{value:?}");
         }
         println!("Closed monitored item subscription");
     });
 
-    thread::sleep(Duration::from_secs(2));
+    time::sleep(Duration::from_secs(2)).await;
 
     drop(subscription);
 
     println!("Subscription dropped");
 
-    thread::sleep(Duration::from_secs(2));
+    time::sleep(Duration::from_secs(2)).await;
 
     println!("Reading some items");
 
@@ -71,13 +72,13 @@ async fn main() -> anyhow::Result<()> {
 
     println!("{results:?}");
 
-    thread::sleep(Duration::from_secs(2));
+    time::sleep(Duration::from_secs(2)).await;
 
     println!("Dropping client");
 
     drop(client);
 
-    thread::sleep(Duration::from_secs(2));
+    time::sleep(Duration::from_secs(2)).await;
 
     println!("Exiting");
 

@@ -1,7 +1,7 @@
 use std::{
     ffi::c_void,
     ptr,
-    sync::{mpsc, Arc, Mutex, Weak},
+    sync::{Arc, Mutex, Weak},
 };
 
 use futures::channel::oneshot;
@@ -11,6 +11,7 @@ use open62541_sys::{
     UA_Client_MonitoredItems_createDataChanges_async, UA_Client_MonitoredItems_delete_async,
     UA_CreateMonitoredItemsResponse, UA_DataValue, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
 };
+use tokio::sync::watch;
 
 use crate::{
     callback::{CallbackMut, CallbackOnce},
@@ -20,7 +21,7 @@ use crate::{
 pub struct AsyncMonitoredItem {
     client: Weak<Mutex<ua::Client>>,
     monitored_item_id: MonitoredItemId,
-    rx: mpsc::Receiver<ua::DataValue>,
+    rx: watch::Receiver<Option<ua::DataValue>>,
 }
 
 impl AsyncMonitoredItem {
@@ -45,9 +46,13 @@ impl AsyncMonitoredItem {
         })
     }
 
-    // TODO: Make this method async.
-    pub fn next(&mut self) -> Option<ua::DataValue> {
-        self.rx.recv().ok()
+    pub async fn next(&mut self) -> Option<ua::DataValue> {
+        // Wait for the next change of underlying value. This always skips the initial `None` value,
+        // so the only way to return `None` from this function is through `ok()` here (i.e. when the
+        // channel has been closed).
+        self.rx.changed().await.ok()?;
+
+        Some(self.rx.borrow().clone().expect("skip initial `None` value"))
     }
 }
 
@@ -70,11 +75,11 @@ async fn create_monitored_items(
 ) -> Result<
     (
         ua::CreateMonitoredItemsResponse,
-        mpsc::Receiver<ua::DataValue>,
+        watch::Receiver<Option<ua::DataValue>>,
     ),
     Error,
 > {
-    type St = CallbackMut<ua::DataValue>;
+    type St = CallbackMut<Option<ua::DataValue>>;
     type Cb = CallbackOnce<Result<ua::CreateMonitoredItemsResponse, UA_StatusCode>>;
 
     unsafe extern "C" fn notification_callback_c(
@@ -88,7 +93,7 @@ async fn create_monitored_items(
         debug!("DataChangeNotificationCallback() was called");
 
         let value = ua::DataValue::from_ref(&*value);
-        St::notify(mon_context, value);
+        St::notify(mon_context, Some(value));
     }
 
     unsafe extern "C" fn delete_callback_c(
@@ -123,7 +128,7 @@ async fn create_monitored_items(
 
     let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse, Error>>();
     // TODO: Think about appropriate buffer size or let the caller decide.
-    let (st_tx, st_rx) = mpsc::sync_channel::<ua::DataValue>(100);
+    let (st_tx, st_rx) = watch::channel::<Option<ua::DataValue>>(None);
 
     let callback = |result: Result<ua::CreateMonitoredItemsResponse, _>| {
         // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not

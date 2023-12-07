@@ -1,4 +1,6 @@
-use std::{ffi::c_void, sync::mpsc};
+use std::ffi::c_void;
+
+use tokio::sync::watch;
 
 /// Type-removed one-shot callback.
 ///
@@ -55,14 +57,14 @@ impl<T> CallbackOnce<T> {
 /// - [`CallbackMut::delete()`] to unwrap the [`c_void`] pointer and close the underlying stream
 ///
 /// [`SyncSender`]: mpsc::SyncSender
-pub(crate) struct CallbackMut<T>(mpsc::SyncSender<T>);
+pub(crate) struct CallbackMut<T>(watch::Sender<T>);
 
 impl<T> CallbackMut<T> {
     /// Prepares stream for later sends.
     ///
     /// This allocates memory. To prevent memory leaks, call [`delete()`](CallbackMut::delete) on
     /// the returned pointer exactly once.
-    pub fn prepare(tx: mpsc::SyncSender<T>) -> *mut c_void {
+    pub fn prepare(tx: watch::Sender<T>) -> *mut c_void {
         let callback = CallbackMut(tx);
         // Move `callback` onto the heap and leak its memory into a raw pointer.
         let ptr: *mut CallbackMut<T> = Box::into_raw(Box::new(callback));
@@ -79,8 +81,8 @@ impl<T> CallbackMut<T> {
         let ptr: *mut CallbackMut<T> = data.cast::<CallbackMut<T>>();
         // Reconstruct heap-allocated `callback` back into its `Box`.
         let callback = unsafe { Box::from_raw(ptr) };
-        // Send message, blocking on full buffer. Ignore disconnects.
-        let _unused = callback.0.send(payload);
+        // Send message, replacing recent values. Ignore disconnects.
+        let _unused = callback.0.send_replace(payload);
         // Leak `callback` again to allow future notification calls.
         let _unused = Box::into_raw(callback);
     }
