@@ -47,7 +47,7 @@ impl AsyncMonitoredItem {
     }
 
     pub async fn next(&mut self) -> Option<ua::DataValue> {
-        // Wait for the next change of underlying value. This always skips the initial `None` value,
+        // Wait for next change of the underlying value. This always skips the initial `None` value,
         // so the only way to return `None` from this function is through `ok()` here (i.e. when the
         // channel has been closed).
         self.rx.changed().await.ok()?;
@@ -56,8 +56,8 @@ impl AsyncMonitoredItem {
     }
 
     pub fn into_stream(self) -> impl Stream<Item = ua::DataValue> {
-        stream::unfold(self, move |mut item| async move {
-            item.next().await.map(|value| (value, item))
+        stream::unfold(self, move |mut this| async move {
+            this.next().await.map(|value| (value, this))
         })
     }
 }
