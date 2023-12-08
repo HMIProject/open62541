@@ -6,8 +6,7 @@ use std::{
 use log::{debug, error, info, trace, warn};
 use open62541_sys::{
     UA_AttributeId_UA_ATTRIBUTEID_NODEID, UA_AttributeId_UA_ATTRIBUTEID_VALUE,
-    UA_ClientConfig_setDefault, UA_Client_MonitoredItems_createDataChange,
-    UA_Client_MonitoredItems_createDataChanges, UA_Client_Service_read,
+    UA_ClientConfig_setDefault, UA_Client_MonitoredItems_createDataChange, UA_Client_Service_read,
     UA_Client_Subscriptions_create, UA_Client_Subscriptions_delete, UA_Client_connect,
     UA_Client_getConfig, UA_Client_run_iterate, UA_LogCategory, UA_LogLevel,
     UA_TimestampsToReturn_UA_TIMESTAMPSTORETURN_BOTH, __UA_Client_readAttribute, va_list,
@@ -264,31 +263,6 @@ impl Client {
         }
 
         Ok(ua::DeleteSubscriptionsResponse::new(response))
-    }
-
-    pub fn create_data_changes(
-        &mut self,
-        request: ua::CreateMonitoredItemsRequest,
-    ) -> Result<ua::CreateMonitoredItemsResponse, Error> {
-        // TODO: Implement this.
-        let contexts = todo!();
-        let callbacks = todo!();
-        let delete_callbacks = todo!();
-
-        let response = unsafe {
-            UA_Client_MonitoredItems_createDataChanges(
-                self.0.as_mut_ptr(),
-                request.into_inner(),
-                contexts,
-                callbacks,
-                delete_callbacks,
-            )
-        };
-        if response.responseHeader.serviceResult != UA_STATUSCODE_GOOD {
-            return Err(Error::new(response.responseHeader.serviceResult));
-        }
-
-        Ok(ua::CreateMonitoredItemsResponse::new(response))
     }
 
     /// Watch monitored item for data change.

@@ -8,8 +8,6 @@ mod callback;
 mod client;
 mod data_type;
 mod error;
-mod monitored_item;
-mod subscription;
 pub mod ua;
 
 #[cfg(feature = "tokio")]
@@ -24,8 +22,6 @@ pub(crate) use self::{
 pub use self::{
     client::{Client, ClientBuilder},
     error::Error,
-    monitored_item::MonitoredItem,
-    subscription::Subscription,
 };
 
 #[derive(Clone, Copy, Debug)]

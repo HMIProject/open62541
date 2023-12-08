@@ -13,10 +13,7 @@ use open62541_sys::{
 };
 use tokio::sync::watch;
 
-use crate::{
-    callback::{CallbackMut, CallbackOnce},
-    ua, Error, MonitoredItemId, SubscriptionId,
-};
+use crate::{ua, CallbackMut, CallbackOnce, Error, MonitoredItemId, SubscriptionId};
 
 pub struct AsyncMonitoredItem {
     client: Weak<Mutex<ua::Client>>,
