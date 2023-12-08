@@ -29,18 +29,18 @@ pub(crate) unsafe trait DataType {
     fn as_ref(&self) -> &Self::Inner {
         // This transmutes the value into the inner type through `cast()`. Types that implement this
         // trait guarantee that we can transmute between them and their inner type, so this is okay.
-        //
+        let ptr = (self as *const Self).cast::<Self::Inner>();
         // SAFETY: Dereferencing the pointer is allowed because of this transmutability.
-        unsafe { &*(self as *const Self).cast::<Self::Inner>() }
+        unsafe { ptr.as_ref().unwrap_unchecked() }
     }
 
     #[must_use]
     fn as_mut(&mut self) -> &mut Self::Inner {
         // This transmutes the value into the inner type through `cast()`. Types that implement this
         // trait guarantee that we can transmute between them and their inner type, so this is okay.
-        //
+        let ptr = (self as *mut Self).cast::<Self::Inner>();
         // SAFETY: Dereferencing the pointer is allowed because of this transmutability.
-        unsafe { &mut *(self as *mut Self).cast::<Self::Inner>() }
+        unsafe { ptr.as_mut().unwrap_unchecked() }
     }
 
     #[must_use]
@@ -162,6 +162,16 @@ macro_rules! data_type {
                 inner
             }
         }
+
+        // SAFETY: The types in `open62541` can be sent across thread boundaries. Internally, all of
+        // the internal dynamic allocations contain only their own data (nothing is shared) and they
+        // need not be freed in the same thread where they were allocated.
+        unsafe impl Send for $name {}
+
+        // SAFETY: References to our wrapper types may be sent across thread. (The `open62541` types
+        // themselves would not allow this because references are used to pass ownership but we must
+        // unwrap our wrapper types in this case which we do not implement for shared references.)
+        unsafe impl Sync for $name {}
 
         impl Drop for $name {
             fn drop(&mut self) {
