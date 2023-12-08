@@ -17,6 +17,7 @@ use crate::{
     AsyncMonitoredItem, Error, SubscriptionId,
 };
 
+/// Subscription (with asynchronous API).
 pub struct AsyncSubscription {
     client: Weak<Mutex<ua::Client>>,
     subscription_id: SubscriptionId,

@@ -15,6 +15,7 @@ use tokio::sync::watch;
 
 use crate::{ua, CallbackMut, CallbackOnce, Error, MonitoredItemId, SubscriptionId};
 
+/// Monitored item (with asynchronous API).
 pub struct AsyncMonitoredItem {
     client: Weak<Mutex<ua::Client>>,
     monitored_item_id: MonitoredItemId,

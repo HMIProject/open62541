@@ -15,6 +15,7 @@ use tokio::{sync::oneshot, task::JoinHandle, time};
 
 use crate::{ua, AsyncSubscription, CallbackOnce, Error};
 
+/// Connected OPC UA client (with asynchronous API).
 pub struct AsyncClient {
     client: Arc<Mutex<ua::Client>>,
     background_handle: JoinHandle<()>,
@@ -144,7 +145,7 @@ impl AsyncClient {
     /// the internal default subscription cannot be created.
     // TODO: Use async-aware lock.
     #[allow(clippy::await_holding_lock)]
-    pub async fn watch_value(
+    pub async fn value_stream(
         &self,
         node_id: ua::NodeId,
     ) -> Result<impl Stream<Item = ua::DataValue>, Error> {

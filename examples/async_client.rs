@@ -23,9 +23,9 @@ async fn main() -> anyhow::Result<()> {
 
     let node_id = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
 
-    let monitored_steam = client.watch_value(node_id).await?;
+    let value_stream = client.value_stream(node_id).await?;
 
-    let mut pinned_stream = pin!(monitored_steam.take(5));
+    let mut pinned_stream = pin!(value_stream.take(5));
 
     while let Some(value) = pinned_stream.next().await {
         println!("{value:?}");
