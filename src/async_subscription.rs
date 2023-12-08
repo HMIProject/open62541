@@ -8,8 +8,7 @@ use futures::channel::oneshot;
 use log::debug;
 use open62541_sys::{
     UA_Client, UA_Client_Subscriptions_create_async, UA_Client_Subscriptions_delete_async,
-    UA_CreateSubscriptionResponse, UA_StatusCode, UA_UInt32, UA_STATUSCODE_BADCONNECTIONCLOSED,
-    UA_STATUSCODE_GOOD,
+    UA_CreateSubscriptionResponse, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
 };
 
 use crate::{
@@ -35,9 +34,19 @@ impl AsyncSubscription {
         })
     }
 
-    pub async fn monitor_item(&self, node_id: NodeId) -> Result<AsyncMonitoredItem, Error> {
+    /// Creates [monitored item](AsyncMonitoredItem).
+    ///
+    /// This creates a new monitored item for the given node.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist.
+    pub async fn create_monitored_item(
+        &self,
+        node_id: NodeId,
+    ) -> Result<AsyncMonitoredItem, Error> {
         let Some(client) = self.client.upgrade() else {
-            return Err(Error::new(UA_STATUSCODE_BADCONNECTIONCLOSED));
+            return Err(Error::internal("client should not be dropped"));
         };
 
         AsyncMonitoredItem::new(client, self.subscription_id, node_id).await
@@ -53,7 +62,7 @@ impl Drop for AsyncSubscription {
         let request =
             ua::DeleteSubscriptionsRequest::init().with_subscription_ids(&[self.subscription_id]);
 
-        delete_subscription(client, request);
+        delete_subscription(&client, request);
     }
 }
 
@@ -120,7 +129,7 @@ async fn create_subscription(
     rx.await.unwrap()
 }
 
-fn delete_subscription(client: Arc<Mutex<ua::Client>>, request: ua::DeleteSubscriptionsRequest) {
+fn delete_subscription(client: &Arc<Mutex<ua::Client>>, request: ua::DeleteSubscriptionsRequest) {
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
         _userdata: *mut c_void,

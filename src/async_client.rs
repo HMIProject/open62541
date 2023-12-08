@@ -57,10 +57,15 @@ impl AsyncClient {
         Self {
             client,
             background_handle,
-            default_subscription: Default::default(),
+            default_subscription: Arc::default(),
         }
     }
 
+    /// Reads value from server.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or its value attribute cannot be read.
     pub async fn read_value(&self, node_id: ua::NodeId) -> Result<ua::DataValue, Error> {
         type Cb = CallbackOnce<Result<ua::DataValue, UA_StatusCode>>;
 
@@ -89,12 +94,14 @@ impl AsyncClient {
             // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do
             // not care if that succeeds, however: the receiver might already have gone out of scope
             // (when its future has been canceled) and we must not panic in FFI callbacks.
-            let _unused = tx.send(result.map_err(|status| Error::new(status)));
+            let _unused = tx.send(result.map_err(Error::new));
         };
 
         let result = {
             debug!("Reading value attribute of {node_id}");
-            let mut client = self.client.lock().unwrap();
+            let Ok(mut client) = self.client.lock() else {
+                return Err(Error::internal("should be able to lock client"));
+            };
 
             unsafe {
                 UA_Client_readValueAttribute_async(
@@ -113,31 +120,51 @@ impl AsyncClient {
         // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. Thus, the
         // sender is only dropped after placing a value into the channel and `rx.await` always finds
         // this value there.
-        rx.await.expect("callback always sends value")
+        rx.await
+            .unwrap_or(Err(Error::Internal("callback should send result")))
     }
 
+    /// Creates new [subscription](AsyncSubscription).
+    ///
+    /// # Errors
+    ///
+    /// This fails when the client is not connected.
     pub async fn create_subscription(&self) -> Result<AsyncSubscription, Error> {
         AsyncSubscription::new(self.client.clone()).await
     }
 
+    /// Watches value for changes.
+    ///
+    /// This uses the internal default subscription to the server and adds a monitored item to it to
+    /// subscribe the node for changes to its value attribute.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the monitored item cannot be created. It also fails when (on the first call)
+    /// the internal default subscription cannot be created.
+    // TODO: Use async-aware lock.
+    #[allow(clippy::await_holding_lock)]
     pub async fn watch_value(
         &self,
         node_id: ua::NodeId,
     ) -> Result<impl Stream<Item = ua::DataValue>, Error> {
         let subscription = {
-            let mut default_subscription = self.default_subscription.lock().unwrap();
+            let Ok(mut default_subscription) = self.default_subscription.lock() else {
+                return Err(Error::internal("should be able to lock subscription"));
+            };
 
-            match default_subscription.as_ref() {
-                Some(subscription) => subscription.clone(),
-                None => {
-                    let subscription = Arc::new(self.create_subscription().await?);
-                    *default_subscription = Some(subscription.clone());
-                    subscription
-                }
+            if let Some(subscription) = default_subscription.as_ref() {
+                // Use existing default subscription.
+                subscription.clone()
+            } else {
+                // Create new subscription and store it for future monitored items.
+                let subscription = Arc::new(self.create_subscription().await?);
+                *default_subscription = Some(subscription.clone());
+                subscription
             }
         };
 
-        let monitored_item = subscription.monitor_item(node_id).await?;
+        let monitored_item = subscription.create_monitored_item(node_id).await?;
 
         Ok(monitored_item.into_stream())
     }

@@ -43,15 +43,25 @@ impl AsyncMonitoredItem {
         })
     }
 
+    /// Waits for next value from server.
+    ///
+    /// This waits for the next value received for this monitored item. Returns `None` when item has
+    /// been closed and no more updates will be received.
     pub async fn next(&mut self) -> Option<ua::DataValue> {
         // Wait for next change of the underlying value. This always skips the initial `None` value,
         // so the only way to return `None` from this function is through `ok()` here (i.e. when the
         // channel has been closed).
         self.rx.changed().await.ok()?;
 
-        Some(self.rx.borrow().clone().expect("skip initial `None` value"))
+        let value = self.rx.borrow().clone();
+        debug_assert!(value.is_some(), "should skip initial `None` value");
+        value
     }
 
+    /// Turns monitored item into stream.
+    ///
+    /// The stream will emit all value updates as they are being received. If the client disconnects
+    /// or the corresponding subscription is deleted, the stream is closed.
     pub fn into_stream(self) -> impl Stream<Item = ua::DataValue> {
         stream::unfold(self, move |mut this| async move {
             this.next().await.map(|value| (value, this))
@@ -68,7 +78,7 @@ impl Drop for AsyncMonitoredItem {
         let request = ua::DeleteMonitoredItemsRequest::init()
             .with_monitored_item_ids(&[self.monitored_item_id]);
 
-        delete_monitored_items(client, request);
+        delete_monitored_items(&client, request);
     }
 }
 
@@ -110,7 +120,7 @@ async fn create_monitored_items(
     ) {
         debug!("DeleteMonitoredItemCallback() was called");
 
-        St::delete(mon_context)
+        St::delete(mon_context);
     }
 
     unsafe extern "C" fn callback_c(
@@ -179,7 +189,7 @@ async fn create_monitored_items(
 }
 
 fn delete_monitored_items(
-    client: Arc<Mutex<ua::Client>>,
+    client: &Arc<Mutex<ua::Client>>,
     request: ua::DeleteMonitoredItemsRequest,
 ) {
     unsafe extern "C" fn callback_c(

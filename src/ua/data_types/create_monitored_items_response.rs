@@ -1,4 +1,7 @@
-use crate::{ua, MonitoredItemId};
+use crate::{
+    ua::{self, MonitoredItemCreateResult},
+    MonitoredItemId,
+};
 
 crate::data_type!(
     CreateMonitoredItemsResponse,
@@ -7,6 +10,7 @@ crate::data_type!(
 );
 
 impl CreateMonitoredItemsResponse {
+    #[must_use]
     pub fn monitored_item_ids(&self) -> Option<Vec<MonitoredItemId>> {
         let results = ua::Array::<ua::MonitoredItemCreateResult>::from_raw_parts(
             self.0.results,
@@ -16,7 +20,7 @@ impl CreateMonitoredItemsResponse {
         let monitored_item_ids: Vec<_> = results
             .as_slice()
             .iter()
-            .map(|result| result.monitored_item_id())
+            .map(MonitoredItemCreateResult::monitored_item_id)
             .collect();
 
         Some(monitored_item_ids)

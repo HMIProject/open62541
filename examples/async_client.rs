@@ -41,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
     let node_id = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
 
     let mut monitored_item = subscription
-        .monitor_item(node_id)
+        .create_monitored_item(node_id)
         .await
         .with_context(|| "monitor item")?;
 

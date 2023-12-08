@@ -138,7 +138,7 @@ impl Client {
         AsyncClient::from_sync(self.0)
     }
 
-    /// Run event loop iteration.
+    /// Runs event loop iteration.
     ///
     /// This should be called periodically to process background events and trigger callbacks when a
     /// message arrives asynchronously.
@@ -158,7 +158,7 @@ impl Client {
         Ok(())
     }
 
-    /// Read data from server.
+    /// Reads data from server.
     ///
     /// # Errors
     ///
@@ -172,7 +172,7 @@ impl Client {
         Ok(ua::ReadResponse::new(response))
     }
 
-    /// Read node ID attribute from node.
+    /// Reads node ID attribute from node.
     ///
     /// # Errors
     ///
@@ -197,7 +197,7 @@ impl Client {
         Ok(output)
     }
 
-    /// Read value attribute from node.
+    /// Reads value attribute from node.
     ///
     /// # Errors
     ///
@@ -222,7 +222,7 @@ impl Client {
         Ok(output)
     }
 
-    /// Create subscription.
+    /// Creates subscription.
     ///
     /// # Errors
     ///
@@ -247,7 +247,7 @@ impl Client {
         Ok(ua::CreateSubscriptionResponse::new(response))
     }
 
-    /// Delete subscriptions.
+    /// Deletes subscriptions.
     ///
     /// # Errors
     ///
@@ -265,7 +265,7 @@ impl Client {
         Ok(ua::DeleteSubscriptionsResponse::new(response))
     }
 
-    /// Watch monitored item for data change.
+    /// Watches monitored item for data change.
     ///
     /// # Errors
     ///
