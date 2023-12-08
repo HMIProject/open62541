@@ -76,6 +76,9 @@ impl Drop for AsyncMonitoredItem {
     }
 }
 
+/// Maximum number of buffered values.
+const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
+
 async fn create_monitored_items(
     client: Arc<Mutex<ua::Client>>,
     request: ua::CreateMonitoredItemsRequest,
@@ -139,7 +142,7 @@ async fn create_monitored_items(
 
     let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse, Error>>();
     // TODO: Think about appropriate buffer size or let the caller decide.
-    let (st_tx, st_rx) = mpsc::channel::<ua::DataValue>(100);
+    let (st_tx, st_rx) = mpsc::channel::<ua::DataValue>(MONITORED_ITEM_BUFFER_SIZE);
 
     let callback = |result: Result<ua::CreateMonitoredItemsResponse, _>| {
         // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
@@ -155,9 +158,14 @@ async fn create_monitored_items(
     let mut contexts: Vec<*mut c_void> = vec![St::prepare(st_tx)];
 
     let result = {
-        let mut client = client.lock().unwrap();
+        let Ok(mut client) = client.lock() else {
+            return Err(Error::internal("should be able to lock client"));
+        };
 
-        debug!("Calling MonitoredItems_createDataChanges()");
+        debug!(
+            "Calling MonitoredItems_createDataChanges(), count={}",
+            contexts.len()
+        );
 
         unsafe {
             UA_Client_MonitoredItems_createDataChanges_async(
@@ -179,7 +187,9 @@ async fn create_monitored_items(
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
     // there.
-    rx.await.unwrap().map(|response| (response, st_rx))
+    rx.await
+        .unwrap_or(Err(Error::Internal("callback should send result")))
+        .map(|response| (response, st_rx))
 }
 
 fn delete_monitored_items(

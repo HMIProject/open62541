@@ -103,7 +103,9 @@ async fn create_subscription(
     };
 
     let result = {
-        let mut client = client.lock().unwrap();
+        let Ok(mut client) = client.lock() else {
+            return Err(Error::internal("should be able to lock client"));
+        };
 
         debug!("Calling Subscriptions_create()");
 
@@ -127,7 +129,8 @@ async fn create_subscription(
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
     // there.
-    rx.await.unwrap()
+    rx.await
+        .unwrap_or(Err(Error::Internal("callback should send result")))
 }
 
 fn delete_subscription(client: &Arc<Mutex<ua::Client>>, request: ua::DeleteSubscriptionsRequest) {
