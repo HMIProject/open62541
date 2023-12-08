@@ -2,7 +2,7 @@ use std::{pin::pin, time::Duration};
 
 use anyhow::Context;
 use futures::{future, StreamExt};
-use open62541::{ua, Client};
+use open62541::{ua, AsyncClient};
 use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME,
@@ -15,9 +15,8 @@ use tokio::time;
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let client = Client::new("opc.tcp://opcuademo.sterfive.com:26543")
-        .with_context(|| "connect")?
-        .into_async();
+    let client =
+        AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543").with_context(|| "connect")?;
 
     println!("Connected successfully");
 

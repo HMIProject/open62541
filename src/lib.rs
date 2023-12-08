@@ -7,12 +7,12 @@
 //! ```
 //! # use std::pin::pin;
 //! # use futures::StreamExt;
-//! use open62541::Client;
+//! use open62541::AsyncClient;
 //!
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() -> anyhow::Result<()> {
 //! #
-//! let client = Client::new("opc.tcp://opcuademo.sterfive.com:26543")?.into_async();
+//! let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543")?;
 //! #
 //! # Ok(())
 //! # }
@@ -24,12 +24,12 @@
 //! # use std::pin::pin;
 //! # use futures::StreamExt;
 //! use open62541::ua::NodeId;
-//! # use open62541::Client;
+//! # use open62541::AsyncClient;
 //!
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() -> anyhow::Result<()> {
 //! #
-//! # let client = Client::new("opc.tcp://opcuademo.sterfive.com:26543")?.into_async();
+//! # let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543")?;
 //! #
 //! let node_id = NodeId::new_numeric(0, 2258); // Server/ServerStatus/CurrentTime
 //!
@@ -46,12 +46,12 @@
 //! ```
 //! # use std::pin::pin;
 //! # use futures::{stream::empty, StreamExt};
-//! # use open62541::{Client, ua::{DataValue, NodeId}};
+//! # use open62541::{AsyncClient, ua::{DataValue, NodeId}};
 //!
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() -> anyhow::Result<()> {
 //! #
-//! # let client = Client::new("opc.tcp://opcuademo.sterfive.com:26543")?.into_async();
+//! # let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543")?;
 //! #
 //! # let node_id = NodeId::new_numeric(0, 2258); // Server/ServerStatus/CurrentTime
 //! #

@@ -5,19 +5,15 @@ use std::{
 
 use log::{debug, error, info, trace, warn};
 use open62541_sys::{
-    UA_AttributeId_UA_ATTRIBUTEID_NODEID, UA_AttributeId_UA_ATTRIBUTEID_VALUE,
-    UA_ClientConfig_setDefault, UA_Client_MonitoredItems_createDataChange, UA_Client_Service_read,
-    UA_Client_Subscriptions_create, UA_Client_Subscriptions_delete, UA_Client_connect,
-    UA_Client_getConfig, UA_Client_run_iterate, UA_LogCategory, UA_LogLevel,
-    UA_TimestampsToReturn_UA_TIMESTAMPSTORETURN_BOTH, __UA_Client_readAttribute, va_list,
-    UA_LogLevel_UA_LOGLEVEL_DEBUG, UA_LogLevel_UA_LOGLEVEL_ERROR, UA_LogLevel_UA_LOGLEVEL_FATAL,
-    UA_LogLevel_UA_LOGLEVEL_INFO, UA_LogLevel_UA_LOGLEVEL_TRACE, UA_LogLevel_UA_LOGLEVEL_WARNING,
-    UA_STATUSCODE_GOOD, UA_TYPES, UA_TYPES_NODEID, UA_TYPES_VARIANT,
+    va_list, UA_ClientConfig, UA_ClientConfig_setDefault, UA_Client_connect, UA_Client_getConfig,
+    UA_LogCategory, UA_LogLevel, UA_LogLevel_UA_LOGLEVEL_DEBUG, UA_LogLevel_UA_LOGLEVEL_ERROR,
+    UA_LogLevel_UA_LOGLEVEL_FATAL, UA_LogLevel_UA_LOGLEVEL_INFO, UA_LogLevel_UA_LOGLEVEL_TRACE,
+    UA_LogLevel_UA_LOGLEVEL_WARNING, UA_STATUSCODE_GOOD,
 };
 
 #[cfg(feature = "tokio")]
 use crate::AsyncClient;
-use crate::{ua, DataType, Error, SubscriptionId};
+use crate::{ua, Error};
 
 /// Builder for [`Client`].
 ///
@@ -52,46 +48,19 @@ impl ClientBuilder {
 
 impl Default for ClientBuilder {
     fn default() -> Self {
-        unsafe extern "C" fn no_log(
-            _log_context: *mut c_void,
-            level: UA_LogLevel,
-            _category: UA_LogCategory,
-            msg: *const c_char,
-            _args: va_list,
-        ) {
-            let msg = unsafe { CStr::from_ptr(msg) }.to_string_lossy();
-
-            if level == UA_LogLevel_UA_LOGLEVEL_FATAL {
-                error!("{msg}");
-            } else if level == UA_LogLevel_UA_LOGLEVEL_ERROR {
-                error!("{msg}");
-            } else if level == UA_LogLevel_UA_LOGLEVEL_WARNING {
-                warn!("{msg}");
-            } else if level == UA_LogLevel_UA_LOGLEVEL_INFO {
-                info!("{msg}");
-            } else if level == UA_LogLevel_UA_LOGLEVEL_DEBUG {
-                debug!("{msg}");
-            } else if level == UA_LogLevel_UA_LOGLEVEL_TRACE {
-                trace!("{msg}");
-            } else {
-                // TODO: Handle unexpected level.
-            }
-        }
-
         let mut inner = ua::Client::default();
 
-        // Clients need to be initialized with config for `UA_Client_connect` to work.
+        // We require some initial configuration `UA_Client_connect()` to work.
+        //
         let result = unsafe {
             let config = UA_Client_getConfig(inner.as_mut_ptr());
 
-            // Reset existing logger configuration, then replace with custom logger.
-            if let Some(clear) = (*config).logger.clear {
-                clear((*config).logger.context);
-            }
-            (*config).logger.clear = None;
-            (*config).logger.log = Some(no_log);
-            (*config).logger.context = ptr::null_mut();
+            // Install custom logger that uses `log` crate.
+            set_default_logger(config.as_mut().expect("client config should be set"));
 
+            // Setting the remainder of the configuration to defaults keeps our custom logger. Do so
+            // after setting the logger to prevent this call to install another default logger which
+            // we would throw away in `set_default_logger()` anyway.
             UA_ClientConfig_setDefault(config)
         };
         assert!(result == UA_STATUSCODE_GOOD);
@@ -116,7 +85,7 @@ impl Client {
     /// Creates client connected to endpoint.
     ///
     /// If you need more control over the initialization, use [`ClientBuilder`] instead, and turn it
-    /// into [`Client`] by calling [`connect()`](ClientBuilder::connect()).
+    /// into [`Client`] by calling [`connect()`](ClientBuilder::connect).
     ///
     /// # Errors
     ///
@@ -137,201 +106,51 @@ impl Client {
     pub fn into_async(self) -> AsyncClient {
         AsyncClient::from_sync(self.0)
     }
-
-    /// Runs event loop iteration.
-    ///
-    /// This should be called periodically to process background events and trigger callbacks when a
-    /// message arrives asynchronously.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the request cannot be served.
-    pub fn run_iterate(&mut self) -> Result<(), Error> {
-        // TODO: Allow setting this.
-        let timeout = 500;
-
-        let result = unsafe { UA_Client_run_iterate(self.0.as_mut_ptr(), timeout) };
-        if result != UA_STATUSCODE_GOOD {
-            return Err(Error::new(result));
-        }
-
-        Ok(())
-    }
-
-    /// Reads data from server.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the request cannot be served.
-    pub fn read(&mut self, request: ua::ReadRequest) -> Result<ua::ReadResponse, Error> {
-        let response = unsafe { UA_Client_Service_read(self.0.as_mut_ptr(), request.into_inner()) };
-        if response.responseHeader.serviceResult != UA_STATUSCODE_GOOD {
-            return Err(Error::new(response.responseHeader.serviceResult));
-        }
-
-        Ok(ua::ReadResponse::new(response))
-    }
-
-    /// Reads node ID attribute from node.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the node does not exist or the node ID attribute cannot be read.
-    pub fn read_node_id(&mut self, node_id: &ua::NodeId) -> Result<ua::NodeId, Error> {
-        let mut output = ua::NodeId::init();
-        let data_type = unsafe { &UA_TYPES[UA_TYPES_NODEID as usize] };
-
-        let result = unsafe {
-            __UA_Client_readAttribute(
-                self.0.as_mut_ptr(),
-                node_id.as_ptr(),
-                UA_AttributeId_UA_ATTRIBUTEID_NODEID,
-                output.as_mut_ptr().cast::<c_void>(),
-                data_type,
-            )
-        };
-        if result != UA_STATUSCODE_GOOD {
-            return Err(Error::new(result));
-        }
-
-        Ok(output)
-    }
-
-    /// Reads value attribute from node.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the node does not exist or the value attribute cannot be read.
-    pub fn read_value(&mut self, node_id: &ua::NodeId) -> Result<ua::Variant, Error> {
-        let mut output = ua::Variant::init();
-        let data_type = unsafe { &UA_TYPES[UA_TYPES_VARIANT as usize] };
-
-        let result = unsafe {
-            __UA_Client_readAttribute(
-                self.0.as_mut_ptr(),
-                node_id.as_ptr(),
-                UA_AttributeId_UA_ATTRIBUTEID_VALUE,
-                output.as_mut_ptr().cast::<c_void>(),
-                data_type,
-            )
-        };
-        if result != UA_STATUSCODE_GOOD {
-            return Err(Error::new(result));
-        }
-
-        Ok(output)
-    }
-
-    /// Creates subscription.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the request cannot be served.
-    pub fn create_subscription(
-        &mut self,
-        request: ua::CreateSubscriptionRequest,
-    ) -> Result<ua::CreateSubscriptionResponse, Error> {
-        let response = unsafe {
-            UA_Client_Subscriptions_create(
-                self.0.as_mut_ptr(),
-                request.into_inner(),
-                ptr::null_mut(),
-                None,
-                None,
-            )
-        };
-        if response.responseHeader.serviceResult != UA_STATUSCODE_GOOD {
-            return Err(Error::new(response.responseHeader.serviceResult));
-        }
-
-        Ok(ua::CreateSubscriptionResponse::new(response))
-    }
-
-    /// Deletes subscriptions.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the request cannot be served.
-    pub fn delete_subscriptions(
-        &mut self,
-        request: ua::DeleteSubscriptionsRequest,
-    ) -> Result<ua::DeleteSubscriptionsResponse, Error> {
-        let response =
-            unsafe { UA_Client_Subscriptions_delete(self.0.as_mut_ptr(), request.into_inner()) };
-        if response.responseHeader.serviceResult != UA_STATUSCODE_GOOD {
-            return Err(Error::new(response.responseHeader.serviceResult));
-        }
-
-        Ok(ua::DeleteSubscriptionsResponse::new(response))
-    }
-
-    /// Watches monitored item for data change.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the request cannot be served.
-    pub fn create_data_change<F: Fn(ua::DataValue) + 'static>(
-        &mut self,
-        subscription_id: SubscriptionId,
-        item: ua::MonitoredItemCreateRequest,
-        callback: F,
-    ) -> Result<ua::MonitoredItemCreateResult, Error> {
-        // TODO: Allow setting this.
-        let timestamps_to_return = UA_TimestampsToReturn_UA_TIMESTAMPSTORETURN_BOTH;
-
-        let callback = CallbackFn(Box::new(callback));
-        let callback_box = Box::new(callback);
-        let callback_ptr = Box::into_raw(callback_box);
-
-        let result = unsafe {
-            UA_Client_MonitoredItems_createDataChange(
-                self.0.as_mut_ptr(),
-                subscription_id.0,
-                timestamps_to_return,
-                item.into_inner(),
-                callback_ptr.cast::<c_void>(),
-                Some(extern_callback),
-                Some(extern_delete),
-            )
-        };
-        if result.statusCode != UA_STATUSCODE_GOOD {
-            return Err(Error::new(result.statusCode));
-        }
-
-        Ok(ua::MonitoredItemCreateResult::new(result))
-    }
 }
 
-struct CallbackFn(Box<dyn Fn(ua::DataValue)>);
+/// Installs logger that forwards to `log` crate.
+///
+/// This remove an existing logger from the given configuration (by calling its `clear()` callback),
+/// then installs a custom logger that forwards all messages to the corresponding calls in the `log`
+/// crate.
+///
+/// We can use this to prevent `open62541` from installing its own default logger (which outputs any
+/// logs to stdout/stderr directly).
+fn set_default_logger(config: &mut UA_ClientConfig) {
+    unsafe extern "C" fn log_c(
+        _log_context: *mut c_void,
+        level: UA_LogLevel,
+        _category: UA_LogCategory,
+        msg: *const c_char,
+        _args: va_list,
+    ) {
+        let msg = unsafe { CStr::from_ptr(msg) }.to_string_lossy();
 
-extern "C" fn extern_callback(
-    _client: *mut open62541_sys::UA_Client,
-    _sub_id: open62541_sys::UA_UInt32,
-    _sub_context: *mut c_void,
-    _mon_id: open62541_sys::UA_UInt32,
-    mon_context: *mut c_void,
-    value: *mut open62541_sys::UA_DataValue,
-) {
-    let callback_ptr = mon_context.cast::<CallbackFn>();
-    let callback_box = unsafe { Box::from_raw(callback_ptr) };
-
-    if let Some(value) = unsafe { value.as_ref() } {
-        callback_box.0(ua::DataValue::from_ref(value));
+        if level == UA_LogLevel_UA_LOGLEVEL_FATAL {
+            // There is no fatal level  in `log`, use `error`.
+            error!("{msg}");
+        } else if level == UA_LogLevel_UA_LOGLEVEL_ERROR {
+            error!("{msg}");
+        } else if level == UA_LogLevel_UA_LOGLEVEL_WARNING {
+            warn!("{msg}");
+        } else if level == UA_LogLevel_UA_LOGLEVEL_INFO {
+            info!("{msg}");
+        } else if level == UA_LogLevel_UA_LOGLEVEL_DEBUG {
+            debug!("{msg}");
+        } else if level == UA_LogLevel_UA_LOGLEVEL_TRACE {
+            trace!("{msg}");
+        } else {
+            // TODO: Handle unexpected level.
+        }
     }
 
-    let callback_ptr = Box::into_raw(callback_box);
-    debug_assert_eq!(callback_ptr.cast::<c_void>(), mon_context);
-}
+    // Reset existing logger configuration.
+    if let Some(clear) = config.logger.clear {
+        unsafe { clear(config.logger.context) };
+    }
 
-extern "C" fn extern_delete(
-    _client: *mut open62541_sys::UA_Client,
-    _sub_id: open62541_sys::UA_UInt32,
-    _sub_context: *mut c_void,
-    _mon_id: open62541_sys::UA_UInt32,
-    mon_context: *mut c_void,
-) {
-    let callback_ptr = mon_context.cast::<CallbackFn>();
-    let callback_box = unsafe { Box::from_raw(callback_ptr) };
-
-    drop(callback_box);
+    // Set logger configuration to our own.
+    config.logger.clear = None;
+    config.logger.log = Some(log_c);
+    config.logger.context = ptr::null_mut();
 }

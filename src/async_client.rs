@@ -13,7 +13,7 @@ use open62541_sys::{
 };
 use tokio::{sync::oneshot, task::JoinHandle, time};
 
-use crate::{ua, AsyncSubscription, CallbackOnce, Error};
+use crate::{ua, AsyncSubscription, CallbackOnce, ClientBuilder, Error};
 
 /// Connected OPC UA client (with asynchronous API).
 pub struct AsyncClient {
@@ -23,6 +23,23 @@ pub struct AsyncClient {
 }
 
 impl AsyncClient {
+    /// Creates client connected to endpoint.
+    ///
+    /// If you need more control over the initialization, use [`ClientBuilder`] instead, and turn it
+    /// into [`Client`](crate::Client) by calling [`connect()`](ClientBuilder::connect), followed by
+    /// [`into_async()`](crate::Client::into_async) to get the asynchronous API.
+    ///
+    /// # Errors
+    ///
+    /// See [`ClientBuilder::connect()`].
+    ///
+    /// # Panics
+    ///
+    /// See [`ClientBuilder::connect()`].
+    pub fn new(endpoint_url: &str) -> Result<Self, Error> {
+        Ok(ClientBuilder::default().connect(endpoint_url)?.into_async())
+    }
+
     pub(crate) fn from_sync(client: ua::Client) -> Self {
         let client = Arc::new(Mutex::new(client));
 
