@@ -4,9 +4,7 @@
 //!
 //! ## Connect to server
 //!
-//! ```
-//! # use std::pin::pin;
-//! # use futures::StreamExt;
+//! ```no_run
 //! use open62541::AsyncClient;
 //!
 //! # #[tokio::main(flavor = "current_thread")]
@@ -20,11 +18,8 @@
 //!
 //! ## Read node's value attribute
 //!
-//! ```
-//! # use std::pin::pin;
-//! # use futures::StreamExt;
-//! use open62541::ua::NodeId;
-//! # use open62541::AsyncClient;
+//! ```no_run
+//! use open62541::{AsyncClient, ua::NodeId};
 //!
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() -> anyhow::Result<()> {
@@ -43,10 +38,11 @@
 //!
 //! ## Watch node for changes in value attribute
 //!
-//! ```
-//! # use std::pin::pin;
-//! # use futures::{stream::empty, StreamExt};
-//! # use open62541::{AsyncClient, ua::{DataValue, NodeId}};
+//! ```no_run
+//! use futures::StreamExt;
+//! use std::pin::pin;
+//!
+//! use open62541::{AsyncClient, ua::NodeId};
 //!
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() -> anyhow::Result<()> {
@@ -55,9 +51,8 @@
 //! #
 //! # let node_id = NodeId::new_numeric(0, 2258); // Server/ServerStatus/CurrentTime
 //! #
-//! // Get stream that contains value updates from the server.
+//! // Get stream with value updates from the server.
 //! let value_stream = client.value_stream(node_id).await?;
-//! # let value_stream = empty::<DataValue>();
 //! // Pinning is required to consume stream items.
 //! let mut pinned_stream = pin!(value_stream);
 //!
@@ -87,7 +82,7 @@ pub use self::{
     async_subscription::AsyncSubscription,
 };
 pub(crate) use self::{
-    callback::{CallbackMut, CallbackOnce},
+    callback::{CallbackOnce, CallbackStream},
     data_type::{data_type, DataType},
 };
 pub use self::{
