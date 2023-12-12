@@ -8,7 +8,7 @@ crate::data_type!(
 
 impl MonitoredItemCreateResult {
     #[must_use]
-    pub fn monitored_item_id(&self) -> MonitoredItemId {
+    pub const fn monitored_item_id(&self) -> MonitoredItemId {
         MonitoredItemId(self.0.monitoredItemId)
     }
 }

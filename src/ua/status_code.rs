@@ -9,7 +9,7 @@ pub struct StatusCode(UA_StatusCode);
 impl StatusCode {
     /// Creates wrapper by taking ownership of `src`.
     #[must_use]
-    pub fn new(src: UA_StatusCode) -> Self {
+    pub const fn new(src: UA_StatusCode) -> Self {
         Self(src)
     }
 }

@@ -32,7 +32,7 @@ impl AsyncMonitoredItem {
             .with_subscription_id(subscription_id)
             .with_items_to_create(&[ua::MonitoredItemCreateRequest::init_node_id(node_id)]);
 
-        let (response, rx) = create_monitored_items(client.clone(), request).await?;
+        let (response, rx) = create_monitored_items(Arc::clone(&client), request).await?;
 
         // PANIC: We expect exactly one result for the monitored item we requested above.
         let monitored_item_id = *response.monitored_item_ids().unwrap().get(0).unwrap();
