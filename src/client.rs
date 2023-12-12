@@ -3,7 +3,6 @@ use std::{
     ptr,
 };
 
-use log::{debug, error, info, trace, warn};
 #[cfg(target_arch = "x86_64")]
 use open62541_sys::__va_list_tag;
 #[cfg(not(target_arch = "x86_64"))]
@@ -36,7 +35,7 @@ impl ClientBuilder {
     ///
     /// The endpoint URL must be a valid C string, i.e. it must not contain any NUL bytes.
     pub fn connect(mut self, endpoint_url: &str) -> Result<Client, Error> {
-        info!("Connecting to endpoint {endpoint_url}");
+        log::info!("Connecting to endpoint {endpoint_url}");
 
         let endpoint_url =
             CString::new(endpoint_url).expect("endpoint URL does not contain NUL bytes");
@@ -136,17 +135,17 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
 
         if level == UA_LogLevel_UA_LOGLEVEL_FATAL {
             // Without fatal level in `log`, fall back to error.
-            error!("{msg}");
+            log::error!("{msg}");
         } else if level == UA_LogLevel_UA_LOGLEVEL_ERROR {
-            error!("{msg}");
+            log::error!("{msg}");
         } else if level == UA_LogLevel_UA_LOGLEVEL_WARNING {
-            warn!("{msg}");
+            log::warn!("{msg}");
         } else if level == UA_LogLevel_UA_LOGLEVEL_INFO {
-            info!("{msg}");
+            log::info!("{msg}");
         } else if level == UA_LogLevel_UA_LOGLEVEL_DEBUG {
-            debug!("{msg}");
+            log::debug!("{msg}");
         } else if level == UA_LogLevel_UA_LOGLEVEL_TRACE {
-            trace!("{msg}");
+            log::trace!("{msg}");
         } else {
             // TODO: Handle unexpected level.
         }

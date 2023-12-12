@@ -5,7 +5,6 @@ use std::{
 };
 
 use futures::{channel::oneshot, stream, Stream};
-use log::debug;
 use open62541_sys::{
     UA_Client, UA_Client_DataChangeNotificationCallback, UA_Client_DeleteMonitoredItemCallback,
     UA_Client_MonitoredItems_createDataChanges_async, UA_Client_MonitoredItems_delete_async,
@@ -100,7 +99,7 @@ async fn create_monitored_items(
         mon_context: *mut c_void,
         value: *mut UA_DataValue,
     ) {
-        debug!("DataChangeNotificationCallback() was called");
+        log::debug!("DataChangeNotificationCallback() was called");
 
         // PANIC: We expect pointer to be valid when called.
         let value = value.as_ref().expect("value is set");
@@ -115,7 +114,7 @@ async fn create_monitored_items(
         _mon_id: UA_UInt32,
         mon_context: *mut c_void,
     ) {
-        debug!("DeleteMonitoredItemCallback() was called");
+        log::debug!("DeleteMonitoredItemCallback() was called");
 
         St::delete(mon_context);
     }
@@ -126,7 +125,7 @@ async fn create_monitored_items(
         _request_id: UA_UInt32,
         response: *mut c_void,
     ) {
-        debug!("MonitoredItems_createDataChanges() completed");
+        log::debug!("MonitoredItems_createDataChanges() completed");
 
         let response = response.cast::<UA_CreateMonitoredItemsResponse>();
         let status = (*response).responseHeader.serviceResult;
@@ -162,7 +161,7 @@ async fn create_monitored_items(
             return Err(Error::internal("should be able to lock client"));
         };
 
-        debug!(
+        log::debug!(
             "Calling MonitoredItems_createDataChanges(), count={}",
             contexts.len()
         );
@@ -202,7 +201,7 @@ fn delete_monitored_items(
         _request_id: UA_UInt32,
         _response: *mut c_void,
     ) {
-        debug!("MonitoredItems_delete() completed");
+        log::debug!("MonitoredItems_delete() completed");
 
         // Nothing to do here.
     }
@@ -212,7 +211,7 @@ fn delete_monitored_items(
             return;
         };
 
-        debug!("Calling MonitoredItems_delete()");
+        log::debug!("Calling MonitoredItems_delete()");
 
         unsafe {
             UA_Client_MonitoredItems_delete_async(

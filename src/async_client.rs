@@ -6,7 +6,6 @@ use std::{
 };
 
 use futures::Stream;
-use log::debug;
 use open62541_sys::{
     UA_Client, UA_Client_disconnect, UA_Client_readValueAttribute_async, UA_Client_run_iterate,
     UA_DataValue, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
@@ -51,7 +50,7 @@ impl AsyncClient {
             // to maintain the connection (e.g. renew session) and run callback handlers.
             tokio::spawn(async move {
                 loop {
-                    debug!("Running iterate");
+                    log::debug!("Running iterate");
 
                     let result = {
                         let Ok(mut client) = client.lock() else {
@@ -158,7 +157,7 @@ async fn read_value(
         status: UA_StatusCode,
         value: *mut UA_DataValue,
     ) {
-        debug!("readValueAttribute() completed");
+        log::debug!("readValueAttribute() completed");
 
         let result = if status == UA_STATUSCODE_GOOD {
             // PANIC: We expect pointer to be valid when good.
@@ -184,7 +183,7 @@ async fn read_value(
             return Err(Error::internal("should be able to lock client"));
         };
 
-        debug!("Calling readValueAttribute(), node_id={node_id:?}");
+        log::debug!("Calling readValueAttribute(), node_id={node_id:?}");
 
         unsafe {
             UA_Client_readValueAttribute_async(

@@ -5,7 +5,6 @@ use std::{
 };
 
 use futures::channel::oneshot;
-use log::debug;
 use open62541_sys::{
     UA_Client, UA_Client_Subscriptions_create_async, UA_Client_Subscriptions_delete_async,
     UA_CreateSubscriptionResponse, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
@@ -79,7 +78,7 @@ async fn create_subscription(
         _request_id: UA_UInt32,
         response: *mut c_void,
     ) {
-        debug!("Subscriptions_create() completed");
+        log::debug!("Subscriptions_create() completed");
 
         let response = response.cast::<UA_CreateSubscriptionResponse>();
         let status = (*response).responseHeader.serviceResult;
@@ -107,7 +106,7 @@ async fn create_subscription(
             return Err(Error::internal("should be able to lock client"));
         };
 
-        debug!("Calling Subscriptions_create()");
+        log::debug!("Calling Subscriptions_create()");
 
         unsafe {
             UA_Client_Subscriptions_create_async(
@@ -140,7 +139,7 @@ fn delete_subscription(client: &Arc<Mutex<ua::Client>>, request: ua::DeleteSubsc
         _request_id: UA_UInt32,
         _response: *mut c_void,
     ) {
-        debug!("Subscriptions_delete() completed");
+        log::debug!("Subscriptions_delete() completed");
 
         // Nothing to do here.
     }
@@ -150,7 +149,7 @@ fn delete_subscription(client: &Arc<Mutex<ua::Client>>, request: ua::DeleteSubsc
             return;
         };
 
-        debug!("Calling Subscriptions_delete()");
+        log::debug!("Calling Subscriptions_delete()");
 
         unsafe {
             UA_Client_Subscriptions_delete_async(
