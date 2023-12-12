@@ -1,4 +1,4 @@
-use crate::{ua, MonitoredItemId};
+use crate::ua;
 
 crate::data_type!(
     DeleteMonitoredItemsRequest,
@@ -8,8 +8,12 @@ crate::data_type!(
 
 impl DeleteMonitoredItemsRequest {
     #[must_use]
-    pub fn with_monitored_item_ids(mut self, monitored_item_ids: &[MonitoredItemId]) -> Self {
-        let array = ua::Array::from_iter(monitored_item_ids.iter().map(|id| ua::Uint32::new(id.0)));
+    pub fn with_monitored_item_ids(mut self, monitored_item_ids: &[ua::MonitoredItemId]) -> Self {
+        let array = ua::Array::from_iter(
+            monitored_item_ids
+                .iter()
+                .map(|id| ua::Uint32::new(id.into_inner())),
+        );
 
         // Make sure to clean up any previous value in target.
         let _unused = ua::Array::<ua::Uint32>::from_raw_parts(

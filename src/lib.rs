@@ -89,15 +89,3 @@ pub use self::{
     client::{Client, ClientBuilder},
     error::Error,
 };
-
-/// ID of subscription.
-///
-/// This holds an ID to track subscriptions in an OPC UA connection.
-#[derive(Clone, Copy, Debug)]
-pub struct SubscriptionId(u32);
-
-/// ID of monitored item.
-///
-/// This holds an ID to track monitored items in an OPC UA connection.
-#[derive(Clone, Copy, Debug)]
-pub struct MonitoredItemId(u32);

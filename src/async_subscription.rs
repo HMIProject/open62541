@@ -13,13 +13,13 @@ use open62541_sys::{
 use crate::{
     callback::CallbackOnce,
     ua::{self, NodeId},
-    AsyncMonitoredItem, Error, SubscriptionId,
+    AsyncMonitoredItem, Error,
 };
 
 /// Subscription (with asynchronous API).
 pub struct AsyncSubscription {
     client: Weak<Mutex<ua::Client>>,
-    subscription_id: SubscriptionId,
+    subscription_id: ua::SubscriptionId,
 }
 
 impl AsyncSubscription {

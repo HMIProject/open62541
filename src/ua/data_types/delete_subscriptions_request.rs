@@ -1,4 +1,4 @@
-use crate::{ua, SubscriptionId};
+use crate::ua;
 
 crate::data_type!(
     DeleteSubscriptionsRequest,
@@ -8,8 +8,12 @@ crate::data_type!(
 
 impl DeleteSubscriptionsRequest {
     #[must_use]
-    pub fn with_subscription_ids(mut self, subscription_ids: &[SubscriptionId]) -> Self {
-        let array = ua::Array::from_iter(subscription_ids.iter().map(|id| ua::Uint32::new(id.0)));
+    pub fn with_subscription_ids(mut self, subscription_ids: &[ua::SubscriptionId]) -> Self {
+        let array = ua::Array::from_iter(
+            subscription_ids
+                .iter()
+                .map(|id| ua::Uint32::new(id.into_inner())),
+        );
 
         // Make sure to clean up any previous value in target.
         let _unused = ua::Array::<ua::Uint32>::from_raw_parts(

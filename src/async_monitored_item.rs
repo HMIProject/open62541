@@ -12,19 +12,19 @@ use open62541_sys::{
 };
 use tokio::sync::mpsc;
 
-use crate::{ua, CallbackOnce, CallbackStream, Error, MonitoredItemId, SubscriptionId};
+use crate::{ua, CallbackOnce, CallbackStream, Error};
 
 /// Monitored item (with asynchronous API).
 pub struct AsyncMonitoredItem {
     client: Weak<Mutex<ua::Client>>,
-    monitored_item_id: MonitoredItemId,
+    monitored_item_id: ua::MonitoredItemId,
     rx: mpsc::Receiver<ua::DataValue>,
 }
 
 impl AsyncMonitoredItem {
     pub(crate) async fn new(
         client: Arc<Mutex<ua::Client>>,
-        subscription_id: SubscriptionId,
+        subscription_id: ua::SubscriptionId,
         node_id: ua::NodeId,
     ) -> Result<Self, Error> {
         let request = ua::CreateMonitoredItemsRequest::init()
