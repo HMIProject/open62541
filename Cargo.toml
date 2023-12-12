@@ -7,7 +7,6 @@ repository = "https://github.com/HMIProject/open62541.git"
 publish = false
 
 [dependencies]
-anyhow = "1.0.75"
 futures = "0.3.29"
 log = "0.4.20"
 open62541-sys = { git = "https://github.com/HMIProject/open62541-sys.git", tag = "v1.3.9" }
@@ -19,6 +18,7 @@ optional = true
 features = ["rt", "sync", "time"]
 
 [dev-dependencies]
+anyhow = "1.0.75"
 env_logger = "0.10.1"
 
 [dev-dependencies.tokio]
