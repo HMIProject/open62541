@@ -6,7 +6,6 @@ use std::{
 };
 
 use futures::Stream;
-use log::debug;
 use open62541_sys::{
     UA_Client, UA_Client_disconnect, UA_Client_readValueAttribute_async, UA_Client_run_iterate,
     UA_DataValue, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
@@ -44,14 +43,14 @@ impl AsyncClient {
         let client = Arc::new(Mutex::new(client));
 
         let background_handle = {
-            let client = client.clone();
+            let client = Arc::clone(&client);
 
             // Run the event loop concurrently (this may be a different thread when using tokio with
             // `rt-multi-thread`). `UA_Client_run_iterate()` must be run periodically and makes sure
             // to maintain the connection (e.g. renew session) and run callback handlers.
             tokio::spawn(async move {
                 loop {
-                    debug!("Running iterate");
+                    log::debug!("Running iterate");
 
                     let result = {
                         let Ok(mut client) = client.lock() else {
@@ -95,7 +94,7 @@ impl AsyncClient {
     ///
     /// This fails when the client is not connected.
     pub async fn create_subscription(&self) -> Result<AsyncSubscription, Error> {
-        AsyncSubscription::new(self.client.clone()).await
+        AsyncSubscription::new(Arc::clone(&self.client)).await
     }
 
     /// Watches value for changes.
@@ -120,11 +119,11 @@ impl AsyncClient {
 
             if let Some(subscription) = default_subscription.as_ref() {
                 // Use existing default subscription.
-                subscription.clone()
+                Arc::clone(subscription)
             } else {
                 // Create new subscription and store it for future monitored items.
                 let subscription = Arc::new(self.create_subscription().await?);
-                *default_subscription = Some(subscription.clone());
+                *default_subscription = Some(Arc::clone(&subscription));
                 subscription
             }
         };
@@ -158,7 +157,7 @@ async fn read_value(
         status: UA_StatusCode,
         value: *mut UA_DataValue,
     ) {
-        debug!("readValueAttribute() completed");
+        log::debug!("readValueAttribute() completed");
 
         let result = if status == UA_STATUSCODE_GOOD {
             // PANIC: We expect pointer to be valid when good.
@@ -184,7 +183,7 @@ async fn read_value(
             return Err(Error::internal("should be able to lock client"));
         };
 
-        debug!("Calling readValueAttribute(), node_id={node_id:?}");
+        log::debug!("Calling readValueAttribute(), node_id={node_id:?}");
 
         unsafe {
             UA_Client_readValueAttribute_async(

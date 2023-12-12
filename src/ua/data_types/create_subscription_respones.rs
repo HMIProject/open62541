@@ -8,7 +8,7 @@ crate::data_type!(
 
 impl CreateSubscriptionResponse {
     #[must_use]
-    pub fn subscription_id(&self) -> SubscriptionId {
+    pub const fn subscription_id(&self) -> SubscriptionId {
         SubscriptionId(self.0.subscriptionId)
     }
 }

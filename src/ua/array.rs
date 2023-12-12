@@ -184,7 +184,7 @@ impl<T: DataType> Array<T> {
 
     #[allow(private_interfaces)]
     #[must_use]
-    pub fn as_slice(&self) -> &[T] {
+    pub const fn as_slice(&self) -> &[T] {
         match self.0 {
             State::Empty => &[],
 

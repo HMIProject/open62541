@@ -20,7 +20,7 @@ use tokio::sync::mpsc;
 /// use open62541::CallbackOnce;
 /// use std::{cell::RefCell, sync::Arc};
 /// # use std::ffi::c_void;
-/// use tokio::sync::mpsc;
+/// use mpsc;
 ///
 /// let cell = Arc::new(RefCell::new(0));
 ///
@@ -93,7 +93,7 @@ impl<T> CallbackOnce<T> {
 /// use futures::executor::block_on;
 /// use open62541::CallbackStream;
 /// # use std::ffi::c_void;
-/// use tokio::sync::mpsc;
+/// use mpsc;
 ///
 /// let (tx, mut rx) = mpsc::channel::<u32>(10);
 ///

@@ -32,7 +32,7 @@ impl Error {
     }
 
     #[must_use]
-    pub(crate) fn internal(message: &'static str) -> Self {
+    pub(crate) const fn internal(message: &'static str) -> Self {
         Self::Internal(message)
     }
 }

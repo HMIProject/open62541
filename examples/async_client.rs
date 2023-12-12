@@ -1,7 +1,7 @@
 use std::{pin::pin, time::Duration};
 
 use anyhow::Context;
-use futures::{future, StreamExt};
+use futures::{future, StreamExt as _};
 use open62541::{ua, AsyncClient};
 use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
