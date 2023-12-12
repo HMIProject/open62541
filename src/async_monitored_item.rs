@@ -79,6 +79,7 @@ impl Drop for AsyncMonitoredItem {
 /// Maximum number of buffered values.
 const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
 
+#[cfg(feature = "tokio")]
 async fn create_monitored_items(
     client: Arc<Mutex<ua::Client>>,
     request: ua::CreateMonitoredItemsRequest,
