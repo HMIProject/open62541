@@ -24,7 +24,7 @@ impl Error {
     }
 
     #[must_use]
-    pub fn internal(message: &'static str) -> Self {
+    pub const fn internal(message: &'static str) -> Self {
         Self::Internal(message)
     }
 }

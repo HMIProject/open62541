@@ -26,7 +26,7 @@ impl AsyncSubscription {
     pub(crate) async fn new(client: Arc<Mutex<ua::Client>>) -> Result<Self, Error> {
         let request = ua::CreateSubscriptionRequest::default();
 
-        let response = create_subscription(client.clone(), request).await?;
+        let response = create_subscription(Arc::clone(&client), request).await?;
 
         Ok(AsyncSubscription {
             client: Arc::downgrade(&client),

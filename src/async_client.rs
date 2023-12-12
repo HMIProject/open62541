@@ -43,7 +43,7 @@ impl AsyncClient {
         let client = Arc::new(Mutex::new(client));
 
         let background_handle = {
-            let client = client.clone();
+            let client = Arc::clone(&client);
 
             // Run the event loop concurrently (this may be a different thread when using tokio with
             // `rt-multi-thread`). `UA_Client_run_iterate()` must be run periodically and makes sure
@@ -94,7 +94,7 @@ impl AsyncClient {
     ///
     /// This fails when the client is not connected.
     pub async fn create_subscription(&self) -> Result<AsyncSubscription, Error> {
-        AsyncSubscription::new(self.client.clone()).await
+        AsyncSubscription::new(Arc::clone(&self.client)).await
     }
 
     /// Watches value for changes.
@@ -119,11 +119,11 @@ impl AsyncClient {
 
             if let Some(subscription) = default_subscription.as_ref() {
                 // Use existing default subscription.
-                subscription.clone()
+                Arc::clone(subscription)
             } else {
                 // Create new subscription and store it for future monitored items.
                 let subscription = Arc::new(self.create_subscription().await?);
-                *default_subscription = Some(subscription.clone());
+                *default_subscription = Some(Arc::clone(&subscription));
                 subscription
             }
         };

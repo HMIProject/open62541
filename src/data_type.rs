@@ -115,7 +115,7 @@ macro_rules! data_type {
             /// Creates wrapper by taking ownership of `src`.
             #[allow(dead_code)]
             #[must_use]
-            pub(crate) fn new(src: open62541_sys::$inner) -> Self {
+            pub(crate) const fn new(src: open62541_sys::$inner) -> Self {
                 // This takes ownership of the wrapped value. We call `UA_clear()` when the value is
                 // dropped eventually.
                 Self(src)

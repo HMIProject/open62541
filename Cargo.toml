@@ -41,3 +41,6 @@ unused = "warn"
 
 [lints.clippy]
 pedantic = "warn"
+clone_on_ref_ptr = "warn"
+missing_const_for_fn = "warn"
+mod_module_files = "warn"
