@@ -70,6 +70,7 @@ mod async_client;
 mod async_monitored_item;
 #[cfg(feature = "tokio")]
 mod async_subscription;
+#[cfg(feature = "tokio")]
 mod callback;
 mod client;
 mod data_type;
@@ -77,13 +78,12 @@ mod error;
 pub mod ua;
 
 #[cfg(feature = "tokio")]
+pub(crate) use self::callback::{CallbackOnce, CallbackStream};
+pub(crate) use self::data_type::{data_type, DataType};
+#[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient, async_monitored_item::AsyncMonitoredItem,
     async_subscription::AsyncSubscription,
-};
-pub(crate) use self::{
-    callback::{CallbackOnce, CallbackStream},
-    data_type::{data_type, DataType},
 };
 pub use self::{
     client::{Client, ClientBuilder},
