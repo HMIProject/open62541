@@ -101,7 +101,7 @@ async fn create_subscription(
         let _unused = tx.send(result.map_err(Error::new));
     };
 
-    let result = {
+    let status_code = {
         let Ok(mut client) = client.lock() else {
             return Err(Error::internal("should be able to lock client"));
         };
@@ -121,9 +121,7 @@ async fn create_subscription(
             )
         }
     };
-    if result != UA_STATUSCODE_GOOD {
-        return Err(Error::new(result));
-    }
+    Error::verify_good(status_code)?;
 
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
     // is only dropped after placing a value into the channel and `rx.await` always finds this value

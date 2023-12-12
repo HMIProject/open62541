@@ -18,13 +18,21 @@ pub enum Error {
 
 impl Error {
     #[must_use]
-    pub fn new(status_code: u32) -> Self {
+    pub(crate) fn new(status_code: u32) -> Self {
         debug_assert_ne!(status_code, UA_STATUSCODE_GOOD);
         Self::Server(ua::StatusCode::new(status_code))
     }
 
+    pub(crate) fn verify_good(status_code: u32) -> Result<(), Self> {
+        if status_code == UA_STATUSCODE_GOOD {
+            Ok(())
+        } else {
+            Err(Self::new(status_code))
+        }
+    }
+
     #[must_use]
-    pub const fn internal(message: &'static str) -> Self {
+    pub(crate) const fn internal(message: &'static str) -> Self {
         Self::Internal(message)
     }
 }
