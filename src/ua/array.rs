@@ -18,7 +18,7 @@ use crate::DataType;
 /// 3. Undefined arrays
 ///
 /// This type tracks only the first two kinds of arrays. Thus when converting from raw parts, we may
-/// return `None` to indicate that the given array is not defined.
+/// return `None` to indicate that the given array is "undefined" (as specified by OPC UA).
 #[allow(private_bounds)]
 pub struct Array<T: DataType>(State<T>);
 
@@ -182,6 +182,22 @@ impl<T: DataType> Array<T> {
         Some(Self::from_slice(slice))
     }
 
+    #[must_use]
+    pub const fn len(&self) -> usize {
+        match self.0 {
+            State::Empty => 0,
+            State::NonEmpty { size, .. } => size.get(),
+        }
+    }
+
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        match self.0 {
+            State::Empty => true,
+            State::NonEmpty { .. } => false,
+        }
+    }
+
     #[allow(private_interfaces)]
     #[must_use]
     pub const fn as_slice(&self) -> &[T] {
@@ -257,5 +273,60 @@ impl<T: DataType> Drop for Array<T> {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::CString;
+
+    use open62541_sys::UA_NODEID_STRING_ALLOC;
+
+    use crate::ua;
+
+    use super::*;
+
+    #[test]
+    fn create_and_drop_array() {
+        const STRING: &str = "LoremIpsum";
+        const LEN: usize = 123;
+        const POS: usize = 42;
+        type T = ua::NodeId;
+
+        // Create and drop array locally.
+        //
+        let mut array: Array<T> = Array::new(LEN);
+        // Copy value with allocated data into array to catch double free.
+        ua::NodeId::new_string(0, STRING)
+            .clone_into(array.as_slice_mut().get_mut(POS).unwrap().as_mut());
+
+        drop(array);
+
+        // Create array locally, delete in `open62541`.
+        //
+        let mut array: Array<T> = Array::new(LEN);
+        // Copy value with allocated data into array to catch double free.
+        ua::NodeId::new_string(0, STRING)
+            .clone_into(array.as_slice_mut().get_mut(POS).unwrap().as_mut());
+
+        let (size, ptr) = array.into_raw_parts();
+        assert_eq!(size, LEN);
+
+        unsafe { UA_Array_delete(ptr.cast(), size, T::data_type()) }
+
+        // Create array in `open62541`, delete locally.
+        //
+        let size = LEN;
+        let ptr: *mut <T as DataType>::Inner = unsafe { UA_Array_new(size, T::data_type()) }.cast();
+        // Copy value with allocated data into array to catch double free.
+        let string = CString::new(STRING).unwrap();
+        *unsafe { ptr.add(POS).as_mut() }.unwrap() =
+            unsafe { UA_NODEID_STRING_ALLOC(0, string.as_ptr()) };
+        drop(string);
+
+        let array: Array<T> = Array::from_raw_parts(ptr, size).unwrap();
+        assert_eq!(array.len(), LEN);
+
+        drop(array);
     }
 }
