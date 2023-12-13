@@ -6,6 +6,8 @@ use crate::ua;
 ///
 /// This error may be returned from many different OPC UA calls. It represents any status code other
 /// than [`UA_STATUSCODE_GOOD`].
+///
+/// [`UA_STATUSCODE_GOOD`]: open62541_sys::UA_STATUSCODE_GOOD
 #[derive(Debug, Error)]
 #[error("{0}")]
 pub enum Error {

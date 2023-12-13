@@ -15,12 +15,11 @@ use tokio::sync::mpsc;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use futures::executor::block_on;
 /// use open62541::CallbackOnce;
 /// use std::{cell::RefCell, sync::Arc};
 /// # use std::ffi::c_void;
-/// use mpsc;
 ///
 /// let cell = Arc::new(RefCell::new(0));
 ///
@@ -39,7 +38,7 @@ use tokio::sync::mpsc;
 ///
 /// assert_eq!(*cell.borrow(), 123);
 /// ```
-pub(crate) struct CallbackOnce<T>(Box<dyn FnOnce(T)>);
+pub struct CallbackOnce<T>(Box<dyn FnOnce(T)>);
 
 impl<T> CallbackOnce<T> {
     /// Prepares closure for later call.
@@ -89,11 +88,11 @@ impl<T> CallbackOnce<T> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use futures::executor::block_on;
 /// use open62541::CallbackStream;
 /// # use std::ffi::c_void;
-/// use mpsc;
+/// use tokio::sync::mpsc;
 ///
 /// let (tx, mut rx) = mpsc::channel::<u32>(10);
 ///
@@ -116,7 +115,7 @@ impl<T> CallbackOnce<T> {
 /// assert_eq!(block_on(rx.recv()), Some(3));
 /// assert_eq!(block_on(rx.recv()), None);
 /// ```
-pub(crate) struct CallbackStream<T>(mpsc::Sender<T>);
+pub struct CallbackStream<T>(mpsc::Sender<T>);
 
 impl<T> CallbackStream<T> {
     /// Prepares sender for later use.

@@ -79,7 +79,8 @@ mod service;
 pub mod ua;
 
 #[cfg(feature = "tokio")]
-pub(crate) use self::callback::{CallbackOnce, CallbackStream};
+#[doc(hidden)]
+pub use self::callback::{CallbackOnce, CallbackStream};
 #[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient, async_monitored_item::AsyncMonitoredItem,
