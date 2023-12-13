@@ -126,7 +126,7 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
         level: UA_LogLevel,
         _category: UA_LogCategory,
         msg: *const c_char,
-        // For some reason, this magic is necessary to accomodate the different signatures generated
+        // For some reason, the magic is necessary to accommodate the different signatures generated
         // by `bindgen` in `open62541-sys`.
         #[cfg(target_arch = "x86_64")] _args: *mut __va_list_tag,
         #[cfg(not(target_arch = "x86_64"))] _args: va_list,

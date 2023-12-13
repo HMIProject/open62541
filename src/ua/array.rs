@@ -159,7 +159,7 @@ impl<T: DataType> Array<T> {
     pub(crate) fn from_raw_parts(ptr: *const T::Inner, size: usize) -> Option<Self> {
         if size == 0 {
             if ptr.is_null() {
-                // This indicates an undefined array of unknow length. We do not handle this in this
+                // This indicates an undefined array of unknown length. We do not handle this in the
                 // type but return `None` instead.
                 return None;
             }

@@ -13,6 +13,8 @@ impl QualifiedName {
         ua::String::from_ref(&self.0.name)
     }
 
+    #[allow(clippy::inherent_to_string_shadow_display)] // TODO: Fix conflicting definitions.
+    #[must_use]
     pub fn to_string(&self) -> String {
         let namespace_index = self.namespace_index();
         if namespace_index == 0 {
