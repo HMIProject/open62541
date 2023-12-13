@@ -1,4 +1,4 @@
-use crate::ua;
+use crate::{ua, ServiceRequest};
 
 crate::data_type!(ReadRequest, UA_ReadRequest, UA_TYPES_READREQUEST);
 
@@ -20,4 +20,8 @@ impl ReadRequest {
 
         self
     }
+}
+
+impl ServiceRequest for ReadRequest {
+    type Response = ua::ReadResponse;
 }

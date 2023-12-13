@@ -1,4 +1,3 @@
-use open62541_sys::UA_STATUSCODE_GOOD;
 use thiserror::Error;
 
 use crate::ua;
@@ -18,13 +17,13 @@ pub enum Error {
 
 impl Error {
     #[must_use]
-    pub(crate) fn new(status_code: u32) -> Self {
-        debug_assert_ne!(status_code, UA_STATUSCODE_GOOD);
-        Self::Server(ua::StatusCode::new(status_code))
+    pub(crate) fn new(status_code: ua::StatusCode) -> Self {
+        debug_assert!(!status_code.is_good());
+        Self::Server(status_code)
     }
 
-    pub(crate) fn verify_good(status_code: u32) -> Result<(), Self> {
-        if status_code == UA_STATUSCODE_GOOD {
+    pub(crate) fn verify_good(status_code: ua::StatusCode) -> Result<(), Self> {
+        if status_code.is_good() {
             Ok(())
         } else {
             Err(Self::new(status_code))

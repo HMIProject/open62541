@@ -7,7 +7,7 @@ use std::{
 use futures::channel::oneshot;
 use open62541_sys::{
     UA_Client, UA_Client_Subscriptions_create_async, UA_Client_Subscriptions_delete_async,
-    UA_CreateSubscriptionResponse, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
+    UA_CreateSubscriptionResponse, UA_UInt32,
 };
 
 use crate::{
@@ -70,7 +70,7 @@ async fn create_subscription(
     client: Arc<Mutex<ua::Client>>,
     request: ua::CreateSubscriptionRequest,
 ) -> Result<ua::CreateSubscriptionResponse, Error> {
-    type Cb = CallbackOnce<Result<ua::CreateSubscriptionResponse, UA_StatusCode>>;
+    type Cb = CallbackOnce<Result<ua::CreateSubscriptionResponse, ua::StatusCode>>;
 
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
@@ -81,13 +81,14 @@ async fn create_subscription(
         log::debug!("Subscriptions_create() completed");
 
         let response = response.cast::<UA_CreateSubscriptionResponse>();
-        let status = (*response).responseHeader.serviceResult;
-        let result = if status == UA_STATUSCODE_GOOD {
+        let status_code = ua::StatusCode::new((*response).responseHeader.serviceResult);
+
+        let result = if status_code.is_good() {
             // PANIC: We expect pointer to be valid when good.
             let response = response.as_ref().expect("response is set");
             Ok(ua::CreateSubscriptionResponse::from_ref(response))
         } else {
-            Err(status)
+            Err(status_code)
         };
         Cb::execute(userdata, result);
     }
@@ -101,7 +102,7 @@ async fn create_subscription(
         let _unused = tx.send(result.map_err(Error::new));
     };
 
-    let status_code = {
+    let status_code = ua::StatusCode::new({
         let Ok(mut client) = client.lock() else {
             return Err(Error::internal("should be able to lock client"));
         };
@@ -120,7 +121,7 @@ async fn create_subscription(
                 ptr::null_mut(),
             )
         }
-    };
+    });
     Error::verify_good(status_code)?;
 
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender

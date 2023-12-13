@@ -148,7 +148,7 @@ async fn read_value(
     client: &Arc<Mutex<ua::Client>>,
     node_id: ua::NodeId,
 ) -> Result<ua::DataValue, Error> {
-    type Cb = CallbackOnce<Result<ua::DataValue, UA_StatusCode>>;
+    type Cb = CallbackOnce<Result<ua::DataValue, ua::StatusCode>>;
 
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
@@ -159,12 +159,14 @@ async fn read_value(
     ) {
         log::debug!("readValueAttribute() completed");
 
-        let result = if status == UA_STATUSCODE_GOOD {
+        let status_code = ua::StatusCode::new(status);
+
+        let result = if status_code.is_good() {
             // PANIC: We expect pointer to be valid when good.
             let value = value.as_ref().expect("value is set");
             Ok(ua::DataValue::from_ref(value))
         } else {
-            Err(status)
+            Err(status_code)
         };
         Cb::execute(userdata, result);
     }
@@ -178,7 +180,7 @@ async fn read_value(
         let _unused = tx.send(result.map_err(Error::new));
     };
 
-    let status_code = {
+    let status_code = ua::StatusCode::new({
         let Ok(mut client) = client.lock() else {
             return Err(Error::internal("should be able to lock client"));
         };
@@ -194,7 +196,7 @@ async fn read_value(
                 ptr::null_mut(),
             )
         }
-    };
+    });
     Error::verify_good(status_code)?;
 
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender

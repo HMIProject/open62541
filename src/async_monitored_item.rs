@@ -8,7 +8,7 @@ use futures::{channel::oneshot, stream, Stream};
 use open62541_sys::{
     UA_Client, UA_Client_DataChangeNotificationCallback, UA_Client_DeleteMonitoredItemCallback,
     UA_Client_MonitoredItems_createDataChanges_async, UA_Client_MonitoredItems_delete_async,
-    UA_CreateMonitoredItemsResponse, UA_DataValue, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
+    UA_CreateMonitoredItemsResponse, UA_DataValue, UA_UInt32,
 };
 use tokio::sync::mpsc;
 
@@ -89,7 +89,7 @@ async fn create_monitored_items(
     Error,
 > {
     type St = CallbackStream<ua::DataValue>;
-    type Cb = CallbackOnce<Result<ua::CreateMonitoredItemsResponse, UA_StatusCode>>;
+    type Cb = CallbackOnce<Result<ua::CreateMonitoredItemsResponse, ua::StatusCode>>;
 
     unsafe extern "C" fn notification_callback_c(
         _client: *mut UA_Client,
@@ -128,13 +128,14 @@ async fn create_monitored_items(
         log::debug!("MonitoredItems_createDataChanges() completed");
 
         let response = response.cast::<UA_CreateMonitoredItemsResponse>();
-        let status = (*response).responseHeader.serviceResult;
-        let result = if status == UA_STATUSCODE_GOOD {
+        let status_code = ua::StatusCode::new((*response).responseHeader.serviceResult);
+
+        let result = if status_code.is_good() {
             // PANIC: We expect pointer to be valid when good.
             let response = response.as_ref().expect("response is set");
             Ok(ua::CreateMonitoredItemsResponse::from_ref(response))
         } else {
-            Err(status)
+            Err(status_code)
         };
         Cb::execute(userdata, result);
     }
@@ -156,7 +157,7 @@ async fn create_monitored_items(
         vec![Some(delete_callback_c)];
     let mut contexts: Vec<*mut c_void> = vec![St::prepare(st_tx)];
 
-    let status_code = {
+    let status_code = ua::StatusCode::new({
         let Ok(mut client) = client.lock() else {
             return Err(Error::internal("should be able to lock client"));
         };
@@ -178,7 +179,7 @@ async fn create_monitored_items(
                 ptr::null_mut(),
             )
         }
-    };
+    });
     Error::verify_good(status_code)?;
 
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender

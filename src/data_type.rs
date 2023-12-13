@@ -25,6 +25,17 @@ pub(crate) unsafe trait DataType {
         unsafe { Self::data_type().as_ref() }.unwrap()
     }
 
+    /// Creates wrapper by cloning value from `src`.
+    ///
+    /// The original value must still be cleared with [`UA_clear`], or deleted with [`UA_delete`] if
+    /// allocated on the heap, to avoid memory leaks. If `src` is borrowed from another wrapper, the
+    /// wrapper will make sure of this.
+    ///
+    /// [`UA_clear`]: open62541_sys::UA_clear
+    /// [`UA_delete`]: open62541_sys::UA_delete
+    #[must_use]
+    fn from_ref(src: &Self::Inner) -> Self;
+
     #[must_use]
     fn as_ref(&self) -> &Self::Inner {
         // This transmutes the value into the inner type through `cast()`. Types that implement this
@@ -125,8 +136,8 @@ macro_rules! data_type {
             ///
             /// The original value must still be cleared with [`UA_clear`](open62541_sys::UA_clear),
             /// or deleted with [`UA_delete`](open62541_sys::UA_delete) if allocated on the heap, to
-            /// avoid memory leaks. If the original value is only borrowed from another wrapper, the
-            /// wrapper will make sure of this.
+            /// avoid memory leaks. If `src` is borrowed from another wrapper, the wrapper will make
+            /// sure of this.
             #[allow(dead_code)]
             #[must_use]
             pub(crate) fn from_ref(src: &open62541_sys::$inner) -> Self {
@@ -222,6 +233,10 @@ macro_rules! data_type {
                 let types = unsafe { &open62541_sys::UA_TYPES };
                 // PANIC: The given index must be valid within `UA_TYPES`.
                 types.get(open62541_sys::$index as usize).unwrap()
+            }
+
+            fn from_ref(src: &Self::Inner) -> Self {
+                $name::from_ref(src)
             }
         }
     };

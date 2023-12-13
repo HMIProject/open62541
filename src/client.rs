@@ -40,7 +40,9 @@ impl ClientBuilder {
         let endpoint_url =
             CString::new(endpoint_url).expect("endpoint URL does not contain NUL bytes");
 
-        let status_code = unsafe { UA_Client_connect(self.0.as_mut_ptr(), endpoint_url.as_ptr()) };
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Client_connect(self.0.as_mut_ptr(), endpoint_url.as_ptr())
+        });
         Error::verify_good(status_code)?;
 
         Ok(Client(self.0))
