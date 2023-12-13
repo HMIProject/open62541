@@ -9,14 +9,7 @@ crate::data_type!(
 impl BrowseDescription {
     #[must_use]
     pub fn with_node_id(mut self, node_id: &ua::NodeId) -> Self {
-        let node_id = node_id.clone();
-
-        // Make sure to clean up any previous value in target.
-        let _unused = ua::NodeId::new(self.0.nodeId);
-
-        // Transfer ownership from `node_id` into `self`.
-        self.0.nodeId = node_id.into_inner();
-
+        node_id.clone_into(&mut self.0.nodeId);
         self
     }
 

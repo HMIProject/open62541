@@ -27,12 +27,12 @@ pub(crate) unsafe trait DataType {
 
     /// Creates wrapper by cloning value from `src`.
     ///
-    /// The original value must still be cleared with [`UA_clear`], or deleted with [`UA_delete`] if
-    /// allocated on the heap, to avoid memory leaks. If `src` is borrowed from another wrapper, the
-    /// wrapper will make sure of this.
+    /// The original value must still be cleared with [`UA_clear()`] or deleted with [`UA_delete()`]
+    /// if allocated on the heap, to avoid memory leaks. If `src` is borrowed from a second wrapper,
+    /// that wrapper will make sure of this.
     ///
-    /// [`UA_clear`]: open62541_sys::UA_clear
-    /// [`UA_delete`]: open62541_sys::UA_delete
+    /// [`UA_clear()`]: open62541_sys::UA_clear
+    /// [`UA_delete()`]: open62541_sys::UA_delete
     #[must_use]
     fn from_ref(src: &Self::Inner) -> Self;
 
@@ -134,10 +134,12 @@ macro_rules! data_type {
 
             /// Creates wrapper by cloning value from `src`.
             ///
-            /// The original value must still be cleared with [`UA_clear`](open62541_sys::UA_clear),
-            /// or deleted with [`UA_delete`](open62541_sys::UA_delete) if allocated on the heap, to
-            /// avoid memory leaks. If `src` is borrowed from another wrapper, the wrapper will make
-            /// sure of this.
+            /// The original value must still be cleared with [`UA_clear()`] or deleted with
+            /// [`UA_delete()`] if allocated on the heap, to avoid memory leaks. If `src` is
+            /// borrowed from a second wrapper, that wrapper will make sure of this.
+            ///
+            /// [`UA_clear()`]: open62541_sys::UA_clear
+            /// [`UA_delete()`]: open62541_sys::UA_delete
             #[allow(dead_code)]
             #[must_use]
             pub(crate) fn from_ref(src: &open62541_sys::$inner) -> Self {
@@ -167,10 +169,40 @@ macro_rules! data_type {
             #[allow(dead_code)]
             #[must_use]
             pub(crate) fn into_inner(self) -> open62541_sys::$inner {
-                let inner = self.0;
+                // SAFETY: Move value out of `self` despite it not being `Copy`. This is okay: we do
+                // consume `self` and forget it, so that `Drop` is not called on the original value,
+                // avoiding duplicate memory de-allocation via `UA_clear()` in `drop()` below.
+                let inner = unsafe { std::ptr::read(std::ptr::addr_of!(self.0)) };
                 // Make sure that `drop()` is not called anymore.
                 std::mem::forget(self);
                 inner
+            }
+
+            /// Clones inner value into target.
+            ///
+            /// This makes sure to clean up any existing value in `dst` before cloning the value. It
+            /// is therefore safe to use on already initialized target values. The original value in
+            /// the target is overwritten.
+            pub(crate) fn clone_into(&self, dst: &mut open62541_sys::$inner) {
+                // Clear the target and free any dynamically allocated memory there from the current
+                // value.
+                unsafe {
+                    open62541_sys::UA_clear(
+                        std::ptr::addr_of_mut!(*dst).cast::<std::ffi::c_void>(),
+                        <Self as crate::DataType>::data_type(),
+                    )
+                }
+
+                // Copy ourselves into the target. This duplicates and allocates memory if necessary
+                // to store a copy of the inner value.
+                let result = unsafe {
+                    open62541_sys::UA_copy(
+                        std::ptr::addr_of!(self.0).cast::<std::ffi::c_void>(),
+                        std::ptr::addr_of_mut!(*dst).cast::<std::ffi::c_void>(),
+                        <Self as crate::DataType>::data_type(),
+                    )
+                };
+                assert_eq!(result, open62541_sys::UA_STATUSCODE_GOOD);
             }
         }
 

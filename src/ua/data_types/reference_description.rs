@@ -8,8 +8,8 @@ crate::data_type!(
 
 impl ReferenceDescription {
     #[must_use]
-    pub const fn reference_type_id(&self) -> ua::NodeId {
-        ua::NodeId::new(self.0.referenceTypeId)
+    pub fn reference_type_id(&self) -> ua::NodeId {
+        ua::NodeId::from_ref(&self.0.referenceTypeId)
     }
 
     #[must_use]
@@ -18,18 +18,18 @@ impl ReferenceDescription {
     }
 
     #[must_use]
-    pub const fn node_id(&self) -> ua::ExpandedNodeId {
-        ua::ExpandedNodeId::new(self.0.nodeId)
+    pub fn node_id(&self) -> ua::ExpandedNodeId {
+        ua::ExpandedNodeId::from_ref(&self.0.nodeId)
     }
 
     #[must_use]
-    pub const fn browse_name(&self) -> ua::QualifiedName {
-        ua::QualifiedName::new(self.0.browseName)
+    pub fn browse_name(&self) -> ua::QualifiedName {
+        ua::QualifiedName::from_ref(&self.0.browseName)
     }
 
     #[must_use]
-    pub const fn display_name(&self) -> ua::LocalizedText {
-        ua::LocalizedText::new(self.0.displayName)
+    pub fn display_name(&self) -> ua::LocalizedText {
+        ua::LocalizedText::from_ref(&self.0.displayName)
     }
 
     #[must_use]
@@ -38,7 +38,7 @@ impl ReferenceDescription {
     }
 
     #[must_use]
-    pub const fn type_definition(&self) -> ua::ExpandedNodeId {
-        ua::ExpandedNodeId::new(self.0.typeDefinition)
+    pub fn type_definition(&self) -> ua::ExpandedNodeId {
+        ua::ExpandedNodeId::from_ref(&self.0.typeDefinition)
     }
 }

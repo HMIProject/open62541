@@ -39,7 +39,7 @@ impl NodeId {
         );
 
         // SAFETY: We have checked that we have this enum variant.
-        let identifier = unsafe { inner.identifier.string };
+        let identifier = unsafe { inner.identifier.string.as_ref() };
         if !string.is_empty() && (identifier.data.is_null() || identifier.length == 0) {
             // We don't want to leak memory on top.
             debug_assert!(identifier.data.is_null());
