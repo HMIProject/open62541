@@ -8,11 +8,14 @@ use std::{
 use futures::Stream;
 use open62541_sys::{
     UA_Client, UA_Client_disconnect, UA_Client_readValueAttribute_async, UA_Client_run_iterate,
-    UA_DataValue, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
+    UA_Client_sendAsyncRequest, UA_DataValue, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
 };
 use tokio::{sync::oneshot, task::JoinHandle, time};
 
-use crate::{ua, AsyncSubscription, CallbackOnce, ClientBuilder, Error};
+use crate::{
+    ua, AsyncSubscription, CallbackOnce, ClientBuilder, DataType, Error, ServiceRequest,
+    ServiceResponse,
+};
 
 /// Connected OPC UA client (with asynchronous API).
 pub struct AsyncClient {
@@ -84,8 +87,39 @@ impl AsyncClient {
     /// # Errors
     ///
     /// This fails when the node does not exist or its value attribute cannot be read.
-    pub async fn read_value(&self, node_id: ua::NodeId) -> Result<ua::DataValue, Error> {
+    pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<ua::DataValue, Error> {
         read_value(&self.client, node_id).await
+    }
+
+    /// Browses specific node.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or it cannot be browsed.
+    pub async fn browse(
+        &self,
+        node_id: &ua::NodeId,
+    ) -> Result<Vec<ua::ReferenceDescription>, Error> {
+        let request =
+            ua::BrowseRequest::init().with_nodes_to_browse(&[ua::BrowseDescription::init()
+                .with_node_id(node_id)
+                .with_result_mask(ua::ResultMask::all())]);
+
+        let response = service_request(&self.client, request).await?;
+
+        let Some(results) = response.results() else {
+            return Err(Error::Internal("browse should return results"));
+        };
+
+        let Some(result) = results.as_slice().get(0) else {
+            return Err(Error::Internal("browse should return a result"));
+        };
+
+        let Some(references) = result.references() else {
+            return Err(Error::Internal("browse should return references"));
+        };
+
+        Ok(references.as_slice().to_vec())
     }
 
     /// Creates new [subscription](AsyncSubscription).
@@ -110,7 +144,7 @@ impl AsyncClient {
     #[allow(clippy::await_holding_lock)]
     pub async fn value_stream(
         &self,
-        node_id: ua::NodeId,
+        node_id: &ua::NodeId,
     ) -> Result<impl Stream<Item = ua::DataValue>, Error> {
         let subscription = {
             let Ok(mut default_subscription) = self.default_subscription.lock() else {
@@ -146,7 +180,7 @@ impl Drop for AsyncClient {
 
 async fn read_value(
     client: &Arc<Mutex<ua::Client>>,
-    node_id: ua::NodeId,
+    node_id: &ua::NodeId,
 ) -> Result<ua::DataValue, Error> {
     type Cb = CallbackOnce<Result<ua::DataValue, ua::StatusCode>>;
 
@@ -190,9 +224,78 @@ async fn read_value(
         unsafe {
             UA_Client_readValueAttribute_async(
                 client.as_mut_ptr(),
-                node_id.into_inner(),
+                node_id.clone().into_inner(),
                 Some(callback_c),
                 Cb::prepare(callback),
+                ptr::null_mut(),
+            )
+        }
+    });
+    Error::verify_good(status_code)?;
+
+    // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
+    // is only dropped after placing a value into the channel and `rx.await` always finds this value
+    // there.
+    rx.await
+        .unwrap_or(Err(Error::Internal("callback should send result")))
+}
+
+async fn service_request<R: ServiceRequest>(
+    client: &Arc<Mutex<ua::Client>>,
+    request: R,
+) -> Result<R::Response, Error> {
+    type Cb<R> = CallbackOnce<Result<<R as ServiceRequest>::Response, ua::StatusCode>>;
+
+    unsafe extern "C" fn callback_c<R: ServiceRequest>(
+        _client: *mut UA_Client,
+        userdata: *mut c_void,
+        _request_id: UA_UInt32,
+        response: *mut c_void,
+    ) {
+        log::debug!("Request completed");
+
+        // PANIC: We expect pointer to be valid when good.
+        let response = R::Response::from_ref(
+            response
+                .cast::<<R::Response as DataType>::Inner>()
+                .as_ref()
+                .expect("response is set"),
+        );
+
+        let status_code = response.service_result();
+        let result = if status_code.is_good() {
+            Ok(response)
+        } else {
+            Err(status_code)
+        };
+
+        Cb::<R>::execute(userdata, result);
+    }
+
+    let (tx, rx) = oneshot::channel::<Result<R::Response, Error>>();
+
+    let callback = |result: Result<R::Response, _>| {
+        // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
+        // care if that succeeds though: the receiver might already have gone out of scope (when its
+        // future has been canceled) and we must not panic in FFI callbacks.
+        let _unused = tx.send(result.map_err(Error::new));
+    };
+
+    let status_code = ua::StatusCode::new({
+        let Ok(mut client) = client.lock() else {
+            return Err(Error::internal("should be able to lock client"));
+        };
+
+        log::debug!("Calling request");
+
+        unsafe {
+            UA_Client_sendAsyncRequest(
+                client.as_mut_ptr(),
+                request.as_ptr().cast::<c_void>(),
+                R::data_type(),
+                Some(callback_c::<R>),
+                R::Response::data_type(),
+                Cb::<R>::prepare(callback),
                 ptr::null_mut(),
             )
         }

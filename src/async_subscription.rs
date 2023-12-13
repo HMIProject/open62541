@@ -10,11 +10,7 @@ use open62541_sys::{
     UA_CreateSubscriptionResponse, UA_UInt32,
 };
 
-use crate::{
-    callback::CallbackOnce,
-    ua::{self, NodeId},
-    AsyncMonitoredItem, Error,
-};
+use crate::{ua, AsyncMonitoredItem, CallbackOnce, Error};
 
 /// Subscription (with asynchronous API).
 pub struct AsyncSubscription {
@@ -43,13 +39,13 @@ impl AsyncSubscription {
     /// This fails when the node does not exist.
     pub async fn create_monitored_item(
         &self,
-        node_id: NodeId,
+        node_id: &ua::NodeId,
     ) -> Result<AsyncMonitoredItem, Error> {
         let Some(client) = self.client.upgrade() else {
             return Err(Error::internal("client should not be dropped"));
         };
 
-        AsyncMonitoredItem::new(client, self.subscription_id, node_id).await
+        AsyncMonitoredItem::new(client, &self.subscription_id, node_id).await
     }
 }
 

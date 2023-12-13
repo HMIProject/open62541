@@ -24,8 +24,8 @@ pub struct AsyncMonitoredItem {
 impl AsyncMonitoredItem {
     pub(crate) async fn new(
         client: Arc<Mutex<ua::Client>>,
-        subscription_id: ua::SubscriptionId,
-        node_id: ua::NodeId,
+        subscription_id: &ua::SubscriptionId,
+        node_id: &ua::NodeId,
     ) -> Result<Self, Error> {
         let request = ua::CreateMonitoredItemsRequest::init()
             .with_subscription_id(subscription_id)

@@ -8,9 +8,8 @@ crate::data_type!(
 
 impl CreateMonitoredItemsRequest {
     #[must_use]
-    pub fn with_subscription_id(mut self, subscription_id: ua::SubscriptionId) -> Self {
+    pub fn with_subscription_id(mut self, subscription_id: &ua::SubscriptionId) -> Self {
         self.0.subscriptionId = subscription_id.into_inner();
-
         self
     }
 

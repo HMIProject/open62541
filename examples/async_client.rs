@@ -4,7 +4,7 @@ use anyhow::Context;
 use futures::{future, StreamExt as _};
 use open62541::{ua, AsyncClient};
 use open62541_sys::{
-    UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
+    UA_NS0ID_SERVER_SERVERSTATUS, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME,
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
     UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME,
@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
 
     let node_id = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
 
-    let value_stream = client.value_stream(node_id).await?;
+    let value_stream = client.value_stream(&node_id).await?;
 
     let mut pinned_stream = pin!(value_stream.take(5));
 
@@ -40,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
     let node_id = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
 
     let mut monitored_item = subscription
-        .create_monitored_item(node_id)
+        .create_monitored_item(&node_id)
         .await
         .with_context(|| "monitor item")?;
 
@@ -58,7 +58,7 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Subscription dropped");
 
-    time::sleep(Duration::from_secs(2)).await;
+    time::sleep(Duration::from_millis(500)).await;
 
     println!("Reading some items");
 
@@ -71,23 +71,33 @@ async fn main() -> anyhow::Result<()> {
     let starttime = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME);
 
     let results = future::join_all(vec![
-        client.read_value(builddate),
-        client.read_value(manufacturername),
-        client.read_value(productname),
-        client.read_value(currenttime),
-        client.read_value(starttime),
+        client.read_value(&builddate),
+        client.read_value(&manufacturername),
+        client.read_value(&productname),
+        client.read_value(&currenttime),
+        client.read_value(&starttime),
     ])
     .await;
 
     println!("{results:?}");
 
-    time::sleep(Duration::from_secs(2)).await;
+    time::sleep(Duration::from_millis(500)).await;
+
+    println!("Browsing node");
+
+    let references = client
+        .browse(&ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS))
+        .await?;
+
+    println!("{references:?}");
+
+    time::sleep(Duration::from_millis(500)).await;
 
     println!("Dropping client");
 
     drop(client);
 
-    time::sleep(Duration::from_secs(2)).await;
+    time::sleep(Duration::from_millis(500)).await;
 
     println!("Exiting");
 
