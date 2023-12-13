@@ -231,6 +231,15 @@ impl<T: DataType> Array<T> {
         mem::forget(self);
         (size, ptr)
     }
+
+    pub(crate) fn move_into(self, dst_size: &mut usize, dst: &mut *mut T::Inner) {
+        // Make sure to clean up any previous value in target.
+        let _unused = Self::from_raw_parts(*dst, *dst_size);
+
+        let (size, ptr) = self.into_raw_parts();
+        *dst_size = size;
+        *dst = ptr;
+    }
 }
 
 impl<T: DataType> Drop for Array<T> {

@@ -19,18 +19,7 @@ impl CreateMonitoredItemsRequest {
         items_to_create: &[ua::MonitoredItemCreateRequest],
     ) -> Self {
         let array = ua::Array::from_slice(items_to_create);
-
-        // Make sure to clean up any previous value in target.
-        let _unused = ua::Array::<ua::MonitoredItemCreateRequest>::from_raw_parts(
-            self.0.itemsToCreate,
-            self.0.itemsToCreateSize,
-        );
-
-        // Transfer ownership from `array` into `self`.
-        let (size, ptr) = array.into_raw_parts();
-        self.0.itemsToCreateSize = size;
-        self.0.itemsToCreate = ptr;
-
+        array.move_into(&mut self.0.itemsToCreateSize, &mut self.0.itemsToCreate);
         self
     }
 }

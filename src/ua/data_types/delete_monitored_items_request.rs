@@ -14,18 +14,10 @@ impl DeleteMonitoredItemsRequest {
                 .iter()
                 .map(|id| ua::Uint32::new(id.into_inner())),
         );
-
-        // Make sure to clean up any previous value in target.
-        let _unused = ua::Array::<ua::Uint32>::from_raw_parts(
-            self.0.monitoredItemIds,
-            self.0.monitoredItemIdsSize,
+        array.move_into(
+            &mut self.0.monitoredItemIdsSize,
+            &mut self.0.monitoredItemIds,
         );
-
-        // Transfer ownership from `array` into `self`.
-        let (size, ptr) = array.into_raw_parts();
-        self.0.monitoredItemIdsSize = size;
-        self.0.monitoredItemIds = ptr;
-
         self
     }
 }

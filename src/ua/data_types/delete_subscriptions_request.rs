@@ -14,18 +14,7 @@ impl DeleteSubscriptionsRequest {
                 .iter()
                 .map(|id| ua::Uint32::new(id.into_inner())),
         );
-
-        // Make sure to clean up any previous value in target.
-        let _unused = ua::Array::<ua::Uint32>::from_raw_parts(
-            self.0.subscriptionIds,
-            self.0.subscriptionIdsSize,
-        );
-
-        // Transfer ownership from `array` into `self`.
-        let (size, ptr) = array.into_raw_parts();
-        self.0.subscriptionIdsSize = size;
-        self.0.subscriptionIds = ptr;
-
+        array.move_into(&mut self.0.subscriptionIdsSize, &mut self.0.subscriptionIds);
         self
     }
 }
