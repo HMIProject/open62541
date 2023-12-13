@@ -124,7 +124,7 @@ async fn create_subscription(
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
     // there.
     rx.await
-        .unwrap_or(Err(Error::Internal("callback should send result")))
+        .unwrap_or(Err(Error::internal("callback should send result")))
 }
 
 fn delete_subscription(client: &Arc<Mutex<ua::Client>>, request: ua::DeleteSubscriptionsRequest) {

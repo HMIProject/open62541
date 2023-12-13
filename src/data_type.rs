@@ -11,7 +11,7 @@ use crate::ua;
 /// We require that it must be possible to transmute between the type that implements `DataType` and
 /// the wrapped type [`Self::Inner`]. Therefore, `#[repr(transparent)]` must be used when one wishes
 /// to implement `DataType`.
-pub(crate) unsafe trait DataType {
+pub unsafe trait DataType: Clone {
     /// Inner type.
     ///
     /// We require that it must be possible to transmute between the inner type and the wrapper type
@@ -183,6 +183,7 @@ macro_rules! data_type {
             /// This makes sure to clean up any existing value in `dst` before cloning the value. It
             /// is therefore safe to use on already initialized target values. The original value in
             /// the target is overwritten.
+            #[allow(dead_code)]
             pub(crate) fn clone_into(&self, dst: &mut open62541_sys::$inner) {
                 // Clear the target and free any dynamically allocated memory there from the current
                 // value.

@@ -91,6 +91,38 @@ impl AsyncClient {
         read_value(&self.client, node_id).await
     }
 
+    /// Writes value from server.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or its value attribute cannot be written.
+    pub async fn write_value(
+        &self,
+        node_id: &ua::NodeId,
+        value: &ua::DataValue,
+    ) -> Result<(), Error> {
+        let attribute_id = ua::AttributeId::value();
+
+        let request = ua::WriteRequest::init().with_nodes_to_write(&[ua::WriteValue::init()
+            .with_node_id(node_id)
+            .with_attribute_id(&attribute_id)
+            .with_value(value)]);
+
+        let response = service_request(&self.client, request).await?;
+
+        let Some(results) = response.results() else {
+            return Err(Error::internal("write should return results"));
+        };
+
+        let Some(result) = results.as_slice().get(0) else {
+            return Err(Error::internal("write should return a result"));
+        };
+
+        Error::verify_good(*result)?;
+
+        Ok(())
+    }
+
     /// Browses specific node.
     ///
     /// # Errors
@@ -108,15 +140,15 @@ impl AsyncClient {
         let response = service_request(&self.client, request).await?;
 
         let Some(results) = response.results() else {
-            return Err(Error::Internal("browse should return results"));
+            return Err(Error::internal("browse should return results"));
         };
 
         let Some(result) = results.as_slice().get(0) else {
-            return Err(Error::Internal("browse should return a result"));
+            return Err(Error::internal("browse should return a result"));
         };
 
         let Some(references) = result.references() else {
-            return Err(Error::Internal("browse should return references"));
+            return Err(Error::internal("browse should return references"));
         };
 
         Ok(references.as_slice().to_vec())
@@ -237,7 +269,7 @@ async fn read_value(
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
     // there.
     rx.await
-        .unwrap_or(Err(Error::Internal("callback should send result")))
+        .unwrap_or(Err(Error::internal("callback should send result")))
 }
 
 async fn service_request<R: ServiceRequest>(
@@ -306,5 +338,5 @@ async fn service_request<R: ServiceRequest>(
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
     // there.
     rx.await
-        .unwrap_or(Err(Error::Internal("callback should send result")))
+        .unwrap_or(Err(Error::internal("callback should send result")))
 }

@@ -13,6 +13,7 @@ mod delete_monitored_items_request;
 mod delete_monitored_items_response;
 mod delete_subscriptions_request;
 mod delete_subscriptions_response;
+mod double;
 mod expanded_node_id;
 mod localized_text;
 mod monitored_item_create_request;
@@ -26,6 +27,9 @@ mod reference_description;
 mod string;
 mod uint32;
 mod variant;
+mod write_request;
+mod write_response;
+mod write_value;
 
 pub use self::{
     browse_description::BrowseDescription, browse_request::BrowseRequest,
@@ -37,10 +41,12 @@ pub use self::{
     delete_monitored_items_request::DeleteMonitoredItemsRequest,
     delete_monitored_items_response::DeleteMonitoredItemsResponse,
     delete_subscriptions_request::DeleteSubscriptionsRequest,
-    delete_subscriptions_response::DeleteSubscriptionsResponse, expanded_node_id::ExpandedNodeId,
-    localized_text::LocalizedText, monitored_item_create_request::MonitoredItemCreateRequest,
+    delete_subscriptions_response::DeleteSubscriptionsResponse, double::Double,
+    expanded_node_id::ExpandedNodeId, localized_text::LocalizedText,
+    monitored_item_create_request::MonitoredItemCreateRequest,
     monitored_item_create_result::MonitoredItemCreateResult, node_id::NodeId,
     qualified_name::QualifiedName, read_request::ReadRequest, read_response::ReadResponse,
     read_value_id::ReadValueId, reference_description::ReferenceDescription, string::String,
-    uint32::Uint32, variant::Variant,
+    uint32::Uint32, variant::Variant, write_request::WriteRequest, write_response::WriteResponse,
+    write_value::WriteValue,
 };

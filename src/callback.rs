@@ -38,6 +38,7 @@ use tokio::sync::mpsc;
 ///
 /// assert_eq!(*cell.borrow(), 123);
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub struct CallbackOnce<T>(Box<dyn FnOnce(T)>);
 
 impl<T> CallbackOnce<T> {
@@ -115,6 +116,7 @@ impl<T> CallbackOnce<T> {
 /// assert_eq!(block_on(rx.recv()), Some(3));
 /// assert_eq!(block_on(rx.recv()), None);
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub struct CallbackStream<T>(mpsc::Sender<T>);
 
 impl<T> CallbackStream<T> {
@@ -122,6 +124,7 @@ impl<T> CallbackStream<T> {
     ///
     /// This allocates memory. To prevent memory leaks, call [`delete()`](CallbackStream::delete) on
     /// the returned pointer exactly once.
+    #[must_use]
     pub fn prepare(tx: mpsc::Sender<T>) -> *mut c_void {
         let callback = CallbackStream(tx);
         // Move `callback` onto the heap and leak its memory into a raw pointer.

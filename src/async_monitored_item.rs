@@ -186,7 +186,7 @@ async fn create_monitored_items(
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
     // there.
     rx.await
-        .unwrap_or(Err(Error::Internal("callback should send result")))
+        .unwrap_or(Err(Error::internal("callback should send result")))
         .map(|response| (response, st_rx))
 }
 

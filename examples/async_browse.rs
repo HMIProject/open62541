@@ -13,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Browsing node {node_id}");
 
-    let references = client.browse(&node_id).await?;
+    let references = client.browse(&node_id).await.with_context(|| "browse")?;
 
     for reference in references {
         println!("- {}", reference.browse_name());
