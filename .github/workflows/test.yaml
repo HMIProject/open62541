@@ -1,0 +1,73 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow
+
+name: test
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: short
+
+jobs:
+  run:
+    strategy:
+      matrix:
+        include:
+          - runner_os: windows-latest
+            # Doctests fill up disk storage on Windows, and we don't expect much
+            # different behavior anyway. It suffices to run them on Linux. Also,
+            # Windows runners are 2 times as expensive on GitHub.
+            run_doctests: false
+          - runner_os: ubuntu-latest
+            run_doctests: true
+
+    runs-on: ${{ matrix.runner_os }}
+
+    steps:
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      # Checkout the repository before the remaining steps that depend on it.
+      # All preceding steps are independent of the repository contents.
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Cache Rust toolchain and build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          # The cache should not be shared between different workflows and jobs.
+          shared-key: ${{ github.workflow }}-${{ github.job }}
+
+      - name: Run tests (bins/lib/tests/examples) with all features enabled
+        run: >-
+          cargo test --all-features
+          --bins --lib --tests --examples
+
+      # Compile and run doctests, which have been excluded in the previous step(s).
+      #
+      # When cross-compiling the doctests are skipped silently, even with the default
+      # target options that should include them!
+      #
+      # See https://github.com/rust-lang/cargo/issues/7040 for an (unstable)
+      # feature flag that should one day allow us to cross-compile doctests.
+      #
+      # For now, we cannot cross-compile doctests and must always run them on
+      # the runner's native platform.
+      - name: Run doctests with all features enabled
+        if: ${{ matrix.run_doctests }}
+        run: >-
+          cargo test --all-features
+          --doc
