@@ -28,7 +28,7 @@
 //! #
 //! let node_id = NodeId::new_numeric(0, 2258); // Server/ServerStatus/CurrentTime
 //!
-//! let value = client.read_value(node_id).await?;
+//! let value = client.read_value(&node_id).await?;
 //!
 //! println!("Received value: {value:?}");
 //! #
@@ -52,7 +52,7 @@
 //! # let node_id = NodeId::new_numeric(0, 2258); // Server/ServerStatus/CurrentTime
 //! #
 //! // Get stream with value updates from the server.
-//! let value_stream = client.value_stream(node_id).await?;
+//! let value_stream = client.value_stream(&node_id).await?;
 //! // Pinning is required to consume stream items.
 //! let mut pinned_stream = pin!(value_stream);
 //!
