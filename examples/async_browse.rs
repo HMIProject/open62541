@@ -9,7 +9,7 @@ async fn main() -> anyhow::Result<()> {
     let client =
         AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543").with_context(|| "connect")?;
 
-    let node_id = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS);
+    let node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS);
 
     println!("Browsing node {node_id}");
 

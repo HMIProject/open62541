@@ -20,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Connected successfully");
 
-    let node_id = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
+    let node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
 
     let value_stream = client.value_stream(&node_id).await?;
 
@@ -37,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .with_context(|| "create subscription")?;
 
-    let node_id = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
+    let node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
 
     let mut monitored_item = subscription
         .create_monitored_item(&node_id)
@@ -62,13 +62,12 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Reading some items");
 
-    let builddate = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE);
+    let builddate = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE);
     let manufacturername =
-        ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME);
-    let productname =
-        ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME);
-    let currenttime = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
-    let starttime = ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME);
+        ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME);
+    let productname = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME);
+    let currenttime = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
+    let starttime = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME);
 
     let results = future::join_all(vec![
         client.read_value(&builddate),
@@ -86,7 +85,7 @@ async fn main() -> anyhow::Result<()> {
     println!("Browsing node");
 
     let references = client
-        .browse(&ua::NodeId::new_numeric(0, UA_NS0ID_SERVER_SERVERSTATUS))
+        .browse(&ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS))
         .await?;
 
     println!("{references:?}");

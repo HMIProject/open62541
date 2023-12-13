@@ -297,7 +297,7 @@ mod tests {
         //
         let mut array: Array<T> = Array::new(LEN);
         // Copy value with allocated data into array to catch double free.
-        ua::NodeId::new_string(0, STRING)
+        ua::NodeId::string(0, STRING)
             .clone_into(array.as_slice_mut().get_mut(POS).unwrap().as_mut());
 
         drop(array);
@@ -306,7 +306,7 @@ mod tests {
         //
         let mut array: Array<T> = Array::new(LEN);
         // Copy value with allocated data into array to catch double free.
-        ua::NodeId::new_string(0, STRING)
+        ua::NodeId::string(0, STRING)
             .clone_into(array.as_slice_mut().get_mut(POS).unwrap().as_mut());
 
         let (size, ptr) = array.into_raw_parts();

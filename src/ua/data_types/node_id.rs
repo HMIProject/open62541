@@ -10,7 +10,7 @@ crate::data_type!(NodeId, UA_NodeId, UA_TYPES_NODEID);
 impl NodeId {
     /// Creates node ID for numeric identifier.
     #[must_use]
-    pub fn new_numeric(ns_index: u16, numeric: u32) -> Self {
+    pub fn numeric(ns_index: u16, numeric: u32) -> Self {
         let inner = unsafe { UA_NODEID_NUMERIC(ns_index, numeric) };
         debug_assert_eq!(
             inner.identifierType, UA_NodeIdType_UA_NODEIDTYPE_NUMERIC,
@@ -27,7 +27,7 @@ impl NodeId {
     /// The string identifier must be a valid C string, i.e. it must not contain any NUL bytes. Also
     /// there must be enough memory available to allocate string.
     #[must_use]
-    pub fn new_string(ns_index: u16, string: &str) -> Self {
+    pub fn string(ns_index: u16, string: &str) -> Self {
         let string = CString::new(string).expect("node ID string does not contain NUL bytes");
 
         // Technically, string allocation may fail but `UA_NODEID_STRING_ALLOC` doesn't tell us that
