@@ -44,11 +44,11 @@ impl NodeIdType {
 
 impl fmt::Display for NodeIdType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let str = match &self.0 {
-            &UA_NodeIdType::UA_NODEIDTYPE_NUMERIC => "NUMERIC",
-            &UA_NodeIdType::UA_NODEIDTYPE_STRING => "STRING",
-            &UA_NodeIdType::UA_NODEIDTYPE_GUID => "GUID",
-            &UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING => "BYTESTRING",
+        let str = match self.0 {
+            UA_NodeIdType::UA_NODEIDTYPE_NUMERIC => "NUMERIC",
+            UA_NodeIdType::UA_NODEIDTYPE_STRING => "STRING",
+            UA_NodeIdType::UA_NODEIDTYPE_GUID => "GUID",
+            UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING => "BYTESTRING",
             _ => "?",
         };
         f.write_str(str)

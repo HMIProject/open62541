@@ -50,6 +50,7 @@ impl NodeId {
         Self(inner)
     }
 
+    #[must_use]
     pub fn identifier_type(&self) -> ua::NodeIdType {
         ua::NodeIdType::new(self.0.identifierType.clone())
     }

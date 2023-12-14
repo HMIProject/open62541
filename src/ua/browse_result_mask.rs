@@ -74,17 +74,18 @@ impl BrowseResultMask {
 
 impl fmt::Display for BrowseResultMask {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let str = match &self.0 {
-            &UA_BrowseResultMask::UA_BROWSERESULTMASK_NONE => "NONE",
-            &UA_BrowseResultMask::UA_BROWSERESULTMASK_REFERENCETYPEID => "REFERENCETYPEID",
-            &UA_BrowseResultMask::UA_BROWSERESULTMASK_ISFORWARD => "ISFORWARD",
-            &UA_BrowseResultMask::UA_BROWSERESULTMASK_NODECLASS => "NODECLASS",
-            &UA_BrowseResultMask::UA_BROWSERESULTMASK_BROWSENAME => "BROWSENAME",
-            &UA_BrowseResultMask::UA_BROWSERESULTMASK_DISPLAYNAME => "DISPLAYNAME",
-            &UA_BrowseResultMask::UA_BROWSERESULTMASK_TYPEDEFINITION => "TYPEDEFINITION",
-            &UA_BrowseResultMask::UA_BROWSERESULTMASK_ALL => "ALL",
-            &UA_BrowseResultMask::UA_BROWSERESULTMASK_REFERENCETYPEINFO => "REFERENCETYPEINFO",
-            &UA_BrowseResultMask::UA_BROWSERESULTMASK_TARGETINFO => "TARGETINFO",
+        // TODO: Handle bit combinations on this mask.
+        let str = match self.0 {
+            UA_BrowseResultMask::UA_BROWSERESULTMASK_NONE => "NONE",
+            UA_BrowseResultMask::UA_BROWSERESULTMASK_REFERENCETYPEID => "REFERENCETYPEID",
+            UA_BrowseResultMask::UA_BROWSERESULTMASK_ISFORWARD => "ISFORWARD",
+            UA_BrowseResultMask::UA_BROWSERESULTMASK_NODECLASS => "NODECLASS",
+            UA_BrowseResultMask::UA_BROWSERESULTMASK_BROWSENAME => "BROWSENAME",
+            UA_BrowseResultMask::UA_BROWSERESULTMASK_DISPLAYNAME => "DISPLAYNAME",
+            UA_BrowseResultMask::UA_BROWSERESULTMASK_TYPEDEFINITION => "TYPEDEFINITION",
+            UA_BrowseResultMask::UA_BROWSERESULTMASK_ALL => "ALL",
+            UA_BrowseResultMask::UA_BROWSERESULTMASK_REFERENCETYPEINFO => "REFERENCETYPEINFO",
+            UA_BrowseResultMask::UA_BROWSERESULTMASK_TARGETINFO => "TARGETINFO",
             _ => "?",
         };
         f.write_str(str)
