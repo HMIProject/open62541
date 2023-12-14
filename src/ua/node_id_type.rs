@@ -34,6 +34,12 @@ impl NodeIdType {
         Self(src)
     }
 
+    /// Returns a reference to the inner value.
+    #[must_use]
+    pub const fn as_inner(&self) -> &UA_NodeIdType {
+        &self.0
+    }
+
     /// Gives up ownership and returns inner value.
     #[allow(dead_code)]
     #[must_use]

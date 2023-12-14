@@ -108,7 +108,6 @@ macro_rules! data_type {
 
         impl $name {
             /// Creates wrapper initialized with defaults.
-            #[allow(dead_code)]
             #[must_use]
             pub fn init() -> Self {
                 let mut inner = unsafe {
@@ -123,6 +122,12 @@ macro_rules! data_type {
                 Self(inner)
             }
 
+            /// Returns a reference to the inner value.
+            #[must_use]
+            pub const fn as_inner(&self) -> &open62541_sys::$inner {
+                &self.0
+            }
+
             /// Creates wrapper by taking ownership of `src`.
             #[allow(dead_code)]
             #[must_use]
@@ -131,7 +136,6 @@ macro_rules! data_type {
                 // dropped eventually.
                 Self(src)
             }
-
             /// Creates wrapper by cloning value from `src`.
             ///
             /// The original value must still be cleared with [`UA_clear()`] or deleted with
