@@ -33,8 +33,8 @@ impl ReferenceDescription {
     }
 
     #[must_use]
-    pub const fn node_class(&self) -> ua::NodeClass {
-        ua::NodeClass::new(self.0.nodeClass)
+    pub fn node_class(&self) -> ua::NodeClass {
+        ua::NodeClass::new(self.0.nodeClass.clone())
     }
 
     #[must_use]

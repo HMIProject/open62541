@@ -1,9 +1,6 @@
 use std::ffi::CString;
 
-use open62541_sys::{
-    UA_NodeIdType_UA_NODEIDTYPE_NUMERIC, UA_NodeIdType_UA_NODEIDTYPE_STRING, UA_NODEID_NUMERIC,
-    UA_NODEID_STRING_ALLOC,
-};
+use open62541_sys::{UA_NodeIdType, UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC};
 
 crate::data_type!(NodeId, UA_NodeId, UA_TYPES_NODEID);
 
@@ -13,7 +10,8 @@ impl NodeId {
     pub fn numeric(ns_index: u16, numeric: u32) -> Self {
         let inner = unsafe { UA_NODEID_NUMERIC(ns_index, numeric) };
         debug_assert_eq!(
-            inner.identifierType, UA_NodeIdType_UA_NODEIDTYPE_NUMERIC,
+            inner.identifierType,
+            UA_NodeIdType::UA_NODEIDTYPE_NUMERIC,
             "node ID is of numeric type"
         );
 
@@ -34,7 +32,8 @@ impl NodeId {
         // when it happens. Instead, we end up with a well-defined node ID that has an empty string.
         let inner = unsafe { UA_NODEID_STRING_ALLOC(ns_index, string.as_ptr()) };
         debug_assert_eq!(
-            inner.identifierType, UA_NodeIdType_UA_NODEIDTYPE_STRING,
+            inner.identifierType,
+            UA_NodeIdType::UA_NODEIDTYPE_STRING,
             "node ID is of string type"
         );
 

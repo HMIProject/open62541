@@ -13,7 +13,7 @@ open62541-sys = { git = "https://github.com/HMIProject/open62541-sys.git", tag =
 thiserror = "1.0.50"
 
 [dependencies.tokio]
-version = "1.34.0"
+version = "1.35.0"
 optional = true
 features = ["rt", "sync", "time"]
 
@@ -23,7 +23,7 @@ env_logger = "0.10.1"
 rand = "0.8.5"
 
 [dev-dependencies.tokio]
-version = "1.34.0"
+version = "1.35.0"
 features = ["macros"]
 
 [features]

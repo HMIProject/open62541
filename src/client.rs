@@ -9,9 +9,7 @@ use open62541_sys::__va_list_tag;
 use open62541_sys::va_list;
 use open62541_sys::{
     UA_ClientConfig, UA_ClientConfig_setDefault, UA_Client_connect, UA_Client_getConfig,
-    UA_LogCategory, UA_LogLevel, UA_LogLevel_UA_LOGLEVEL_DEBUG, UA_LogLevel_UA_LOGLEVEL_ERROR,
-    UA_LogLevel_UA_LOGLEVEL_FATAL, UA_LogLevel_UA_LOGLEVEL_INFO, UA_LogLevel_UA_LOGLEVEL_TRACE,
-    UA_LogLevel_UA_LOGLEVEL_WARNING, UA_STATUSCODE_GOOD,
+    UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
 };
 
 #[cfg(feature = "tokio")]
@@ -133,18 +131,18 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
     ) {
         let msg = unsafe { CStr::from_ptr(msg) }.to_string_lossy();
 
-        if level == UA_LogLevel_UA_LOGLEVEL_FATAL {
+        if level == UA_LogLevel::UA_LOGLEVEL_FATAL {
             // Without fatal level in `log`, fall back to error.
             log::error!("{msg}");
-        } else if level == UA_LogLevel_UA_LOGLEVEL_ERROR {
+        } else if level == UA_LogLevel::UA_LOGLEVEL_ERROR {
             log::error!("{msg}");
-        } else if level == UA_LogLevel_UA_LOGLEVEL_WARNING {
+        } else if level == UA_LogLevel::UA_LOGLEVEL_WARNING {
             log::warn!("{msg}");
-        } else if level == UA_LogLevel_UA_LOGLEVEL_INFO {
+        } else if level == UA_LogLevel::UA_LOGLEVEL_INFO {
             log::info!("{msg}");
-        } else if level == UA_LogLevel_UA_LOGLEVEL_DEBUG {
+        } else if level == UA_LogLevel::UA_LOGLEVEL_DEBUG {
             log::debug!("{msg}");
-        } else if level == UA_LogLevel_UA_LOGLEVEL_TRACE {
+        } else if level == UA_LogLevel::UA_LOGLEVEL_TRACE {
             log::trace!("{msg}");
         } else {
             // TODO: Handle unexpected level.

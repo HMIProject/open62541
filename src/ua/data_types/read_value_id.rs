@@ -11,7 +11,7 @@ impl ReadValueId {
 
     #[must_use]
     pub fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
-        self.0.attributeId = attribute_id.into_inner();
+        self.0.attributeId = attribute_id.clone().into_inner().0;
         self
     }
 }
