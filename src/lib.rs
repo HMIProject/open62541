@@ -64,6 +64,9 @@
 //! # }
 //! ```
 
+// Often used in internal modules.
+#![allow(clippy::module_name_repetitions)]
+
 #[cfg(feature = "tokio")]
 mod async_client;
 #[cfg(feature = "tokio")]

@@ -38,7 +38,6 @@ use tokio::sync::mpsc;
 ///
 /// assert_eq!(*cell.borrow(), 123);
 /// ```
-#[allow(clippy::module_name_repetitions)]
 pub struct CallbackOnce<T>(Box<dyn FnOnce(T)>);
 
 impl<T> CallbackOnce<T> {
@@ -116,7 +115,6 @@ impl<T> CallbackOnce<T> {
 /// assert_eq!(block_on(rx.recv()), Some(3));
 /// assert_eq!(block_on(rx.recv()), None);
 /// ```
-#[allow(clippy::module_name_repetitions)]
 pub struct CallbackStream<T>(mpsc::Sender<T>);
 
 impl<T> CallbackStream<T> {

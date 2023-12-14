@@ -19,7 +19,6 @@ use crate::{ua, Error};
 /// Builder for [`Client`].
 ///
 /// Use this to specify additional options before connecting to an OPC UA endpoint.
-#[allow(clippy::module_name_repetitions)]
 pub struct ClientBuilder(ua::Client);
 
 impl ClientBuilder {
