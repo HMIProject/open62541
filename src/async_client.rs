@@ -135,7 +135,7 @@ impl AsyncClient {
         let request =
             ua::BrowseRequest::init().with_nodes_to_browse(&[ua::BrowseDescription::init()
                 .with_node_id(node_id)
-                .with_result_mask(ua::ResultMask::all())]);
+                .with_result_mask(ua::BrowseResultMask::all())]);
 
         let response = service_request(&self.client, request).await?;
 

@@ -2,6 +2,8 @@ use std::ffi::CString;
 
 use open62541_sys::{UA_NodeIdType, UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC};
 
+use crate::ua;
+
 crate::data_type!(NodeId, UA_NodeId, UA_TYPES_NODEID);
 
 impl NodeId {
@@ -46,5 +48,9 @@ impl NodeId {
         }
 
         Self(inner)
+    }
+
+    pub fn identifier_type(&self) -> ua::NodeIdType {
+        ua::NodeIdType::new(self.0.identifierType.clone())
     }
 }

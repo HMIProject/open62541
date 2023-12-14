@@ -14,7 +14,7 @@ impl BrowseDescription {
     }
 
     #[must_use]
-    pub fn with_result_mask(mut self, result_mask: ua::ResultMask) -> Self {
+    pub fn with_result_mask(mut self, result_mask: ua::BrowseResultMask) -> Self {
         self.0.resultMask = result_mask.into_inner().0;
         self
     }
