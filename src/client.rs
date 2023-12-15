@@ -31,7 +31,7 @@ impl ClientBuilder {
     ///
     /// # Panics
     ///
-    /// The endpoint URL must be a valid C string, i.e. it must not contain any NUL bytes.
+    /// The endpoint URL must not contain any NUL bytes.
     pub fn connect(mut self, endpoint_url: &str) -> Result<Client, Error> {
         log::info!("Connecting to endpoint {endpoint_url}");
 
