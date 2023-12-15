@@ -10,24 +10,24 @@ publish = false
 futures = "0.3.29"
 log = "0.4.20"
 open62541-sys = { git = "https://github.com/HMIProject/open62541-sys.git", tag = "v1.3.9" }
+serde = { version = "1.0.193", optional = true }
 thiserror = "1.0.50"
-
-[dependencies.tokio]
-version = "1.35.0"
-optional = true
-features = ["rt", "sync", "time"]
+tokio = { version = "1.35.0", optional = true, features = [
+  "rt",
+  "sync",
+  "time",
+] }
 
 [dev-dependencies]
 anyhow = "1.0.75"
 env_logger = "0.10.1"
 rand = "0.8.5"
-
-[dev-dependencies.tokio]
-version = "1.35.0"
-features = ["macros"]
+serde_json = "1.0.108"
+tokio = { version = "1.35.0", features = ["macros"] }
 
 [features]
-default = ["tokio"]
+default = ["serde", "tokio"]
+serde = ["dep:serde"]
 tokio = ["dep:tokio"]
 
 [lints.rust]
@@ -45,3 +45,16 @@ pedantic = "warn"
 clone_on_ref_ptr = "warn"
 missing_const_for_fn = "warn"
 mod_module_files = "warn"
+
+[[example]]
+name = "async_browse"
+required-features = ["tokio"]
+
+
+[[example]]
+name = "async_client"
+required-features = ["tokio"]
+
+[[example]]
+name = "async_read_write"
+required-features = ["tokio"]
