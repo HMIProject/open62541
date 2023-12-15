@@ -1,6 +1,7 @@
+use core::slice;
 use std::ffi::CString;
 
-use open62541_sys::{UA_NodeIdType, UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC};
+use open62541_sys::{UA_Guid, UA_NodeIdType, UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC};
 
 use crate::ua;
 
@@ -50,8 +51,79 @@ impl NodeId {
         Self(inner)
     }
 
+    /// Identifier type
     #[must_use]
     pub fn identifier_type(&self) -> ua::NodeIdType {
         ua::NodeIdType::new(self.0.identifierType.clone())
+    }
+
+    /// Namespace index
+    #[must_use]
+    pub const fn namespace_index(&self) -> u16 {
+        self.0.namespaceIndex
+    }
+
+    /// Numeric value
+    ///
+    /// Returns the numeric value if the type is numeric or `None` otherwise.
+    #[must_use]
+    pub fn numeric_value(&self) -> Option<u32> {
+        if self.0.identifierType.0 != UA_NodeIdType::UA_NODEIDTYPE_NUMERIC.0 {
+            return None;
+        }
+        // SAFETY: We have checked that we have this enum variant.
+        let value = unsafe { *self.0.identifier.numeric.as_ref() };
+        Some(value)
+    }
+
+    /// GUID value
+    ///
+    /// Returns the a reference to the value if the type is GUID or `None` otherwise.
+    #[must_use]
+    pub fn guid_value(&self) -> Option<&UA_Guid> {
+        if self.0.identifierType.0 != UA_NodeIdType::UA_NODEIDTYPE_GUID.0 {
+            return None;
+        }
+        // SAFETY: We have checked that we have this enum variant.
+        let value = unsafe { self.0.identifier.guid.as_ref() };
+        Some(value)
+    }
+
+    /// String value
+    ///
+    /// Returns the string value if the type is string or `None` otherwise.
+    #[must_use]
+    pub fn string_value(&self) -> Option<&str> {
+        if self.0.identifierType.0 != UA_NodeIdType::UA_NODEIDTYPE_STRING.0 {
+            return None;
+        }
+        // SAFETY: We have checked that we have this enum variant.
+        let utf8 = unsafe {
+            slice::from_raw_parts(
+                self.0.identifier.string.as_ref().data,
+                self.0.identifier.string.as_ref().length,
+            )
+        };
+        let from_utf8 = core::str::from_utf8(utf8);
+        debug_assert!(from_utf8.is_ok());
+        from_utf8.ok()
+    }
+
+    /// Byte string value
+    ///
+    /// Returns the value if the type is byte string or `None` otherwise.
+    #[must_use]
+    pub fn byte_string_value(&self) -> Option<&[u8]> {
+        if self.0.identifierType.0 != UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING.0 {
+            return None;
+        }
+        // SAFETY: We have checked that we have this enum variant.
+        let bytes = unsafe {
+            slice::from_raw_parts(
+                self.0.identifier.byteString.as_ref().data,
+                self.0.identifier.byteString.as_ref().length,
+            )
+        };
+        Some(bytes)
     }
 }
