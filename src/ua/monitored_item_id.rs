@@ -1,5 +1,5 @@
-/// Wrapper for monitored item IDs from [`open62541_sys`].
-#[derive(Clone, Copy, Debug)]
+/// Wrapper for monitored item ID from [`open62541_sys`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MonitoredItemId(u32);
 
 impl MonitoredItemId {

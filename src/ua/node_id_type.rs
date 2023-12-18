@@ -2,8 +2,8 @@ use std::fmt;
 
 use open62541_sys::UA_NodeIdType;
 
-/// Wrapper for node ID types from [`open62541_sys`].
-#[derive(Clone, Debug)]
+/// Wrapper for node ID type from [`open62541_sys`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NodeIdType(UA_NodeIdType);
 
 impl NodeIdType {

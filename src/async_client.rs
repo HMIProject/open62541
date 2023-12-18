@@ -132,10 +132,8 @@ impl AsyncClient {
         &self,
         node_id: &ua::NodeId,
     ) -> Result<Vec<ua::ReferenceDescription>, Error> {
-        let request =
-            ua::BrowseRequest::init().with_nodes_to_browse(&[ua::BrowseDescription::init()
-                .with_node_id(node_id)
-                .with_result_mask(&ua::BrowseResultMask::all())]);
+        let request = ua::BrowseRequest::init()
+            .with_nodes_to_browse(&[ua::BrowseDescription::default().with_node_id(node_id)]);
 
         let response = service_request(&self.client, request).await?;
 
@@ -152,6 +150,46 @@ impl AsyncClient {
         };
 
         Ok(references.as_slice().to_vec())
+    }
+
+    /// Browses several nodes at once.
+    ///
+    /// This issues only a single request to the OPC UA server (and should be preferred over several
+    /// individual requests with [`browse()`] when browsing multiple nodes).
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or it cannot be browsed.
+    ///
+    /// [`browse()`]: Self::browse
+    pub async fn browse_many(
+        &self,
+        node_ids: &[ua::NodeId],
+    ) -> Result<Vec<Option<Vec<ua::ReferenceDescription>>>, Error> {
+        let nodes_to_browse: Vec<_> = node_ids
+            .iter()
+            .map(|node_id| ua::BrowseDescription::default().with_node_id(node_id))
+            .collect();
+
+        let request = ua::BrowseRequest::init().with_nodes_to_browse(&nodes_to_browse);
+
+        let response = service_request(&self.client, request).await?;
+
+        let Some(results) = response.results() else {
+            return Err(Error::internal("browse should return results"));
+        };
+
+        let results: Vec<_> = results
+            .iter()
+            .map(|result| {
+                result
+                    .references()
+                    .map(|references| references.iter().cloned().collect())
+            })
+            .collect();
+        debug_assert_eq!(results.len(), node_ids.len());
+
+        Ok(results)
     }
 
     /// Creates new [subscription](AsyncSubscription).

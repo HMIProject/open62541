@@ -6,7 +6,7 @@ use open62541_sys::{
 
 use crate::DataType;
 
-/// Wrapper for arrays from [`open62541_sys`].
+/// Wrapper for array from [`open62541_sys`].
 ///
 /// This owns the wrapped data type. When the wrapper is dropped, its inner value is cleaned up with
 /// [`UA_Array_delete()`] which also recursively cleans up all contained elements in the array.
@@ -224,6 +224,10 @@ impl<T: DataType> Array<T> {
                 unsafe { slice::from_raw_parts_mut(ptr.as_ptr().cast::<T>(), size.get()) }
             }
         }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.as_slice().iter()
     }
 
     /// Gives up ownership and returns raw parts.

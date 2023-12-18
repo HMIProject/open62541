@@ -1,9 +1,10 @@
-/// Wrapper for subscription ID from [`open62541_sys`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SubscriptionId(u32);
+/// Wrapper for node class mask from [`open62541_sys`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NodeClassMask(u32);
 
-impl SubscriptionId {
+impl NodeClassMask {
     /// Creates wrapper by taking ownership of `src`.
+    #[allow(dead_code)]
     #[must_use]
     pub(crate) const fn new(src: u32) -> Self {
         Self(src)

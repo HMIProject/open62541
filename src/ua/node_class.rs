@@ -2,8 +2,8 @@ use std::fmt;
 
 use open62541_sys::UA_NodeClass;
 
-/// Wrapper for node classes from [`open62541_sys`].
-#[derive(Clone, Debug)]
+/// Wrapper for node class from [`open62541_sys`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NodeClass(UA_NodeClass);
 
 impl NodeClass {

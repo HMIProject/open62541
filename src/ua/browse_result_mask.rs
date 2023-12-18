@@ -2,8 +2,8 @@ use std::fmt;
 
 use open62541_sys::UA_BrowseResultMask;
 
-/// Wrapper for result masks from [`open62541_sys`].
-#[derive(Clone, Debug)]
+/// Wrapper for result mask from [`open62541_sys`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BrowseResultMask(UA_BrowseResultMask);
 
 // TODO: Support bit operations on this mask.

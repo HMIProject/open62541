@@ -2,8 +2,8 @@ use std::fmt;
 
 use open62541_sys::UA_AttributeId;
 
-/// Wrapper for attribute IDs from [`open62541_sys`].
-#[derive(Clone, Debug)]
+/// Wrapper for attribute ID from [`open62541_sys`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AttributeId(UA_AttributeId);
 
 impl AttributeId {
