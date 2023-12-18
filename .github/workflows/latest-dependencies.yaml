@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow
 
-name: test
+name: latest-dependencies
 
 permissions:
   contents: read
@@ -52,6 +52,14 @@ jobs:
         with:
           # The cache should not be shared between different workflows and jobs.
           shared-key: ${{ github.workflow }}-${{ github.job }}
+
+      - name: Update Rust to latest version
+        run: >-
+          rustup update stable && rustup default stable
+
+      - name: Update crates to latest versions
+        run: >-
+          cargo update --verbose
 
       - name: Build with all features enabled
         run: >-

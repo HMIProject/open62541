@@ -3,7 +3,7 @@ overrides:
       - "**/*.yaml"
     options:
       tabWidth: 2
-      # in double quotes you can use escapes
+      # In double quotes you can use escapes.
       singleQuote: false
   - files:
       - "**/*.md"
