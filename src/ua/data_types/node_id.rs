@@ -1,6 +1,9 @@
-use std::{ffi::CString, str};
+use std::{cmp, ffi::CString, hash, str};
 
-use open62541_sys::{UA_NodeIdType, UA_NodeId_parse, UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC};
+use open62541_sys::{
+    UA_NodeIdType, UA_NodeId_equal, UA_NodeId_hash, UA_NodeId_order, UA_NodeId_parse, UA_Order,
+    UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC,
+};
 
 use crate::{data_type::DataType, ua, Error};
 
@@ -52,6 +55,41 @@ impl NodeId {
     #[must_use]
     pub fn identifier_type(&self) -> ua::NodeIdType {
         ua::NodeIdType::new(self.0.identifierType.clone())
+    }
+}
+
+impl cmp::PartialEq for NodeId {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { UA_NodeId_equal(self.as_ptr(), other.as_ptr()) }
+    }
+}
+
+impl cmp::Eq for NodeId {}
+
+impl cmp::PartialOrd for NodeId {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(<Self as cmp::Ord>::cmp(self, other))
+    }
+}
+
+impl cmp::Ord for NodeId {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        let order = unsafe { UA_NodeId_order(self.as_ptr(), other.as_ptr()) };
+
+        match order {
+            UA_Order::UA_ORDER_LESS => cmp::Ordering::Less,
+            UA_Order::UA_ORDER_EQ => cmp::Ordering::Equal,
+            UA_Order::UA_ORDER_MORE => cmp::Ordering::Greater,
+            _ => panic!("should return valid order"),
+        }
+    }
+}
+
+impl hash::Hash for NodeId {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        let hash = unsafe { UA_NodeId_hash(self.as_ptr()) };
+
+        state.write_u32(hash);
     }
 }
 
