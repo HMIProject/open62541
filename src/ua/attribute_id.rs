@@ -24,6 +24,13 @@ impl AttributeId {
     pub(crate) const fn into_inner(self) -> UA_AttributeId {
         self.0
     }
+
+    #[allow(clippy::unnecessary_cast)]
+    #[must_use]
+    pub(crate) const fn as_u32(&self) -> u32 {
+        // This cast is necessary on Windows builds where `UA_BrowseResultMask` wraps an `i32`.
+        (self.0).0 as u32
+    }
 }
 
 impl fmt::Display for AttributeId {
