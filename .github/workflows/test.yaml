@@ -26,13 +26,11 @@ jobs:
     strategy:
       matrix:
         include:
-          # TODO: Re-enable windows builds once `bindgen` differences have been
-          # sorted out.
-          # - runner_os: windows-latest
-          #   # Doctests fill up disk storage on Windows, and we don't expect much
-          #   # different behavior anyway. It suffices to run them on Linux. Also,
-          #   # Windows runners are 2 times as expensive on GitHub.
-          #   run_doctests: false
+          - runner_os: windows-latest
+            # Doctests fill up disk storage on Windows, and we don't expect much
+            # different behavior anyway. It suffices to run them on Linux. Also,
+            # Windows runners are 2 times as expensive on GitHub.
+            run_doctests: false
           - runner_os: ubuntu-latest
             run_doctests: true
 
