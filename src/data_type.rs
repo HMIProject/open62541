@@ -240,11 +240,7 @@ macro_rules! data_type {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 let output = crate::DataType::print(self);
                 let string = output.as_ref().and_then(|output| output.as_str());
-                f.write_fmt(format_args!(
-                    "{}({})",
-                    stringify!($name),
-                    string.unwrap_or("_")
-                ))
+                write!(f, "{}({})", stringify!($name), string.unwrap_or("_"))
             }
         }
 
