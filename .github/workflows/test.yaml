@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - main
+    tags:
   workflow_dispatch:
 
 concurrency:
@@ -40,7 +41,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      # Checkout the repository before the remaining steps that depend on it.
+      # Check out the repository before the remaining steps that depend on it.
       # All preceding steps are independent of the repository contents.
       - name: Check out repository
         uses: actions/checkout@v4
