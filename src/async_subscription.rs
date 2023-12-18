@@ -13,19 +13,20 @@ use open62541_sys::{
 use crate::{ua, AsyncMonitoredItem, CallbackOnce, Error};
 
 /// Subscription (with asynchronous API).
+#[derive(Clone)]
 pub struct AsyncSubscription {
     client: Weak<Mutex<ua::Client>>,
     subscription_id: ua::SubscriptionId,
 }
 
 impl AsyncSubscription {
-    pub(crate) async fn new(client: Arc<Mutex<ua::Client>>) -> Result<Self, Error> {
+    pub(crate) async fn new(client: &Arc<Mutex<ua::Client>>) -> Result<Self, Error> {
         let request = ua::CreateSubscriptionRequest::default();
 
-        let response = create_subscription(Arc::clone(&client), request).await?;
+        let response = create_subscription(client, request).await?;
 
         Ok(AsyncSubscription {
-            client: Arc::downgrade(&client),
+            client: Arc::downgrade(client),
             subscription_id: response.subscription_id(),
         })
     }
@@ -63,7 +64,7 @@ impl Drop for AsyncSubscription {
 }
 
 async fn create_subscription(
-    client: Arc<Mutex<ua::Client>>,
+    client: &Mutex<ua::Client>,
     request: ua::CreateSubscriptionRequest,
 ) -> Result<ua::CreateSubscriptionResponse, Error> {
     type Cb = CallbackOnce<Result<ua::CreateSubscriptionResponse, ua::StatusCode>>;

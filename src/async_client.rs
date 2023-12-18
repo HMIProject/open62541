@@ -160,7 +160,7 @@ impl AsyncClient {
     ///
     /// This fails when the client is not connected.
     pub async fn create_subscription(&self) -> Result<AsyncSubscription, Error> {
-        AsyncSubscription::new(Arc::clone(&self.client)).await
+        AsyncSubscription::new(&self.client).await
     }
 
     /// Watches value for changes.
