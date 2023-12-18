@@ -52,9 +52,13 @@ jobs:
           # The cache should not be shared between different workflows and jobs.
           shared-key: ${{ github.workflow }}-${{ github.job }}
 
+      - name: Build with all features enabled
+        run: >-
+          cargo build --locked --all-features
+
       - name: Run tests (bins/lib/tests/examples) with all features enabled
         run: >-
-          cargo test --all-features
+          cargo test --locked --all-features
           --bins --lib --tests --examples
 
       # Compile and run doctests, which have been excluded in the previous step(s).
@@ -70,5 +74,5 @@ jobs:
       - name: Run doctests with all features enabled
         if: ${{ matrix.run_doctests }}
         run: >-
-          cargo test --all-features
+          cargo test --locked --all-features
           --doc
