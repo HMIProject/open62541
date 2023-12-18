@@ -3,10 +3,6 @@ use std::{
     ptr,
 };
 
-#[cfg(target_arch = "x86_64")]
-use open62541_sys::__va_list_tag;
-#[cfg(not(target_arch = "x86_64"))]
-use open62541_sys::va_list;
 use open62541_sys::{
     UA_ClientConfig, UA_ClientConfig_setDefault, UA_Client_connect, UA_Client_getConfig,
     UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
@@ -118,7 +114,6 @@ impl Client {
 /// We can use this to prevent `open62541` from installing its own default logger (which outputs any
 /// logs to stdout/stderr directly).
 fn set_default_logger(config: &mut UA_ClientConfig) {
-    #[allow(improper_ctypes_definitions)]
     unsafe extern "C" fn log_c(
         _log_context: *mut c_void,
         level: UA_LogLevel,
@@ -126,8 +121,8 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
         msg: *const c_char,
         // For some reason, the magic is necessary to accommodate the different signatures generated
         // by `bindgen` in `open62541-sys`.
-        #[cfg(target_arch = "x86_64")] _args: *mut __va_list_tag,
-        #[cfg(not(target_arch = "x86_64"))] _args: va_list,
+        #[cfg(all(unix, target_arch = "x86_64"))] _args: *mut open62541_sys::__va_list_tag,
+        #[cfg(not(all(unix, target_arch = "x86_64")))] _args: open62541_sys::va_list,
     ) {
         let msg = unsafe { CStr::from_ptr(msg) }.to_string_lossy();
 
