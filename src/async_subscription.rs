@@ -128,7 +128,7 @@ async fn create_subscription(
         .unwrap_or(Err(Error::internal("callback should send result")))
 }
 
-fn delete_subscription(client: &Arc<Mutex<ua::Client>>, request: ua::DeleteSubscriptionsRequest) {
+fn delete_subscription(client: &Mutex<ua::Client>, request: ua::DeleteSubscriptionsRequest) {
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
         _userdata: *mut c_void,
