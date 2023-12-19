@@ -1,7 +1,7 @@
-use std::{pin::pin, time::Duration};
+use std::time::Duration;
 
 use anyhow::Context;
-use futures::{future, StreamExt as _};
+use futures::future;
 use open62541::{ua, AsyncClient};
 use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
@@ -19,16 +19,6 @@ async fn main() -> anyhow::Result<()> {
         AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543").with_context(|| "connect")?;
 
     println!("Connected successfully");
-
-    let node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
-
-    let value_stream = client.value_stream(&node_id).await?;
-
-    let mut pinned_stream = pin!(value_stream.take(5));
-
-    while let Some(value) = pinned_stream.next().await {
-        println!("{value:?}");
-    }
 
     println!("Creating subscription");
 

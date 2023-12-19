@@ -5,7 +5,6 @@ use std::{
     time::Duration,
 };
 
-use futures::Stream;
 use open62541_sys::{
     UA_Client, UA_Client_disconnect, UA_Client_readValueAttribute_async, UA_Client_run_iterate,
     UA_Client_sendAsyncRequest, UA_DataValue, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
@@ -21,7 +20,6 @@ use crate::{
 pub struct AsyncClient {
     client: Arc<Mutex<ua::Client>>,
     background_handle: JoinHandle<()>,
-    default_subscription: Arc<Mutex<Option<Arc<AsyncSubscription>>>>,
 }
 
 impl AsyncClient {
@@ -78,7 +76,6 @@ impl AsyncClient {
         Self {
             client,
             background_handle,
-            default_subscription: Arc::default(),
         }
     }
 
@@ -199,42 +196,6 @@ impl AsyncClient {
     /// This fails when the client is not connected.
     pub async fn create_subscription(&self) -> Result<AsyncSubscription, Error> {
         AsyncSubscription::new(Arc::clone(&self.client)).await
-    }
-
-    /// Watches value for changes.
-    ///
-    /// This uses the internal default subscription to the server and adds a monitored item to it to
-    /// subscribe the node for changes to its value attribute.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the monitored item cannot be created. It also fails when (on the first call)
-    /// the internal default subscription cannot be created.
-    // TODO: Use async-aware lock.
-    #[allow(clippy::await_holding_lock)]
-    pub async fn value_stream(
-        &self,
-        node_id: &ua::NodeId,
-    ) -> Result<impl Stream<Item = ua::DataValue>, Error> {
-        let subscription = {
-            let Ok(mut default_subscription) = self.default_subscription.lock() else {
-                return Err(Error::internal("should be able to lock subscription"));
-            };
-
-            if let Some(subscription) = default_subscription.as_ref() {
-                // Use existing default subscription.
-                Arc::clone(subscription)
-            } else {
-                // Create new subscription and store it for future monitored items.
-                let subscription = Arc::new(self.create_subscription().await?);
-                *default_subscription = Some(Arc::clone(&subscription));
-                subscription
-            }
-        };
-
-        let monitored_item = subscription.create_monitored_item(node_id).await?;
-
-        Ok(monitored_item.into_stream())
     }
 }
 
