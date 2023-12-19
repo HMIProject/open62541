@@ -39,8 +39,7 @@
 //! ## Watch node for changes in value attribute
 //!
 //! ```no_run
-//! use futures::StreamExt;
-//! use std::pin::pin;
+//! use futures::StreamExt as _;
 //!
 //! use open62541::{AsyncClient, ua::NodeId};
 //!
@@ -51,12 +50,12 @@
 //! #
 //! # let node_id = NodeId::numeric(0, 2258); // Server/ServerStatus/CurrentTime
 //! #
-//! // Get stream with value updates from the server.
-//! let value_stream = client.value_stream(&node_id).await?;
-//! // Pinning is required to consume stream items.
-//! let mut pinned_stream = pin!(value_stream);
+//! // Create subscription that receives the updates.
+//! let subscription = client.create_subscription().await?;
+//! // Create monitored item to create  node updates.
+//! let mut monitored_item = subscription.create_monitored_item(&node_id).await?;
 //!
-//! while let Some(value) = pinned_stream.next().await {
+//! while let Some(value) = monitored_item.next().await {
 //!     println!("Received value: {value:?}");
 //! }
 //! #

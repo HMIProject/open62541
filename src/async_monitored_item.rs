@@ -1,7 +1,9 @@
 use std::{
     ffi::c_void,
+    pin::Pin,
     ptr,
     sync::{Arc, Mutex, Weak},
+    task::{self, Poll},
 };
 
 use futures::{channel::oneshot, stream, Stream};
@@ -48,6 +50,7 @@ impl AsyncMonitoredItem {
     /// This waits for the next value received for this monitored item. Returns `None` when item has
     /// been closed and no more updates will be received.
     pub async fn next(&mut self) -> Option<ua::DataValue> {
+        // This mirrors `<Self as Stream>::poll_next()` but does not require `self` to be pinned.
         self.rx.recv().await
     }
 
@@ -72,6 +75,15 @@ impl Drop for AsyncMonitoredItem {
             .with_monitored_item_ids(&[self.monitored_item_id]);
 
         delete_monitored_items(&client, request);
+    }
+}
+
+impl Stream for AsyncMonitoredItem {
+    type Item = ua::DataValue;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Option<Self::Item>> {
+        // This mirrors `AsyncMonitoredItem::next()` and implements the `Stream` trait.
+        self.rx.poll_recv(cx)
     }
 }
 
