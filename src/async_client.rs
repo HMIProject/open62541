@@ -195,7 +195,7 @@ impl AsyncClient {
     ///
     /// This fails when the client is not connected.
     pub async fn create_subscription(&self) -> Result<AsyncSubscription, Error> {
-        AsyncSubscription::new(Arc::clone(&self.client)).await
+        AsyncSubscription::new(&self.client).await
     }
 }
 
@@ -210,7 +210,7 @@ impl Drop for AsyncClient {
 }
 
 async fn read_value(
-    client: &Arc<Mutex<ua::Client>>,
+    client: &Mutex<ua::Client>,
     node_id: &ua::NodeId,
 ) -> Result<ua::DataValue, Error> {
     type Cb = CallbackOnce<Result<ua::DataValue, ua::StatusCode>>;
@@ -272,7 +272,7 @@ async fn read_value(
 }
 
 async fn service_request<R: ServiceRequest>(
-    client: &Arc<Mutex<ua::Client>>,
+    client: &Mutex<ua::Client>,
     request: R,
 ) -> Result<R::Response, Error> {
     type Cb<R> = CallbackOnce<Result<<R as ServiceRequest>::Response, ua::StatusCode>>;

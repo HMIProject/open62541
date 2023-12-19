@@ -23,7 +23,7 @@ pub struct AsyncMonitoredItem {
 
 impl AsyncMonitoredItem {
     pub(crate) async fn new(
-        client: Arc<Mutex<ua::Client>>,
+        client: &Arc<Mutex<ua::Client>>,
         subscription_id: &ua::SubscriptionId,
         node_id: &ua::NodeId,
     ) -> Result<Self, Error> {
@@ -31,13 +31,13 @@ impl AsyncMonitoredItem {
             .with_subscription_id(subscription_id)
             .with_items_to_create(&[ua::MonitoredItemCreateRequest::init_node_id(node_id)]);
 
-        let (response, rx) = create_monitored_items(Arc::clone(&client), request).await?;
+        let (response, rx) = create_monitored_items(client, request).await?;
 
         // PANIC: We expect exactly one result for the monitored item we requested above.
         let monitored_item_id = *response.monitored_item_ids().unwrap().get(0).unwrap();
 
         Ok(AsyncMonitoredItem {
-            client: Arc::downgrade(&client),
+            client: Arc::downgrade(client),
             monitored_item_id,
             rx,
         })
@@ -79,7 +79,7 @@ impl Drop for AsyncMonitoredItem {
 const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
 
 async fn create_monitored_items(
-    client: Arc<Mutex<ua::Client>>,
+    client: &Mutex<ua::Client>,
     request: ua::CreateMonitoredItemsRequest,
 ) -> Result<
     (
@@ -190,10 +190,7 @@ async fn create_monitored_items(
         .map(|response| (response, st_rx))
 }
 
-fn delete_monitored_items(
-    client: &Arc<Mutex<ua::Client>>,
-    request: ua::DeleteMonitoredItemsRequest,
-) {
+fn delete_monitored_items(client: &Mutex<ua::Client>, request: ua::DeleteMonitoredItemsRequest) {
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
         _userdata: *mut c_void,

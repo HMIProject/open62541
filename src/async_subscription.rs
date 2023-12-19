@@ -19,13 +19,13 @@ pub struct AsyncSubscription {
 }
 
 impl AsyncSubscription {
-    pub(crate) async fn new(client: Arc<Mutex<ua::Client>>) -> Result<Self, Error> {
+    pub(crate) async fn new(client: &Arc<Mutex<ua::Client>>) -> Result<Self, Error> {
         let request = ua::CreateSubscriptionRequest::default();
 
-        let response = create_subscription(Arc::clone(&client), request).await?;
+        let response = create_subscription(client, request).await?;
 
         Ok(AsyncSubscription {
-            client: Arc::downgrade(&client),
+            client: Arc::downgrade(client),
             subscription_id: response.subscription_id(),
         })
     }
@@ -45,7 +45,7 @@ impl AsyncSubscription {
             return Err(Error::internal("client should not be dropped"));
         };
 
-        AsyncMonitoredItem::new(client, &self.subscription_id, node_id).await
+        AsyncMonitoredItem::new(&client, &self.subscription_id, node_id).await
     }
 }
 
@@ -63,7 +63,7 @@ impl Drop for AsyncSubscription {
 }
 
 async fn create_subscription(
-    client: Arc<Mutex<ua::Client>>,
+    client: &Mutex<ua::Client>,
     request: ua::CreateSubscriptionRequest,
 ) -> Result<ua::CreateSubscriptionResponse, Error> {
     type Cb = CallbackOnce<Result<ua::CreateSubscriptionResponse, ua::StatusCode>>;
@@ -127,7 +127,7 @@ async fn create_subscription(
         .unwrap_or(Err(Error::internal("callback should send result")))
 }
 
-fn delete_subscription(client: &Arc<Mutex<ua::Client>>, request: ua::DeleteSubscriptionsRequest) {
+fn delete_subscription(client: &Mutex<ua::Client>, request: ua::DeleteSubscriptionsRequest) {
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
         _userdata: *mut c_void,
