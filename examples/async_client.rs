@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use anyhow::Context;
+use anyhow::Context as _;
 use futures::future;
 use open62541::{ua, AsyncClient};
 use open62541_sys::{

@@ -1,4 +1,4 @@
-use anyhow::Context;
+use anyhow::Context as _;
 use open62541::{ua, AsyncClient};
 use rand::Rng as _;
 
