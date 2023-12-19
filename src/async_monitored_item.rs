@@ -103,6 +103,13 @@ async fn create_monitored_items(
     type St = CallbackStream<ua::DataValue>;
     type Cb = CallbackOnce<Result<ua::CreateMonitoredItemsResponse, ua::StatusCode>>;
 
+    // Wrapper type so that we can mark `*mut c_void` for callbacks as safe to send. Otherwise, this
+    // would make any closure that uses `AsyncMonitoredItem::new()` not `Send`.
+    #[repr(transparent)]
+    struct Context(*mut c_void);
+    // SAFETY: As long as the payload is `Send`, context is also `Send`.
+    unsafe impl Send for Context where St: Send + Sync {}
+
     unsafe extern "C" fn notification_callback_c(
         _client: *mut UA_Client,
         _sub_id: UA_UInt32,
@@ -167,7 +174,7 @@ async fn create_monitored_items(
         vec![Some(notification_callback_c)];
     let mut delete_callbacks: Vec<UA_Client_DeleteMonitoredItemCallback> =
         vec![Some(delete_callback_c)];
-    let mut contexts: Vec<*mut c_void> = vec![St::prepare(st_tx)];
+    let mut contexts = vec![Context(St::prepare(st_tx))];
 
     let status_code = ua::StatusCode::new({
         let Ok(mut client) = client.lock() else {
@@ -183,7 +190,7 @@ async fn create_monitored_items(
             UA_Client_MonitoredItems_createDataChanges_async(
                 client.as_mut_ptr(),
                 request.into_inner(),
-                contexts.as_mut_ptr(),
+                contexts.as_mut_ptr().cast::<*mut c_void>(),
                 notification_callbacks.as_mut_ptr(),
                 delete_callbacks.as_mut_ptr(),
                 Some(callback_c),
