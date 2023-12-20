@@ -30,8 +30,6 @@ mod write_request;
 mod write_response;
 mod write_value;
 
-use paste::paste;
-
 pub use self::{
     browse_description::BrowseDescription, browse_request::BrowseRequest,
     browse_response::BrowseResponse, browse_result::BrowseResult,
@@ -53,7 +51,7 @@ pub use self::{
 
 macro_rules! primitive {
     ($name:ident, $type:ty) => {
-        paste! {
+        paste::paste! {
             crate::data_type!($name, [<UA_ $name>], [<UA_TYPES_ $name:upper>]);
         }
 

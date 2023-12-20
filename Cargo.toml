@@ -12,6 +12,7 @@ log = "0.4.20"
 open62541-sys = { git = "https://github.com/HMIProject/open62541-sys.git", tag = "v0.1.1" }
 paste = "1.0.14"
 serde = { version = "1.0.193", optional = true }
+serde_json = { version = "1.0.108", optional = true }
 thiserror = "1.0.51"
 time = { version = "0.3.31", optional = true }
 tokio = { version = "1.35.0", optional = true, features = [
@@ -24,12 +25,11 @@ tokio = { version = "1.35.0", optional = true, features = [
 anyhow = "1.0.75"
 env_logger = "0.10.1"
 rand = "0.8.5"
-serde_json = "1.0.108"
 tokio = { version = "1.35.0", features = ["macros"] }
 
 [features]
 default = ["serde", "time", "tokio"]
-serde = ["dep:serde"]
+serde = ["dep:serde", "dep:serde_json"]
 time = ["dep:time"]
 tokio = ["dep:tokio"]
 
@@ -56,6 +56,10 @@ required-features = ["tokio"]
 [[example]]
 name = "async_client"
 required-features = ["tokio"]
+
+[[example]]
+name = "async_monitor"
+required-features = ["serde", "tokio"]
 
 [[example]]
 name = "async_read_write"
