@@ -8,8 +8,6 @@ use open62541_sys::{
     UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
 };
 
-#[cfg(feature = "tokio")]
-use crate::AsyncClient;
 use crate::{ua, Error};
 
 /// Builder for [`Client`].
@@ -98,10 +96,10 @@ impl Client {
     /// Turns client into [`AsyncClient`].
     ///
     /// The [`AsyncClient`] can be used to access methods in an asynchronous way.
-    #[must_use]
     #[cfg(feature = "tokio")]
-    pub fn into_async(self) -> AsyncClient {
-        AsyncClient::from_sync(self.0)
+    #[must_use]
+    pub fn into_async(self) -> crate::AsyncClient {
+        crate::AsyncClient::from_sync(self.0)
     }
 }
 
