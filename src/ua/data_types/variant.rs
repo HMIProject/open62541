@@ -87,6 +87,7 @@ mod serde {
             }
 
             // Data type ns=0;i=13
+            #[cfg(feature = "time")]
             if let Some(value) = self
                 .scalar::<ua::DateTime>()
                 .and_then(|value| value.as_datetime())

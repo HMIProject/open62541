@@ -29,7 +29,7 @@ tokio = { version = "1.35.0", features = ["macros"] }
 
 [features]
 default = ["serde", "time", "tokio"]
-serde = ["dep:serde", "dep:serde_json", "time/serde"]
+serde = ["dep:serde", "dep:serde_json", "time?/serde"]
 time = ["dep:time"]
 tokio = ["dep:tokio"]
 
