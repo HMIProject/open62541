@@ -33,13 +33,17 @@ jobs:
         runner_os: [windows-latest, ubuntu-latest]
         features: [all-features, no-default-features]
         include:
+          # Add derived attribute `run_doctests`.
+          - run_doctests: true
           - runner_os: windows-latest
             # Doctests fill up disk storage on Windows, and we don't expect much
             # different behavior anyway. It suffices to run them on Linux. Also,
             # Windows runners are 2 times as expensive on GitHub.
             run_doctests: false
-          - runner_os: ubuntu-latest
-            run_doctests: true
+          - features: no-default-features
+            # Doctests may use any features and there is no easy way to activate
+            # certain features only for some doctests.
+            run_doctests: false
 
     runs-on: ${{ matrix.runner_os }}
 
