@@ -50,28 +50,32 @@ pub use self::{
 };
 
 macro_rules! primitive {
-    ($name:ident, $type:ty) => {
-        paste::paste! {
-            crate::data_type!($name, [<UA_ $name>], [<UA_TYPES_ $name:upper>]);
-        }
-
-        impl $name {
-            #[must_use]
-            pub fn new(value: $type) -> Self {
-                Self::from_ref(&value)
+    ($( ($name:ident, $type:ty) ),+ $(,)?) => {
+        $(
+            paste::paste! {
+                crate::data_type!($name, [<UA_ $name>], [<UA_TYPES_ $name:upper>]);
             }
-        }
+
+            impl $name {
+                #[must_use]
+                pub fn new(value: $type) -> Self {
+                    Self::from_ref(&value)
+                }
+            }
+        )+
     };
 }
 
-primitive!(Boolean, bool);
-primitive!(SByte, i8);
-primitive!(Byte, u8);
-primitive!(Int16, i16);
-primitive!(UInt16, u16);
-primitive!(Int32, i32);
-primitive!(UInt32, u32);
-primitive!(Int64, i64);
-primitive!(UInt64, u64);
-primitive!(Float, f32);
-primitive!(Double, f64);
+primitive!(
+    (Boolean, bool), // Data type ns=0;i=1
+    (SByte, i8),     // Data type ns=0;i=2
+    (Byte, u8),      // Data type ns=0;i=3
+    (Int16, i16),    // Data type ns=0;i=4
+    (UInt16, u16),   // Data type ns=0;i=5
+    (Int32, i32),    // Data type ns=0;i=6
+    (UInt32, u32),   // Data type ns=0;i=7
+    (Int64, i64),    // Data type ns=0;i=8
+    (UInt64, u64),   // Data type ns=0;i=9
+    (Float, f32),    // Data type ns=0;i=10
+    (Double, f64),   // Data type ns=0;i=11
+);

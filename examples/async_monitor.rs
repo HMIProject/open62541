@@ -2,7 +2,9 @@ use std::{sync::Arc, time::Duration};
 
 use anyhow::Context as _;
 use open62541::{ua, AsyncClient, AsyncSubscription};
-use open62541_sys::UA_NS0ID_SERVERSTATUSTYPE_CURRENTTIME;
+use open62541_sys::{
+    UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
+};
 use rand::Rng as _;
 use tokio::time::error::Elapsed;
 
@@ -29,7 +31,11 @@ async fn main() -> anyhow::Result<()> {
     let input_node_id = ua::NodeId::numeric(1, 1773);
 
     // `/Root/Objects/Server/ServerStatus/CurrentTime`
-    let current_time_node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVERSTATUSTYPE_CURRENTTIME);
+    let current_time_node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
+
+    // `/Root/Objects/Server/ServerStatus/BuildInfo/ProductName`
+    let product_name_node_id =
+        ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME);
 
     let tasks = vec![
         tokio::spawn(monitor_background(
@@ -39,6 +45,10 @@ async fn main() -> anyhow::Result<()> {
         tokio::spawn(monitor_background(
             Arc::clone(&subscription),
             current_time_node_id,
+        )),
+        tokio::spawn(monitor_background(
+            Arc::clone(&subscription),
+            product_name_node_id,
         )),
         tokio::spawn(write_background(Arc::clone(&client), input_node_id)),
     ];

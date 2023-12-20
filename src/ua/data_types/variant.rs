@@ -38,6 +38,8 @@ impl Variant {
 mod serde {
     use serde::ser;
 
+    use crate::ua;
+
     use super::Variant;
 
     impl serde::Serialize for Variant {
@@ -61,19 +63,36 @@ mod serde {
                 self,
                 serializer,
                 [
-                    (Boolean, bool),
-                    (SByte, i8),
-                    (Byte, u8),
-                    (Int16, i16),
-                    (UInt16, u16),
-                    (Int32, i32),
-                    (UInt32, u32),
-                    (Int64, i64),
-                    (UInt64, u64),
-                    (Float, f32),
-                    (Double, f64),
+                    (Boolean, bool), // Data type ns=0;i=1
+                    (SByte, i8),     // Data type ns=0;i=2
+                    (Byte, u8),      // Data type ns=0;i=3
+                    (Int16, i16),    // Data type ns=0;i=4
+                    (UInt16, u16),   // Data type ns=0;i=5
+                    (Int32, i32),    // Data type ns=0;i=6
+                    (UInt32, u32),   // Data type ns=0;i=7
+                    (Int64, i64),    // Data type ns=0;i=8
+                    (UInt64, u64),   // Data type ns=0;i=9
+                    (Float, f32),    // Data type ns=0;i=10
+                    (Double, f64),   // Data type ns=0;i=11
                 ]
             );
+
+            // Data type ns=0;i=12
+            if let Some(value) = self
+                .scalar::<ua::String>()
+                .as_ref()
+                .and_then(|value| value.as_str())
+            {
+                return serializer.serialize_str(value);
+            }
+
+            // Data type ns=0;i=13
+            if let Some(value) = self
+                .scalar::<ua::DateTime>()
+                .and_then(|value| value.as_datetime())
+            {
+                return value.serialize(serializer);
+            }
 
             Err(ser::Error::custom("non-primitive value in Variant"))
         }
