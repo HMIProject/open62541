@@ -9,7 +9,7 @@ publish = false
 [dependencies]
 futures = "0.3.29"
 log = "0.4.20"
-open62541-sys = { git = "https://github.com/HMIProject/open62541-sys.git", tag = "v0.1.0" }
+open62541-sys = { git = "https://github.com/HMIProject/open62541-sys.git", tag = "v0.1.1" }
 serde = { version = "1.0.193", optional = true }
 thiserror = "1.0.51"
 time = { version = "0.3.31", optional = true }

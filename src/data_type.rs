@@ -108,12 +108,11 @@ macro_rules! data_type {
 
         impl $name {
             /// Creates wrapper initialized with defaults.
-            #[allow(dead_code)]
             #[must_use]
             pub fn init() -> Self {
-                let mut inner = unsafe {
-                    std::mem::MaybeUninit::<open62541_sys::$inner>::zeroed().assume_init()
-                };
+                let mut inner = <open62541_sys::$inner as std::default::Default>::default();
+                // `UA_init()` depends on the specific data type, so we must call it, even though it
+                // only zero-initializes the memory region (again) in most cases.
                 unsafe {
                     open62541_sys::UA_init(
                         std::ptr::addr_of_mut!(inner).cast::<std::ffi::c_void>(),
@@ -121,15 +120,6 @@ macro_rules! data_type {
                     )
                 };
                 Self(inner)
-            }
-
-            /// Creates wrapper by taking ownership of `src`.
-            #[allow(dead_code)]
-            #[must_use]
-            pub(crate) const fn new(src: open62541_sys::$inner) -> Self {
-                // This takes ownership of the wrapped value. We call `UA_clear()` when the value is
-                // dropped eventually.
-                Self(src)
             }
 
             /// Creates wrapper by cloning value from `src`.
@@ -145,9 +135,7 @@ macro_rules! data_type {
             pub(crate) fn from_ref(src: &open62541_sys::$inner) -> Self {
                 // `UA_copy()` does not clean up the target before copying into it, so we may use an
                 // uninitialized slice of memory here.
-                let mut dst = unsafe {
-                    std::mem::MaybeUninit::<open62541_sys::$inner>::zeroed().assume_init()
-                };
+                let mut dst = <open62541_sys::$inner as std::default::Default>::default();
 
                 let result = unsafe {
                     open62541_sys::UA_copy(
