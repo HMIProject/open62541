@@ -13,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
     let client =
         AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543").with_context(|| "connect")?;
 
-    println!("Connected successfully");
+    println!("Client connected successfully");
 
     let client = Arc::new(client);
 

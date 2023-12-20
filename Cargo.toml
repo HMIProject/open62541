@@ -52,7 +52,6 @@ mod_module_files = "warn"
 name = "async_browse"
 required-features = ["tokio"]
 
-
 [[example]]
 name = "async_client"
 required-features = ["tokio"]
@@ -60,3 +59,7 @@ required-features = ["tokio"]
 [[example]]
 name = "async_read_write"
 required-features = ["tokio"]
+
+[[example]]
+name = "async_send_sync"
+required-features = ["time", "tokio"]
