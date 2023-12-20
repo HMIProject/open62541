@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
         .write_value(
             &node_id,
             &ua::DataValue::init()
-                .with_value(&ua::Variant::init().with_scalar(&ua::Double::value(value))),
+                .with_value(&ua::Variant::init().with_scalar(&ua::Double::new(value))),
         )
         .await
         .with_context(|| "write")?;

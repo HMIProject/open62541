@@ -8,15 +8,6 @@ crate::data_type!(Variant, UA_Variant, UA_TYPES_VARIANT);
 
 impl Variant {
     #[must_use]
-    pub fn scalar<T: DataType>(&self) -> Option<T> {
-        if !unsafe { UA_Variant_hasScalarType(self.as_ptr(), T::data_type()) } {
-            return None;
-        }
-
-        unsafe { self.0.data.cast::<T::Inner>().as_ref() }.map(|value| T::from_ref(value))
-    }
-
-    #[must_use]
     pub fn with_scalar<T: DataType>(mut self, value: &T) -> Self {
         unsafe {
             UA_Variant_setScalarCopy(
@@ -26,5 +17,13 @@ impl Variant {
             );
         }
         self
+    }
+
+    #[must_use]
+    pub fn scalar<T: DataType>(&self) -> Option<T> {
+        if !unsafe { UA_Variant_hasScalarType(self.as_ptr(), T::data_type()) } {
+            return None;
+        }
+        unsafe { self.0.data.cast::<T::Inner>().as_ref() }.map(|value| T::from_ref(value))
     }
 }

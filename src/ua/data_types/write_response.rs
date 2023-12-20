@@ -6,7 +6,7 @@ impl WriteResponse {
     #[must_use]
     pub fn results(&self) -> Option<Vec<ua::StatusCode>> {
         // TODO: Adjust signature to return non-owned value instead.
-        let array: ua::Array<ua::Uint32> =
+        let array: ua::Array<ua::UInt32> =
             ua::Array::from_raw_parts(self.0.results, self.0.resultsSize)?;
         // TODO: Simplify this. Think about what should be in `ua` and what should not.
         Some(

@@ -12,7 +12,7 @@ impl DeleteSubscriptionsRequest {
         let array = ua::Array::from_iter(
             subscription_ids
                 .iter()
-                .map(|id| ua::Uint32::new(id.into_inner())),
+                .map(|id| ua::UInt32::new(id.into_inner())),
         );
         array.move_into(&mut self.0.subscriptionIdsSize, &mut self.0.subscriptionIds);
         self
