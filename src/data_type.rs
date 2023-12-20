@@ -19,8 +19,10 @@ pub unsafe trait DataType: Clone {
     /// that implements the `DataType` trait.
     type Inner;
 
+    #[must_use]
     fn data_type() -> *const open62541_sys::UA_DataType;
 
+    #[must_use]
     fn data_type_ref() -> &'static open62541_sys::UA_DataType {
         unsafe { Self::data_type().as_ref() }.unwrap()
     }

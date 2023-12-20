@@ -30,6 +30,8 @@ jobs:
   run:
     strategy:
       matrix:
+        runner_os: [windows-latest, ubuntu-latest]
+        features: [all-features, no-default-features]
         include:
           - runner_os: windows-latest
             # Doctests fill up disk storage on Windows, and we don't expect much
@@ -64,13 +66,13 @@ jobs:
         run: >-
           cargo update --verbose
 
-      - name: Build with all features enabled
+      - name: Build with --${{ matrix.features }}
         run: >-
-          cargo build --locked --all-features
+          cargo build --locked --${{ matrix.features }}
 
-      - name: Run tests (bins/lib/tests/examples) with all features enabled
+      - name: Run tests (bins/lib/tests/examples) with --${{ matrix.features }}
         run: >-
-          cargo test --locked --all-features
+          cargo test --locked --${{ matrix.features }}
           --bins --lib --tests --examples
 
       # Compile and run doctests, which have been excluded in the previous step(s).
@@ -83,8 +85,8 @@ jobs:
       #
       # For now, we cannot cross-compile doctests and must always run them on
       # the runner's native platform.
-      - name: Run doctests with all features enabled
+      - name: Run doctests with --${{ matrix.features }}
         if: ${{ matrix.run_doctests }}
         run: >-
-          cargo test --locked --all-features
+          cargo test --locked --${{ matrix.features }}
           --doc
