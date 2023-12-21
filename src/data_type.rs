@@ -92,6 +92,19 @@ pub unsafe trait DataType: Clone {
         unsafe { Self::from_raw(dst) }
     }
 
+    // TODO
+    // #[must_use]
+    // fn get_ref(src: &Self::Inner) -> &Self {
+    //     // This transmutes between the inner type and `Self` through `cast()`. Types that implement
+    //     // `DataType` guarantee that we can transmute between them and their inner type, so this is
+    //     // okay.
+    //     let ptr = (src as *const Self::Inner).cast::<Self>();
+    //     // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
+    //     let ptr = unsafe { ptr.as_ref() };
+    //     // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
+    //     unsafe { ptr.unwrap_unchecked() }
+    // }
+
     /// Returns shared reference to value.
     #[must_use]
     fn as_ref(&self) -> &Self::Inner {

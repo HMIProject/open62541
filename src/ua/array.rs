@@ -278,6 +278,20 @@ impl<T: DataType> Drop for Array<T> {
     }
 }
 
+// TODO
+// impl<T: DataType> Clone for Array<T> {
+//     fn clone(&self) -> Self {
+//         todo!()
+//     }
+// }
+
+// TODO
+// impl<T: DataType> fmt::Debug for Array<T> {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         todo!()
+//     }
+// }
+
 #[cfg(test)]
 mod tests {
     use std::ffi::CString;

@@ -31,6 +31,15 @@ impl Variant {
         unsafe { UA_Variant_isScalar(self.as_ptr()) }
     }
 
+    // TODO
+    // #[must_use]
+    // pub fn as_scalar<T: DataType>(&self) -> Option<&T> {
+    //     if !unsafe { UA_Variant_hasScalarType(self.as_ptr(), T::data_type()) } {
+    //         return None;
+    //     }
+    //     unsafe { self.0.data.cast::<T::Inner>().as_ref() }.map(|value| T::get_ref(value))
+    // }
+
     #[must_use]
     pub fn to_scalar<T: DataType>(&self) -> Option<T> {
         if !unsafe { UA_Variant_hasScalarType(self.as_ptr(), T::data_type()) } {
