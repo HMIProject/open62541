@@ -14,7 +14,7 @@ use open62541_sys::{
 };
 use tokio::sync::mpsc;
 
-use crate::{ua, CallbackOnce, CallbackStream, Error};
+use crate::{ua, CallbackOnce, CallbackStream, DataType as _, Error};
 
 /// Monitored item (with asynchronous API).
 pub struct AsyncMonitoredItem {

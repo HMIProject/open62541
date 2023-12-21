@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use anyhow::Context as _;
-use open62541::{ua, AsyncClient, AsyncSubscription};
+use open62541::{ua, AsyncClient, AsyncSubscription, DataType as _};
 use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
 };

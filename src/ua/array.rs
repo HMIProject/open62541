@@ -55,7 +55,6 @@ impl<T: DataType> Array<T> {
             return Self(State::Empty);
         };
 
-        debug_assert_eq!(T::data_type_ref().memSize() as usize, mem::size_of::<T>());
         let array = NonNull::new(unsafe { UA_Array_new(size.get(), T::data_type()) })
             .expect("create new UA_Array")
             .cast::<T::Inner>();
@@ -106,7 +105,6 @@ impl<T: DataType> Array<T> {
             return Self(State::Empty);
         };
 
-        debug_assert_eq!(T::data_type_ref().memSize() as usize, mem::size_of::<T>());
         let array = NonNull::new(unsafe { UA_Array_new(slice.len(), T::data_type()) })
             .expect("create new UA_Array")
             .cast::<T::Inner>();

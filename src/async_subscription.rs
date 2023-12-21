@@ -10,7 +10,7 @@ use open62541_sys::{
     UA_CreateSubscriptionResponse, UA_UInt32,
 };
 
-use crate::{ua, AsyncMonitoredItem, CallbackOnce, Error};
+use crate::{ua, AsyncMonitoredItem, CallbackOnce, DataType as _, Error};
 
 /// Subscription (with asynchronous API).
 pub struct AsyncSubscription {

@@ -1,6 +1,6 @@
-use std::ffi::c_void;
+use std::{ffi::c_void, mem::MaybeUninit};
 
-use open62541_sys::{UA_print, UA_STATUSCODE_GOOD};
+use open62541_sys::{UA_copy, UA_init, UA_print, UA_STATUSCODE_GOOD};
 
 use crate::ua;
 
@@ -8,72 +8,131 @@ use crate::ua;
 ///
 /// # Safety
 ///
-/// We require that it must be possible to transmute between the type that implements `DataType` and
-/// the wrapped type [`Self::Inner`]. Therefore, `#[repr(transparent)]` must be used when one wishes
-/// to implement `DataType`.
+/// It must be possible to transmute between the type that implements [`DataType`] and the inner
+/// type [`Inner`]. This implies that `#[repr(transparent)]` must be used on types that implement
+/// this trait and the inner type must be [`Inner`].
+///
+/// [`Inner`]: DataType::Inner
 pub unsafe trait DataType: Clone {
     /// Inner type.
     ///
-    /// We require that it must be possible to transmute between the inner type and the wrapper type
-    /// that implements `DataType`. This implies that `#[repr(transparent)]` must be set on any type
-    /// that implements the `DataType` trait.
+    /// It must be possible to transmute between the inner type and the type that implements
+    /// [`DataType`].
     type Inner;
 
+    /// Gets `open62541` data type record.
+    ///
+    /// The result can be passed to functions in `open62541` that deal with arbitrary data types.
     #[must_use]
     fn data_type() -> *const open62541_sys::UA_DataType;
 
+    /// Creates wrapper by taking ownership of value.
+    ///
+    /// When `Self` is dropped, [`UA_clear()`] is used to free allocations held by the inner type.
+    /// Move only values into `Self` that can be cleared in-place (such as stack-allocated values
+    /// but no heap-allocated values created by [`UA_new()`]).
+    ///
+    /// # Safety
+    ///
+    /// Ownership of value passes to `Self` which must only be used for values that are not
+    /// contained within other values that may be dropped (such as attributes in other data types).
+    /// Use [`from_ref()`] intead.
+    ///
+    /// [`UA_clear()`]: open62541_sys::UA_clear
+    /// [`UA_new()`]: open62541_sys::UA_new
+    /// [`from_ref()`]: DataType::from_ref
     #[must_use]
-    fn data_type_ref() -> &'static open62541_sys::UA_DataType {
-        unsafe { Self::data_type().as_ref() }.unwrap()
+    unsafe fn from_raw(src: Self::Inner) -> Self;
+
+    /// Creates wrapper initialized with defaults.
+    ///
+    /// This uses [`UA_init()`] to initialize the value.
+    #[must_use]
+    fn init() -> Self {
+        let mut inner = MaybeUninit::<Self::Inner>::uninit();
+        // `UA_init()` may depend on the specific data type. The current implementation just
+        // zero-initializes the memory region. We could use `MaybeUninit::zeroed()` instead but we
+        // want to allow `open62541` to use a different implementation in the future if necessary.
+        unsafe {
+            UA_init(
+                inner.as_mut_ptr().cast::<std::ffi::c_void>(),
+                <Self as crate::DataType>::data_type(),
+            );
+        }
+        // SAFETY: We just made sure that the memory region is initialized.
+        let inner = unsafe { inner.assume_init() };
+        // SAFETY: We pass a value without pointers to it into `Self`.
+        unsafe { Self::from_raw(inner) }
     }
 
     /// Creates wrapper by cloning value from `src`.
     ///
-    /// The original value must still be cleared with [`UA_clear()`] or deleted with [`UA_delete()`]
-    /// if allocated on the heap, to avoid memory leaks. If `src` is borrowed from a second wrapper,
-    /// that wrapper will make sure of this.
+    /// The original value must be cleared with [`UA_clear()`], or deleted with [`UA_delete()`] if
+    /// allocated on the heap, to avoid memory leaks. If `src` is borrowed from another data type
+    /// wrapper, that wrapper will make sure of this.
     ///
     /// [`UA_clear()`]: open62541_sys::UA_clear
     /// [`UA_delete()`]: open62541_sys::UA_delete
     #[must_use]
-    fn from_ref(src: &Self::Inner) -> Self;
+    fn from_ref(src: &Self::Inner) -> Self {
+        // `UA_copy()` does not clean up the target value before copying into it, so we may use an
+        // uninitialized memory region here.
+        let mut dst = MaybeUninit::<Self::Inner>::uninit();
+        let result = unsafe {
+            UA_copy(
+                (src as *const Self::Inner).cast::<std::ffi::c_void>(),
+                dst.as_mut_ptr().cast::<std::ffi::c_void>(),
+                <Self as crate::DataType>::data_type(),
+            )
+        };
+        assert_eq!(result, open62541_sys::UA_STATUSCODE_GOOD);
+        // SAFETY: We just made sure that the memory region is initialized.
+        let dst = unsafe { dst.assume_init() };
+        // SAFETY: We pass a value without pointers to it into `Self`.
+        unsafe { Self::from_raw(dst) }
+    }
 
+    /// Returns shared reference to value.
     #[must_use]
     fn as_ref(&self) -> &Self::Inner {
-        // This transmutes the value into the inner type through `cast()`. Types that implement this
-        // trait guarantee that we can transmute between them and their inner type, so this is okay.
-        let ptr = (self as *const Self).cast::<Self::Inner>();
-        // SAFETY: Dereferencing the pointer is allowed because of this transmutability.
-        unsafe { ptr.as_ref().unwrap_unchecked() }
+        let ptr = self.as_ptr();
+        // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
+        let ptr = unsafe { ptr.as_ref() };
+        // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
+        unsafe { ptr.unwrap_unchecked() }
     }
 
+    /// Returns exclusive reference to value.
     #[must_use]
     fn as_mut(&mut self) -> &mut Self::Inner {
-        // This transmutes the value into the inner type through `cast()`. Types that implement this
-        // trait guarantee that we can transmute between them and their inner type, so this is okay.
-        let ptr = (self as *mut Self).cast::<Self::Inner>();
-        // SAFETY: Dereferencing the pointer is allowed because of this transmutability.
-        unsafe { ptr.as_mut().unwrap_unchecked() }
+        let ptr = self.as_mut_ptr();
+        // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
+        let ptr = unsafe { ptr.as_mut() };
+        // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
+        unsafe { ptr.unwrap_unchecked() }
     }
 
+    /// Returns const pointer to value.
     #[must_use]
     fn as_ptr(&self) -> *const Self::Inner {
-        // This transmutes the value into the inner type through `cast()`. Types that implement this
-        // trait guarantee that we can transmute between them and their inner type, so this is okay.
+        // This transmutes between `Self` and the inner type through `cast()`. Types that implement
+        // `DataType` guarantee that we can transmute between them and their inner type, so this is
+        // okay.
         (self as *const Self).cast::<Self::Inner>()
     }
 
+    /// Returns mutable pointer to value.
     #[must_use]
     fn as_mut_ptr(&mut self) -> *mut Self::Inner {
-        // This transmutes the value into the inner type through `cast()`. Types that implement this
-        // trait guarantee that we can transmute between them and their inner type, so this is okay.
+        // This transmutes between `Self` and the inner type through `cast()`. Types that implement
+        // `DataType` guarantee that we can transmute between them and their inner type, so this is
+        // okay.
         (self as *mut Self).cast::<Self::Inner>()
     }
 
     #[must_use]
     fn print(&self) -> Option<ua::String> {
         let mut output = ua::String::init();
-
         let result = unsafe {
             UA_print(
                 self.as_ptr().cast::<c_void>(),
@@ -81,12 +140,7 @@ pub unsafe trait DataType: Clone {
                 output.as_mut_ptr(),
             )
         };
-
-        if result != UA_STATUSCODE_GOOD {
-            return None;
-        }
-
-        Some(output)
+        (result == UA_STATUSCODE_GOOD).then_some(output)
     }
 }
 
@@ -109,48 +163,6 @@ macro_rules! data_type {
         );
 
         impl $name {
-            /// Creates wrapper initialized with defaults.
-            #[must_use]
-            pub fn init() -> Self {
-                let mut inner = <open62541_sys::$inner as std::default::Default>::default();
-                // `UA_init()` depends on the specific data type, so we must call it, even though it
-                // only zero-initializes the memory region (again) in most cases.
-                unsafe {
-                    open62541_sys::UA_init(
-                        std::ptr::addr_of_mut!(inner).cast::<std::ffi::c_void>(),
-                        <Self as crate::DataType>::data_type(),
-                    )
-                };
-                Self(inner)
-            }
-
-            /// Creates wrapper by cloning value from `src`.
-            ///
-            /// The original value must still be cleared with [`UA_clear()`] or deleted with
-            /// [`UA_delete()`] if allocated on the heap, to avoid memory leaks. If `src` is
-            /// borrowed from a second wrapper, that wrapper will make sure of this.
-            ///
-            /// [`UA_clear()`]: open62541_sys::UA_clear
-            /// [`UA_delete()`]: open62541_sys::UA_delete
-            #[allow(dead_code)]
-            #[must_use]
-            pub(crate) fn from_ref(src: &open62541_sys::$inner) -> Self {
-                // `UA_copy()` does not clean up the target before copying into it, so we may use an
-                // uninitialized slice of memory here.
-                let mut dst = <open62541_sys::$inner as std::default::Default>::default();
-
-                let result = unsafe {
-                    open62541_sys::UA_copy(
-                        (src as *const open62541_sys::$inner).cast::<std::ffi::c_void>(),
-                        std::ptr::addr_of_mut!(dst).cast::<std::ffi::c_void>(),
-                        <Self as crate::DataType>::data_type(),
-                    )
-                };
-                assert_eq!(result, open62541_sys::UA_STATUSCODE_GOOD);
-
-                Self(dst)
-            }
-
             /// Gives up ownership and returns inner value.
             ///
             /// The returned value must be cleared with [`UA_clear`](open62541_sys::UA_clear) to not
@@ -222,7 +234,7 @@ macro_rules! data_type {
 
         impl Clone for $name {
             fn clone(&self) -> Self {
-                Self::from_ref(&self.0)
+                <Self as crate::DataType>::from_ref(&self.0)
             }
         }
 
@@ -250,12 +262,15 @@ macro_rules! data_type {
             fn data_type() -> *const open62541_sys::UA_DataType {
                 // SAFETY: We use this static variable only read-only.
                 let types = unsafe { &open62541_sys::UA_TYPES };
+                // PANIC: Value must fit into `usize` to allow indexing.
+                let index = usize::try_from(open62541_sys::$index).unwrap();
                 // PANIC: The given index must be valid within `UA_TYPES`.
-                types.get(open62541_sys::$index as usize).unwrap()
+                types.get(index).unwrap()
             }
 
-            fn from_ref(src: &Self::Inner) -> Self {
-                $name::from_ref(src)
+            #[must_use]
+            unsafe fn from_raw(src: Self::Inner) -> Self {
+                $name(src)
             }
         }
     };

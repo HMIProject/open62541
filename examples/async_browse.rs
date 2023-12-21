@@ -1,7 +1,7 @@
 use std::collections::{hash_map::Entry, HashMap, VecDeque};
 
 use anyhow::Context as _;
-use open62541::{ua, AsyncClient};
+use open62541::{ua, AsyncClient, DataType as _};
 use open62541_sys::UA_NS0ID_SERVERTYPE;
 
 #[tokio::main(flavor = "current_thread")]

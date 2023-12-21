@@ -1,5 +1,5 @@
 use anyhow::Context as _;
-use open62541::{ua, AsyncClient};
+use open62541::{ua, AsyncClient, DataType as _};
 use rand::Rng as _;
 
 #[tokio::main(flavor = "current_thread")]
