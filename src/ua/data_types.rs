@@ -50,7 +50,7 @@ pub use self::{
 };
 
 macro_rules! primitive {
-    ($( ($name:ident, $type:ty) ),+ $(,)?) => {
+    ($( ($name:ident, $type:ty) ),* $(,)?) => {
         $(
             paste::paste! {
                 crate::data_type!($name, [<UA_ $name>], [<UA_TYPES_ $name:upper>]);
@@ -62,7 +62,7 @@ macro_rules! primitive {
                     Self::from_ref(&value)
                 }
             }
-        )+
+        )*
     };
 }
 

@@ -12,10 +12,20 @@ mod node_class_mask;
 mod node_id_type;
 mod status_code;
 mod subscription_id;
+mod values;
 
 pub use self::{
-    array::Array, attribute_id::AttributeId, browse_direction::BrowseDirection,
-    browse_result_mask::BrowseResultMask, client::Client, data_types::*,
-    monitored_item_id::MonitoredItemId, node_class::NodeClass, node_class_mask::NodeClassMask,
-    node_id_type::NodeIdType, status_code::StatusCode, subscription_id::SubscriptionId,
+    array::Array,
+    attribute_id::AttributeId,
+    browse_direction::BrowseDirection,
+    browse_result_mask::BrowseResultMask,
+    client::Client,
+    data_types::*,
+    monitored_item_id::MonitoredItemId,
+    node_class::NodeClass,
+    node_class_mask::NodeClassMask,
+    node_id_type::NodeIdType,
+    status_code::StatusCode,
+    subscription_id::SubscriptionId,
+    values::{ScalarValue, VariantValue},
 };

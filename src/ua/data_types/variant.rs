@@ -1,8 +1,10 @@
 use std::ffi::c_void;
 
-use open62541_sys::{UA_Variant_hasScalarType, UA_Variant_setScalarCopy};
+use open62541_sys::{
+    UA_Variant_hasScalarType, UA_Variant_isEmpty, UA_Variant_isScalar, UA_Variant_setScalarCopy,
+};
 
-use crate::data_type::DataType;
+use crate::{data_type::DataType, ua};
 
 crate::data_type!(Variant, UA_Variant, UA_TYPES_VARIANT);
 
@@ -20,11 +22,60 @@ impl Variant {
     }
 
     #[must_use]
-    pub fn scalar<T: DataType>(&self) -> Option<T> {
+    pub fn is_empty(&self) -> bool {
+        unsafe { UA_Variant_isEmpty(self.as_ptr()) }
+    }
+
+    #[must_use]
+    pub fn is_scalar(&self) -> bool {
+        unsafe { UA_Variant_isScalar(self.as_ptr()) }
+    }
+
+    #[must_use]
+    pub fn to_scalar<T: DataType>(&self) -> Option<T> {
         if !unsafe { UA_Variant_hasScalarType(self.as_ptr(), T::data_type()) } {
             return None;
         }
         unsafe { self.0.data.cast::<T::Inner>().as_ref() }.map(|value| T::from_ref(value))
+    }
+
+    #[must_use]
+    pub fn into_value(self) -> ua::VariantValue {
+        if self.is_empty() {
+            return ua::VariantValue::Empty;
+        }
+
+        if !self.is_scalar() {
+            todo!("should handle non-scalar value");
+        }
+
+        macro_rules! check {
+            ([ $( $name:ident ),* $(,)? ]) => {
+                $(
+                    if let Some(value) = self.to_scalar::<ua::$name>() {
+                        return ua::VariantValue::Scalar(ua::ScalarValue::$name(value));
+                    }
+                )*
+            };
+        }
+
+        check!([
+            Boolean,  // Data type ns=0;i=1
+            SByte,    // Data type ns=0;i=2
+            Byte,     // Data type ns=0;i=3
+            Int16,    // Data type ns=0;i=4
+            UInt16,   // Data type ns=0;i=5
+            Int32,    // Data type ns=0;i=6
+            UInt32,   // Data type ns=0;i=7
+            Int64,    // Data type ns=0;i=8
+            UInt64,   // Data type ns=0;i=9
+            Float,    // Data type ns=0;i=10
+            Double,   // Data type ns=0;i=11
+            String,   // Data type ns=0;i=12
+            DateTime, // Data type ns=0;i=13
+        ]);
+
+        ua::VariantValue::Scalar(ua::ScalarValue::Unknown)
     }
 
     #[cfg(feature = "serde")]
@@ -48,14 +99,14 @@ mod serde {
             S: serde::Serializer,
         {
             macro_rules! serialize {
-                ($self:ident, $serializer:ident, [ $( ($name:ident, $type:ty) ),+ $(,)? ]) => {
+                ($self:ident, $serializer:ident, [ $( ($name:ident, $type:ty) ),* $(,)? ]) => {
                     $(
-                        if let Some(value) = $self.scalar::<crate::ua::$name>() {
+                        if let Some(value) = $self.to_scalar::<crate::ua::$name>() {
                             paste::paste! {
                                 return $serializer.[<serialize_ $type>](value.into_inner());
                             }
                         }
-                    )+
+                    )*
                 };
             }
 
@@ -79,7 +130,7 @@ mod serde {
 
             // Data type ns=0;i=12
             if let Some(value) = self
-                .scalar::<ua::String>()
+                .to_scalar::<ua::String>()
                 .as_ref()
                 .and_then(|value| value.as_str())
             {
@@ -89,7 +140,7 @@ mod serde {
             // Data type ns=0;i=13
             #[cfg(feature = "time")]
             if let Some(value) = self
-                .scalar::<ua::DateTime>()
+                .to_scalar::<ua::DateTime>()
                 .and_then(|value| value.as_datetime())
             {
                 return value.serialize(serializer);

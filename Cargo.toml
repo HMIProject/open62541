@@ -59,7 +59,7 @@ required-features = ["tokio"]
 
 [[example]]
 name = "async_monitor"
-required-features = ["serde", "tokio"]
+required-features = ["tokio"]
 
 [[example]]
 name = "async_read_write"
