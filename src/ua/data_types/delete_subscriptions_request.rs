@@ -1,10 +1,6 @@
 use crate::ua;
 
-crate::data_type!(
-    DeleteSubscriptionsRequest,
-    UA_DeleteSubscriptionsRequest,
-    UA_TYPES_DELETESUBSCRIPTIONSREQUEST
-);
+crate::data_type!(DeleteSubscriptionsRequest);
 
 impl DeleteSubscriptionsRequest {
     #[must_use]

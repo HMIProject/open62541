@@ -1,6 +1,6 @@
 use crate::{ua, DataType as _};
 
-crate::data_type!(LocalizedText, UA_LocalizedText, UA_TYPES_LOCALIZEDTEXT);
+crate::data_type!(LocalizedText);
 
 impl LocalizedText {
     #[must_use]

@@ -2,11 +2,7 @@ use open62541_sys::UA_MonitoredItemCreateRequest_default;
 
 use crate::{ua, DataType as _};
 
-crate::data_type!(
-    MonitoredItemCreateRequest,
-    UA_MonitoredItemCreateRequest,
-    UA_TYPES_MONITOREDITEMCREATEREQUEST
-);
+crate::data_type!(MonitoredItemCreateRequest);
 
 impl MonitoredItemCreateRequest {
     #[must_use]

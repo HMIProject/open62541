@@ -1,6 +1,6 @@
 use crate::{ua, ServiceRequest};
 
-crate::data_type!(WriteRequest, UA_WriteRequest, UA_TYPES_WRITEREQUEST);
+crate::data_type!(WriteRequest);
 
 impl WriteRequest {
     #[must_use]

@@ -2,11 +2,7 @@ use open62541_sys::UA_NS0ID_HIERARCHICALREFERENCES;
 
 use crate::{ua, DataType};
 
-crate::data_type!(
-    BrowseDescription,
-    UA_BrowseDescription,
-    UA_TYPES_BROWSEDESCRIPTION
-);
+crate::data_type!(BrowseDescription);
 
 impl BrowseDescription {
     #[must_use]

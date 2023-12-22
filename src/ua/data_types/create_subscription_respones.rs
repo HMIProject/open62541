@@ -1,10 +1,6 @@
 use crate::ua;
 
-crate::data_type!(
-    CreateSubscriptionResponse,
-    UA_CreateSubscriptionResponse,
-    UA_TYPES_CREATESUBSCRIPTIONRESPONSE
-);
+crate::data_type!(CreateSubscriptionResponse);
 
 impl CreateSubscriptionResponse {
     #[must_use]

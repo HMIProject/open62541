@@ -1,6 +1,6 @@
 use crate::{ua, DataType as _};
 
-crate::data_type!(ExpandedNodeId, UA_ExpandedNodeId, UA_TYPES_EXPANDEDNODEID);
+crate::data_type!(ExpandedNodeId);
 
 impl ExpandedNodeId {
     #[must_use]

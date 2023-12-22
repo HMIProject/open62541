@@ -1,6 +1,6 @@
 use crate::{ua, DataType as _};
 
-crate::data_type!(DataValue, UA_DataValue, UA_TYPES_DATAVALUE);
+crate::data_type!(DataValue);
 
 impl DataValue {
     #[must_use]

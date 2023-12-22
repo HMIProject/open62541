@@ -1,10 +1,6 @@
 use open62541_sys::UA_CreateSubscriptionRequest_default;
 
-crate::data_type!(
-    CreateSubscriptionRequest,
-    UA_CreateSubscriptionRequest,
-    UA_TYPES_CREATESUBSCRIPTIONREQUEST
-);
+crate::data_type!(CreateSubscriptionRequest);
 
 impl Default for CreateSubscriptionRequest {
     fn default() -> Self {

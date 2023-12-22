@@ -1,4 +1,4 @@
-crate::data_type!(DateTime, UA_DateTime, UA_TYPES_DATETIME);
+crate::data_type!(DateTime);
 
 impl DateTime {
     #[cfg(feature = "time")]

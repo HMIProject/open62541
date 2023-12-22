@@ -1,6 +1,6 @@
 use crate::{ua, ServiceResponse};
 
-crate::data_type!(BrowseResponse, UA_BrowseResponse, UA_TYPES_BROWSERESPONSE);
+crate::data_type!(BrowseResponse);
 
 impl BrowseResponse {
     #[must_use]

@@ -53,7 +53,7 @@ macro_rules! primitive {
     ($( ($name:ident, $type:ty) ),* $(,)?) => {
         $(
             paste::paste! {
-                crate::data_type!($name, [<UA_ $name>], [<UA_TYPES_ $name:upper>]);
+                crate::data_type!($name);
             }
 
             impl $name {

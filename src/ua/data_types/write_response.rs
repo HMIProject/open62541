@@ -1,6 +1,6 @@
 use crate::{ua, DataType as _, ServiceResponse};
 
-crate::data_type!(WriteResponse, UA_WriteResponse, UA_TYPES_WRITERESPONSE);
+crate::data_type!(WriteResponse);
 
 impl WriteResponse {
     #[must_use]

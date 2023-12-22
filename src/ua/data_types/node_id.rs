@@ -7,7 +7,7 @@ use open62541_sys::{
 
 use crate::{data_type::DataType, ua, Error};
 
-crate::data_type!(NodeId, UA_NodeId, UA_TYPES_NODEID);
+crate::data_type!(NodeId);
 
 impl NodeId {
     /// Creates node ID for numeric identifier.

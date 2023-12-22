@@ -6,7 +6,7 @@ use open62541_sys::{
 
 use crate::{data_type::DataType, ua};
 
-crate::data_type!(Variant, UA_Variant, UA_TYPES_VARIANT);
+crate::data_type!(Variant);
 
 impl Variant {
     #[must_use]

@@ -1,6 +1,6 @@
 use crate::{ua, ServiceResponse};
 
-crate::data_type!(ReadResponse, UA_ReadResponse, UA_TYPES_READRESPONSE);
+crate::data_type!(ReadResponse);
 
 impl ReadResponse {
     #[must_use]

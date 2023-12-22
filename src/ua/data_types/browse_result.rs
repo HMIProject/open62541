@@ -1,6 +1,6 @@
 use crate::ua;
 
-crate::data_type!(BrowseResult, UA_BrowseResult, UA_TYPES_BROWSERESULT);
+crate::data_type!(BrowseResult);
 
 impl BrowseResult {
     #[must_use]

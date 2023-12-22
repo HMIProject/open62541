@@ -1,10 +1,6 @@
 use crate::ua;
 
-crate::data_type!(
-    CreateMonitoredItemsRequest,
-    UA_CreateMonitoredItemsRequest,
-    UA_TYPES_CREATEMONITOREDITEMSREQUEST
-);
+crate::data_type!(CreateMonitoredItemsRequest);
 
 impl CreateMonitoredItemsRequest {
     #[must_use]

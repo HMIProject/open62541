@@ -1,6 +1,6 @@
 use crate::{ua, DataType as _};
 
-crate::data_type!(QualifiedName, UA_QualifiedName, UA_TYPES_QUALIFIEDNAME);
+crate::data_type!(QualifiedName);
 
 impl QualifiedName {
     #[must_use]

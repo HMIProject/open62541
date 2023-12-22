@@ -221,6 +221,12 @@ pub unsafe trait DataType: Clone {
 /// This provides the basic interface to convert from and back into the [`open62541_sys`] types. Use
 /// another `impl` block to add additional methods to each type if necessary.
 macro_rules! data_type {
+    ($name:ident) => {
+        paste::paste! {
+            $crate::data_type!($name, [<UA_ $name>], [<UA_TYPES_ $name:upper>]);
+        }
+    };
+
     ($name:ident, $inner:ident, $index:ident) => {
         /// Wrapper for
         #[doc = concat!("[`", stringify!($inner), "`](open62541_sys::", stringify!($inner), ")")]

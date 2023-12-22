@@ -4,7 +4,7 @@ use open62541_sys::UA_String_fromChars;
 
 use crate::Error;
 
-crate::data_type!(String, UA_String, UA_TYPES_STRING);
+crate::data_type!(String);
 
 // In the implementation below, remember that `self.0.data` may be `UA_EMPTY_ARRAY_SENTINEL` for any
 // strings of `length` 0. It may also be `ptr::null()` for "invalid" strings. This is similar to how

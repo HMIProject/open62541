@@ -1,6 +1,6 @@
 use crate::{ua, DataType as _};
 
-crate::data_type!(WriteValue, UA_WriteValue, UA_TYPES_WRITEVALUE);
+crate::data_type!(WriteValue);
 
 impl WriteValue {
     #[must_use]

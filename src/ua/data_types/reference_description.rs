@@ -1,10 +1,6 @@
 use crate::{ua, DataType as _};
 
-crate::data_type!(
-    ReferenceDescription,
-    UA_ReferenceDescription,
-    UA_TYPES_REFERENCEDESCRIPTION
-);
+crate::data_type!(ReferenceDescription);
 
 impl ReferenceDescription {
     #[must_use]

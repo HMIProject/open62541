@@ -1,10 +1,6 @@
 use crate::ua;
 
-crate::data_type!(
-    DeleteMonitoredItemsRequest,
-    UA_DeleteMonitoredItemsRequest,
-    UA_TYPES_DELETEMONITOREDITEMSREQUEST
-);
+crate::data_type!(DeleteMonitoredItemsRequest);
 
 impl DeleteMonitoredItemsRequest {
     #[must_use]

@@ -1,6 +1,6 @@
 use crate::{ua, DataType as _};
 
-crate::data_type!(ReadValueId, UA_ReadValueId, UA_TYPES_READVALUEID);
+crate::data_type!(ReadValueId);
 
 impl ReadValueId {
     #[must_use]

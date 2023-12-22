@@ -1,6 +1,6 @@
 use crate::{ua, ServiceRequest};
 
-crate::data_type!(BrowseRequest, UA_BrowseRequest, UA_TYPES_BROWSEREQUEST);
+crate::data_type!(BrowseRequest);
 
 impl BrowseRequest {
     #[must_use]
