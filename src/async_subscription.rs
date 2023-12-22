@@ -81,7 +81,7 @@ async fn create_subscription(
 
         let result = if status_code.is_good() {
             // PANIC: We expect pointer to be valid when good.
-            let response = response.as_ref().expect("response is set");
+            let response = response.as_ref().expect("response should be set");
             Ok(ua::CreateSubscriptionResponse::clone_raw(response))
         } else {
             Err(status_code)

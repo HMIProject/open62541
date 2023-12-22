@@ -4,12 +4,14 @@ crate::data_type!(LocalizedText);
 
 impl LocalizedText {
     #[must_use]
-    pub fn locale(&self) -> ua::String {
-        ua::String::clone_raw(&self.0.locale)
+    pub fn locale(&self) -> &ua::String {
+        // SAFETY: There is no mutable reference to the inner value.
+        unsafe { ua::String::raw_ref(&self.0.locale) }
     }
 
     #[must_use]
-    pub fn text(&self) -> ua::String {
-        ua::String::clone_raw(&self.0.text)
+    pub fn text(&self) -> &ua::String {
+        // SAFETY: There is no mutable reference to the inner value.
+        unsafe { ua::String::raw_ref(&self.0.text) }
     }
 }

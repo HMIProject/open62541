@@ -9,8 +9,9 @@ impl QualifiedName {
     }
 
     #[must_use]
-    pub fn name(&self) -> ua::String {
-        ua::String::clone_raw(&self.0.name)
+    pub fn name(&self) -> &ua::String {
+        // SAFETY: There is no mutable reference to the inner value.
+        unsafe { ua::String::raw_ref(&self.0.name) }
     }
 
     #[allow(clippy::inherent_to_string_shadow_display)] // TODO: Fix conflicting definitions.

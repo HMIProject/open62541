@@ -10,7 +10,7 @@ impl DeleteSubscriptionsRequest {
                 .iter()
                 .map(|id| ua::UInt32::new(id.into_inner())),
         );
-        array.move_into(&mut self.0.subscriptionIdsSize, &mut self.0.subscriptionIds);
+        array.move_into_raw(&mut self.0.subscriptionIdsSize, &mut self.0.subscriptionIds);
         self
     }
 }

@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     ffi::c_void,
     ptr,
     sync::{Arc, Mutex},
@@ -161,11 +162,11 @@ impl AsyncClient {
     /// [`browse()`]: Self::browse
     pub async fn browse_many(
         &self,
-        node_ids: &[ua::NodeId],
+        node_ids: &[impl Borrow<ua::NodeId>],
     ) -> Result<Vec<Option<Vec<ua::ReferenceDescription>>>, Error> {
         let nodes_to_browse: Vec<_> = node_ids
             .iter()
-            .map(|node_id| ua::BrowseDescription::default().with_node_id(node_id))
+            .map(|node_id| ua::BrowseDescription::default().with_node_id(node_id.borrow()))
             .collect();
 
         let request = ua::BrowseRequest::init().with_nodes_to_browse(&nodes_to_browse);
@@ -228,7 +229,7 @@ async fn read_value(
 
         let result = if status_code.is_good() {
             // PANIC: We expect pointer to be valid when good.
-            let value = value.as_ref().expect("value is set");
+            let value = value.as_ref().expect("value should be set");
             Ok(ua::DataValue::clone_raw(value))
         } else {
             Err(status_code)
@@ -286,12 +287,11 @@ async fn service_request<R: ServiceRequest>(
         log::debug!("Request completed");
 
         // PANIC: We expect pointer to be valid when good.
-        let response = R::Response::clone_raw(
-            response
-                .cast::<<R::Response as DataType>::Inner>()
-                .as_ref()
-                .expect("response is set"),
-        );
+        let response = response
+            .cast::<<R::Response as DataType>::Inner>()
+            .as_ref()
+            .expect("response should be set");
+        let response = R::Response::clone_raw(response);
 
         let status_code = response.service_result();
         let result = if status_code.is_good() {

@@ -10,7 +10,7 @@ impl DeleteMonitoredItemsRequest {
                 .iter()
                 .map(|id| ua::UInt32::new(id.into_inner())),
         );
-        array.move_into(
+        array.move_into_raw(
             &mut self.0.monitoredItemIdsSize,
             &mut self.0.monitoredItemIds,
         );

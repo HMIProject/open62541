@@ -45,7 +45,7 @@ async fn browse_hierarchy(
     pending_node_ids.push_back(root_node_id.clone());
 
     while !pending_node_ids.is_empty() {
-        let browse_node_ids: Vec<_> = pending_node_ids
+        let browse_node_ids: Vec<ua::NodeId> = pending_node_ids
             .drain(..MAX_NODE_IDS.min(pending_node_ids.len()))
             .collect();
 
@@ -74,7 +74,7 @@ async fn browse_hierarchy(
             };
 
             for reference in references {
-                pending_node_ids.push_back(reference.node_id().node_id());
+                pending_node_ids.push_back(reference.node_id().node_id().clone());
 
                 children.push(reference);
             }
@@ -94,7 +94,10 @@ async fn browse_hierarchy(
             .map(|browse_description| {
                 (
                     browse_description.browse_name().to_string(),
-                    (browse_description.node_id().node_id(), browse_description),
+                    (
+                        browse_description.node_id().node_id().clone(),
+                        browse_description,
+                    ),
                 )
             })
     });

@@ -126,19 +126,25 @@ pub unsafe trait DataType: Clone {
         assert_eq!(result, UA_STATUSCODE_GOOD, "should have copied value");
     }
 
-    // TODO
-    // #[must_use]
-    // fn get_ref(src: &Self::Inner) -> &Self {
-    //     // This transmutes between the inner type and `Self` through `cast()`. Types that implement
-    //     // `DataType` guarantee that we can transmute between them and their inner type, so this is
-    //     // okay.
-    //     let src: *const Self::Inner = src;
-    //     let ptr = src.cast::<Self>();
-    //     // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
-    //     let ptr = unsafe { ptr.as_ref() };
-    //     // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
-    //     unsafe { ptr.unwrap_unchecked() }
-    // }
+    /// Creates wrapper reference from value.
+    ///
+    /// # Safety
+    ///
+    /// The inner value must conform to the lifetime rules. In particular, it must not be modified
+    /// indirectly through pointers or released implicitly by its owning structure as long as the
+    /// returned reference is valid.
+    #[must_use]
+    unsafe fn raw_ref(src: &Self::Inner) -> &Self {
+        let src: *const Self::Inner = src;
+        // This transmutes between the inner type and `Self` through `cast()`. Types that implement
+        // `DataType` guarantee that we can transmute between them and their inner type, so this is
+        // okay.
+        let ptr = src.cast::<Self>();
+        // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
+        let ptr = unsafe { ptr.as_ref() };
+        // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
+        unsafe { ptr.unwrap_unchecked() }
+    }
 
     /// Returns shared reference to value.
     ///
