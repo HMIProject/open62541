@@ -229,7 +229,7 @@ async fn read_value(
         let result = if status_code.is_good() {
             // PANIC: We expect pointer to be valid when good.
             let value = value.as_ref().expect("value is set");
-            Ok(ua::DataValue::from_ref(value))
+            Ok(ua::DataValue::clone_raw(value))
         } else {
             Err(status_code)
         };
@@ -255,7 +255,7 @@ async fn read_value(
         unsafe {
             UA_Client_readValueAttribute_async(
                 client.as_mut_ptr(),
-                node_id.clone().into_inner(),
+                node_id.clone().into_raw(),
                 Some(callback_c),
                 Cb::prepare(callback),
                 ptr::null_mut(),
@@ -286,7 +286,7 @@ async fn service_request<R: ServiceRequest>(
         log::debug!("Request completed");
 
         // PANIC: We expect pointer to be valid when good.
-        let response = R::Response::from_ref(
+        let response = R::Response::clone_raw(
             response
                 .cast::<<R::Response as DataType>::Inner>()
                 .as_ref()

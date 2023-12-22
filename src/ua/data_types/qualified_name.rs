@@ -10,7 +10,7 @@ impl QualifiedName {
 
     #[must_use]
     pub fn name(&self) -> ua::String {
-        ua::String::from_ref(&self.0.name)
+        ua::String::clone_raw(&self.0.name)
     }
 
     #[allow(clippy::inherent_to_string_shadow_display)] // TODO: Fix conflicting definitions.

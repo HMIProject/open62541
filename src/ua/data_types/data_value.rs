@@ -14,7 +14,7 @@ impl DataValue {
     pub fn value(&self) -> Option<ua::Variant> {
         // TODO: Adjust signature to return non-owned value instead.
         if self.0.hasValue() {
-            Some(ua::Variant::from_ref(&self.0.value))
+            Some(ua::Variant::clone_raw(&self.0.value))
         } else {
             None
         }

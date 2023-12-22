@@ -9,7 +9,7 @@ crate::data_type!(
 impl ReferenceDescription {
     #[must_use]
     pub fn reference_type_id(&self) -> ua::NodeId {
-        ua::NodeId::from_ref(&self.0.referenceTypeId)
+        ua::NodeId::clone_raw(&self.0.referenceTypeId)
     }
 
     #[must_use]
@@ -19,17 +19,17 @@ impl ReferenceDescription {
 
     #[must_use]
     pub fn node_id(&self) -> ua::ExpandedNodeId {
-        ua::ExpandedNodeId::from_ref(&self.0.nodeId)
+        ua::ExpandedNodeId::clone_raw(&self.0.nodeId)
     }
 
     #[must_use]
     pub fn browse_name(&self) -> ua::QualifiedName {
-        ua::QualifiedName::from_ref(&self.0.browseName)
+        ua::QualifiedName::clone_raw(&self.0.browseName)
     }
 
     #[must_use]
     pub fn display_name(&self) -> ua::LocalizedText {
-        ua::LocalizedText::from_ref(&self.0.displayName)
+        ua::LocalizedText::clone_raw(&self.0.displayName)
     }
 
     #[must_use]
@@ -39,6 +39,6 @@ impl ReferenceDescription {
 
     #[must_use]
     pub fn type_definition(&self) -> ua::ExpandedNodeId {
-        ua::ExpandedNodeId::from_ref(&self.0.typeDefinition)
+        ua::ExpandedNodeId::clone_raw(&self.0.typeDefinition)
     }
 }

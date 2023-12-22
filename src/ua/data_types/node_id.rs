@@ -113,7 +113,7 @@ impl str::FromStr for NodeId {
 
         let status_code = ua::StatusCode::new({
             let str: ua::String = s.parse()?;
-            let str = str.into_inner();
+            let str = str.into_raw();
             unsafe { UA_NodeId_parse(node_id.as_mut_ptr(), str) }
         });
         Error::verify_good(status_code)?;

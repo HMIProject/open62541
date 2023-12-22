@@ -59,7 +59,7 @@ macro_rules! primitive {
             impl $name {
                 #[must_use]
                 pub fn new(value: $type) -> Self {
-                    <Self as crate::DataType>::from_ref(&value)
+                    <Self as crate::DataType>::clone_raw(&value)
                 }
             }
         )*

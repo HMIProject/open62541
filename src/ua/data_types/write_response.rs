@@ -1,4 +1,4 @@
-use crate::{ua, ServiceResponse};
+use crate::{ua, DataType as _, ServiceResponse};
 
 crate::data_type!(WriteResponse, UA_WriteResponse, UA_TYPES_WRITERESPONSE);
 
@@ -13,7 +13,7 @@ impl WriteResponse {
             array
                 .as_slice()
                 .iter()
-                .map(|status_code| ua::StatusCode::new(status_code.clone().into_inner()))
+                .map(|status_code| ua::StatusCode::new(status_code.clone().into_raw()))
                 .collect(),
         )
     }

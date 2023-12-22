@@ -122,7 +122,7 @@ async fn create_monitored_items(
 
         // PANIC: We expect pointer to be valid when called.
         let value = value.as_ref().expect("value is set");
-        let value = ua::DataValue::from_ref(value);
+        let value = ua::DataValue::clone_raw(value);
         St::notify(mon_context, value);
     }
 
@@ -152,7 +152,7 @@ async fn create_monitored_items(
         let result = if status_code.is_good() {
             // PANIC: We expect pointer to be valid when good.
             let response = response.as_ref().expect("response is set");
-            Ok(ua::CreateMonitoredItemsResponse::from_ref(response))
+            Ok(ua::CreateMonitoredItemsResponse::clone_raw(response))
         } else {
             Err(status_code)
         };
@@ -189,7 +189,7 @@ async fn create_monitored_items(
         unsafe {
             UA_Client_MonitoredItems_createDataChanges_async(
                 client.as_mut_ptr(),
-                request.into_inner(),
+                request.into_raw(),
                 contexts.as_mut_ptr().cast::<*mut c_void>(),
                 notification_callbacks.as_mut_ptr(),
                 delete_callbacks.as_mut_ptr(),
@@ -231,7 +231,7 @@ fn delete_monitored_items(client: &Mutex<ua::Client>, request: ua::DeleteMonitor
         unsafe {
             UA_Client_MonitoredItems_delete_async(
                 client.as_mut_ptr(),
-                request.into_inner(),
+                request.into_raw(),
                 // This must be set (despite the `Option` type). The internal handler in `open62541`
                 // calls our callback unconditionally (as opposed to other service functions where a
                 // handler may be left unset if not required).

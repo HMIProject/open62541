@@ -34,19 +34,29 @@ pub unsafe trait DataType: Clone {
     ///
     /// # Safety
     ///
-    /// Ownership of value passes to `Self` which must only be used for values that are not
+    /// Ownership of the value passes to `Self`. This must only be used for values that are not
     /// contained within other values that may be dropped (such as attributes in other data types).
-    /// Use [`from_ref()`] intead.
+    /// In this case use [`clone_raw()`] instead to clone data instead of taking ownership.
     ///
     /// [`UA_clear()`]: open62541_sys::UA_clear
     /// [`UA_new()`]: open62541_sys::UA_new
-    /// [`from_ref()`]: DataType::from_ref
+    /// [`clone_raw()`]: DataType::clone_raw
     #[must_use]
     unsafe fn from_raw(src: Self::Inner) -> Self;
 
+    /// Gives up ownership and returns inner value.
+    ///
+    /// The returned value must be re-wrapped with [`from_raw()`] or cleared manually with
+    /// [`UA_clear()`] to free internal allocations and not leak memory.
+    ///
+    /// [`from_raw()`]: DataType::from_raw
+    /// [`UA_clear()`]: open62541_sys::UA_clear
+    #[must_use]
+    fn into_raw(self) -> Self::Inner;
+
     /// Creates wrapper initialized with defaults.
     ///
-    /// This uses [`UA_init()`] to initialize the value and make all attribute values well-defined.
+    /// This uses [`UA_init()`] to initialize the value and make all attributes well-defined.
     /// Depending on the type, additional attributes may need to be initialized for the value to be
     /// actually useful afterwards.
     #[must_use]
@@ -76,7 +86,7 @@ pub unsafe trait DataType: Clone {
     /// [`UA_clear()`]: open62541_sys::UA_clear
     /// [`UA_delete()`]: open62541_sys::UA_delete
     #[must_use]
-    fn from_ref(src: &Self::Inner) -> Self {
+    fn clone_raw(src: &Self::Inner) -> Self {
         // `UA_copy()` does not clean up the target value before copying into it, so we may use an
         // uninitialized memory region here.
         let mut dst = MaybeUninit::<Self::Inner>::uninit();
@@ -198,23 +208,6 @@ macro_rules! data_type {
         );
 
         impl $name {
-            /// Gives up ownership and returns inner value.
-            ///
-            /// The returned value must be cleared with [`UA_clear`](open62541_sys::UA_clear) to not
-            /// leak any memory. Alternatively, it may be re-wrapped with [`new()`](Self::new) which
-            /// then cleans up when dropped regularly.
-            #[allow(dead_code)]
-            #[must_use]
-            pub(crate) fn into_inner(self) -> open62541_sys::$inner {
-                // SAFETY: Move value out of `self` despite it not being `Copy`. This is okay: we do
-                // consume `self` and forget it, so that `Drop` is not called on the original value,
-                // avoiding duplicate memory de-allocation via `UA_clear()` in `drop()` below.
-                let inner = unsafe { std::ptr::read(std::ptr::addr_of!(self.0)) };
-                // Make sure that `drop()` is not called anymore.
-                std::mem::forget(self);
-                inner
-            }
-
             /// Clones inner value into target.
             ///
             /// This makes sure to clean up any existing value in `dst` before cloning the value. It
@@ -256,36 +249,14 @@ macro_rules! data_type {
 
         impl Drop for $name {
             fn drop(&mut self) {
-                // `UA_clear` resets the data structure, freeing any dynamically allocated memory in
-                // it, no matter how deeply nested.
+                // `UA_clear()` resets the data structure, freeing any dynamically allocated memory
+                // in it, no matter how deeply nested.
                 unsafe {
                     open62541_sys::UA_clear(
                         std::ptr::addr_of_mut!(self.0).cast::<std::ffi::c_void>(),
                         <Self as crate::DataType>::data_type(),
                     )
                 }
-            }
-        }
-
-        impl Clone for $name {
-            fn clone(&self) -> Self {
-                <Self as crate::DataType>::from_ref(&self.0)
-            }
-        }
-
-        impl std::fmt::Debug for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let output = crate::DataType::print(self);
-                let string = output.as_ref().and_then(|output| output.as_str());
-                write!(f, "{}({})", stringify!($name), string.unwrap_or("_"))
-            }
-        }
-
-        impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let output = crate::DataType::print(self);
-                let string = output.as_ref().and_then(|output| output.as_str());
-                f.write_str(string.unwrap_or(stringify!($name)))
             }
         }
 
@@ -306,6 +277,38 @@ macro_rules! data_type {
             #[must_use]
             unsafe fn from_raw(src: Self::Inner) -> Self {
                 $name(src)
+            }
+
+            #[must_use]
+            fn into_raw(self) -> Self::Inner {
+                // SAFETY: Move value out of `self` despite it not being `Copy`. We consume `self`
+                // and forget it below, so that `Drop` is not called on the original value.
+                let inner = unsafe { std::ptr::read(std::ptr::addr_of!(self.0)) };
+                // Make sure that `drop()` is not called anymore.
+                std::mem::forget(self);
+                inner
+            }
+        }
+
+        impl Clone for $name {
+            fn clone(&self) -> Self {
+                <Self as crate::DataType>::clone_raw(&self.0)
+            }
+        }
+
+        impl std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let output = crate::DataType::print(self);
+                let string = output.as_ref().and_then(|output| output.as_str());
+                write!(f, "{}({})", stringify!($name), string.unwrap_or("_"))
+            }
+        }
+
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let output = crate::DataType::print(self);
+                let string = output.as_ref().and_then(|output| output.as_str());
+                f.write_str(string.unwrap_or(stringify!($name)))
             }
         }
     };

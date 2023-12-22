@@ -45,7 +45,7 @@ impl Variant {
         if !unsafe { UA_Variant_hasScalarType(self.as_ptr(), T::data_type()) } {
             return None;
         }
-        unsafe { self.0.data.cast::<T::Inner>().as_ref() }.map(|value| T::from_ref(value))
+        unsafe { self.0.data.cast::<T::Inner>().as_ref() }.map(|value| T::clone_raw(value))
     }
 
     #[must_use]
@@ -98,7 +98,7 @@ impl Variant {
 mod serde {
     use serde::ser;
 
-    use crate::ua;
+    use crate::{ua, DataType as _};
 
     use super::Variant;
 
@@ -112,7 +112,7 @@ mod serde {
                     $(
                         if let Some(value) = $self.to_scalar::<crate::ua::$name>() {
                             paste::paste! {
-                                return $serializer.[<serialize_ $type>](value.into_inner());
+                                return $serializer.[<serialize_ $type>](value.into_raw());
                             }
                         }
                     )*

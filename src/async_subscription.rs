@@ -82,7 +82,7 @@ async fn create_subscription(
         let result = if status_code.is_good() {
             // PANIC: We expect pointer to be valid when good.
             let response = response.as_ref().expect("response is set");
-            Ok(ua::CreateSubscriptionResponse::from_ref(response))
+            Ok(ua::CreateSubscriptionResponse::clone_raw(response))
         } else {
             Err(status_code)
         };
@@ -108,7 +108,7 @@ async fn create_subscription(
         unsafe {
             UA_Client_Subscriptions_create_async(
                 client.as_mut_ptr(),
-                request.into_inner(),
+                request.into_raw(),
                 ptr::null_mut(),
                 None,
                 None,
@@ -149,7 +149,7 @@ fn delete_subscription(client: &Mutex<ua::Client>, request: ua::DeleteSubscripti
         unsafe {
             UA_Client_Subscriptions_delete_async(
                 client.as_mut_ptr(),
-                request.into_inner(),
+                request.into_raw(),
                 // This must be set (despite the `Option` type). The internal handler in `open62541`
                 // calls our callback unconditionally (as opposed to other service functions where a
                 // handler may be left unset if not required).
