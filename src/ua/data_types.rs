@@ -1,9 +1,12 @@
 //! Thin wrappers for OPC UA data types from [`open62541_sys`].
 
+mod attribute_id;
 mod browse_description;
+mod browse_direction;
 mod browse_request;
 mod browse_response;
 mod browse_result;
+mod browse_result_mask;
 mod create_monitored_items_request;
 mod create_monitored_items_response;
 mod create_subscription_request;
@@ -18,12 +21,15 @@ mod expanded_node_id;
 mod localized_text;
 mod monitored_item_create_request;
 mod monitored_item_create_result;
+mod node_class;
 mod node_id;
+mod node_id_type;
 mod qualified_name;
 mod read_request;
 mod read_response;
 mod read_value_id;
 mod reference_description;
+mod status_code;
 mod string;
 mod timestamps_to_return;
 mod variant;
@@ -32,8 +38,10 @@ mod write_response;
 mod write_value;
 
 pub use self::{
-    browse_description::BrowseDescription, browse_request::BrowseRequest,
+    attribute_id::AttributeId, browse_description::BrowseDescription,
+    browse_direction::BrowseDirection, browse_request::BrowseRequest,
     browse_response::BrowseResponse, browse_result::BrowseResult,
+    browse_result_mask::BrowseResultMask,
     create_monitored_items_request::CreateMonitoredItemsRequest,
     create_monitored_items_response::CreateMonitoredItemsResponse,
     create_subscription_request::CreateSubscriptionRequest,
@@ -43,9 +51,10 @@ pub use self::{
     delete_subscriptions_request::DeleteSubscriptionsRequest,
     delete_subscriptions_response::DeleteSubscriptionsResponse, expanded_node_id::ExpandedNodeId,
     localized_text::LocalizedText, monitored_item_create_request::MonitoredItemCreateRequest,
-    monitored_item_create_result::MonitoredItemCreateResult, node_id::NodeId,
-    qualified_name::QualifiedName, read_request::ReadRequest, read_response::ReadResponse,
-    read_value_id::ReadValueId, reference_description::ReferenceDescription, string::String,
+    monitored_item_create_result::MonitoredItemCreateResult, node_class::NodeClass,
+    node_id::NodeId, node_id_type::NodeIdType, qualified_name::QualifiedName,
+    read_request::ReadRequest, read_response::ReadResponse, read_value_id::ReadValueId,
+    reference_description::ReferenceDescription, status_code::StatusCode, string::String,
     timestamps_to_return::TimestampsToReturn, variant::Variant, write_request::WriteRequest,
     write_response::WriteResponse, write_value::WriteValue,
 };

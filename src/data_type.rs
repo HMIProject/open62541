@@ -265,6 +265,12 @@ macro_rules! data_type {
         }
     };
 
+    ($name:ident, $inner:ident) => {
+        paste::paste! {
+            $crate::data_type!($name, [<UA_ $name>], [<UA_TYPES_ $inner:upper>]);
+        }
+    };
+
     ($name:ident, $inner:ident, $index:ident) => {
         /// Wrapper for
         #[doc = concat!("[`", stringify!($inner), "`](open62541_sys::", stringify!($inner), ")")]

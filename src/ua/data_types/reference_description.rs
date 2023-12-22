@@ -29,8 +29,8 @@ impl ReferenceDescription {
     }
 
     #[must_use]
-    pub fn node_class(&self) -> ua::NodeClass {
-        ua::NodeClass::new(self.0.nodeClass.clone())
+    pub fn node_class(&self) -> &ua::NodeClass {
+        ua::NodeClass::raw_ref(&self.0.nodeClass)
     }
 
     #[must_use]

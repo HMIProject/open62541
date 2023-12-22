@@ -8,7 +8,7 @@ impl DeleteMonitoredItemsRequest {
         let array = ua::Array::from_iter(
             monitored_item_ids
                 .iter()
-                .map(|id| ua::UInt32::new(id.into_inner())),
+                .map(|monitored_item_id| monitored_item_id.to_uint32()),
         );
         array.move_into_raw(
             &mut self.0.monitoredItemIdsSize,

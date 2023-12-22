@@ -116,7 +116,7 @@ impl AsyncClient {
             return Err(Error::internal("write should return a result"));
         };
 
-        Error::verify_good(*result)?;
+        Error::verify_good(result)?;
 
         Ok(())
     }
@@ -258,19 +258,25 @@ async fn read_attribute(
             .with_node_id(node_id)
             .with_attribute_id(attribute_id);
 
+        let timestamps_to_return = ua::TimestampsToReturn::both();
+
+        // SAFETY: `UA_Client_readAttribute_async()` expects the request passed by value but does
+        // not take ownership.
+        let timestamps_to_return =
+            unsafe { ua::TimestampsToReturn::to_raw_copy(&timestamps_to_return) };
+
         unsafe {
             UA_Client_readAttribute_async(
                 client.as_mut_ptr(),
                 read_value_id.as_ptr(),
-                // SAFETY: Ownership of primitive value passes trivially to function.
-                ua::TimestampsToReturn::both().into_raw(),
+                timestamps_to_return,
                 Some(callback_c),
                 Cb::prepare(callback),
                 ptr::null_mut(),
             )
         }
     });
-    Error::verify_good(status_code)?;
+    Error::verify_good(&status_code)?;
 
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
@@ -338,7 +344,7 @@ async fn service_request<R: ServiceRequest>(
             )
         }
     });
-    Error::verify_good(status_code)?;
+    Error::verify_good(&status_code)?;
 
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
     // is only dropped after placing a value into the channel and `rx.await` always finds this value

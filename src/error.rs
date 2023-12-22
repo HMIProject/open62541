@@ -24,11 +24,11 @@ impl Error {
         Self::Server(status_code)
     }
 
-    pub(crate) fn verify_good(status_code: ua::StatusCode) -> Result<(), Self> {
+    pub(crate) fn verify_good(status_code: &ua::StatusCode) -> Result<(), Self> {
         if status_code.is_good() {
             Ok(())
         } else {
-            Err(Self::new(status_code))
+            Err(Self::new(status_code.clone()))
         }
     }
 

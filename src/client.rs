@@ -35,7 +35,7 @@ impl ClientBuilder {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Client_connect(self.0.as_mut_ptr(), endpoint_url.as_ptr())
         });
-        Error::verify_good(status_code)?;
+        Error::verify_good(&status_code)?;
 
         Ok(Client(self.0))
     }

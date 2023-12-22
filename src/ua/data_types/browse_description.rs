@@ -13,7 +13,7 @@ impl BrowseDescription {
 
     #[must_use]
     pub fn with_browse_direction(mut self, browse_direction: &ua::BrowseDirection) -> Self {
-        self.0.browseDirection = browse_direction.clone().into_inner();
+        browse_direction.clone_into_raw(&mut self.0.browseDirection);
         self
     }
 
@@ -31,7 +31,7 @@ impl BrowseDescription {
 
     #[must_use]
     pub fn with_node_class_mask(mut self, node_class_mask: &ua::NodeClassMask) -> Self {
-        self.0.nodeClassMask = node_class_mask.clone().into_inner();
+        self.0.nodeClassMask = node_class_mask.as_u32();
         self
     }
 

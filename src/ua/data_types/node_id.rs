@@ -52,8 +52,8 @@ impl NodeId {
     }
 
     #[must_use]
-    pub fn identifier_type(&self) -> ua::NodeIdType {
-        ua::NodeIdType::new(self.0.identifierType.clone())
+    pub fn identifier_type(&self) -> &ua::NodeIdType {
+        ua::NodeIdType::raw_ref(&self.0.identifierType)
     }
 }
 
@@ -90,7 +90,7 @@ impl str::FromStr for NodeId {
             let str = unsafe { ua::String::to_raw_copy(&str) };
             unsafe { UA_NodeId_parse(node_id.as_mut_ptr(), str) }
         });
-        Error::verify_good(status_code)?;
+        Error::verify_good(&status_code)?;
 
         Ok(node_id)
     }
