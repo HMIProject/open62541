@@ -302,9 +302,45 @@ macro_rules! data_type {
             }
         }
 
+        impl std::cmp::PartialEq for $name {
+            fn eq(&self, other: &Self) -> bool {
+                <Self as std::cmp::Ord>::cmp(self, other) == std::cmp::Ordering::Equal
+            }
+        }
+
+        // The implementation of [`UA_order()`] ensures an equivalence relation. Among others, the
+        // comparison of floating point numbers deviates from IEEE 754 and handles NaN as proper
+        // values.
+        impl std::cmp::Eq for $name {}
+
+        impl std::cmp::PartialOrd for $name {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                Some(<Self as std::cmp::Ord>::cmp(self, other))
+            }
+        }
+
+        // The implementation of [`UA_order()`] ensures a total order.
+        impl std::cmp::Ord for $name {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                let result = unsafe {
+                    open62541_sys::UA_order(
+                        <Self as crate::DataType>::as_ptr(self).cast::<std::ffi::c_void>(),
+                        <Self as crate::DataType>::as_ptr(other).cast::<std::ffi::c_void>(),
+                        <Self as crate::DataType>::data_type(),
+                    )
+                };
+                match result {
+                    open62541_sys::UA_Order::UA_ORDER_LESS => std::cmp::Ordering::Less,
+                    open62541_sys::UA_Order::UA_ORDER_EQ => std::cmp::Ordering::Equal,
+                    open62541_sys::UA_Order::UA_ORDER_MORE => std::cmp::Ordering::Greater,
+                    _ => panic!("should return valid order"),
+                }
+            }
+        }
+
         impl std::fmt::Debug for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let output = crate::DataType::print(self);
+                let output = <Self as crate::DataType>::print(self);
                 let string = output.as_ref().and_then(|output| output.as_str());
                 write!(f, "{}({})", stringify!($name), string.unwrap_or("_"))
             }
@@ -312,7 +348,7 @@ macro_rules! data_type {
 
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let output = crate::DataType::print(self);
+                let output = <Self as crate::DataType>::print(self);
                 let string = output.as_ref().and_then(|output| output.as_str());
                 f.write_str(string.unwrap_or(stringify!($name)))
             }
