@@ -42,9 +42,10 @@ impl BrowseDirection {
 
     #[allow(clippy::unnecessary_cast)]
     #[must_use]
-    pub(crate) const fn as_u32(&self) -> u32 {
-        // This cast is necessary on Windows builds where `UA_BrowseDirection` wraps an `i32`.
-        (self.0).0 as u32
+    pub(crate) fn as_u32(&self) -> u32 {
+        // This cast is necessary on Windows builds with inner type `i32`.
+        #[allow(clippy::useless_conversion)]
+        u32::from((self.0).0)
     }
 }
 

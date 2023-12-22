@@ -314,7 +314,7 @@ mod tests {
         let mut array: Array<T> = Array::new(LEN);
         // Copy value with allocated data into array to catch double free.
         let target = array.as_slice_mut().get_mut(POS).unwrap();
-        ua::NodeId::string(0, STRING).clone_into(unsafe { target.as_mut() });
+        ua::NodeId::string(0, STRING).clone_into_raw(unsafe { target.as_mut() });
 
         drop(array);
 
@@ -323,7 +323,7 @@ mod tests {
         let mut array: Array<T> = Array::new(LEN);
         // Copy value with allocated data into array to catch double free.
         let target = array.as_slice_mut().get_mut(POS).unwrap();
-        ua::NodeId::string(0, STRING).clone_into(unsafe { target.as_mut() });
+        ua::NodeId::string(0, STRING).clone_into_raw(unsafe { target.as_mut() });
 
         let (size, ptr) = array.into_raw_parts();
         assert_eq!(size, LEN);

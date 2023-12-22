@@ -1,11 +1,11 @@
-use crate::ua;
+use crate::{ua, DataType as _};
 
 crate::data_type!(WriteValue, UA_WriteValue, UA_TYPES_WRITEVALUE);
 
 impl WriteValue {
     #[must_use]
     pub fn with_node_id(mut self, node_id: &ua::NodeId) -> Self {
-        node_id.clone_into(&mut self.0.nodeId);
+        node_id.clone_into_raw(&mut self.0.nodeId);
         self
     }
 
@@ -17,7 +17,7 @@ impl WriteValue {
 
     #[must_use]
     pub fn with_value(mut self, value: &ua::DataValue) -> Self {
-        value.clone_into(&mut self.0.value);
+        value.clone_into_raw(&mut self.0.value);
         self
     }
 }

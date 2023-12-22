@@ -67,7 +67,7 @@ pub unsafe trait DataType: Clone {
         // want to allow `open62541` to use a different implementation in the future if necessary.
         unsafe {
             UA_init(
-                inner.as_mut_ptr().cast::<std::ffi::c_void>(),
+                inner.as_mut_ptr().cast::<c_void>(),
                 <Self as crate::DataType>::data_type(),
             );
         }
@@ -87,13 +87,14 @@ pub unsafe trait DataType: Clone {
     /// [`UA_delete()`]: open62541_sys::UA_delete
     #[must_use]
     fn clone_raw(src: &Self::Inner) -> Self {
+        let src: *const Self::Inner = src;
         // `UA_copy()` does not clean up the target value before copying into it, so we may use an
         // uninitialized memory region here.
         let mut dst = MaybeUninit::<Self::Inner>::uninit();
         let result = unsafe {
             UA_copy(
-                (src as *const Self::Inner).cast::<std::ffi::c_void>(),
-                dst.as_mut_ptr().cast::<std::ffi::c_void>(),
+                src.cast::<c_void>(),
+                dst.as_mut_ptr().cast::<c_void>(),
                 <Self as crate::DataType>::data_type(),
             )
         };
@@ -104,13 +105,37 @@ pub unsafe trait DataType: Clone {
         unsafe { Self::from_raw(dst) }
     }
 
+    /// Clones inner value into `dst`.
+    ///
+    /// This cleans up existing data in `dst` before cloning the value. It is therefore safe to use
+    /// on already initialized target values (the original value in the target is overwritten).
+    fn clone_into_raw(&self, dst: &mut Self::Inner) {
+        let dst: *mut Self::Inner = dst;
+        // `UA_copy()` does not clean up the target value before copying into it, so we use
+        // `UA_clear()` first to free dynamically allocated memory held by the current value.
+        unsafe {
+            open62541_sys::UA_clear(dst.cast::<c_void>(), <Self as crate::DataType>::data_type());
+        }
+        // Copy ourselves into the target. This duplicates and allocates memory if necessary to
+        // store a copy of the inner value.
+        let result = unsafe {
+            open62541_sys::UA_copy(
+                self.as_ptr().cast::<c_void>(),
+                dst.cast::<c_void>(),
+                <Self as crate::DataType>::data_type(),
+            )
+        };
+        assert_eq!(result, open62541_sys::UA_STATUSCODE_GOOD);
+    }
+
     // TODO
     // #[must_use]
     // fn get_ref(src: &Self::Inner) -> &Self {
     //     // This transmutes between the inner type and `Self` through `cast()`. Types that implement
     //     // `DataType` guarantee that we can transmute between them and their inner type, so this is
     //     // okay.
-    //     let ptr = (src as *const Self::Inner).cast::<Self>();
+    //     let src: *const Self::Inner = src;
+    //     let ptr = src.cast::<Self>();
     //     // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
     //     let ptr = unsafe { ptr.as_ref() };
     //     // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
@@ -155,10 +180,11 @@ pub unsafe trait DataType: Clone {
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
     unsafe fn as_ptr(&self) -> *const Self::Inner {
+        let this: *const Self = self;
         // This transmutes between `Self` and the inner type through `cast()`. Types that implement
         // `DataType` guarantee that we can transmute between them and their inner type, so this is
         // okay.
-        (self as *const Self).cast::<Self::Inner>()
+        this.cast::<Self::Inner>()
     }
 
     /// Returns mutable pointer to value.
@@ -169,10 +195,11 @@ pub unsafe trait DataType: Clone {
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
     unsafe fn as_mut_ptr(&mut self) -> *mut Self::Inner {
+        let this: *mut Self = self;
         // This transmutes between `Self` and the inner type through `cast()`. Types that implement
         // `DataType` guarantee that we can transmute between them and their inner type, so this is
         // okay.
-        (self as *mut Self).cast::<Self::Inner>()
+        this.cast::<Self::Inner>()
     }
 
     #[must_use]
@@ -199,52 +226,25 @@ macro_rules! data_type {
         #[doc = concat!("[`", stringify!($inner), "`](open62541_sys::", stringify!($inner), ")")]
         /// from [`open62541_sys`].
         ///
-        /// This owns the wrapped data type. When the wrapper is dropped, its inner value, including
-        /// all contained data, is cleaned up with [`UA_clear()`](open62541_sys::UA_clear()).
+        /// This owns the wrapped data. When the wrapper is dropped, the inner value is cleaned up
+        /// with [`UA_clear()`] to release dynamically allocated memory held by the value.
+        ///
+        /// [`UA_clear()`]: open62541_sys::UA_clear
         #[repr(transparent)]
         pub struct $name(
             /// Inner value.
             open62541_sys::$inner,
         );
 
-        impl $name {
-            /// Clones inner value into target.
-            ///
-            /// This makes sure to clean up any existing value in `dst` before cloning the value. It
-            /// is therefore safe to use on already initialized target values. The original value in
-            /// the target is overwritten.
-            #[allow(dead_code)]
-            pub(crate) fn clone_into(&self, dst: &mut open62541_sys::$inner) {
-                // Clear the target and free any dynamically allocated memory there from the current
-                // value.
-                unsafe {
-                    open62541_sys::UA_clear(
-                        std::ptr::addr_of_mut!(*dst).cast::<std::ffi::c_void>(),
-                        <Self as crate::DataType>::data_type(),
-                    )
-                }
-
-                // Copy ourselves into the target. This duplicates and allocates memory if necessary
-                // to store a copy of the inner value.
-                let result = unsafe {
-                    open62541_sys::UA_copy(
-                        std::ptr::addr_of!(self.0).cast::<std::ffi::c_void>(),
-                        std::ptr::addr_of_mut!(*dst).cast::<std::ffi::c_void>(),
-                        <Self as crate::DataType>::data_type(),
-                    )
-                };
-                assert_eq!(result, open62541_sys::UA_STATUSCODE_GOOD);
-            }
-        }
-
-        // SAFETY: The types in `open62541` can be sent across thread boundaries. Internally, all of
-        // the internal dynamic allocations contain only their own data (nothing is shared) and they
-        // need not be freed in the same thread where they were allocated.
+        // SAFETY: The types in `open62541` can be sent across thread boundaries. They contain
+        // pointers but all internal dynamic allocations contain only their own data (nothing is
+        // shared) and the allocations need not be deallocated in the same thread where they were
+        // allocated.
         unsafe impl Send for $name {}
 
-        // SAFETY: References to our wrapper types may be sent across thread. (The `open62541` types
-        // themselves would not allow this because references are used to pass ownership but we must
-        // unwrap our wrapper types in this case which we do not implement for shared references.)
+        // SAFETY: References to [`DataType`] may be sent across thread. The inner types would not
+        // allow this (because pointers are used to pass ownership) but we must unwrap our wrapper
+        // types in this case which is only implemented for owned values.
         unsafe impl Sync for $name {}
 
         impl Drop for $name {
@@ -260,8 +260,8 @@ macro_rules! data_type {
             }
         }
 
-        // SAFETY: We can transmute between our wrapper type and the contained inner type. This will
-        // be ensured by using `#[repr(transparent)]` above.
+        // SAFETY: We can transmute between our wrapper type and the inner type. This is ensured by
+        // using `#[repr(transparent)]` on the type definition.
         unsafe impl crate::DataType for $name {
             type Inner = open62541_sys::$inner;
 

@@ -11,7 +11,7 @@ crate::data_type!(
 impl BrowseDescription {
     #[must_use]
     pub fn with_node_id(mut self, node_id: &ua::NodeId) -> Self {
-        node_id.clone_into(&mut self.0.nodeId);
+        node_id.clone_into_raw(&mut self.0.nodeId);
         self
     }
 
