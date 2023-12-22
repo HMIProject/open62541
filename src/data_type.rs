@@ -29,8 +29,8 @@ pub unsafe trait DataType: Clone {
     /// Creates wrapper by taking ownership of value.
     ///
     /// When `Self` is dropped, [`UA_clear()`] is used to free allocations held by the inner type.
-    /// Move only values into `Self` that can be cleared in-place (such as stack-allocated values
-    /// but no heap-allocated values created by [`UA_new()`]).
+    /// Move only values into `Self` that can be cleared in-place such as stack-allocated values
+    /// (but no heap-allocated values created by [`UA_new()`]).
     ///
     /// # Safety
     ///
@@ -46,7 +46,9 @@ pub unsafe trait DataType: Clone {
 
     /// Creates wrapper initialized with defaults.
     ///
-    /// This uses [`UA_init()`] to initialize the value.
+    /// This uses [`UA_init()`] to initialize the value and make all attribute values well-defined.
+    /// Depending on the type, additional attributes may need to be initialized for the value to be
+    /// actually useful afterwards.
     #[must_use]
     fn init() -> Self {
         let mut inner = MaybeUninit::<Self::Inner>::uninit();
@@ -106,8 +108,13 @@ pub unsafe trait DataType: Clone {
     // }
 
     /// Returns shared reference to value.
+    ///
+    /// # Safety
+    ///
+    /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
+    /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
-    fn as_ref(&self) -> &Self::Inner {
+    unsafe fn as_ref(&self) -> &Self::Inner {
         let ptr = self.as_ptr();
         // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
         let ptr = unsafe { ptr.as_ref() };
@@ -116,8 +123,13 @@ pub unsafe trait DataType: Clone {
     }
 
     /// Returns exclusive reference to value.
+    ///
+    /// # Safety
+    ///
+    /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
+    /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
-    fn as_mut(&mut self) -> &mut Self::Inner {
+    unsafe fn as_mut(&mut self) -> &mut Self::Inner {
         let ptr = self.as_mut_ptr();
         // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
         let ptr = unsafe { ptr.as_mut() };
@@ -126,8 +138,13 @@ pub unsafe trait DataType: Clone {
     }
 
     /// Returns const pointer to value.
+    ///
+    /// # Safety
+    ///
+    /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
+    /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
-    fn as_ptr(&self) -> *const Self::Inner {
+    unsafe fn as_ptr(&self) -> *const Self::Inner {
         // This transmutes between `Self` and the inner type through `cast()`. Types that implement
         // `DataType` guarantee that we can transmute between them and their inner type, so this is
         // okay.
@@ -135,8 +152,13 @@ pub unsafe trait DataType: Clone {
     }
 
     /// Returns mutable pointer to value.
+    ///
+    /// # Safety
+    ///
+    /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
+    /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
-    fn as_mut_ptr(&mut self) -> *mut Self::Inner {
+    unsafe fn as_mut_ptr(&mut self) -> *mut Self::Inner {
         // This transmutes between `Self` and the inner type through `cast()`. Types that implement
         // `DataType` guarantee that we can transmute between them and their inner type, so this is
         // okay.
