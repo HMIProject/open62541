@@ -1,8 +1,8 @@
 use std::{ffi::c_void, mem::MaybeUninit};
 
-use open62541_sys::{UA_copy, UA_init, UA_print, UA_STATUSCODE_GOOD};
-
-use crate::ua;
+use open62541_sys::{
+    UA_DataType, UA_Order, UA_clear, UA_copy, UA_init, UA_order, UA_print, UA_STATUSCODE_GOOD,
+};
 
 /// Transparent wrapper for OPC UA data type.
 ///
@@ -24,7 +24,7 @@ pub unsafe trait DataType: Clone {
     ///
     /// The result can be passed to functions in `open62541` that deal with arbitrary data types.
     #[must_use]
-    fn data_type() -> *const open62541_sys::UA_DataType;
+    fn data_type() -> *const UA_DataType;
 
     /// Creates wrapper by taking ownership of value.
     ///
@@ -38,7 +38,6 @@ pub unsafe trait DataType: Clone {
     /// contained within other values that may be dropped (such as attributes in other data types).
     /// In this case use [`clone_raw()`] instead to clone data instead of taking ownership.
     ///
-    /// [`UA_clear()`]: open62541_sys::UA_clear
     /// [`UA_new()`]: open62541_sys::UA_new
     /// [`clone_raw()`]: DataType::clone_raw
     #[must_use]
@@ -50,7 +49,6 @@ pub unsafe trait DataType: Clone {
     /// [`UA_clear()`] to free internal allocations and not leak memory.
     ///
     /// [`from_raw()`]: DataType::from_raw
-    /// [`UA_clear()`]: open62541_sys::UA_clear
     #[must_use]
     fn into_raw(self) -> Self::Inner;
 
@@ -66,10 +64,7 @@ pub unsafe trait DataType: Clone {
         // zero-initializes the memory region. We could use `MaybeUninit::zeroed()` instead but we
         // want to allow `open62541` to use a different implementation in the future if necessary.
         unsafe {
-            UA_init(
-                inner.as_mut_ptr().cast::<c_void>(),
-                <Self as crate::DataType>::data_type(),
-            );
+            UA_init(inner.as_mut_ptr().cast::<c_void>(), Self::data_type());
         }
         // SAFETY: We just made sure that the memory region is initialized.
         let inner = unsafe { inner.assume_init() };
@@ -79,11 +74,12 @@ pub unsafe trait DataType: Clone {
 
     /// Creates wrapper by cloning value from `src`.
     ///
+    /// This uses [`UA_copy()`] to deeply copy an existing value without transferring ownership.
+    ///
     /// The original value must be cleared with [`UA_clear()`], or deleted with [`UA_delete()`] if
     /// allocated on the heap, to avoid memory leaks. If `src` is borrowed from another data type
     /// wrapper, that wrapper will make sure of this.
     ///
-    /// [`UA_clear()`]: open62541_sys::UA_clear
     /// [`UA_delete()`]: open62541_sys::UA_delete
     #[must_use]
     fn clone_raw(src: &Self::Inner) -> Self {
@@ -95,10 +91,10 @@ pub unsafe trait DataType: Clone {
             UA_copy(
                 src.cast::<c_void>(),
                 dst.as_mut_ptr().cast::<c_void>(),
-                <Self as crate::DataType>::data_type(),
+                Self::data_type(),
             )
         };
-        assert_eq!(result, open62541_sys::UA_STATUSCODE_GOOD);
+        assert_eq!(result, UA_STATUSCODE_GOOD, "should have copied value");
         // SAFETY: We just made sure that the memory region is initialized.
         let dst = unsafe { dst.assume_init() };
         // SAFETY: We pass a value without pointers to it into `Self`.
@@ -107,25 +103,27 @@ pub unsafe trait DataType: Clone {
 
     /// Clones inner value into `dst`.
     ///
-    /// This cleans up existing data in `dst` before cloning the value. It is therefore safe to use
-    /// on already initialized target values (the original value in the target is overwritten).
+    /// This uses [`UA_copy()`] to deeply copy an existing value without transferring ownership.
+    ///
+    /// Existing data in `dst` is cleared with [`UA_clear()`] before cloning the value; it is safe
+    /// to use this operation on already initialized target values.
     fn clone_into_raw(&self, dst: &mut Self::Inner) {
         let dst: *mut Self::Inner = dst;
         // `UA_copy()` does not clean up the target value before copying into it, so we use
         // `UA_clear()` first to free dynamically allocated memory held by the current value.
         unsafe {
-            open62541_sys::UA_clear(dst.cast::<c_void>(), <Self as crate::DataType>::data_type());
+            UA_clear(dst.cast::<c_void>(), Self::data_type());
         }
         // Copy ourselves into the target. This duplicates and allocates memory if necessary to
         // store a copy of the inner value.
         let result = unsafe {
-            open62541_sys::UA_copy(
+            UA_copy(
                 self.as_ptr().cast::<c_void>(),
                 dst.cast::<c_void>(),
-                <Self as crate::DataType>::data_type(),
+                Self::data_type(),
             )
         };
-        assert_eq!(result, open62541_sys::UA_STATUSCODE_GOOD);
+        assert_eq!(result, UA_STATUSCODE_GOOD, "should have copied value");
     }
 
     // TODO
@@ -202,17 +200,38 @@ pub unsafe trait DataType: Clone {
         this.cast::<Self::Inner>()
     }
 
+    /// Prints value to string.
+    ///
+    /// This uses [`UA_print()`] to generate the string representation.
+    ///
+    /// # Note
+    ///
+    /// The string representation is not guaranteed to be stable across versions.
     #[must_use]
-    fn print(&self) -> Option<ua::String> {
+    fn print(this: &Self) -> Option<ua::String> {
         let mut output = ua::String::init();
         let result = unsafe {
             UA_print(
-                self.as_ptr().cast::<c_void>(),
+                this.as_ptr().cast::<c_void>(),
                 Self::data_type(),
-                output.as_mut_ptr(),
+                <ua::String as DataType>::as_mut_ptr(&mut output),
             )
         };
         (result == UA_STATUSCODE_GOOD).then_some(output)
+    }
+
+    /// Compares value to other.
+    ///
+    /// This uses [`UA_order()`] to derive a total ordering between values.
+    #[must_use]
+    fn order(this: &Self, other: &Self) -> UA_Order {
+        unsafe {
+            UA_order(
+                this.as_ptr().cast::<std::ffi::c_void>(),
+                other.as_ptr().cast::<std::ffi::c_void>(),
+                Self::data_type(),
+            )
+        }
     }
 }
 
@@ -302,6 +321,20 @@ macro_rules! data_type {
             }
         }
 
+        impl std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                <Self as std::fmt::Display>::fmt(self, f)
+            }
+        }
+
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let output = <Self as crate::DataType>::print(self);
+                let string = output.as_ref().and_then(|output| output.as_str());
+                f.write_str(string.unwrap_or(stringify!($name)))
+            }
+        }
+
         impl std::cmp::PartialEq for $name {
             fn eq(&self, other: &Self) -> bool {
                 <Self as std::cmp::Ord>::cmp(self, other) == std::cmp::Ordering::Equal
@@ -322,13 +355,7 @@ macro_rules! data_type {
         // The implementation of [`UA_order()`] ensures a total order.
         impl std::cmp::Ord for $name {
             fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-                let result = unsafe {
-                    open62541_sys::UA_order(
-                        <Self as crate::DataType>::as_ptr(self).cast::<std::ffi::c_void>(),
-                        <Self as crate::DataType>::as_ptr(other).cast::<std::ffi::c_void>(),
-                        <Self as crate::DataType>::data_type(),
-                    )
-                };
+                let result = <Self as crate::DataType>::order(self, other);
                 match result {
                     open62541_sys::UA_Order::UA_ORDER_LESS => std::cmp::Ordering::Less,
                     open62541_sys::UA_Order::UA_ORDER_EQ => std::cmp::Ordering::Equal,
@@ -337,23 +364,9 @@ macro_rules! data_type {
                 }
             }
         }
-
-        impl std::fmt::Debug for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let output = <Self as crate::DataType>::print(self);
-                let string = output.as_ref().and_then(|output| output.as_str());
-                write!(f, "{}({})", stringify!($name), string.unwrap_or("_"))
-            }
-        }
-
-        impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let output = <Self as crate::DataType>::print(self);
-                let string = output.as_ref().and_then(|output| output.as_str());
-                f.write_str(string.unwrap_or(stringify!($name)))
-            }
-        }
     };
 }
 
 pub(crate) use data_type;
+
+use crate::ua;
