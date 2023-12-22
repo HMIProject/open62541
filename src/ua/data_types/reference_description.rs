@@ -5,8 +5,7 @@ crate::data_type!(ReferenceDescription);
 impl ReferenceDescription {
     #[must_use]
     pub fn reference_type_id(&self) -> &ua::NodeId {
-        // SAFETY: There is no mutable reference to the inner value.
-        unsafe { ua::NodeId::raw_ref(&self.0.referenceTypeId) }
+        ua::NodeId::raw_ref(&self.0.referenceTypeId)
     }
 
     #[must_use]
@@ -16,20 +15,17 @@ impl ReferenceDescription {
 
     #[must_use]
     pub fn node_id(&self) -> &ua::ExpandedNodeId {
-        // SAFETY: There is no mutable reference to the inner value.
-        unsafe { ua::ExpandedNodeId::raw_ref(&self.0.nodeId) }
+        ua::ExpandedNodeId::raw_ref(&self.0.nodeId)
     }
 
     #[must_use]
     pub fn browse_name(&self) -> &ua::QualifiedName {
-        // SAFETY: There is no mutable reference to the inner value.
-        unsafe { ua::QualifiedName::raw_ref(&self.0.browseName) }
+        ua::QualifiedName::raw_ref(&self.0.browseName)
     }
 
     #[must_use]
     pub fn display_name(&self) -> &ua::LocalizedText {
-        // SAFETY: There is no mutable reference to the inner value.
-        unsafe { ua::LocalizedText::raw_ref(&self.0.displayName) }
+        ua::LocalizedText::raw_ref(&self.0.displayName)
     }
 
     #[must_use]
@@ -39,7 +35,6 @@ impl ReferenceDescription {
 
     #[must_use]
     pub fn type_definition(&self) -> &ua::ExpandedNodeId {
-        // SAFETY: There is no mutable reference to the inner value.
-        unsafe { ua::ExpandedNodeId::raw_ref(&self.0.typeDefinition) }
+        ua::ExpandedNodeId::raw_ref(&self.0.typeDefinition)
     }
 }

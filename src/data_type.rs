@@ -127,14 +127,8 @@ pub unsafe trait DataType: Clone {
     }
 
     /// Creates wrapper reference from value.
-    ///
-    /// # Safety
-    ///
-    /// The inner value must conform to the lifetime rules. In particular, it must not be modified
-    /// indirectly through pointers or released implicitly by its owning structure as long as the
-    /// returned reference is valid.
     #[must_use]
-    unsafe fn raw_ref(src: &Self::Inner) -> &Self {
+    fn raw_ref(src: &Self::Inner) -> &Self {
         let src: *const Self::Inner = src;
         // This transmutes between the inner type and `Self` through `cast()`. Types that implement
         // `DataType` guarantee that we can transmute between them and their inner type, so this is
