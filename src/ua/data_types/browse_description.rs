@@ -19,7 +19,7 @@ impl BrowseDescription {
 
     #[must_use]
     pub fn with_reference_type_id(mut self, reference_type_id: &ua::NodeId) -> Self {
-        self.0.referenceTypeId = reference_type_id.clone().into_raw();
+        reference_type_id.clone_into_raw(&mut self.0.referenceTypeId);
         self
     }
 

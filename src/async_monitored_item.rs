@@ -29,11 +29,13 @@ impl AsyncMonitoredItem {
         subscription_id: &ua::SubscriptionId,
         node_id: &ua::NodeId,
     ) -> Result<Self, Error> {
+        let create_request = ua::MonitoredItemCreateRequest::default().with_node_id(node_id);
+
         let request = ua::CreateMonitoredItemsRequest::init()
             .with_subscription_id(subscription_id)
-            .with_items_to_create(&[ua::MonitoredItemCreateRequest::init_node_id(node_id)]);
+            .with_items_to_create(&[create_request]);
 
-        let (response, rx) = create_monitored_items(client, request).await?;
+        let (response, rx) = create_monitored_items(client, &request).await?;
 
         // PANIC: We expect exactly one result for the monitored item we requested above.
         let monitored_item_id = *response.monitored_item_ids().unwrap().get(0).unwrap();
@@ -74,7 +76,7 @@ impl Drop for AsyncMonitoredItem {
         let request = ua::DeleteMonitoredItemsRequest::init()
             .with_monitored_item_ids(&[self.monitored_item_id]);
 
-        delete_monitored_items(&client, request);
+        delete_monitored_items(&client, &request);
     }
 }
 
@@ -92,7 +94,7 @@ const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
 
 async fn create_monitored_items(
     client: &Mutex<ua::Client>,
-    request: ua::CreateMonitoredItemsRequest,
+    request: &ua::CreateMonitoredItemsRequest,
 ) -> Result<
     (
         ua::CreateMonitoredItemsResponse,
@@ -186,10 +188,14 @@ async fn create_monitored_items(
             contexts.len()
         );
 
+        // SAFETY: `UA_Client_MonitoredItems_createDataChanges_async()` expects the request passed
+        // by value but does not take ownership.
+        let request = unsafe { ua::CreateMonitoredItemsRequest::to_raw_copy(request) };
+
         unsafe {
             UA_Client_MonitoredItems_createDataChanges_async(
                 client.as_mut_ptr(),
-                request.into_raw(),
+                request,
                 contexts.as_mut_ptr().cast::<*mut c_void>(),
                 notification_callbacks.as_mut_ptr(),
                 delete_callbacks.as_mut_ptr(),
@@ -209,7 +215,7 @@ async fn create_monitored_items(
         .map(|response| (response, st_rx))
 }
 
-fn delete_monitored_items(client: &Mutex<ua::Client>, request: ua::DeleteMonitoredItemsRequest) {
+fn delete_monitored_items(client: &Mutex<ua::Client>, request: &ua::DeleteMonitoredItemsRequest) {
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
         _userdata: *mut c_void,
@@ -228,13 +234,17 @@ fn delete_monitored_items(client: &Mutex<ua::Client>, request: ua::DeleteMonitor
 
         log::debug!("Calling MonitoredItems_delete()");
 
+        // SAFETY: `UA_Client_MonitoredItems_delete_async()` expects the request passed by value but
+        // does not take ownership.
+        let request = unsafe { ua::DeleteMonitoredItemsRequest::to_raw_copy(request) };
+
         unsafe {
             UA_Client_MonitoredItems_delete_async(
                 client.as_mut_ptr(),
-                request.into_raw(),
-                // This must be set (despite the `Option` type). The internal handler in `open62541`
-                // calls our callback unconditionally (as opposed to other service functions where a
-                // handler may be left unset if not required).
+                request,
+                // This must be set despite the `Option` type. The internal handler in `open62541`
+                // calls our callback unconditionally (in contrast to other service functions where
+                // a handler may be left unset when it is not required).
                 Some(callback_c),
                 ptr::null_mut(),
                 ptr::null_mut(),

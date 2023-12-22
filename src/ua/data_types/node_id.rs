@@ -85,7 +85,9 @@ impl str::FromStr for NodeId {
 
         let status_code = ua::StatusCode::new({
             let str: ua::String = s.parse()?;
-            let str = str.into_raw();
+            // SAFETY: `UA_NodeId_parse()` expects the string passed by value but does not take
+            // ownership.
+            let str = unsafe { ua::String::to_raw_copy(&str) };
             unsafe { UA_NodeId_parse(node_id.as_mut_ptr(), str) }
         });
         Error::verify_good(status_code)?;

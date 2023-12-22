@@ -1,4 +1,4 @@
-use std::{ffi::c_void, mem::MaybeUninit};
+use std::{ffi::c_void, mem::MaybeUninit, ptr};
 
 use open62541_sys::{
     UA_DataType, UA_Order, UA_clear, UA_copy, UA_init, UA_order, UA_print, UA_STATUSCODE_GOOD,
@@ -43,7 +43,7 @@ pub unsafe trait DataType: Clone {
     #[must_use]
     unsafe fn from_raw(src: Self::Inner) -> Self;
 
-    /// Gives up ownership and returns inner value.
+    /// Gives up ownership and returns value.
     ///
     /// The returned value must be re-wrapped with [`from_raw()`] or cleared manually with
     /// [`UA_clear()`] to free internal allocations and not leak memory.
@@ -70,6 +70,20 @@ pub unsafe trait DataType: Clone {
         let inner = unsafe { inner.assume_init() };
         // SAFETY: We pass a value without pointers to it into `Self`.
         unsafe { Self::from_raw(inner) }
+    }
+
+    /// Creates wrapper reference from value.
+    #[must_use]
+    fn raw_ref(src: &Self::Inner) -> &Self {
+        let src: *const Self::Inner = src;
+        // This transmutes between the inner type and `Self` through `cast()`. Types that implement
+        // `DataType` guarantee that we can transmute between them and their inner type, so this is
+        // okay.
+        let ptr = src.cast::<Self>();
+        // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
+        let ptr = unsafe { ptr.as_ref() };
+        // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
+        unsafe { ptr.unwrap_unchecked() }
     }
 
     /// Creates wrapper by cloning value from `src`.
@@ -101,7 +115,7 @@ pub unsafe trait DataType: Clone {
         unsafe { Self::from_raw(dst) }
     }
 
-    /// Clones inner value into `dst`.
+    /// Clones value into `dst`.
     ///
     /// This uses [`UA_copy()`] to deeply copy an existing value without transferring ownership.
     ///
@@ -126,18 +140,21 @@ pub unsafe trait DataType: Clone {
         assert_eq!(result, UA_STATUSCODE_GOOD, "should have copied value");
     }
 
-    /// Creates wrapper reference from value.
+    /// Creates copy without giving up ownership.
+    ///
+    /// # Safety
+    ///
+    /// Think twice before using this. Pointers to dynamically allocated attributes within `Self`
+    /// are copied and will become dangling pointers when `self` is dropped.
+    ///
+    /// This function is necessary because some functions in `open62541` take arguments by value
+    /// instead of by pointer _without taking ownership_ and make the caller responsible for
+    /// cleaning up after the call has returned.
     #[must_use]
-    fn raw_ref(src: &Self::Inner) -> &Self {
-        let src: *const Self::Inner = src;
-        // This transmutes between the inner type and `Self` through `cast()`. Types that implement
-        // `DataType` guarantee that we can transmute between them and their inner type, so this is
-        // okay.
-        let ptr = src.cast::<Self>();
-        // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
-        let ptr = unsafe { ptr.as_ref() };
-        // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
-        unsafe { ptr.unwrap_unchecked() }
+    unsafe fn to_raw_copy(this: &Self) -> Self::Inner {
+        // SAFETY: This creates a copy of the inner value despite it not being `Copy`. Extreme care
+        // must be taken that any contained structures are not freed twice when `self` is dropped.
+        unsafe { ptr::read(this.as_ptr()) }
     }
 
     /// Returns shared reference to value.
@@ -148,7 +165,8 @@ pub unsafe trait DataType: Clone {
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
     unsafe fn as_ref(&self) -> &Self::Inner {
-        let ptr = self.as_ptr();
+        // SAFETY: We wrap the pointer into a reference below to ensure upholding lifetime rules.
+        let ptr = unsafe { self.as_ptr() };
         // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
         let ptr = unsafe { ptr.as_ref() };
         // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
@@ -163,7 +181,8 @@ pub unsafe trait DataType: Clone {
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
     unsafe fn as_mut(&mut self) -> &mut Self::Inner {
-        let ptr = self.as_mut_ptr();
+        // SAFETY: We wrap the pointer into a reference below to ensure upholding lifetime rules.
+        let ptr = unsafe { self.as_mut_ptr() };
         // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
         let ptr = unsafe { ptr.as_mut() };
         // SAFETY: Pointer is valid (non-zero) because it comes from a reference.

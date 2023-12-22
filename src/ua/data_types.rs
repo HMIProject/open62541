@@ -25,6 +25,7 @@ mod read_response;
 mod read_value_id;
 mod reference_description;
 mod string;
+mod timestamps_to_return;
 mod variant;
 mod write_request;
 mod write_response;
@@ -45,8 +46,8 @@ pub use self::{
     monitored_item_create_result::MonitoredItemCreateResult, node_id::NodeId,
     qualified_name::QualifiedName, read_request::ReadRequest, read_response::ReadResponse,
     read_value_id::ReadValueId, reference_description::ReferenceDescription, string::String,
-    variant::Variant, write_request::WriteRequest, write_response::WriteResponse,
-    write_value::WriteValue,
+    timestamps_to_return::TimestampsToReturn, variant::Variant, write_request::WriteRequest,
+    write_response::WriteResponse, write_value::WriteValue,
 };
 
 macro_rules! primitive {

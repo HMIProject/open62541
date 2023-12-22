@@ -7,7 +7,7 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_Client, UA_Client_disconnect, UA_Client_readValueAttribute_async, UA_Client_run_iterate,
+    UA_Client, UA_Client_disconnect, UA_Client_readAttribute_async, UA_Client_run_iterate,
     UA_Client_sendAsyncRequest, UA_DataValue, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
 };
 use tokio::{sync::oneshot, task::JoinHandle, time};
@@ -86,7 +86,7 @@ impl AsyncClient {
     ///
     /// This fails when the node does not exist or its value attribute cannot be read.
     pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<ua::DataValue, Error> {
-        read_value(&self.client, node_id).await
+        read_attribute(&self.client, node_id, &ua::AttributeId::value()).await
     }
 
     /// Writes value from server.
@@ -210,9 +210,10 @@ impl Drop for AsyncClient {
     }
 }
 
-async fn read_value(
+async fn read_attribute(
     client: &Mutex<ua::Client>,
     node_id: &ua::NodeId,
+    attribute_id: &ua::AttributeId,
 ) -> Result<ua::DataValue, Error> {
     type Cb = CallbackOnce<Result<ua::DataValue, ua::StatusCode>>;
 
@@ -221,7 +222,7 @@ async fn read_value(
         userdata: *mut c_void,
         _request_id: UA_UInt32,
         status: UA_StatusCode,
-        value: *mut UA_DataValue,
+        attribute: *mut UA_DataValue,
     ) {
         log::debug!("readValueAttribute() completed");
 
@@ -229,7 +230,7 @@ async fn read_value(
 
         let result = if status_code.is_good() {
             // PANIC: We expect pointer to be valid when good.
-            let value = value.as_ref().expect("value should be set");
+            let value = attribute.as_ref().expect("value should be set");
             Ok(ua::DataValue::clone_raw(value))
         } else {
             Err(status_code)
@@ -253,10 +254,16 @@ async fn read_value(
 
         log::debug!("Calling readValueAttribute(), node_id={node_id:?}");
 
+        let read_value_id = ua::ReadValueId::init()
+            .with_node_id(node_id)
+            .with_attribute_id(attribute_id);
+
         unsafe {
-            UA_Client_readValueAttribute_async(
+            UA_Client_readAttribute_async(
                 client.as_mut_ptr(),
-                node_id.clone().into_raw(),
+                read_value_id.as_ptr(),
+                // SAFETY: Ownership of primitive value passes trivially to function.
+                ua::TimestampsToReturn::both().into_raw(),
                 Some(callback_c),
                 Cb::prepare(callback),
                 ptr::null_mut(),

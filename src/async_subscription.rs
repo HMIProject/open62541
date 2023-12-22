@@ -22,7 +22,7 @@ impl AsyncSubscription {
     pub(crate) async fn new(client: &Arc<Mutex<ua::Client>>) -> Result<Self, Error> {
         let request = ua::CreateSubscriptionRequest::default();
 
-        let response = create_subscription(client, request).await?;
+        let response = create_subscription(client, &request).await?;
 
         Ok(AsyncSubscription {
             client: Arc::downgrade(client),
@@ -58,13 +58,13 @@ impl Drop for AsyncSubscription {
         let request =
             ua::DeleteSubscriptionsRequest::init().with_subscription_ids(&[self.subscription_id]);
 
-        delete_subscription(&client, request);
+        delete_subscription(&client, &request);
     }
 }
 
 async fn create_subscription(
     client: &Mutex<ua::Client>,
-    request: ua::CreateSubscriptionRequest,
+    request: &ua::CreateSubscriptionRequest,
 ) -> Result<ua::CreateSubscriptionResponse, Error> {
     type Cb = CallbackOnce<Result<ua::CreateSubscriptionResponse, ua::StatusCode>>;
 
@@ -105,10 +105,14 @@ async fn create_subscription(
 
         log::debug!("Calling Subscriptions_create()");
 
+        // SAFETY: `UA_Client_Subscriptions_create_async()` expects the request passed by value but
+        // does not take ownership.
+        let request = unsafe { ua::CreateSubscriptionRequest::to_raw_copy(request) };
+
         unsafe {
             UA_Client_Subscriptions_create_async(
                 client.as_mut_ptr(),
-                request.into_raw(),
+                request,
                 ptr::null_mut(),
                 None,
                 None,
@@ -127,7 +131,7 @@ async fn create_subscription(
         .unwrap_or(Err(Error::internal("callback should send result")))
 }
 
-fn delete_subscription(client: &Mutex<ua::Client>, request: ua::DeleteSubscriptionsRequest) {
+fn delete_subscription(client: &Mutex<ua::Client>, request: &ua::DeleteSubscriptionsRequest) {
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
         _userdata: *mut c_void,
@@ -146,10 +150,14 @@ fn delete_subscription(client: &Mutex<ua::Client>, request: ua::DeleteSubscripti
 
         log::debug!("Calling Subscriptions_delete()");
 
+        // SAFETY: `UA_Client_Subscriptions_delete_async()` expects the request passed by value but
+        // does not take ownership.
+        let request = unsafe { ua::DeleteSubscriptionsRequest::to_raw_copy(request) };
+
         unsafe {
             UA_Client_Subscriptions_delete_async(
                 client.as_mut_ptr(),
-                request.into_raw(),
+                request,
                 // This must be set (despite the `Option` type). The internal handler in `open62541`
                 // calls our callback unconditionally (as opposed to other service functions where a
                 // handler may be left unset if not required).
