@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Mutex, Weak},
 };
 
-use futures::channel::oneshot;
+use futures_channel::oneshot;
 use open62541_sys::{
     UA_Client, UA_Client_Subscriptions_create_async, UA_Client_Subscriptions_delete_async,
     UA_CreateSubscriptionResponse, UA_UInt32,

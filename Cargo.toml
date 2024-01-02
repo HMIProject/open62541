@@ -7,25 +7,28 @@ repository = "https://github.com/HMIProject/open62541.git"
 publish = false
 
 [dependencies]
-futures = "0.3.29"
+futures-channel = "0.3.30"
+futures-core = { version = "0.3.30", default-features = false }
+futures-util = { version = "0.3.30", default-features = false }
 log = "0.4.20"
 open62541-sys = { git = "https://github.com/HMIProject/open62541-sys.git", tag = "v0.1.1" }
 paste = "1.0.14"
-serde = { version = "1.0.193", optional = true }
-serde_json = { version = "1.0.108", optional = true }
-thiserror = "1.0.51"
+serde = { version = "1.0.194", optional = true }
+serde_json = { version = "1.0.110", optional = true }
+thiserror = "1.0.56"
 time = { version = "0.3.31", optional = true }
-tokio = { version = "1.35.0", optional = true, features = [
+tokio = { version = "1.35.1", optional = true, features = [
   "rt",
   "sync",
   "time",
 ] }
 
 [dev-dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.79"
+futures = "0.3.30"
 env_logger = "0.10.1"
 rand = "0.8.5"
-tokio = { version = "1.35.0", features = ["macros"] }
+tokio = { version = "1.35.1", features = ["macros"] }
 
 [features]
 default = ["serde", "time", "tokio"]
