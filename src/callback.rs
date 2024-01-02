@@ -16,16 +16,15 @@ use tokio::sync::mpsc;
 /// # Examples
 ///
 /// ```
-/// use futures::executor::block_on;
 /// use open62541::CallbackOnce;
-/// use std::{cell::RefCell, sync::Arc};
+/// use std::{cell::RefCell, rc::Rc};
 /// # use std::ffi::c_void;
 ///
-/// let cell = Arc::new(RefCell::new(0));
+/// let cell = Rc::new(RefCell::new(0));
 ///
 /// // Turn `tx` into type-erased void pointer for FFI.
 /// let raw_data: *mut c_void = CallbackOnce::<u32>::prepare({
-///     let cell = cell.clone();
+///     let cell = Rc::clone(&cell);
 ///     move |value| {
 ///         *cell.borrow_mut() = value;
 ///     }
