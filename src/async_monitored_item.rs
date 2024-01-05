@@ -40,7 +40,7 @@ impl AsyncMonitoredItem {
         let (response, rx) = create_monitored_items(client, &request).await?;
 
         // PANIC: We expect exactly one result for the monitored item we requested above.
-        let monitored_item_id = *response.monitored_item_ids().unwrap().get(0).unwrap();
+        let monitored_item_id = *response.monitored_item_ids().unwrap().first().unwrap();
 
         Ok(AsyncMonitoredItem {
             client: Arc::downgrade(client),
