@@ -112,7 +112,7 @@ impl AsyncClient {
             return Err(Error::internal("write should return results"));
         };
 
-        let Some(result) = results.as_slice().get(0) else {
+        let Some(result) = results.as_slice().first() else {
             return Err(Error::internal("write should return a result"));
         };
 
@@ -139,7 +139,7 @@ impl AsyncClient {
             return Err(Error::internal("browse should return results"));
         };
 
-        let Some(result) = results.as_slice().get(0) else {
+        let Some(result) = results.as_slice().first() else {
             return Err(Error::internal("browse should return a result"));
         };
 

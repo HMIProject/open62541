@@ -6,7 +6,9 @@ use std::{
     task::{self, Poll},
 };
 
-use futures::{channel::oneshot, stream, Stream};
+use futures_channel::oneshot;
+use futures_core::Stream;
+use futures_util::stream;
 use open62541_sys::{
     UA_Client, UA_Client_DataChangeNotificationCallback, UA_Client_DeleteMonitoredItemCallback,
     UA_Client_MonitoredItems_createDataChanges_async, UA_Client_MonitoredItems_delete_async,
@@ -38,7 +40,7 @@ impl AsyncMonitoredItem {
         let (response, rx) = create_monitored_items(client, &request).await?;
 
         // PANIC: We expect exactly one result for the monitored item we requested above.
-        let monitored_item_id = *response.monitored_item_ids().unwrap().get(0).unwrap();
+        let monitored_item_id = *response.monitored_item_ids().unwrap().first().unwrap();
 
         Ok(AsyncMonitoredItem {
             client: Arc::downgrade(client),
