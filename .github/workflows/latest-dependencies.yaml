@@ -49,6 +49,7 @@ jobs:
 
     steps:
       - name: Install Rust toolchain
+        # Use latest stable Rust version.
         uses: dtolnay/rust-toolchain@stable
 
       # Check out the repository before the remaining steps that depend on it.

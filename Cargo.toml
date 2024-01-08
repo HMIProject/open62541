@@ -2,7 +2,9 @@
 name = "open62541"
 version = "0.2.0"
 edition = "2021"
-rust-version = "1.75"
+# Rust 1.74 is necessary because we leak private types. Keep this version number
+# in sync with `test.yaml`.
+rust-version = "1.74"
 repository = "https://github.com/HMIProject/open62541.git"
 publish = false
 
