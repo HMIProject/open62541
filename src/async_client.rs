@@ -155,9 +155,11 @@ impl AsyncClient {
     /// This issues only a single request to the OPC UA server (and should be preferred over several
     /// individual requests with [`browse()`] when browsing multiple nodes).
     ///
+    /// The size and order of the result list matches the size and order of the given node ID list.
+    ///
     /// # Errors
     ///
-    /// This fails when the node does not exist or it cannot be browsed.
+    /// This fails when any of the given nodes does not exist or cannot be browsed.
     ///
     /// [`browse()`]: Self::browse
     pub async fn browse_many(
@@ -185,6 +187,9 @@ impl AsyncClient {
                     .map(|references| references.iter().cloned().collect())
             })
             .collect();
+
+        // The OPC UA specification state that the resulting list has the same number of elements as
+        // the request list. If not, we would not be able to match elements in the two lists anyway.
         debug_assert_eq!(results.len(), node_ids.len());
 
         Ok(results)
