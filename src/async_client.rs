@@ -1,6 +1,7 @@
 use std::{
     borrow::Borrow,
     ffi::c_void,
+    pin::pin,
     ptr,
     sync::{Arc, Mutex},
     time::Duration,
@@ -32,16 +33,18 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// See [`ClientBuilder::connect()`].
+    /// See [`ClientBuilder::connect()`] and [`Client::into_async()`](crate::Client::into_async).
     ///
     /// # Panics
     ///
     /// See [`ClientBuilder::connect()`].
-    pub fn new(endpoint_url: &str) -> Result<Self, Error> {
-        Ok(ClientBuilder::default().connect(endpoint_url)?.into_async())
+    pub fn new(endpoint_url: &str, cycle_time: time::Duration) -> Result<Self, Error> {
+        Ok(ClientBuilder::default()
+            .connect(endpoint_url)?
+            .into_async(cycle_time))
     }
 
-    pub(crate) fn from_sync(client: ua::Client) -> Self {
+    pub(crate) fn from_sync(client: ua::Client, cycle_time: Duration) -> Self {
         let client = Arc::new(Mutex::new(client));
 
         let background_handle = {
@@ -51,6 +54,7 @@ impl AsyncClient {
             // `rt-multi-thread`). `UA_Client_run_iterate()` must be run periodically and makes sure
             // to maintain the connection (e.g. renew session) and run callback handlers.
             tokio::spawn(async move {
+                let mut next_cycle = pin!(time::sleep(time::Duration::ZERO));
                 loop {
                     log::debug!("Running iterate");
 
@@ -68,8 +72,13 @@ impl AsyncClient {
                         break;
                     }
 
+                    // Determine the start of the next cycle and catch up if cycles have been missed.
+                    let next_deadline =
+                        (next_cycle.deadline() + cycle_time).max(time::Instant::now());
+                    next_cycle.as_mut().reset(next_deadline);
+
                     // This await point is where `background_handle.abort()` might abort us later.
-                    time::sleep(Duration::from_millis(100)).await;
+                    next_cycle.as_mut().await;
                 }
             })
         };
