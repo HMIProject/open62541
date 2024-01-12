@@ -6,6 +6,11 @@ config:
   line-length:
     line_length: 100
 
+  # The same headline in different nested sections is okay (and necessary for
+  # CHANGELOG.md).
+  no-duplicate-header:
+    allow_different_nesting: true
+
 # Fix any fixable errors.
 fix: true
 
