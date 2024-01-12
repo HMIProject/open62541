@@ -1,0 +1,16 @@
+# Override some built-in rules.
+config:
+  default: true
+
+  # This should match `printWidth` in `.prettierrc.yaml`.
+  line-length:
+    line_length: 100
+
+# Fix any fixable errors.
+fix: true
+
+# Disable inline config comments.
+noInlineConfig: true
+
+# Disable progress on stdout (only valid at root).
+noProgress: true
