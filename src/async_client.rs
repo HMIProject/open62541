@@ -46,43 +46,10 @@ impl AsyncClient {
 
     pub(crate) fn from_sync(client: ua::Client, cycle_time: Duration) -> Self {
         let client = Arc::new(Mutex::new(client));
-
-        let background_handle = {
-            let client = Arc::clone(&client);
-
-            // Run the event loop concurrently (this may be a different thread when using tokio with
-            // `rt-multi-thread`). `UA_Client_run_iterate()` must be run periodically and makes sure
-            // to maintain the connection (e.g. renew session) and run callback handlers.
-            tokio::spawn(async move {
-                let mut next_cycle = pin!(time::sleep(time::Duration::ZERO));
-                loop {
-                    log::debug!("Running iterate");
-
-                    let result = {
-                        let Ok(mut client) = client.lock() else {
-                            break;
-                        };
-
-                        // Timeout of 0 means we do not block here at all. We don't want to hold the
-                        // mutex longer than necessary (because that would block requests from being
-                        // sent out).
-                        unsafe { UA_Client_run_iterate(client.as_mut_ptr(), 0) }
-                    };
-                    if result != UA_STATUSCODE_GOOD {
-                        break;
-                    }
-
-                    // Determine the start of the next cycle and catch up if cycles have been missed.
-                    let next_deadline =
-                        (next_cycle.deadline() + cycle_time).max(time::Instant::now());
-                    next_cycle.as_mut().reset(next_deadline);
-
-                    // This await point is where `background_handle.abort()` might abort us later.
-                    next_cycle.as_mut().await;
-                }
-            })
-        };
-
+        let background_task = background_task(Arc::clone(&client), cycle_time);
+        // Run the event loop concurrently. This may be a different thread when
+        // using tokio with `rt-multi-thread`.
+        let background_handle = tokio::spawn(background_task);
         Self {
             client,
             background_handle,
@@ -221,6 +188,36 @@ impl Drop for AsyncClient {
         if let Ok(mut client) = self.client.lock() {
             let _unused = unsafe { UA_Client_disconnect(client.as_mut_ptr()) };
         }
+    }
+}
+
+async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: time::Duration) {
+    let mut next_cycle = pin!(time::sleep(time::Duration::ZERO));
+    // `UA_Client_run_iterate()` must be run periodically and makes sure to
+    // maintain the connection (e.g. renew session) and run callback handlers.
+    loop {
+        log::debug!("Running iterate");
+
+        let result = {
+            let Ok(mut client) = client.lock() else {
+                break;
+            };
+
+            // Timeout of 0 means we do not block here at all. We don't want to hold the
+            // mutex longer than necessary (because that would block requests from being
+            // sent out).
+            unsafe { UA_Client_run_iterate(client.as_mut_ptr(), 0) }
+        };
+        if result != UA_STATUSCODE_GOOD {
+            break;
+        }
+
+        // Determine the start of the next cycle and catch up if cycles have been missed.
+        let next_deadline = (next_cycle.deadline() + cycle_time).max(time::Instant::now());
+        next_cycle.as_mut().reset(next_deadline);
+
+        // This await point is where the background task could be aborted.
+        next_cycle.as_mut().await;
     }
 }
 
