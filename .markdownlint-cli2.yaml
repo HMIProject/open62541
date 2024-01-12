@@ -8,7 +8,7 @@ config:
 
   # The same headline in different nested sections is okay (and necessary for
   # CHANGELOG.md).
-  no-duplicate-header:
+  no-duplicate-heading:
     allow_different_nesting: true
 
 # Fix any fixable errors.
