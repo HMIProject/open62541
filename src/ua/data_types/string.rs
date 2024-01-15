@@ -1,8 +1,8 @@
-use std::{borrow::Cow, ffi::CString, fmt, slice, str, string};
+use std::{ffi::CString, fmt, slice, str};
 
 use open62541_sys::UA_String_fromChars;
 
-use crate::Error;
+use crate::{ua, Error};
 
 crate::data_type!(String);
 
@@ -10,18 +10,27 @@ crate::data_type!(String);
 // strings of `length` 0. It may also be `ptr::null()` for "invalid" strings. This is similar to how
 // OPC UA treats arrays (which also distinguishes between empty and invalid instances).
 impl String {
+    /// Returns string contents as slice.
+    ///
+    /// This may return [`None`] when the string itself is invalid (state as defined by OPC UA).
     #[must_use]
-    pub fn as_str(&self) -> Option<&str> {
-        // TODO: Handle `UA_EMPTY_ARRAY_SENTINEL` and `ptr::null()` correctly.
-        let slice = unsafe { slice::from_raw_parts(self.0.data, self.0.length) };
-        str::from_utf8(slice).ok()
+    pub fn as_slice(&self) -> Option<&[u8]> {
+        match ua::PointerValue::from_raw(self.0.data) {
+            ua::PointerValue::Invalid => None,
+            ua::PointerValue::Empty => Some(&[]),
+            ua::PointerValue::Valid(data) => {
+                // `self.0.data` is valid, so we may use `self.0.length` now.
+                Some(unsafe { slice::from_raw_parts(data.as_ptr(), self.0.length) })
+            }
+        }
     }
 
+    /// Returns string as [`str`] slice.
+    ///
+    /// This may return [`None`] when the string itself is invalid or it is not valid UTF-8.
     #[must_use]
-    pub fn to_string(&self) -> Cow<'_, str> {
-        // TODO: Handle `UA_EMPTY_ARRAY_SENTINEL` and `ptr::null()` correctly.
-        let slice = unsafe { slice::from_raw_parts(self.0.data, self.0.length) };
-        string::String::from_utf8_lossy(slice)
+    pub fn as_str(&self) -> Option<&str> {
+        self.as_slice().and_then(|slice| str::from_utf8(slice).ok())
     }
 }
 
