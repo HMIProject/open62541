@@ -99,5 +99,6 @@ jobs:
           --doc
 
       - name: Build package with all features enabled
+        # We allow dirty state here because it is only expected after update.
         run: >-
-          cargo package --locked --all-features
+          cargo package --locked --all-features --allow-dirty
