@@ -121,6 +121,43 @@ impl AsyncClient {
         Ok(())
     }
 
+    /// Calls specific method node at object node.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the object or method node does not exist, the method cannot be called, or
+    /// the input arguments are unexpected.
+    pub async fn call_method(
+        &self,
+        object_id: &ua::NodeId,
+        method_id: &ua::NodeId,
+        input_arguments: &[ua::Variant],
+    ) -> Result<Option<Vec<ua::Variant>>, Error> {
+        let request =
+            ua::CallRequest::init().with_methods_to_call(&[ua::CallMethodRequest::init()
+                .with_object_id(object_id)
+                .with_method_id(method_id)
+                .with_input_arguments(input_arguments)]);
+
+        let response = service_request(&self.client, request).await?;
+
+        let Some(results) = response.results() else {
+            return Err(Error::internal("call should return results"));
+        };
+
+        let Some(result) = results.as_slice().first() else {
+            return Err(Error::internal("call should return a result"));
+        };
+
+        Error::verify_good(&result.status_code())?;
+
+        let Some(output_arguments) = result.output_arguments() else {
+            return Ok(None);
+        };
+
+        Ok(Some(output_arguments.as_slice().to_vec()))
+    }
+
     /// Browses specific node.
     ///
     /// # Errors

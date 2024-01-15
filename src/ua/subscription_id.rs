@@ -14,7 +14,7 @@ impl SubscriptionId {
         self.0
     }
 
-    pub(crate) fn to_uint32(self) -> ua::UInt32 {
+    pub(crate) const fn to_uint32(self) -> ua::UInt32 {
         ua::UInt32::new(self.as_u32())
     }
 }
