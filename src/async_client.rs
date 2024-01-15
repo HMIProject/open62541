@@ -1,7 +1,6 @@
 use std::{
     borrow::Borrow,
     ffi::c_void,
-    pin::pin,
     ptr,
     sync::{Arc, Mutex},
     time::Duration,
