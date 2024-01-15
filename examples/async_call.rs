@@ -1,5 +1,5 @@
-use anyhow::{anyhow, bail, Context as _};
-use open62541::{ua, AsyncClient};
+use anyhow::{anyhow, Context as _};
+use open62541::{ua, AsyncClient, DataType as _};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
@@ -8,64 +8,45 @@ async fn main() -> anyhow::Result<()> {
     let client =
         AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543").with_context(|| "connect")?;
 
-    // `/Root/Objects/1:Boiler#1/1:Simulation`
-    let simulation_node_id = ua::NodeId::numeric(1, 1801);
-    // `/Root/Objects/1:Boiler#1/1:Simulation/Reset`
-    let reset_node_id = ua::NodeId::numeric(1, 1803);
-    // `/Root/Objects/1:Boiler#1/1:Simulation/Start`
-    let start_node_id = ua::NodeId::numeric(1, 1804);
-    // `/Root/Objects/1:Boiler#1/1:Simulation/Suspend`
-    let suspend_node_id = ua::NodeId::numeric(1, 1805);
-    // `/Root/Objects/1:Boiler#1/1:Simulation/CurrentState`
-    let current_state_node_id = ua::NodeId::numeric(1, 1807);
+    // `/Root/Objects/8:Simulation/8:ObjectWithMethods`
+    let object_node_id = ua::NodeId::string(8, "ObjectWithMethods");
+    // `/Root/Objects/8:Simulation/8:ObjectWithMethods/8:MethodNoArgs`
+    let method_no_args_node_id = ua::NodeId::string(8, "MethodNoArgs");
+    // `/Root/Objects/8:Simulation/8:ObjectWithMethods/8:MethodIO`
+    let method_io_node_id = ua::NodeId::string(8, "MethodIO");
 
-    println!("Reading current state from {current_state_node_id}");
-
-    let current_state = client
-        .read_value(&current_state_node_id)
-        .await
-        .with_context(|| "read")?;
-
-    println!("-> {current_state:?}");
-
-    let current_state = current_state
-        .value()
-        .ok_or(anyhow!("get value"))?
-        .to_scalar::<ua::LocalizedText>()
-        .ok_or(anyhow!("get scalar"))?
-        .text()
-        .to_string()
-        .into_owned();
-
-    let method_node_id = if current_state == "Halted" {
-        reset_node_id
-    } else if current_state == "Ready" || current_state == "Suspended" {
-        start_node_id
-    } else if current_state == "Running" {
-        suspend_node_id
-    } else {
-        bail!("unknown state");
-    };
-
-    println!("Calling node {method_node_id}");
+    println!("Calling node {method_no_args_node_id}");
 
     let input_arguments: Vec<ua::Variant> = vec![];
 
     let output_arguments = client
-        .call_method(&simulation_node_id, &method_node_id, &input_arguments)
+        .call_method(&object_node_id, &method_no_args_node_id, &input_arguments)
         .await
         .with_context(|| "call")?;
 
     println!("-> {output_arguments:?}");
 
-    println!("Reading current state from {current_state_node_id}");
+    println!("Calling node {method_io_node_id}");
 
-    let current_state = client
-        .read_value(&current_state_node_id)
+    let input_arguments: Vec<ua::Variant> =
+        vec![ua::Variant::init().with_scalar(&ua::UInt32::new(123))];
+
+    let output_arguments = client
+        .call_method(&object_node_id, &method_io_node_id, &input_arguments)
         .await
-        .with_context(|| "read")?;
+        .with_context(|| "call")?;
 
-    println!("-> {current_state:?}");
+    println!("-> {output_arguments:?}");
+
+    let value: i32 = output_arguments
+        .ok_or(anyhow!("output arguments"))?
+        .first()
+        .ok_or(anyhow!("output argument"))?
+        .to_scalar::<ua::Int32>()
+        .ok_or(anyhow!("scalar"))?
+        .value();
+
+    println!("-> {value}");
 
     Ok(())
 }

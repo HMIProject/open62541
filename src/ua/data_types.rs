@@ -76,6 +76,10 @@ macro_rules! primitive {
                 pub fn new(value: $type) -> Self {
                     <Self as crate::DataType>::clone_raw(&value)
                 }
+
+                pub fn value(&self) -> $type {
+                    self.0
+                }
             }
         )*
     };
