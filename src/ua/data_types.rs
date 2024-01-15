@@ -7,6 +7,10 @@ mod browse_request;
 mod browse_response;
 mod browse_result;
 mod browse_result_mask;
+mod call_method_request;
+mod call_method_result;
+mod call_request;
+mod call_response;
 mod create_monitored_items_request;
 mod create_monitored_items_response;
 mod create_subscription_request;
@@ -41,7 +45,8 @@ pub use self::{
     attribute_id::AttributeId, browse_description::BrowseDescription,
     browse_direction::BrowseDirection, browse_request::BrowseRequest,
     browse_response::BrowseResponse, browse_result::BrowseResult,
-    browse_result_mask::BrowseResultMask,
+    browse_result_mask::BrowseResultMask, call_method_request::CallMethodRequest,
+    call_method_result::CallMethodResult, call_request::CallRequest, call_response::CallResponse,
     create_monitored_items_request::CreateMonitoredItemsRequest,
     create_monitored_items_response::CreateMonitoredItemsResponse,
     create_subscription_request::CreateSubscriptionRequest,
