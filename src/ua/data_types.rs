@@ -73,11 +73,12 @@ macro_rules! primitive {
 
             impl $name {
                 #[must_use]
-                pub fn new(value: $type) -> Self {
-                    <Self as crate::DataType>::clone_raw(&value)
+                pub const fn new(value: $type) -> Self {
+                    $name(value)
                 }
 
-                pub fn value(&self) -> $type {
+                #[must_use]
+                pub const fn value(&self) -> $type {
                     self.0
                 }
             }
