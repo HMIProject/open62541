@@ -10,7 +10,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Breaking: Remove default `Display` implementation for most `ua` wrapper types (using the `Debug`
-  implementation is more appropriate in these cases)
+  implementation is more appropriate in these cases).
+
+### Fixed
+
+- Fix handling of empty and invalid strings.
 
 ## [0.2.2] - 2024-01-12
 
