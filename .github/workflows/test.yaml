@@ -10,8 +10,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
   workflow_dispatch:
 
 concurrency:
@@ -84,8 +82,8 @@ jobs:
       #
       # For now, we cannot cross-compile doctests and must always run them on
       # the runner's native platform.
-      - name: Run doctests with default features
+      - name: Run doctests with all features enabled
         if: ${{ matrix.run_doctests }}
         run: >-
-          cargo test --locked
+          cargo test --locked --all-features
           --doc
