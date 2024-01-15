@@ -233,7 +233,7 @@ async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: time::Durat
     // `UA_Client_run_iterate()` must be run periodically and makes sure to
     // maintain the connection (e.g. renew session) and run callback handlers.
     loop {
-        log::debug!("Running iterate");
+        log::trace!("Running iterate");
 
         let result = {
             let Ok(mut client) = client.lock() else {
