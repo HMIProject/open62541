@@ -25,7 +25,7 @@ impl String {
         }
     }
 
-    /// Returns string as [`str`] slice.
+    /// Returns string as string slice.
     ///
     /// This may return [`None`] when the string itself is invalid or it is not valid UTF-8.
     #[must_use]
