@@ -66,6 +66,10 @@ name = "async_browse"
 required-features = ["tokio"]
 
 [[example]]
+name = "async_call"
+required-features = ["tokio"]
+
+[[example]]
 name = "async_client"
 required-features = ["tokio"]
 
