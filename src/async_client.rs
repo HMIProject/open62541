@@ -229,7 +229,7 @@ impl Drop for AsyncClient {
 }
 
 async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: time::Duration) {
-    let mut next_cycle = pin!(time::sleep(time::Duration::ZERO));
+    let mut interval = time::interval(cycle_time);
     // `UA_Client_run_iterate()` must be run periodically and makes sure to
     // maintain the connection (e.g. renew session) and run callback handlers.
     loop {
@@ -249,12 +249,8 @@ async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: time::Durat
             break;
         }
 
-        // Determine the start of the next cycle and catch up if cycles have been missed.
-        let next_deadline = (next_cycle.deadline() + cycle_time).max(time::Instant::now());
-        next_cycle.as_mut().reset(next_deadline);
-
         // This await point is where the background task could be aborted.
-        next_cycle.as_mut().await;
+        interval.tick().await;
     }
 }
 
