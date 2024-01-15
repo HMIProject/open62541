@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ffi::CString, slice, str, string};
+use std::{borrow::Cow, ffi::CString, fmt, slice, str, string};
 
 use open62541_sys::UA_String_fromChars;
 
@@ -22,6 +22,13 @@ impl String {
         // TODO: Handle `UA_EMPTY_ARRAY_SENTINEL` and `ptr::null()` correctly.
         let slice = unsafe { slice::from_raw_parts(self.0.data, self.0.length) };
         string::String::from_utf8_lossy(slice)
+    }
+}
+
+impl fmt::Display for String {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Display invalid strings as empty strings.
+        f.write_str(self.as_str().unwrap_or(""))
     }
 }
 
@@ -62,5 +69,12 @@ mod tests {
         let str: ua::String = "".parse().expect("should parse empty string");
         assert_eq!(str.as_str().expect("should display empty string"), "");
         assert_eq!(str.to_string(), "");
+    }
+
+    #[test]
+    fn valid_string() {
+        let str: ua::String = "lorem ipsum".parse().expect("should parse string");
+        assert_eq!(str.as_str().expect("should display string"), "lorem ipsum");
+        assert_eq!(str.to_string(), "lorem ipsum");
     }
 }

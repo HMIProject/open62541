@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::{ua, DataType as _};
 
 crate::data_type!(QualifiedName);
@@ -12,14 +14,14 @@ impl QualifiedName {
     pub fn name(&self) -> &ua::String {
         ua::String::raw_ref(&self.0.name)
     }
+}
 
-    #[allow(clippy::inherent_to_string_shadow_display)] // TODO: Fix conflicting definitions.
-    #[must_use]
-    pub fn to_string(&self) -> String {
+impl fmt::Display for QualifiedName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let namespace_index = self.namespace_index();
         if namespace_index == 0 {
-            return self.name().to_string().to_string();
+            return write!(f, "{}", self.name());
         }
-        format!("{namespace_index}:{}", self.name().to_string())
+        write!(f, "{namespace_index}:{}", self.name())
     }
 }
