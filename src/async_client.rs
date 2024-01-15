@@ -230,6 +230,7 @@ impl Drop for AsyncClient {
 
 async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: time::Duration) {
     let mut interval = time::interval(cycle_time);
+    interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
     // `UA_Client_run_iterate()` must be run periodically and makes sure to
     // maintain the connection (e.g. renew session) and run callback handlers.
     loop {
