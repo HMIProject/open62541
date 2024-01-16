@@ -10,7 +10,7 @@
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() -> anyhow::Result<()> {
 //! #
-//! let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543")?;
+//! let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", tokio::time::Duration::from_millis(100))?;
 //! #
 //! # Ok(())
 //! # }
@@ -24,7 +24,7 @@
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() -> anyhow::Result<()> {
 //! #
-//! # let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543")?;
+//! # let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", tokio::time::Duration::from_millis(100))?;
 //! #
 //! let node_id = NodeId::numeric(0, 2258); // Server/ServerStatus/CurrentTime
 //!
@@ -46,7 +46,7 @@
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() -> anyhow::Result<()> {
 //! #
-//! # let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543")?;
+//! # let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", tokio::time::Duration::from_millis(100))?;
 //! #
 //! # let node_id = NodeId::numeric(0, 2258); // Server/ServerStatus/CurrentTime
 //! #

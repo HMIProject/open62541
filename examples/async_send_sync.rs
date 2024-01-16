@@ -6,12 +6,14 @@ use open62541::{ua, AsyncClient};
 use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME;
 use tokio::task;
 
+const CYCLE_TIME: tokio::time::Duration = tokio::time::Duration::from_millis(100);
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let client =
-        AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543").with_context(|| "connect")?;
+    let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", CYCLE_TIME)
+        .with_context(|| "connect")?;
 
     println!("Client connected successfully");
 
