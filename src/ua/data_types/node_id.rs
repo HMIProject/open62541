@@ -1,7 +1,8 @@
-use std::{ffi::CString, hash, str};
+use std::{ffi::CString, fmt, hash, str};
 
 use open62541_sys::{
-    UA_NodeIdType, UA_NodeId_hash, UA_NodeId_parse, UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC,
+    UA_NodeIdType, UA_NodeId_hash, UA_NodeId_parse, UA_NodeId_print, UA_NODEID_NUMERIC,
+    UA_NODEID_STRING_ALLOC,
 };
 
 use crate::{data_type::DataType, ua, Error};
@@ -93,6 +94,20 @@ impl str::FromStr for NodeId {
         Error::verify_good(&status_code)?;
 
         Ok(node_id)
+    }
+}
+
+impl fmt::Display for NodeId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut output = ua::String::init();
+
+        let status_code = &ua::StatusCode::new({
+            // This mirrors the behavior of `UA_NodeId_parse()` above.
+            unsafe { UA_NodeId_print(self.as_ptr(), output.as_mut_ptr()) }
+        });
+        Error::verify_good(status_code).map_err(|_| fmt::Error)?;
+
+        f.write_str(output.as_str().unwrap_or(""))
     }
 }
 
