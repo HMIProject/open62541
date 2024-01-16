@@ -15,5 +15,5 @@ pub use self::{
     monitored_item_id::MonitoredItemId,
     node_class_mask::NodeClassMask,
     subscription_id::SubscriptionId,
-    values::{ScalarValue, VariantValue},
+    values::{ArrayValue, ScalarValue, VariantValue},
 };

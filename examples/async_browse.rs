@@ -18,12 +18,7 @@ async fn main() -> anyhow::Result<()> {
             return format!("{node_id}");
         };
 
-        let info = vec![
-            node.display_name().text().to_string().into_owned(),
-            node.node_class().to_string(),
-        ];
-
-        let info = info.join(", ");
+        let info = format!("{}, {:?}", node.display_name().text(), node.node_class());
 
         format!("{name} ({info}) -> {node_id}")
     });

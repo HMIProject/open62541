@@ -1,8 +1,8 @@
-use std::{borrow::Cow, ffi::CString, slice, str, string};
+use std::{ffi::CString, fmt, slice, str};
 
 use open62541_sys::UA_String_fromChars;
 
-use crate::Error;
+use crate::{ua, Error};
 
 crate::data_type!(String);
 
@@ -10,25 +10,56 @@ crate::data_type!(String);
 // strings of `length` 0. It may also be `ptr::null()` for "invalid" strings. This is similar to how
 // OPC UA treats arrays (which also distinguishes between empty and invalid instances).
 impl String {
+    /// Returns string contents as byte slice.
+    ///
+    /// This may return [`None`] when the string itself is invalid (as defined by OPC UA).
     #[must_use]
-    pub fn as_str(&self) -> Option<&str> {
-        // TODO: Handle `UA_EMPTY_ARRAY_SENTINEL` and `ptr::null()` correctly.
-        let slice = unsafe { slice::from_raw_parts(self.0.data, self.0.length) };
-        str::from_utf8(slice).ok()
+    pub fn as_slice(&self) -> Option<&[u8]> {
+        // Internally, `open62541` represents strings as `Byte` array and has the same special cases
+        // as regular arrays, i.e. empty and invalid states.
+        match ua::ArrayValue::from_ptr(self.0.data) {
+            ua::ArrayValue::Invalid => None,
+            ua::ArrayValue::Empty => Some(&[]),
+            ua::ArrayValue::Valid(data) => {
+                // `self.0.data` is valid, so we may use `self.0.length` now.
+                Some(unsafe { slice::from_raw_parts(data.as_ptr(), self.0.length) })
+            }
+        }
     }
 
+    /// Returns string contents as string slice.
+    ///
+    /// This may return [`None`] when the string itself is invalid (as defined by OPC UA) or it is
+    /// not valid UTF-8.
     #[must_use]
-    pub fn to_string(&self) -> Cow<'_, str> {
-        // TODO: Handle `UA_EMPTY_ARRAY_SENTINEL` and `ptr::null()` correctly.
-        let slice = unsafe { slice::from_raw_parts(self.0.data, self.0.length) };
-        string::String::from_utf8_lossy(slice)
+    pub fn as_str(&self) -> Option<&str> {
+        self.as_slice().and_then(|slice| str::from_utf8(slice).ok())
+    }
+}
+
+impl fmt::Display for String {
+    /// Creates string from [`String`] value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use open62541::{ua, DataType as _};
+    ///
+    /// let node_id = ua::String::init();
+    /// let str = node_id.to_string();
+    ///
+    /// assert_eq!(str, "");
+    /// ```
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Display invalid strings as empty strings.
+        f.write_str(self.as_str().unwrap_or(""))
     }
 }
 
 impl str::FromStr for String {
     type Err = Error;
 
-    /// Creates string from string slice.
+    /// Creates [`String`] from string slice.
     ///
     /// # Examples
     ///
@@ -54,6 +85,13 @@ impl str::FromStr for String {
 #[cfg(test)]
 mod tests {
     use crate::ua;
+
+    #[test]
+    fn valid_string() {
+        let str: ua::String = "lorem ipsum".parse().expect("should parse string");
+        assert_eq!(str.as_str().expect("should display string"), "lorem ipsum");
+        assert_eq!(str.to_string(), "lorem ipsum");
+    }
 
     #[test]
     fn empty_string() {

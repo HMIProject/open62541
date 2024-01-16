@@ -9,11 +9,12 @@ use crate::ua;
 ///
 /// [`UA_STATUSCODE_GOOD`]: open62541_sys::UA_STATUSCODE_GOOD
 #[derive(Debug, Error)]
-#[error("{0}")]
 pub enum Error {
     /// Error from server.
+    #[error("{0:?}")]
     Server(ua::StatusCode),
     /// Internal error.
+    #[error("{0}")]
     Internal(&'static str),
 }
 

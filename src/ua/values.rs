@@ -1,3 +1,7 @@
+use std::{ffi::c_void, ptr::NonNull};
+
+use open62541_sys::UA_EMPTY_ARRAY_SENTINEL_;
+
 use crate::ua;
 
 #[derive(Debug, Clone)]
@@ -23,4 +27,34 @@ pub enum ScalarValue {
     Double(ua::Double),     // Data type ns=0;i=11
     String(ua::String),     // Data type ns=0;i=12
     DateTime(ua::DateTime), // Data type ns=0;i=13
+}
+
+/// Value that may be invalid or empty.
+///
+/// For some types (notably arrays and strings) OPC UA defines different states: an empty state and
+/// an invalid state, in addition to the regular valid/non-empty state.
+#[derive(Debug, Clone)]
+pub enum ArrayValue<T> {
+    Invalid,
+    Empty,
+    Valid(NonNull<T>),
+}
+
+impl<T> ArrayValue<T> {
+    /// Creates appropriate [`ArrayValue`].
+    ///
+    /// This checks for different states (null pointer, sentinel value) and returns the appropriate
+    /// value from [`ArrayValue`].
+    pub fn from_ptr(data: *mut T) -> Self {
+        // Check for sentinel value first. We must not treat it as valid pointer below.
+        if data.cast_const().cast::<c_void>() == unsafe { UA_EMPTY_ARRAY_SENTINEL_ } {
+            return ArrayValue::Empty;
+        }
+
+        // Null pointers are regarded as "invalid" data by `open62541`.
+        match NonNull::new(data) {
+            Some(data) => ArrayValue::Valid(data),
+            None => ArrayValue::Invalid,
+        }
+    }
 }

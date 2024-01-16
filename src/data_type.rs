@@ -348,12 +348,6 @@ macro_rules! data_type {
 
         impl std::fmt::Debug for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                <Self as std::fmt::Display>::fmt(self, f)
-            }
-        }
-
-        impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 let output = <Self as crate::DataType>::print(self);
                 let string = output.as_ref().and_then(|output| output.as_str());
                 f.write_str(string.unwrap_or(stringify!($name)))
