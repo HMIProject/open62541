@@ -228,30 +228,46 @@ impl Drop for AsyncClient {
 }
 
 async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: time::Duration) {
+    log::debug!("Starting background task");
+
     let mut interval = time::interval(cycle_time);
     // TODO: Customized MissedTickBehavior? Only Skip and Delay are suitable here.
     interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
+    let mut last_tick;
+
     // `UA_Client_run_iterate()` must be run periodically and makes sure to
     // maintain the connection (e.g. renew session) and run callback handlers.
     loop {
-        log::trace!("Running iterate");
+        log::trace!("Next iterate cycle");
+        let last_cycle = time::Instant::now();
 
-        let result = {
+        let status_code = {
             let Ok(mut client) = client.lock() else {
-                break;
+                log::error!("Terminating background task: Client could not be locked");
+                return;
             };
 
             // Timeout of 0 means we do not block here at all. We don't want to hold the
             // mutex longer than necessary (because that would block requests from being
             // sent out).
+            log::trace!("Running iterate");
             unsafe { UA_Client_run_iterate(client.as_mut_ptr(), 0) }
         };
-        if result != UA_STATUSCODE_GOOD {
-            break;
+        if status_code != UA_STATUSCODE_GOOD {
+            log::warn!(
+                "Terminating background task: Run iterate failed with status code {status_code}"
+            );
+            return;
         }
 
         // This await point is where the background task could be aborted.
-        interval.tick().await;
+        last_tick = interval.tick().await;
+
+        // Detect and log missed cycles.
+        if !cycle_time.is_zero() && last_tick > last_cycle + cycle_time {
+            let missed_cycles = (last_tick - last_cycle).as_nanos() / cycle_time.as_nanos();
+            log::warn!("Missed {missed_cycles} iterate cycle(s)");
+        }
     }
 }
 
