@@ -1,10 +1,10 @@
 use std::{
-    ffi::{c_char, c_void, CStr, CString},
+    ffi::{c_char, c_ulong, c_void, CStr, CString},
     ptr,
 };
 
 use open62541_sys::{
-    UA_ClientConfig, UA_ClientConfig_setDefault, UA_Client_connect, UA_Client_getConfig,
+    vsnprintf, UA_ClientConfig, UA_ClientConfig_setDefault, UA_Client_connect, UA_Client_getConfig,
     UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
 };
 
@@ -124,10 +124,35 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
         msg: *const c_char,
         // For some reason, the magic is necessary to accommodate the different signatures generated
         // by `bindgen` in `open62541-sys`.
-        #[cfg(all(unix, target_arch = "x86_64"))] _args: *mut open62541_sys::__va_list_tag,
-        #[cfg(not(all(unix, target_arch = "x86_64")))] _args: open62541_sys::va_list,
+        #[cfg(all(unix, target_arch = "x86_64"))] args: *mut open62541_sys::__va_list_tag,
+        #[cfg(not(all(unix, target_arch = "x86_64")))] args: open62541_sys::va_list,
     ) {
-        let msg = unsafe { CStr::from_ptr(msg) }.to_string_lossy();
+        // We delegate string formatting to `vsnprintf()`, the length-checked string buffer variant
+        // of the variadic `vprintf` family. We call the function twice: first to get the length of
+        // the resulting string, then to actually fill in the string with data.
+
+        // Result is the number of bytes that would be written not including the NUL terminator.
+        let msg_length = usize::try_from(unsafe { vsnprintf(ptr::null_mut(), 0, msg, args) })
+            .expect("string length should fit into memory");
+
+        // Allocate buffer with one more byte for NUL terminator.
+        let mut msg_buffer: Vec<u8> = vec![0; msg_length + 1];
+
+        // Fill in string with data.
+        unsafe {
+            vsnprintf(
+                msg_buffer.as_mut_ptr().cast::<i8>(),
+                c_ulong::try_from(msg_buffer.len()).expect("string length should fit into memory"),
+                msg,
+                args,
+            )
+        };
+
+        // This includes a final check that the string has the expected length (i.e. the buffer was
+        // filled completely, ending in a NUL terminator).
+        let msg = CStr::from_bytes_with_nul(&msg_buffer)
+            .expect("string length should match")
+            .to_string_lossy();
 
         if level == UA_LogLevel::UA_LOGLEVEL_FATAL {
             // Without fatal level in `log`, fall back to error.
