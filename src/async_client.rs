@@ -8,9 +8,13 @@ use std::{
 
 use open62541_sys::{
     UA_Client, UA_Client_disconnect, UA_Client_readAttribute_async, UA_Client_run_iterate,
-    UA_Client_sendAsyncRequest, UA_DataValue, UA_StatusCode, UA_UInt32, UA_STATUSCODE_GOOD,
+    UA_Client_sendAsyncRequest, UA_DataValue, UA_StatusCode, UA_UInt32,
 };
-use tokio::{sync::oneshot, task::JoinHandle, time};
+use tokio::{
+    sync::oneshot,
+    task::JoinHandle,
+    time::{self, Instant, MissedTickBehavior},
+};
 
 use crate::{
     ua, AsyncSubscription, CallbackOnce, ClientBuilder, DataType, Error, ServiceRequest,
@@ -37,7 +41,7 @@ impl AsyncClient {
     /// # Panics
     ///
     /// See [`ClientBuilder::connect()`].
-    pub fn new(endpoint_url: &str, cycle_time: time::Duration) -> Result<Self, Error> {
+    pub fn new(endpoint_url: &str, cycle_time: Duration) -> Result<Self, Error> {
         Ok(ClientBuilder::default()
             .connect(endpoint_url)?
             .into_async(cycle_time))
@@ -45,10 +49,12 @@ impl AsyncClient {
 
     pub(crate) fn from_sync(client: ua::Client, cycle_time: Duration) -> Self {
         let client = Arc::new(Mutex::new(client));
+
         let background_task = background_task(Arc::clone(&client), cycle_time);
-        // Run the event loop concurrently. This may be a different thread when
-        // using tokio with `rt-multi-thread`.
+        // Run the event loop concurrently. This may be a different thread when using tokio with
+        // `rt-multi-thread`.
         let background_handle = tokio::spawn(background_task);
+
         Self {
             client,
             background_handle,
@@ -227,46 +233,48 @@ impl Drop for AsyncClient {
     }
 }
 
-async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: time::Duration) {
+async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: Duration) {
     log::debug!("Starting background task");
 
     let mut interval = time::interval(cycle_time);
-    // TODO: Customized MissedTickBehavior? Only Skip and Delay are suitable here.
-    interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
-    let mut last_tick;
+    // TODO: Offer customized `MissedTickBehavior`? Only `Skip` and `Delay` are suitable here as we
+    // don't want `Burst` to repeatedly and unnecessarily call `UA_Client_run_iterate()` many times
+    // in a row.
+    interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
-    // `UA_Client_run_iterate()` must be run periodically and makes sure to
-    // maintain the connection (e.g. renew session) and run callback handlers.
+    // `UA_Client_run_iterate()` must be run periodically and makes sure to maintain the connection
+    // (e.g. renew session) and run callback handlers.
     loop {
-        log::trace!("Next iterate cycle");
-        let last_cycle = time::Instant::now();
+        // This await point is where the background task could be aborted. (The first tick finishes
+        // immediately, so there is no additional delay on the first iteration.)
+        interval.tick().await;
+        // Track time of cycle start to report missed cycles below.
+        let start_of_cycle = Instant::now();
 
-        let status_code = {
+        let status_code = ua::StatusCode::new({
             let Ok(mut client) = client.lock() else {
                 log::error!("Terminating background task: Client could not be locked");
                 return;
             };
 
-            // Timeout of 0 means we do not block here at all. We don't want to hold the
-            // mutex longer than necessary (because that would block requests from being
-            // sent out).
+            // Timeout of 0 means we do not block here at all. We don't want to hold the mutex
+            // longer than necessary (because that would block requests from being sent out).
             log::trace!("Running iterate");
             unsafe { UA_Client_run_iterate(client.as_mut_ptr(), 0) }
-        };
-        if status_code != UA_STATUSCODE_GOOD {
-            log::warn!(
-                "Terminating background task: Run iterate failed with status code {status_code}"
-            );
+        });
+        if let Err(error) = Error::verify_good(&status_code) {
+            log::error!("Terminating background task: Run iterate failed, {error}");
             return;
         }
 
-        // This await point is where the background task could be aborted.
-        last_tick = interval.tick().await;
+        let time_taken = start_of_cycle.elapsed();
 
         // Detect and log missed cycles.
-        if !cycle_time.is_zero() && last_tick > last_cycle + cycle_time {
-            let missed_cycles = (last_tick - last_cycle).as_nanos() / cycle_time.as_nanos();
-            log::warn!("Missed {missed_cycles} iterate cycle(s)");
+        if !cycle_time.is_zero() && time_taken > cycle_time {
+            let missed_cycles = time_taken.as_nanos() / cycle_time.as_nanos();
+            log::warn!("Iterate run took {time_taken:?}, missed {missed_cycles} cycle(s)");
+        } else {
+            log::trace!("Iterate run took {time_taken:?}");
         }
     }
 }

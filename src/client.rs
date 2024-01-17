@@ -45,17 +45,17 @@ impl Default for ClientBuilder {
     fn default() -> Self {
         let mut inner = ua::Client::default();
 
-        // We require some initial configuration `UA_Client_connect()` to work.
+        // We require some initial configuration for `UA_Client_connect()` to work.
         //
         let result = unsafe {
             let config = UA_Client_getConfig(inner.as_mut_ptr());
 
-            // Install custom logger that uses `log` crate.
+            // Install custom logger that uses the `log` crate.
             set_default_logger(config.as_mut().expect("client config should be set"));
 
-            // Setting the remainder of the configuration to defaults keeps our custom logger. Do so
-            // after setting the logger to prevent this call to install another default logger which
-            // we would throw away in `set_default_logger()` anyway.
+            // Initialize remainder of configuration with defaults. This keeps our custom logger. We
+            // do this after `set_default_logger()`: `UA_ClientConfig_setDefault()` would needlessly
+            // install a default logger that we would throw away in `set_default_logger()` anyway.
             UA_ClientConfig_setDefault(config)
         };
         assert!(result == UA_STATUSCODE_GOOD);
@@ -97,8 +97,8 @@ impl Client {
     ///
     /// The [`AsyncClient`] can be used to access methods in an asynchronous way.
     ///
-    /// `cycle_time` controls the frequency at which the client will poll the server
-    /// for responses in the background.
+    /// `cycle_time` controls the frequency at which the client will poll the server for responses
+    /// in the background.
     ///
     /// [`AsyncClient`]: crate::AsyncClient
     #[cfg(feature = "tokio")]
@@ -108,7 +108,7 @@ impl Client {
     }
 }
 
-/// Installs logger that forwards to `log` crate.
+/// Installs logger that forwards to the `log` crate.
 ///
 /// This remove an existing logger from the given configuration (by calling its `clear()` callback),
 /// then installs a custom logger that forwards all messages to the corresponding calls in the `log`
