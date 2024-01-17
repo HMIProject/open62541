@@ -168,7 +168,8 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
         } else if level == UA_LogLevel::UA_LOGLEVEL_TRACE {
             log::trace!("{msg}");
         } else {
-            // TODO: Handle unexpected level.
+            // Handle unexpected level by escalating to error.
+            log::error!("{msg}");
         }
     }
 
