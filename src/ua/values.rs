@@ -1,6 +1,6 @@
 use std::{ffi::c_void, ptr::NonNull};
 
-use open62541_sys::UA_EMPTY_ARRAY_SENTINEL_;
+use open62541_sys::UA_EMPTY_ARRAY_SENTINEL;
 
 use crate::ua;
 
@@ -47,7 +47,7 @@ impl<T> ArrayValue<T> {
     /// value from [`ArrayValue`].
     pub fn from_ptr(data: *mut T) -> Self {
         // Check for sentinel value first. We must not treat it as valid pointer below.
-        if data.cast_const().cast::<c_void>() == unsafe { UA_EMPTY_ARRAY_SENTINEL_ } {
+        if data.cast_const().cast::<c_void>() == unsafe { UA_EMPTY_ARRAY_SENTINEL } {
             return ArrayValue::Empty;
         }
 
