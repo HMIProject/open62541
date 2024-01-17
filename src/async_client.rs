@@ -273,6 +273,8 @@ async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: Duration) {
         if !cycle_time.is_zero() && time_taken > cycle_time {
             let missed_cycles = time_taken.as_nanos() / cycle_time.as_nanos();
             log::warn!("Iterate run took {time_taken:?}, missed {missed_cycles} cycle(s)");
+        } else {
+            log::trace!("Iterate run took {time_taken:?}");
         }
     }
 }
