@@ -15,6 +15,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Fix handling of empty and invalid strings.
+- Include values in log messages.
 
 ## [0.2.2] - 2024-01-12
 
