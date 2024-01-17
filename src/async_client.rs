@@ -267,7 +267,7 @@ async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: Duration) {
             return;
         }
 
-        let time_taken = Instant::now().duration_since(start_of_cycle);
+        let time_taken = start_of_cycle.elapsed();
 
         // Detect and log missed cycles.
         if !cycle_time.is_zero() && time_taken > cycle_time {
