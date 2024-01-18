@@ -7,16 +7,56 @@ use open62541_sys::{
     UA_ClientConfig, UA_ClientConfig_setDefault, UA_Client_connect, UA_Client_getConfig,
     UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
 };
+use time::Duration;
 
 use crate::{ua, Error};
 
 /// Builder for [`Client`].
 ///
 /// Use this to specify additional options before connecting to an OPC UA endpoint.
+///
+/// # Examples
+///
+/// ```no_run
+/// use open62541::ClientBuilder;
+/// use time::Duration;
+///
+/// # #[tokio::main(flavor = "current_thread")]
+/// # async fn main() -> anyhow::Result<()> {
+/// #
+/// let client = ClientBuilder::default()
+///     .secure_channel_lifetime(Duration::seconds(60))
+///     .connect("opc.tcp://opcuademo.sterfive.com:26543")?;
+/// #
+/// # Ok(())
+/// # }
+/// ```
 #[allow(clippy::module_name_repetitions)]
 pub struct ClientBuilder(ua::Client);
 
 impl ClientBuilder {
+    /// Sets secure channel life time.
+    pub fn secure_channel_lifetime(mut self, secure_channel_lifetime: Duration) -> Self {
+        let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() };
+
+        config.unwrap().secureChannelLifeTime =
+            u32::try_from(secure_channel_lifetime.whole_milliseconds())
+                .expect("secure channel life time should be in range of u32");
+
+        self
+    }
+
+    /// Sets requested session timeout.
+    pub fn requested_session_timeout(mut self, requested_session_timeout: Duration) -> Self {
+        let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() };
+
+        config.unwrap().requestedSessionTimeout =
+            u32::try_from(requested_session_timeout.whole_milliseconds())
+                .expect("secure channel life time should be in range of u32");
+
+        self
+    }
+
     /// Connects to OPC UA endpoint and returns [`Client`].
     ///
     /// # Errors
