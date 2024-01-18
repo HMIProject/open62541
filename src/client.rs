@@ -1,13 +1,13 @@
 use std::{
     ffi::{c_char, c_void, CStr, CString},
     ptr,
+    time::Duration,
 };
 
 use open62541_sys::{
     UA_ClientConfig, UA_ClientConfig_setDefault, UA_Client_connect, UA_Client_getConfig,
     UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
 };
-use time::Duration;
 
 use crate::{ua, Error};
 
@@ -19,13 +19,13 @@ use crate::{ua, Error};
 ///
 /// ```no_run
 /// use open62541::ClientBuilder;
-/// use time::Duration;
+/// use std::time::Duration;
 ///
 /// # #[tokio::main(flavor = "current_thread")]
 /// # async fn main() -> anyhow::Result<()> {
 /// #
 /// let client = ClientBuilder::default()
-///     .secure_channel_lifetime(Duration::seconds(60))
+///     .secure_channel_lifetime(Duration::from_secs(60))
 ///     .connect("opc.tcp://opcuademo.sterfive.com:26543")?;
 /// #
 /// # Ok(())
@@ -36,22 +36,33 @@ pub struct ClientBuilder(ua::Client);
 
 impl ClientBuilder {
     /// Sets secure channel life time.
+    ///
+    /// # Panics
+    ///
+    /// The given duration must be non-negative and less than 4,294,967,295 milliseconds (less than
+    /// 49.7 days).
+    #[must_use]
     pub fn secure_channel_lifetime(mut self, secure_channel_lifetime: Duration) -> Self {
         let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() };
 
-        config.unwrap().secureChannelLifeTime =
-            u32::try_from(secure_channel_lifetime.whole_milliseconds())
-                .expect("secure channel life time should be in range of u32");
+        config.unwrap().secureChannelLifeTime = u32::try_from(secure_channel_lifetime.as_millis())
+            .expect("secure channel life time should be in range of u32");
 
         self
     }
 
     /// Sets requested session timeout.
+    ///
+    /// # Panics
+    ///
+    /// The given duration must be non-negative and less than 4,294,967,295 milliseconds (less than
+    /// 49.7 days).
+    #[must_use]
     pub fn requested_session_timeout(mut self, requested_session_timeout: Duration) -> Self {
         let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() };
 
         config.unwrap().requestedSessionTimeout =
-            u32::try_from(requested_session_timeout.whole_milliseconds())
+            u32::try_from(requested_session_timeout.as_millis())
                 .expect("secure channel life time should be in range of u32");
 
         self
