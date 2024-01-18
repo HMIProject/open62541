@@ -4,9 +4,10 @@ use open62541_sys::{UA_Client, UA_Client_delete, UA_Client_getState, UA_Client_n
 
 use crate::{ua, DataType as _};
 
-/// Combined state of [`Client`] or [`AsyncClient`].
+/// Combined state for [`Client`] and [`AsyncClient`].
 ///
 /// [`AsyncClient`]: crate::AsyncClient
+#[allow(clippy::module_name_repetitions)]
 pub struct ClientState {
     pub channel_state: ua::SecureChannelState,
     pub session_state: ua::SessionState,

@@ -62,6 +62,10 @@ impl AsyncClient {
     }
 
     /// Gets current channel and session state, and connect status.
+    ///
+    /// # Errors
+    ///
+    /// This only fails when the client has an internal error.
     pub fn state(&self) -> Result<ua::ClientState, Error> {
         let Ok(mut client) = self.client.lock() else {
             return Err(Error::internal("should be able to lock client"));
