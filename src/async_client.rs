@@ -9,6 +9,7 @@ use std::{
 use open62541_sys::{
     UA_Client, UA_Client_disconnect, UA_Client_readAttribute_async, UA_Client_run_iterate,
     UA_Client_sendAsyncRequest, UA_DataValue, UA_StatusCode, UA_UInt32,
+    UA_STATUSCODE_BADDISCONNECT,
 };
 use tokio::{
     sync::oneshot,
@@ -276,7 +277,17 @@ async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: Duration) {
             unsafe { UA_Client_run_iterate(client.as_mut_ptr(), 0) }
         });
         if let Err(error) = Error::verify_good(&status_code) {
-            log::error!("Terminating background task: Run iterate failed, {error}");
+            // Context-sensitive handling of bad status codes.
+            match status_code.into_raw() {
+                UA_STATUSCODE_BADDISCONNECT => {
+                    // Not an error.
+                    log::info!("Terminating background task after disconnect");
+                }
+                _ => {
+                    // Unexpected error.
+                    log::error!("Terminating background task: Run iterate failed with {error}");
+                }
+            }
             return;
         }
 
