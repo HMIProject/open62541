@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- Allow setting secure channel lifetime and requested session timeout in `ClientBuilder`.
+- Allow fetching current client state to periodically check for disconnect.
+
 ### Changed
 
 - Breaking: Remove default `Display` implementation for most `ua` wrapper types (using the `Debug`

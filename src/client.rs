@@ -1,6 +1,7 @@
 use std::{
     ffi::{c_char, c_ulong, c_void, CStr, CString},
     ptr,
+    time::Duration,
 };
 
 use open62541_sys::{
@@ -13,10 +14,60 @@ use crate::{ua, Error};
 /// Builder for [`Client`].
 ///
 /// Use this to specify additional options before connecting to an OPC UA endpoint.
+///
+/// # Examples
+///
+/// ```no_run
+/// use open62541::ClientBuilder;
+/// use std::time::Duration;
+///
+/// # #[tokio::main(flavor = "current_thread")]
+/// # async fn main() -> anyhow::Result<()> {
+/// #
+/// let client = ClientBuilder::default()
+///     .secure_channel_lifetime(Duration::from_secs(60))
+///     .connect("opc.tcp://opcuademo.sterfive.com:26543")?;
+/// #
+/// # Ok(())
+/// # }
+/// ```
 #[allow(clippy::module_name_repetitions)]
 pub struct ClientBuilder(ua::Client);
 
 impl ClientBuilder {
+    /// Sets secure channel life time.
+    ///
+    /// # Panics
+    ///
+    /// The given duration must be non-negative and less than 4,294,967,295 milliseconds (less than
+    /// 49.7 days).
+    #[must_use]
+    pub fn secure_channel_lifetime(mut self, secure_channel_lifetime: Duration) -> Self {
+        let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() };
+
+        config.unwrap().secureChannelLifeTime = u32::try_from(secure_channel_lifetime.as_millis())
+            .expect("secure channel life time should be in range of u32");
+
+        self
+    }
+
+    /// Sets requested session timeout.
+    ///
+    /// # Panics
+    ///
+    /// The given duration must be non-negative and less than 4,294,967,295 milliseconds (less than
+    /// 49.7 days).
+    #[must_use]
+    pub fn requested_session_timeout(mut self, requested_session_timeout: Duration) -> Self {
+        let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() };
+
+        config.unwrap().requestedSessionTimeout =
+            u32::try_from(requested_session_timeout.as_millis())
+                .expect("secure channel life time should be in range of u32");
+
+        self
+    }
+
     /// Connects to OPC UA endpoint and returns [`Client`].
     ///
     /// # Errors
@@ -45,17 +96,17 @@ impl Default for ClientBuilder {
     fn default() -> Self {
         let mut inner = ua::Client::default();
 
-        // We require some initial configuration `UA_Client_connect()` to work.
+        // We require some initial configuration for `UA_Client_connect()` to work.
         //
         let result = unsafe {
             let config = UA_Client_getConfig(inner.as_mut_ptr());
 
-            // Install custom logger that uses `log` crate.
+            // Install custom logger that uses the `log` crate.
             set_default_logger(config.as_mut().expect("client config should be set"));
 
-            // Setting the remainder of the configuration to defaults keeps our custom logger. Do so
-            // after setting the logger to prevent this call to install another default logger which
-            // we would throw away in `set_default_logger()` anyway.
+            // Initialize remainder of configuration with defaults. This keeps our custom logger. We
+            // do this after `set_default_logger()`: `UA_ClientConfig_setDefault()` would needlessly
+            // install a default logger that we would throw away in `set_default_logger()` anyway.
             UA_ClientConfig_setDefault(config)
         };
         assert!(result == UA_STATUSCODE_GOOD);
@@ -97,8 +148,8 @@ impl Client {
     ///
     /// The [`AsyncClient`] can be used to access methods in an asynchronous way.
     ///
-    /// `cycle_time` controls the frequency at which the client will poll the server
-    /// for responses in the background.
+    /// `cycle_time` controls the frequency at which the client will poll the server for responses
+    /// in the background.
     ///
     /// [`AsyncClient`]: crate::AsyncClient
     #[cfg(feature = "tokio")]
@@ -108,7 +159,7 @@ impl Client {
     }
 }
 
-/// Installs logger that forwards to `log` crate.
+/// Installs logger that forwards to the `log` crate.
 ///
 /// This remove an existing logger from the given configuration (by calling its `clear()` callback),
 /// then installs a custom logger that forwards all messages to the corresponding calls in the `log`
