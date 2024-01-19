@@ -281,7 +281,7 @@ async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: Duration) {
             match status_code.into_raw() {
                 UA_STATUSCODE_BADDISCONNECT => {
                     // Not an error.
-                    log::info!("Terminating background task after disconnected");
+                    log::info!("Terminating background task after disconnect");
                 }
                 _ => {
                     // Unexpected error.
