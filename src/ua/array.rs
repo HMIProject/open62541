@@ -1,7 +1,7 @@
 use std::{ffi::c_void, mem, num::NonZeroUsize, ptr::NonNull, slice};
 
 use open62541_sys::{
-    UA_Array_delete, UA_Array_new, UA_copy, UA_init, UA_EMPTY_ARRAY_SENTINEL_, UA_STATUSCODE_GOOD,
+    UA_Array_delete, UA_Array_new, UA_copy, UA_init, UA_EMPTY_ARRAY_SENTINEL, UA_STATUSCODE_GOOD,
 };
 
 use crate::DataType;
@@ -25,7 +25,7 @@ pub struct Array<T: DataType>(State<T>);
 /// Internal state of array.
 ///
 /// This tracks whether the array contains any elements at all. Without elements, [`UA_Array_new()`]
-/// would not return a pointer but the sentinel value [`UA_EMPTY_ARRAY_SENTINEL_`]. We do not handle
+/// would not return a pointer but the sentinel value [`UA_EMPTY_ARRAY_SENTINEL`]. We do not handle
 /// these implications (mostly non-alignedness) but track these states explicitly instead.
 enum State<T: DataType> {
     /// Array of length `0`.
@@ -35,7 +35,7 @@ enum State<T: DataType> {
         /// Pointer returned from [`UA_Array_new()`].
         ///
         /// This is always a valid pointer into one or more instances of `[T::Inner]`, i.e. non-null
-        /// and not [`UA_EMPTY_ARRAY_SENTINEL_`]. For empty arrays, we never call [`UA_Array_new()`]
+        /// and not [`UA_EMPTY_ARRAY_SENTINEL`]. For empty arrays, we never call [`UA_Array_new()`]
         /// but use [`State::Empty`] instead.
         ptr: NonNull<T::Inner>,
         size: NonZeroUsize,
@@ -61,12 +61,12 @@ impl<T: DataType> Array<T> {
         // We require a proper pointer for safe operation (even when we do not access the pointed-to
         // memory region at all, cf. documentation of `from_raw_parts_mut()`).
         debug_assert_ne!(array.as_ptr().cast::<c_void>().cast_const(), unsafe {
-            UA_EMPTY_ARRAY_SENTINEL_
+            UA_EMPTY_ARRAY_SENTINEL
         });
 
         // `UA_Array_new()` does not initialize any of its array elements. We do this manually here.
         //
-        // SAFETY: `size` is non-zero, `array` is a valid pointer (not `UA_EMPTY_ARRAY_SENTINEL_`).
+        // SAFETY: `size` is non-zero, `array` is a valid pointer (not `UA_EMPTY_ARRAY_SENTINEL`).
         let slice: &mut [T::Inner] =
             unsafe { slice::from_raw_parts_mut(array.as_ptr(), size.get()) };
         for element in slice {
@@ -111,7 +111,7 @@ impl<T: DataType> Array<T> {
         // We require a proper pointer for safe operation (even when we do not access the pointed-to
         // memory region at all, cf. documentation of `from_raw_parts_mut()`).
         debug_assert_ne!(array.as_ptr().cast::<c_void>().cast_const(), unsafe {
-            UA_EMPTY_ARRAY_SENTINEL_
+            UA_EMPTY_ARRAY_SENTINEL
         });
 
         // Clone elements into the array. When this is done, all elements will be initialized. If we
@@ -119,7 +119,7 @@ impl<T: DataType> Array<T> {
         // elements have been zero-initialized by `UA_Array_new()` and `UA_Array_delete()` uses this
         // knowledge (under the hood, this is handled with a no-op of `UA_clear()` on each element).
         //
-        // SAFETY: `size` is non-zero, `array` is a valid pointer (not `UA_EMPTY_ARRAY_SENTINEL_`).
+        // SAFETY: `size` is non-zero, `array` is a valid pointer (not `UA_EMPTY_ARRAY_SENTINEL`).
         let dst: &mut [T::Inner] = unsafe { slice::from_raw_parts_mut(array.as_ptr(), size.get()) };
         for (src, dst) in slice.iter().zip(dst) {
             let result = unsafe {
@@ -163,19 +163,19 @@ impl<T: DataType> Array<T> {
             }
             // Otherwise, we expect the sentinel value to indicate an empty array of length 0. This,
             // we do handle and may return `Some`.
-            debug_assert_eq!(ptr.cast::<c_void>(), unsafe { UA_EMPTY_ARRAY_SENTINEL_ });
+            debug_assert_eq!(ptr.cast::<c_void>(), unsafe { UA_EMPTY_ARRAY_SENTINEL });
             return Some(Self(State::Empty));
         }
 
         // We require a proper pointer for safe operation (even when we do not access the pointed-to
         // memory region at all, cf. documentation of `from_raw_parts()`).
         debug_assert!(!ptr.is_null());
-        debug_assert_ne!(ptr.cast::<c_void>(), unsafe { UA_EMPTY_ARRAY_SENTINEL_ });
+        debug_assert_ne!(ptr.cast::<c_void>(), unsafe { UA_EMPTY_ARRAY_SENTINEL });
 
         // Here we transmute the pointed-to elements from `T::Inner` to `T`. This is allowed because
         // `T` implements the trait `DataType`.
         //
-        // SAFETY: `size` is non-zero, `array` is a valid pointer (not `UA_EMPTY_ARRAY_SENTINEL_`).
+        // SAFETY: `size` is non-zero, `array` is a valid pointer (not `UA_EMPTY_ARRAY_SENTINEL`).
         let slice = unsafe { slice::from_raw_parts(ptr.cast::<T>(), size) };
         Some(Self::from_slice(slice))
     }
@@ -239,7 +239,7 @@ impl<T: DataType> Array<T> {
                 // `UA_Array_new()` would return the sentinel value when "allocating" a size of `0`.
                 // We emulate this here to allow `UA_Array_delete()` and other functions to use that
                 // and handle this case appropriately (essentially making deallocation a no-op).
-                let ptr = unsafe { UA_EMPTY_ARRAY_SENTINEL_ };
+                let ptr = unsafe { UA_EMPTY_ARRAY_SENTINEL };
                 (ptr.cast::<T::Inner>().cast_mut(), 0)
             }
             State::NonEmpty { ptr, size } => (ptr.as_ptr(), size.get()),

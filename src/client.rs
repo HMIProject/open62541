@@ -5,7 +5,7 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_ClientConfig, UA_ClientConfig_setDefault, UA_Client_connect, UA_Client_getConfig,
+    vsnprintf, UA_ClientConfig, UA_ClientConfig_setDefault, UA_Client_connect, UA_Client_getConfig,
     UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
 };
 
@@ -173,12 +173,16 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
         level: UA_LogLevel,
         _category: UA_LogCategory,
         msg: *const c_char,
-        // For some reason, the magic is necessary to accommodate the different signatures generated
-        // by `bindgen` in `open62541-sys`.
-        #[cfg(all(unix, target_arch = "x86_64"))] _args: *mut open62541_sys::__va_list_tag,
-        #[cfg(not(all(unix, target_arch = "x86_64")))] _args: open62541_sys::va_list,
+        args: open62541_sys::va_list_,
     ) {
-        let msg = unsafe { CStr::from_ptr(msg) }.to_string_lossy();
+        let Some(msg) = format_message(msg, args) else {
+            log::error!("Unknown log message");
+            return;
+        };
+
+        let msg = CStr::from_bytes_with_nul(&msg)
+            .expect("string length should match")
+            .to_string_lossy();
 
         if level == UA_LogLevel::UA_LOGLEVEL_FATAL {
             // Without fatal level in `log`, fall back to error.
@@ -194,7 +198,8 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
         } else if level == UA_LogLevel::UA_LOGLEVEL_TRACE {
             log::trace!("{msg}");
         } else {
-            // TODO: Handle unexpected level.
+            // Handle unexpected level by escalating to error.
+            log::error!("{msg}");
         }
     }
 
@@ -207,4 +212,77 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
     config.logger.clear = None;
     config.logger.log = Some(log_c);
     config.logger.context = ptr::null_mut();
+}
+
+/// Initial buffer size when formatting messages.
+const FORMAT_MESSAGE_DEFAULT_BUFFER_LEN: usize = 128;
+
+/// Maximum buffer size when formatting messages.
+const FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN: usize = 65536;
+
+/// Formats message with `vprintf` library calls.
+///
+/// This returns the formatted message with a trailing NUL byte, or `None` when formatting fails. A
+/// long message may be truncated (see [`FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN`] for details); its last
+/// characters will be replaced with `...` to indicate this.
+fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<Vec<u8>> {
+    // Delegate string formatting to `vsnprintf()`, the length-checked string buffer variant of the
+    // variadic `vprintf` family.
+
+    // Formats message and puts it into `msg_buffer`.
+    //
+    // This returns the total length of the formatted message without trailing NUL terminator (even
+    // when `msg_buffer` was not large enough to fit the entire message).
+    let printf = move |msg_buffer: &mut Vec<u8>| -> Option<usize> {
+        // Result is the number of bytes that would be written, not including the NUL terminator.
+        let result = unsafe {
+            vsnprintf(
+                msg_buffer.as_mut_ptr().cast::<c_char>(),
+                msg_buffer.len(),
+                msg,
+                args,
+            )
+        };
+        usize::try_from(result).ok().or_else(|| {
+            // Negative result is an error in the format string. Nothing we can do.
+            debug_assert!(result < 0);
+            None
+        })
+    };
+
+    // Allocate default buffer first. Only when the message doesn't fit, we need to allocate larger
+    // buffer below.
+    let mut msg_buffer: Vec<u8> = vec![0; FORMAT_MESSAGE_DEFAULT_BUFFER_LEN];
+
+    // Format message (or try to format as much as fits in `msg_buffer`). Remember final length and
+    // necessary buffer size for message with NUL terminator even when it doesn't fit.
+    let mut msg_length = printf(&mut msg_buffer)?;
+    let buffer_length = msg_length + 1;
+
+    if buffer_length <= msg_buffer.len() {
+        // Message was able to fit into default buffer. Make sure that `from_bytes_with_nul()` sees
+        // the expected single NUL terminator in the final position.
+        msg_buffer.truncate(buffer_length);
+    } else {
+        // Increase buffer but do not exceed maximum size (we do not want to risk arbitrarily large
+        // memory allocations).
+        msg_buffer.resize(buffer_length.min(FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN), 0);
+
+        // Try to format again with larger buffer.
+        msg_length = printf(&mut msg_buffer)?;
+        // Message must have filled the buffer entirely.
+        debug_assert!(msg_length + 1 >= msg_buffer.len());
+
+        // If message was truncated, indicate so in message.
+        if msg_length + 1 > msg_buffer.len() {
+            // Last byte must always be the NUL terminator.
+            debug_assert_eq!(msg_buffer.last(), Some(&0));
+            // Replace last characters with `.` character.
+            for char in msg_buffer.iter_mut().rev().skip(1).take(3) {
+                *char = b'.';
+            }
+        }
+    }
+
+    Some(msg_buffer)
 }
