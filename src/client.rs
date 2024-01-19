@@ -1,6 +1,7 @@
 use std::{
     ffi::{c_char, c_void, CStr, CString},
     ptr,
+    time::Duration,
 };
 
 use open62541_sys::{
@@ -13,10 +14,60 @@ use crate::{ua, Error};
 /// Builder for [`Client`].
 ///
 /// Use this to specify additional options before connecting to an OPC UA endpoint.
+///
+/// # Examples
+///
+/// ```no_run
+/// use open62541::ClientBuilder;
+/// use std::time::Duration;
+///
+/// # #[tokio::main(flavor = "current_thread")]
+/// # async fn main() -> anyhow::Result<()> {
+/// #
+/// let client = ClientBuilder::default()
+///     .secure_channel_lifetime(Duration::from_secs(60))
+///     .connect("opc.tcp://opcuademo.sterfive.com:26543")?;
+/// #
+/// # Ok(())
+/// # }
+/// ```
 #[allow(clippy::module_name_repetitions)]
 pub struct ClientBuilder(ua::Client);
 
 impl ClientBuilder {
+    /// Sets secure channel life time.
+    ///
+    /// # Panics
+    ///
+    /// The given duration must be non-negative and less than 4,294,967,295 milliseconds (less than
+    /// 49.7 days).
+    #[must_use]
+    pub fn secure_channel_lifetime(mut self, secure_channel_lifetime: Duration) -> Self {
+        let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() };
+
+        config.unwrap().secureChannelLifeTime = u32::try_from(secure_channel_lifetime.as_millis())
+            .expect("secure channel life time should be in range of u32");
+
+        self
+    }
+
+    /// Sets requested session timeout.
+    ///
+    /// # Panics
+    ///
+    /// The given duration must be non-negative and less than 4,294,967,295 milliseconds (less than
+    /// 49.7 days).
+    #[must_use]
+    pub fn requested_session_timeout(mut self, requested_session_timeout: Duration) -> Self {
+        let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() };
+
+        config.unwrap().requestedSessionTimeout =
+            u32::try_from(requested_session_timeout.as_millis())
+                .expect("secure channel life time should be in range of u32");
+
+        self
+    }
+
     /// Connects to OPC UA endpoint and returns [`Client`].
     ///
     /// # Errors
