@@ -10,6 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Allow setting secure channel lifetime and requested session timeout in `ClientBuilder`.
+- Allow fetching current client state to periodically check for disconnect.
 
 ### Changed
 
