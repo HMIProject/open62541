@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_char, c_ulong, c_void, CStr, CString},
+    ffi::{c_char, c_void, CStr, CString},
     ptr,
     time::Duration,
 };
@@ -238,7 +238,7 @@ fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<V
         let result = unsafe {
             vsnprintf(
                 msg_buffer.as_mut_ptr().cast::<c_char>(),
-                c_ulong::try_from(msg_buffer.len()).expect("string should fit into memory"),
+                msg_buffer.len(),
                 msg,
                 args,
             )
