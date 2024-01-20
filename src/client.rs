@@ -5,8 +5,8 @@ use std::{
 };
 
 use open62541_sys::{
-    vsnprintf, UA_ClientConfig, UA_ClientConfig_setDefault, UA_Client_connect, UA_Client_getConfig,
-    UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
+    va_end, vsnprintf, UA_ClientConfig, UA_ClientConfig_setDefault, UA_Client_connect,
+    UA_Client_getConfig, UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
 };
 
 use crate::{ua, Error};
@@ -229,12 +229,12 @@ fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<V
     // Delegate string formatting to `vsnprintf()`, the length-checked string buffer variant of the
     // variadic `vprintf` family.
 
-    // Formats message and puts it into `msg_buffer`.
-    //
-    // This returns the total length of the formatted message without trailing NUL terminator (even
-    // when `msg_buffer` was not large enough to fit the entire message).
-    let printf = move |msg_buffer: &mut Vec<u8>| -> Option<usize> {
-        // Result is the number of bytes that would be written, not including the NUL terminator.
+    // Delegate string formatting to the custom `vsnprintf()` provided by open62541_sys.
+
+    // Allocate default buffer first. Only when the message doesn't fit, we need to allocate larger
+    // buffer below.
+    let mut msg_buffer: Vec<u8> = vec![0; FORMAT_MESSAGE_DEFAULT_BUFFER_LEN];
+    loop {
         let result = unsafe {
             vsnprintf(
                 msg_buffer.as_mut_ptr().cast::<c_char>(),
@@ -243,46 +243,40 @@ fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<V
                 args,
             )
         };
-        usize::try_from(result).ok().or_else(|| {
+        let Ok(msg_len) = usize::try_from(result) else {
             // Negative result is an error in the format string. Nothing we can do.
             debug_assert!(result < 0);
-            None
-        })
-    };
-
-    // Allocate default buffer first. Only when the message doesn't fit, we need to allocate larger
-    // buffer below.
-    let mut msg_buffer: Vec<u8> = vec![0; FORMAT_MESSAGE_DEFAULT_BUFFER_LEN];
-
-    // Format message (or try to format as much as fits in `msg_buffer`). Remember final length and
-    // necessary buffer size for message with NUL terminator even when it doesn't fit.
-    let mut msg_length = printf(&mut msg_buffer)?;
-    let buffer_length = msg_length + 1;
-
-    if buffer_length <= msg_buffer.len() {
-        // Message was able to fit into default buffer. Make sure that `from_bytes_with_nul()` sees
-        // the expected single NUL terminator in the final position.
-        msg_buffer.truncate(buffer_length);
-    } else {
-        // Increase buffer but do not exceed maximum size (we do not want to risk arbitrarily large
-        // memory allocations).
-        msg_buffer.resize(buffer_length.min(FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN), 0);
-
-        // Try to format again with larger buffer.
-        msg_length = printf(&mut msg_buffer)?;
-        // Message must have filled the buffer entirely.
-        debug_assert!(msg_length + 1 >= msg_buffer.len());
-
-        // If message was truncated, indicate so in message.
-        if msg_length + 1 > msg_buffer.len() {
-            // Last byte must always be the NUL terminator.
-            debug_assert_eq!(msg_buffer.last(), Some(&0));
-            // Replace last characters with `.` character.
-            for char in msg_buffer.iter_mut().rev().skip(1).take(3) {
-                *char = b'.';
+            // Free the `va_list` argument that is no consumed by `vsnprintf()`!
+            unsafe { va_end(args) }
+            return None;
+        };
+        // Last byte must always be the NUL terminator.
+        debug_assert_eq!(msg_buffer.last(), Some(&0));
+        let buffer_len = msg_len + 1;
+        if buffer_len > msg_buffer.len() {
+            // Message didn't fit into default buffer. Allocate larger buffer and try again.
+            if buffer_len < FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN {
+                // Allocate larger buffer and try again.
+                msg_buffer.resize(FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN, 0);
+                continue;
             }
+            if buffer_len > msg_buffer.len() {
+                // Message is too large to format. Truncate the message.
+                // Replace last characters with `.` character.
+                for char in msg_buffer.iter_mut().rev().skip(1).take(3) {
+                    *char = b'.';
+                }
+            }
+        } else {
+            // Message was able to fit into default buffer. Make sure that `from_bytes_with_nul()`
+            // sees the expected single NUL terminator in the final position.
+            msg_buffer.truncate(buffer_len);
         }
+        break;
     }
+
+    // Free the `va_list` argument that is not consumed by `vsnprintf()`!
+    unsafe { va_end(args) }
 
     Some(msg_buffer)
 }
