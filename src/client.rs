@@ -254,7 +254,7 @@ fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<V
         debug_assert_eq!(msg_buffer.last(), Some(&0));
         let buffer_len = msg_len + 1;
         if buffer_len > msg_buffer.len() {
-            // Message didn't fit into default buffer. Allocate larger buffer and try again.
+            // Message didn't fit into the buffer. Allocate a larger buffer and try again.
             if buffer_len < FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN {
                 // Allocate larger buffer and try again.
                 msg_buffer.resize(FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN, 0);
@@ -268,7 +268,7 @@ fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<V
                 }
             }
         } else {
-            // Message was able to fit into default buffer. Make sure that `from_bytes_with_nul()`
+            // Message was able to fit into the buffer. Make sure that `from_bytes_with_nul()`
             // sees the expected single NUL terminator in the final position.
             msg_buffer.truncate(buffer_len);
         }
