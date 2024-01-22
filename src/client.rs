@@ -255,7 +255,7 @@ fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<V
         let buffer_len = msg_len + 1;
         if buffer_len > msg_buffer.len() {
             // Message didn't fit into the buffer. Allocate a larger buffer and try again.
-            if buffer_len < FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN {
+            if msg_buffer.len() < FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN {
                 // Allocate larger buffer and try again.
                 msg_buffer.resize(FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN, 0);
                 continue;
