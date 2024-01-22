@@ -268,14 +268,15 @@ fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<V
             // Message fits into the buffer. Make sure that `from_bytes_with_nul()`
             // sees the expected single NUL terminator in the final position.
             msg_buffer.truncate(buffer_len);
-            // Last byte must always be the NUL terminator.
-            debug_assert_eq!(msg_buffer.last(), Some(&0));
         }
         break;
     }
 
     // Free the `va_list` argument that is not consumed by `vsnprintf()`!
     unsafe { va_end(args) }
+
+    // Last byte must always be the NUL terminator.
+    debug_assert_eq!(msg_buffer.last(), Some(&0));
 
     Some(msg_buffer)
 }
