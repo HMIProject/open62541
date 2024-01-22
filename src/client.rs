@@ -250,27 +250,26 @@ fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<V
             unsafe { va_end(args) }
             return None;
         };
-        // Last byte must always be the NUL terminator.
-        debug_assert_eq!(msg_buffer.last(), Some(&0));
         let buffer_len = msg_len + 1;
         if buffer_len > msg_buffer.len() {
-            // Message didn't fit into the buffer. Allocate a larger buffer and try again.
+            // Last byte must always be the NUL terminator, even if the message
+            // doesn't fit into the buffer.
+            debug_assert_eq!(msg_buffer.last(), Some(&0));
             if msg_buffer.len() < FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN {
                 // Allocate larger buffer and try again.
                 msg_buffer.resize(FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN, 0);
                 continue;
             }
-            if buffer_len > msg_buffer.len() {
-                // Message is too large to format. Truncate the message.
-                // Replace last characters with `.` character.
-                for char in msg_buffer.iter_mut().rev().skip(1).take(3) {
-                    *char = b'.';
-                }
+            // Message is too large to format. Truncate the message by ending it with `...`.
+            for char in msg_buffer.iter_mut().rev().skip(1).take(3) {
+                *char = b'.';
             }
         } else {
-            // Message was able to fit into the buffer. Make sure that `from_bytes_with_nul()`
+            // Message fits into the buffer. Make sure that `from_bytes_with_nul()`
             // sees the expected single NUL terminator in the final position.
             msg_buffer.truncate(buffer_len);
+            // Last byte must always be the NUL terminator.
+            debug_assert_eq!(msg_buffer.last(), Some(&0));
         }
         break;
     }
