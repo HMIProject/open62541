@@ -5,8 +5,8 @@ use std::{
 };
 
 use open62541_sys::{
-    va_end, vsnprintf, UA_ClientConfig, UA_ClientConfig_setDefault, UA_Client_connect,
-    UA_Client_getConfig, UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
+    vsnprintf_va_copy, vsnprintf_va_end, UA_ClientConfig, UA_ClientConfig_setDefault,
+    UA_Client_connect, UA_Client_getConfig, UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
 };
 
 use crate::{ua, Error};
@@ -228,15 +228,16 @@ const FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN: usize = 65536;
 fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<Vec<u8>> {
     // Delegate string formatting to `vsnprintf()`, the length-checked string buffer variant of the
     // variadic `vprintf` family.
-
-    // Delegate string formatting to the custom `vsnprintf()` provided by open62541_sys.
+    //
+    // We use the custom `vsnprintf_va_copy()` provided by `open62541_sys`. This copies the va args
+    // and requires an explicit call to `vsnprintf_va_end()` afterwards.
 
     // Allocate default buffer first. Only when the message doesn't fit, we need to allocate larger
     // buffer below.
     let mut msg_buffer: Vec<u8> = vec![0; FORMAT_MESSAGE_DEFAULT_BUFFER_LEN];
     loop {
         let result = unsafe {
-            vsnprintf(
+            vsnprintf_va_copy(
                 msg_buffer.as_mut_ptr().cast::<c_char>(),
                 msg_buffer.len(),
                 msg,
@@ -247,7 +248,7 @@ fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<V
             // Negative result is an error in the format string. Nothing we can do.
             debug_assert!(result < 0);
             // Free the `va_list` argument that is no consumed by `vsnprintf()`!
-            unsafe { va_end(args) }
+            unsafe { vsnprintf_va_end(args) }
             return None;
         };
         let buffer_len = msg_len + 1;
@@ -273,7 +274,7 @@ fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<V
     }
 
     // Free the `va_list` argument that is not consumed by `vsnprintf()`!
-    unsafe { va_end(args) }
+    unsafe { vsnprintf_va_end(args) }
 
     // Last byte must always be the NUL terminator.
     debug_assert_eq!(msg_buffer.last(), Some(&0));
