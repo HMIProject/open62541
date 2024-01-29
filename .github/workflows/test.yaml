@@ -24,24 +24,53 @@ env:
 jobs:
   run:
     strategy:
+      fail-fast: false # don't give up on the whole matrix if one variant fails
       matrix:
-        runner_os: [windows-latest, ubuntu-latest]
         include:
-          # Add derived attribute `run_doctests`.
-          - run_doctests: true
-          - runner_os: windows-latest
-            # Doctests fill up disk storage on Windows, and we don't expect much
-            # different behavior anyway. It suffices to run them on Linux. Also,
-            # Windows runners are 2 times as expensive on GitHub.
-            run_doctests: false
+          - target: aarch64-apple-darwin
+            runner_os: macos-latest
+            default_target: false
+          - target: armv7-unknown-linux-gnueabihf
+            runner_os: ubuntu-latest
+            default_target: false
+          - target: x86_64-apple-darwin
+            runner_os: macos-latest
+            default_target: true
+          - target: x86_64-unknown-linux-gnu
+            runner_os: ubuntu-latest
+            default_target: true
+          - target: x86_64-unknown-linux-musl
+            runner_os: ubuntu-latest
+            default_target: false
+          - target: x86_64-pc-windows-msvc
+            runner_os: windows-latest
+            default_target: true
 
     runs-on: ${{ matrix.runner_os }}
 
     steps:
+      - name: Install build tools for musl libc
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        # To avoid HTTP 404 when package index has been updated, we run `update` first.
+        run: >-
+          sudo apt -y update &&
+          sudo apt -y install musl-tools
+
+      - name: Install build tools for ARMv7
+        if: matrix.target == 'armv7-unknown-linux-gnueabihf'
+        # To avoid HTTP 404 when package index has been updated, we run `update` first.
+        run: >-
+          sudo apt -y update &&
+          sudo apt -y install gcc-arm-linux-gnueabihf
+
       - name: Install Rust toolchain
         # Use specific Rust version that is the minimum supported `rust-version`
         # (MSRV) from `Cargo.toml`.
         uses: dtolnay/rust-toolchain@1.71
+        with:
+          # This target also needs to be specified explicitly in every build step!
+          # Otherwise the default toolchain might be used unintentionally.
+          targets: ${{ matrix.target }}
 
       - name: Install Cargo helpers
         run: >-
@@ -55,16 +84,18 @@ jobs:
       - name: Cache Rust toolchain and build artifacts
         uses: Swatinem/rust-cache@v2
         with:
-          # The cache should not be shared between different workflows and jobs.
-          shared-key: ${{ github.workflow }}-${{ github.job }}
+          # The cache should not be shared between different workflows, jobs, and targets.
+          shared-key: ${{ github.workflow }}-${{ github.job }}-${{ matrix.target }}
 
       - name: Build with feature combinations
         run: >-
           cargo hack --each-feature build --locked
+          --target ${{ matrix.target }}
 
       - name: Run tests (bins/lib/tests/examples) with feature combinations
         run: >-
           cargo hack --each-feature test --locked
+          --target ${{ matrix.target }}
           --bins --lib --tests --examples
 
       # Compile and run doctests, which have been excluded in the previous
@@ -83,7 +114,7 @@ jobs:
       # For now, we cannot cross-compile doctests and must always run them on
       # the runner's native platform.
       - name: Run doctests with all features enabled
-        if: ${{ matrix.run_doctests }}
+        if: matrix.default_target
         run: >-
           cargo test --locked --all-features
           --doc
@@ -91,3 +122,4 @@ jobs:
       - name: Build package with all features enabled
         run: >-
           cargo package --locked --all-features
+          --target ${{ matrix.target }}
