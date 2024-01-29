@@ -30,21 +30,27 @@ jobs:
           - target: aarch64-apple-darwin
             runner_os: macos-latest
             default_target: false
+            runnable: false
           - target: armv7-unknown-linux-gnueabihf
             runner_os: ubuntu-latest
             default_target: false
+            runnable: false
           - target: x86_64-apple-darwin
             runner_os: macos-latest
             default_target: true
+            runnable: true
           - target: x86_64-unknown-linux-gnu
             runner_os: ubuntu-latest
             default_target: true
+            runnable: true
           - target: x86_64-unknown-linux-musl
             runner_os: ubuntu-latest
             default_target: false
+            runnable: true
           - target: x86_64-pc-windows-msvc
             runner_os: windows-latest
             default_target: true
+            runnable: true
 
     runs-on: ${{ matrix.runner_os }}
 
@@ -93,6 +99,7 @@ jobs:
           --target ${{ matrix.target }}
 
       - name: Run tests (bins/lib/tests/examples) with feature combinations
+        if: matrix.runnable
         run: >-
           cargo hack --each-feature test --locked
           --target ${{ matrix.target }}
