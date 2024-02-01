@@ -32,8 +32,6 @@ jobs:
       # All preceding steps are independent of the repository contents.
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Publish release on creates.io
         env:
