@@ -51,6 +51,7 @@ nonstandard_style = "warn"
 rust_2018_compatibility = "warn"
 rust_2018_idioms = "warn"
 rust_2021_compatibility = "warn"
+unsafe_op_in_unsafe_fn = "warn"
 unused = "warn"
 warnings = "warn"
 

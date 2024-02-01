@@ -124,10 +124,15 @@ async fn create_monitored_items(
     ) {
         log::debug!("DataChangeNotificationCallback() was called");
 
+        // SAFETY: Incoming pointer is valid for access.
         // PANIC: We expect pointer to be valid when called.
-        let value = value.as_ref().expect("value should be set");
+        let value = unsafe { value.as_ref() }.expect("value should be set");
         let value = ua::DataValue::clone_raw(value);
-        St::notify(mon_context, value);
+
+        // SAFETY: `userdata` is the result of `St::prepare()` and is used only before `delete()`.
+        unsafe {
+            St::notify(mon_context, value);
+        }
     }
 
     unsafe extern "C" fn delete_callback_c(
@@ -139,7 +144,10 @@ async fn create_monitored_items(
     ) {
         log::debug!("DeleteMonitoredItemCallback() was called");
 
-        St::delete(mon_context);
+        // SAFETY: `userdata` is the result of `St::prepare()` and is deleted only once.
+        unsafe {
+            St::delete(mon_context);
+        }
     }
 
     unsafe extern "C" fn callback_c(
@@ -151,16 +159,21 @@ async fn create_monitored_items(
         log::debug!("MonitoredItems_createDataChanges() completed");
 
         let response = response.cast::<UA_CreateMonitoredItemsResponse>();
-        let status_code = ua::StatusCode::new((*response).responseHeader.serviceResult);
+        // SAFETY: Incoming pointer is valid for access.
+        // PANIC: We expect pointer to be valid when good.
+        let response = unsafe { response.as_ref() }.expect("response should be set");
+        let status_code = ua::StatusCode::new(response.responseHeader.serviceResult);
 
         let result = if status_code.is_good() {
-            // PANIC: We expect pointer to be valid when good.
-            let response = response.as_ref().expect("response should be set");
             Ok(ua::CreateMonitoredItemsResponse::clone_raw(response))
         } else {
             Err(status_code)
         };
-        Cb::execute(userdata, result);
+
+        // SAFETY: `userdata` is the result of `Cb::prepare()` and is used only once.
+        unsafe {
+            Cb::execute(userdata, result);
+        }
     }
 
     let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse, Error>>();
