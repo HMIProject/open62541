@@ -322,13 +322,18 @@ async fn read_attribute(
         let status_code = ua::StatusCode::new(status);
 
         let result = if status_code.is_good() {
+            // SAFETY: Incoming pointer is valid for access.
             // PANIC: We expect pointer to be valid when good.
-            let value = attribute.as_ref().expect("value should be set");
+            let value = unsafe { attribute.as_ref() }.expect("value should be set");
             Ok(ua::DataValue::clone_raw(value))
         } else {
             Err(status_code)
         };
-        Cb::execute(userdata, result);
+
+        // SAFETY: `userdata` is the result of `Cb::prepare()` and is used only once.
+        unsafe {
+            Cb::execute(userdata, result);
+        }
     }
 
     let (tx, rx) = oneshot::channel::<Result<ua::DataValue, Error>>();
@@ -392,10 +397,9 @@ async fn service_request<R: ServiceRequest>(
     ) {
         log::debug!("Request completed");
 
+        // SAFETY: Incoming pointer is valid for access.
         // PANIC: We expect pointer to be valid when good.
-        let response = response
-            .cast::<<R::Response as DataType>::Inner>()
-            .as_ref()
+        let response = unsafe { response.cast::<<R::Response as DataType>::Inner>().as_ref() }
             .expect("response should be set");
         let response = R::Response::clone_raw(response);
 
@@ -406,7 +410,10 @@ async fn service_request<R: ServiceRequest>(
             Err(status_code)
         };
 
-        Cb::<R>::execute(userdata, result);
+        // SAFETY: `userdata` is the result of `Cb::prepare()` and is used only once.
+        unsafe {
+            Cb::<R>::execute(userdata, result);
+        }
     }
 
     let (tx, rx) = oneshot::channel::<Result<R::Response, Error>>();

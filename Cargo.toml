@@ -45,20 +45,21 @@ time = ["dep:time"]
 tokio = ["dep:tokio"]
 
 [lints.rust]
-warnings = "warn"
 future_incompatible = "warn"
 let_underscore = "warn"
 nonstandard_style = "warn"
 rust_2018_compatibility = "warn"
 rust_2018_idioms = "warn"
 rust_2021_compatibility = "warn"
+unsafe_op_in_unsafe_fn = "warn"
 unused = "warn"
+warnings = "warn"
 
 [lints.clippy]
-pedantic = "warn"
 clone_on_ref_ptr = "warn"
 missing_const_for_fn = "warn"
 mod_module_files = "warn"
+pedantic = "warn"
 
 [[example]]
 name = "async_browse"

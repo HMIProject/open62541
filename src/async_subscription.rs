@@ -77,16 +77,21 @@ async fn create_subscription(
         log::debug!("Subscriptions_create() completed");
 
         let response = response.cast::<UA_CreateSubscriptionResponse>();
-        let status_code = ua::StatusCode::new((*response).responseHeader.serviceResult);
+        // SAFETY: Incoming pointer is valid for access.
+        // PANIC: We expect pointer to be valid when good.
+        let response = unsafe { response.as_ref() }.expect("response should be set");
+        let status_code = ua::StatusCode::new(response.responseHeader.serviceResult);
 
         let result = if status_code.is_good() {
-            // PANIC: We expect pointer to be valid when good.
-            let response = response.as_ref().expect("response should be set");
             Ok(ua::CreateSubscriptionResponse::clone_raw(response))
         } else {
             Err(status_code)
         };
-        Cb::execute(userdata, result);
+
+        // SAFETY: `userdata` is the result of `Cb::prepare()` and is used only once.
+        unsafe {
+            Cb::execute(userdata, result);
+        }
     }
 
     let (tx, rx) = oneshot::channel::<Result<ua::CreateSubscriptionResponse, Error>>();
