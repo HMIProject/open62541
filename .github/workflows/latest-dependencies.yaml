@@ -75,9 +75,8 @@ jobs:
           sudo apt -y install gcc-arm-linux-gnueabihf
 
       - name: Install Rust toolchain
-        # Use specific Rust version that is the minimum supported `rust-version`
-        # (MSRV) from `Cargo.toml`.
-        uses: dtolnay/rust-toolchain@1.74
+        # Use latest stable Rust version.
+        uses: dtolnay/rust-toolchain@stable
         with:
           # This target also needs to be specified explicitly in every build step!
           # Otherwise the default toolchain might be used unintentionally.
