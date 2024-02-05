@@ -10,7 +10,10 @@
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() -> anyhow::Result<()> {
 //! #
-//! let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", tokio::time::Duration::from_millis(100))?;
+//! let client = AsyncClient::new(
+//!     "opc.tcp://opcuademo.sterfive.com:26543",
+//!     tokio::time::Duration::from_millis(100),
+//! )?;
 //! #
 //! # Ok(())
 //! # }
@@ -19,12 +22,16 @@
 //! ## Read node's value attribute
 //!
 //! ```no_run
-//! use open62541::{AsyncClient, ua::NodeId};
+//! # use open62541::AsyncClient;
+//! use open62541::ua::NodeId;
 //!
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() -> anyhow::Result<()> {
 //! #
-//! # let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", tokio::time::Duration::from_millis(100))?;
+//! # let client = AsyncClient::new(
+//! #     "opc.tcp://opcuademo.sterfive.com:26543",
+//! #     tokio::time::Duration::from_millis(100),
+//! # )?;
 //! #
 //! let node_id = NodeId::numeric(0, 2258); // Server/ServerStatus/CurrentTime
 //!
@@ -39,20 +46,21 @@
 //! ## Watch node for changes in value attribute
 //!
 //! ```no_run
-//! use futures::StreamExt as _;
-//!
-//! use open62541::{AsyncClient, ua::NodeId};
-//!
+//! # use open62541::{AsyncClient, ua::NodeId};
+//! #
 //! # #[tokio::main(flavor = "current_thread")]
 //! # async fn main() -> anyhow::Result<()> {
 //! #
-//! # let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", tokio::time::Duration::from_millis(100))?;
+//! # let client = AsyncClient::new(
+//! #     "opc.tcp://opcuademo.sterfive.com:26543",
+//! #     tokio::time::Duration::from_millis(100),
+//! # )?;
 //! #
 //! # let node_id = NodeId::numeric(0, 2258); // Server/ServerStatus/CurrentTime
 //! #
 //! // Create subscription that receives the updates.
 //! let subscription = client.create_subscription().await?;
-//! // Create monitored item to create  node updates.
+//! // Create monitored item to receive node updates.
 //! let mut monitored_item = subscription.create_monitored_item(&node_id).await?;
 //!
 //! while let Some(value) = monitored_item.next().await {
