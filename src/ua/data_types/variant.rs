@@ -137,11 +137,7 @@ mod serde {
             );
 
             // Data type ns=0;i=12
-            if let Some(value) = self
-                .to_scalar::<ua::String>()
-                .as_ref()
-                .and_then(|value| value.as_str())
-            {
+            if let Some(value) = self.as_scalar().and_then(ua::String::as_str) {
                 return serializer.serialize_str(value);
             }
 
