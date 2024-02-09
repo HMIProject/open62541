@@ -144,7 +144,7 @@ mod serde {
             // Data type ns=0;i=13
             #[cfg(feature = "time")]
             if let Some(dt) = self.as_scalar().and_then(ua::DateTime::to_utc) {
-                return dt.serialize(serializer);
+                return time::serde::rfc3339::serialize(&dt, serializer);
             }
 
             Err(ser::Error::custom("non-primitive value in Variant"))
@@ -235,5 +235,23 @@ mod tests {
         let ua_variant = ua::Variant::init().with_scalar(&ua_string);
         let json = serde_json::to_string(&ua_variant).unwrap();
         assert_eq!(r#""a'b\"c{dẞe​f""#, json);
+    }
+
+    #[cfg(feature = "time")]
+    #[test]
+    fn serialize_datetime() {
+        // Minute precision
+        let datetime = time::macros::datetime!(2024-02-09 16:48 UTC);
+        let ua_datetime = ua::DateTime::try_from(datetime).unwrap();
+        let ua_variant = ua::Variant::init().with_scalar(&ua_datetime);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#""2024-02-09T16:48:00Z""#, json);
+
+        // Microsecond precision
+        let datetime = time::macros::datetime!(2024-02-09 16:48:52.123456 UTC);
+        let ua_datetime = ua::DateTime::try_from(datetime).unwrap();
+        let ua_variant = ua::Variant::init().with_scalar(&ua_datetime);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#""2024-02-09T16:48:52.123456Z""#, json);
     }
 }
