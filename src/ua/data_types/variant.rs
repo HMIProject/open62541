@@ -94,19 +94,12 @@ impl Variant {
 }
 
 #[cfg(feature = "serde")]
-mod serde {
-    use serde::ser;
-
-    use crate::{ua, DataType as _};
-
-    use super::Variant;
-
-    impl serde::Serialize for Variant {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer,
-        {
-            macro_rules! serialize {
+impl serde::Serialize for Variant {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        macro_rules! serialize_raw {
                 ($self:ident, $serializer:ident, [ $( ($name:ident, $type:ty) ),* $(,)? ]) => {
                     $(
                         if let Some(value) = $self.to_scalar::<crate::ua::$name>() {
@@ -118,37 +111,42 @@ mod serde {
                 };
             }
 
-            serialize!(
-                self,
-                serializer,
-                [
-                    (Boolean, bool), // Data type ns=0;i=1
-                    (SByte, i8),     // Data type ns=0;i=2
-                    (Byte, u8),      // Data type ns=0;i=3
-                    (Int16, i16),    // Data type ns=0;i=4
-                    (UInt16, u16),   // Data type ns=0;i=5
-                    (Int32, i32),    // Data type ns=0;i=6
-                    (UInt32, u32),   // Data type ns=0;i=7
-                    (Int64, i64),    // Data type ns=0;i=8
-                    (UInt64, u64),   // Data type ns=0;i=9
-                    (Float, f32),    // Data type ns=0;i=10
-                    (Double, f64),   // Data type ns=0;i=11
-                ]
-            );
+        serialize_raw!(
+            self,
+            serializer,
+            [
+                (Boolean, bool), // Data type ns=0;i=1
+                (SByte, i8),     // Data type ns=0;i=2
+                (Byte, u8),      // Data type ns=0;i=3
+                (Int16, i16),    // Data type ns=0;i=4
+                (UInt16, u16),   // Data type ns=0;i=5
+                (Int32, i32),    // Data type ns=0;i=6
+                (UInt32, u32),   // Data type ns=0;i=7
+                (Int64, i64),    // Data type ns=0;i=8
+                (UInt64, u64),   // Data type ns=0;i=9
+                (Float, f32),    // Data type ns=0;i=10
+                (Double, f64),   // Data type ns=0;i=11
+            ]
+        );
 
-            // Data type ns=0;i=12
-            if let Some(value) = self.as_scalar().and_then(ua::String::as_str) {
-                return serializer.serialize_str(value);
-            }
-
-            // Data type ns=0;i=13
-            #[cfg(feature = "time")]
-            if let Some(dt) = self.as_scalar().and_then(ua::DateTime::to_utc) {
-                return time::serde::rfc3339::serialize(&dt, serializer);
-            }
-
-            Err(ser::Error::custom("non-primitive value in Variant"))
+        macro_rules! serialize {
+            ($self:ident, $serializer:ident, [ $( ($name:ident, $type:ty) ),* $(,)? ]) => {
+                $()*
+            };
         }
+
+        // Data type ns=0;i=12
+        if let Some(value) = self.as_scalar::<ua::String>() {
+            return value.serialize(serializer);
+        }
+
+        // Data type ns=0;i=13
+        #[cfg(feature = "time")]
+        if let Some(value) = self.as_scalar::<ua::DateTime>() {
+            return value.serialize(serializer);
+        }
+
+        Err(serde::ser::Error::custom("non-primitive value in Variant"))
     }
 }
 

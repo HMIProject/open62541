@@ -16,6 +16,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Breaking: Renamed `ua::DateTime::as_datetime()` to `ua::DateTime::to_utc()`.
+- Use RFC 3339 variant of ISO 8601 for `ua::DateTime` serialization.
 
 ## [0.3.0] - 2024-01-23
 

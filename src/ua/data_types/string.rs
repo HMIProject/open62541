@@ -82,6 +82,18 @@ impl str::FromStr for String {
     }
 }
 
+#[cfg(all(feature = "serde", feature = "time"))]
+impl serde::Serialize for String {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.as_str()
+            .ok_or(serde::ser::Error::custom("String should be valid"))
+            .and_then(|str| serializer.serialize_str(str))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::ua;
