@@ -82,7 +82,7 @@ impl str::FromStr for String {
     }
 }
 
-#[cfg(all(feature = "serde", feature = "time"))]
+#[cfg(feature = "serde")]
 impl serde::Serialize for String {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
