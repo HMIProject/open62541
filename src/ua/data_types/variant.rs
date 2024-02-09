@@ -155,3 +155,89 @@ mod serde {
         }
     }
 }
+
+#[cfg(feature = "serde")]
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr as _;
+
+    use crate::{ua, DataType as _};
+
+    #[test]
+    fn serialize_bool() {
+        // Value `true`
+        let ua_bool = ua::Boolean::new(true);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_bool);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#"true"#, json);
+
+        // Value `false`
+        let ua_bool = ua::Boolean::new(false);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_bool);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#"false"#, json);
+    }
+
+    #[test]
+    fn serialize_int() {
+        // Byte (unsigned)
+        let ua_byte = ua::Byte::new(42);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_byte);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#"42"#, json);
+
+        // Int16 (signed)
+        let ua_int16 = ua::Int16::new(-12345);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_int16);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#"-12345"#, json);
+
+        // UInt32 (unsigned)
+        let ua_uint32 = ua::UInt32::new(123456789);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_uint32);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#"123456789"#, json);
+
+        // Int64 (signed)
+        let ua_int64 = ua::Int64::new(-7077926753204279296);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_int64);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#"-7077926753204279296"#, json);
+    }
+
+    #[test]
+    fn serialize_float() {
+        // Float
+        let ua_float = ua::Float::new(123.4567);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_float);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#"123.4567"#, json);
+
+        // Double
+        let ua_double = ua::Double::new(-98765432.1);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_double);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#"-98765432.1"#, json);
+    }
+
+    #[test]
+    fn serialize_string() {
+        // Empty string
+        let ua_string = ua::String::from_str("").unwrap();
+        let ua_variant = ua::Variant::init().with_scalar(&ua_string);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#""""#, json);
+
+        // Short string
+        let ua_string = ua::String::from_str("lorem ipsum").unwrap();
+        let ua_variant = ua::Variant::init().with_scalar(&ua_string);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#""lorem ipsum""#, json);
+
+        // Special characters
+        let ua_string = ua::String::from_str(r#"a'b"c{dẞe​f"#).unwrap();
+        let ua_variant = ua::Variant::init().with_scalar(&ua_string);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#""a'b\"c{dẞe​f""#, json);
+    }
+}
