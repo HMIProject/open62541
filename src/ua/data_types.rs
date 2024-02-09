@@ -82,6 +82,18 @@ macro_rules! primitive {
                     self.0
                 }
             }
+
+            #[cfg(feature = "serde")]
+            impl serde::Serialize for $name {
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where
+                    S: serde::Serializer,
+                {
+                    paste::paste! {
+                        serializer.[<serialize_ $type>](self.0)
+                    }
+                }
+            }
         )*
     };
 }

@@ -99,36 +99,6 @@ impl serde::Serialize for Variant {
     where
         S: serde::Serializer,
     {
-        macro_rules! serialize_raw {
-            ($self:ident, $serializer:ident, [ $( ($name:ident, $type:ty) ),* $(,)? ]) => {
-                $(
-                    if let Some(value) = $self.to_scalar::<crate::ua::$name>() {
-                        paste::paste! {
-                            return $serializer.[<serialize_ $type>](value.into_raw());
-                        }
-                    }
-                )*
-            };
-        }
-
-        serialize_raw!(
-            self,
-            serializer,
-            [
-                (Boolean, bool), // Data type ns=0;i=1
-                (SByte, i8),     // Data type ns=0;i=2
-                (Byte, u8),      // Data type ns=0;i=3
-                (Int16, i16),    // Data type ns=0;i=4
-                (UInt16, u16),   // Data type ns=0;i=5
-                (Int32, i32),    // Data type ns=0;i=6
-                (UInt32, u32),   // Data type ns=0;i=7
-                (Int64, i64),    // Data type ns=0;i=8
-                (UInt64, u64),   // Data type ns=0;i=9
-                (Float, f32),    // Data type ns=0;i=10
-                (Double, f64),   // Data type ns=0;i=11
-            ]
-        );
-
         macro_rules! serialize {
             ($self:ident, $serializer:ident, [ $( $( #[cfg($cfg: meta)] )? $name:ident ),* $(,)? ]) => {
                 $(
@@ -144,7 +114,18 @@ impl serde::Serialize for Variant {
             self,
             serializer,
             [
-                String, // Data type ns=0;i=12
+                Boolean, // Data type ns=0;i=1
+                SByte,   // Data type ns=0;i=2
+                Byte,    // Data type ns=0;i=3
+                Int16,   // Data type ns=0;i=4
+                UInt16,  // Data type ns=0;i=5
+                Int32,   // Data type ns=0;i=6
+                UInt32,  // Data type ns=0;i=7
+                Int64,   // Data type ns=0;i=8
+                UInt64,  // Data type ns=0;i=9
+                Float,   // Data type ns=0;i=10
+                Double,  // Data type ns=0;i=11
+                String,  // Data type ns=0;i=12
                 #[cfg(feature = "time")]
                 DateTime, // Data type ns=0;i=13
             ]
