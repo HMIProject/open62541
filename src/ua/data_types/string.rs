@@ -69,7 +69,7 @@ impl str::FromStr for String {
     /// let node_id: ua::String = "Lorem Ipsum".parse().unwrap();
     /// ```
     ///
-    /// # Panics
+    /// # Errors
     ///
     /// The string slice must not contain any NUL bytes.
     fn from_str(s: &str) -> Result<Self, Self::Err> {

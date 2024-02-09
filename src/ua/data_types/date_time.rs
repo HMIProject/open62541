@@ -1,3 +1,5 @@
+use crate::Error;
+
 crate::data_type!(DateTime);
 
 impl DateTime {
@@ -11,14 +13,29 @@ impl DateTime {
         let ticks_ua = i128::from(self.0);
         let ticks_unix = ticks_ua - i128::from(UA_DATETIME_UNIX_EPOCH);
         let nanos_unix = ticks_unix * i128::from(1000 / UA_DATETIME_USEC);
+
         time::OffsetDateTime::from_unix_timestamp_nanos(nanos_unix).ok()
     }
 }
 
 #[cfg(feature = "time")]
 impl TryFrom<time::OffsetDateTime> for DateTime {
-    type Error = std::num::TryFromIntError;
+    type Error = Error;
 
+    /// Creates [`DateTime`] from [`time::OffsetDateTime`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use open62541::ua;
+    /// use time::macros::datetime;
+    ///
+    /// let dt: ua::DateTime = datetime!(2024-02-09 12:34:56 UTC).try_into().unwrap();
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// The date/time must be valid and in range of the 64-bit representation of [`DateTime`].
     fn try_from(from: time::OffsetDateTime) -> Result<Self, Self::Error> {
         use open62541_sys::{UA_DATETIME_UNIX_EPOCH, UA_DATETIME_USEC};
 
@@ -27,7 +44,10 @@ impl TryFrom<time::OffsetDateTime> for DateTime {
         let nanos_unix = from.unix_timestamp_nanos();
         let ticks_unix = nanos_unix / i128::from(1000 / UA_DATETIME_USEC);
         let ticks_ua = ticks_unix + i128::from(UA_DATETIME_UNIX_EPOCH);
-        i64::try_from(ticks_ua).map(Self)
+
+        i64::try_from(ticks_ua)
+            .map_err(|_| Error::internal("DateTime should be in range"))
+            .map(Self)
     }
 }
 
