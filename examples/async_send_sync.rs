@@ -46,8 +46,8 @@ async fn read_background(client: Arc<AsyncClient>) -> anyhow::Result<()> {
         "Node {node_id} has value {:?}",
         value
             .value()
-            .and_then(ua::Variant::to_scalar::<ua::DateTime>)
-            .and_then(|value| value.as_datetime())
+            .and_then(ua::Variant::as_scalar)
+            .and_then(ua::DateTime::to_utc)
     );
 
     Ok(())
@@ -73,8 +73,8 @@ async fn watch_background(client: Arc<AsyncClient>) -> anyhow::Result<()> {
             "Node {node_id} emitted value #{index}: {:?}",
             value
                 .value()
-                .and_then(ua::Variant::to_scalar::<ua::DateTime>)
-                .and_then(|value| value.as_datetime())
+                .and_then(ua::Variant::as_scalar)
+                .and_then(ua::DateTime::to_utc)
         );
     }
 

@@ -147,11 +147,8 @@ mod serde {
 
             // Data type ns=0;i=13
             #[cfg(feature = "time")]
-            if let Some(value) = self
-                .to_scalar::<ua::DateTime>()
-                .and_then(|value| value.as_datetime())
-            {
-                return value.serialize(serializer);
+            if let Some(dt) = self.as_scalar().and_then(ua::DateTime::to_utc) {
+                return dt.serialize(serializer);
             }
 
             Err(ser::Error::custom("non-primitive value in Variant"))
