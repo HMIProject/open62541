@@ -1,18 +1,7 @@
 crate::data_type!(DateTime);
 
-#[cfg(feature = "time")]
 impl DateTime {
-    pub fn new(dt: time::OffsetDateTime) -> Option<Self> {
-        use open62541_sys::{UA_DATETIME_UNIX_EPOCH, UA_DATETIME_USEC};
-
-        // OPC UA encodes `DateTime` as Windows file time: a 64-bit value that represents the number
-        // of 100-nanosecond intervals that have elapsed since 12:00 A.M. January 1, 1601 (UTC).
-        let nanos_unix = dt.unix_timestamp_nanos();
-        let ticks_unix = nanos_unix / i128::from(1000 / UA_DATETIME_USEC);
-        let ticks_ua = ticks_unix + i128::from(UA_DATETIME_UNIX_EPOCH);
-        i64::try_from(ticks_ua).ok().map(Self)
-    }
-
+    #[cfg(feature = "time")]
     #[must_use]
     pub fn to_utc(&self) -> Option<time::OffsetDateTime> {
         use open62541_sys::{UA_DATETIME_UNIX_EPOCH, UA_DATETIME_USEC};
@@ -26,6 +15,22 @@ impl DateTime {
     }
 }
 
+#[cfg(feature = "time")]
+impl TryFrom<time::OffsetDateTime> for DateTime {
+    type Error = std::num::TryFromIntError;
+
+    fn try_from(from: time::OffsetDateTime) -> Result<Self, Self::Error> {
+        use open62541_sys::{UA_DATETIME_UNIX_EPOCH, UA_DATETIME_USEC};
+
+        // OPC UA encodes `DateTime` as Windows file time: a 64-bit value that represents the number
+        // of 100-nanosecond intervals that have elapsed since 12:00 A.M. January 1, 1601 (UTC).
+        let nanos_unix = from.unix_timestamp_nanos();
+        let ticks_unix = nanos_unix / i128::from(1000 / UA_DATETIME_USEC);
+        let ticks_ua = ticks_unix + i128::from(UA_DATETIME_UNIX_EPOCH);
+        i64::try_from(ticks_ua).map(Self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "time")]
@@ -35,7 +40,7 @@ mod tests {
         let dt = time::macros::datetime!(2023-11-20 16:51:15.9876543 -2:00);
         assert_eq!(time::macros::offset!(-2:00), dt.offset());
         assert_ne!(time::macros::offset!(UTC), dt.offset());
-        let dt_ua = crate::ua::DateTime::new(dt).unwrap();
+        let dt_ua = crate::ua::DateTime::try_from(dt).unwrap();
         let dt_utc = dt_ua.to_utc().unwrap();
         // Equal to the original timestamp, but the offset is now UTC.
         assert_eq!(time::macros::offset!(UTC), dt_utc.offset());
