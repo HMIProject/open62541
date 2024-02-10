@@ -51,6 +51,18 @@ impl TryFrom<time::OffsetDateTime> for DateTime {
     }
 }
 
+#[cfg(all(feature = "serde", feature = "time"))]
+impl serde::Serialize for DateTime {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_utc()
+            .ok_or(serde::ser::Error::custom("DateTime should be in range"))
+            .and_then(|dt| time::serde::rfc3339::serialize(&dt, serializer))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "time")]

@@ -94,64 +94,147 @@ impl Variant {
 }
 
 #[cfg(feature = "serde")]
-mod serde {
-    use serde::ser;
+impl serde::Serialize for Variant {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        macro_rules! serialize {
+            ($self:ident, $serializer:ident, [ $( $( #[cfg($cfg: meta)] )? $name:ident ),* $(,)? ]) => {
+                $(
+                    $( #[cfg($cfg)] )?
+                    if let Some(value) = self.as_scalar::<crate::ua::$name>() {
+                        return <crate::ua::$name as serde::Serialize>::serialize(value, serializer);
+                    }
+                )*
+            };
+        }
+
+        serialize!(
+            self,
+            serializer,
+            [
+                Boolean, // Data type ns=0;i=1
+                SByte,   // Data type ns=0;i=2
+                Byte,    // Data type ns=0;i=3
+                Int16,   // Data type ns=0;i=4
+                UInt16,  // Data type ns=0;i=5
+                Int32,   // Data type ns=0;i=6
+                UInt32,  // Data type ns=0;i=7
+                Int64,   // Data type ns=0;i=8
+                UInt64,  // Data type ns=0;i=9
+                Float,   // Data type ns=0;i=10
+                Double,  // Data type ns=0;i=11
+                String,  // Data type ns=0;i=12
+                #[cfg(feature = "time")]
+                DateTime, // Data type ns=0;i=13
+            ]
+        );
+
+        Err(serde::ser::Error::custom("non-primitive value in Variant"))
+    }
+}
+
+#[cfg(feature = "serde")]
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr as _;
 
     use crate::{ua, DataType as _};
 
-    use super::Variant;
+    #[test]
+    fn serialize_bool() {
+        // Value `true`
+        let ua_bool = ua::Boolean::new(true);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_bool);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!("true", json);
 
-    impl serde::Serialize for Variant {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer,
-        {
-            macro_rules! serialize {
-                ($self:ident, $serializer:ident, [ $( ($name:ident, $type:ty) ),* $(,)? ]) => {
-                    $(
-                        if let Some(value) = $self.to_scalar::<crate::ua::$name>() {
-                            paste::paste! {
-                                return $serializer.[<serialize_ $type>](value.into_raw());
-                            }
-                        }
-                    )*
-                };
-            }
+        // Value `false`
+        let ua_bool = ua::Boolean::new(false);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_bool);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!("false", json);
+    }
 
-            serialize!(
-                self,
-                serializer,
-                [
-                    (Boolean, bool), // Data type ns=0;i=1
-                    (SByte, i8),     // Data type ns=0;i=2
-                    (Byte, u8),      // Data type ns=0;i=3
-                    (Int16, i16),    // Data type ns=0;i=4
-                    (UInt16, u16),   // Data type ns=0;i=5
-                    (Int32, i32),    // Data type ns=0;i=6
-                    (UInt32, u32),   // Data type ns=0;i=7
-                    (Int64, i64),    // Data type ns=0;i=8
-                    (UInt64, u64),   // Data type ns=0;i=9
-                    (Float, f32),    // Data type ns=0;i=10
-                    (Double, f64),   // Data type ns=0;i=11
-                ]
-            );
+    #[test]
+    fn serialize_int() {
+        // Byte (unsigned)
+        let ua_byte = ua::Byte::new(42);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_byte);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!("42", json);
 
-            // Data type ns=0;i=12
-            if let Some(value) = self
-                .to_scalar::<ua::String>()
-                .as_ref()
-                .and_then(|value| value.as_str())
-            {
-                return serializer.serialize_str(value);
-            }
+        // Int16 (signed)
+        let ua_int16 = ua::Int16::new(-12345);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_int16);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!("-12345", json);
 
-            // Data type ns=0;i=13
-            #[cfg(feature = "time")]
-            if let Some(dt) = self.as_scalar().and_then(ua::DateTime::to_utc) {
-                return dt.serialize(serializer);
-            }
+        // UInt32 (unsigned)
+        let ua_uint32 = ua::UInt32::new(123_456_789);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_uint32);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!("123456789", json);
 
-            Err(ser::Error::custom("non-primitive value in Variant"))
-        }
+        // Int64 (signed)
+        let ua_int64 = ua::Int64::new(-7_077_926_753_204_279_296);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_int64);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!("-7077926753204279296", json);
+    }
+
+    #[test]
+    fn serialize_float() {
+        // Float
+        let ua_float = ua::Float::new(123.4567);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_float);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!("123.4567", json);
+
+        // Double
+        let ua_double = ua::Double::new(-98_765_432.1);
+        let ua_variant = ua::Variant::init().with_scalar(&ua_double);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!("-98765432.1", json);
+    }
+
+    #[test]
+    fn serialize_string() {
+        // Empty string
+        let ua_string = ua::String::from_str("").unwrap();
+        let ua_variant = ua::Variant::init().with_scalar(&ua_string);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#""""#, json);
+
+        // Short string
+        let ua_string = ua::String::from_str("lorem ipsum").unwrap();
+        let ua_variant = ua::Variant::init().with_scalar(&ua_string);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#""lorem ipsum""#, json);
+
+        // Special characters
+        let ua_string = ua::String::from_str(r#"a'b"c{dẞe"#).unwrap();
+        let ua_variant = ua::Variant::init().with_scalar(&ua_string);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#""a'b\"c{dẞe""#, json);
+    }
+
+    #[cfg(feature = "time")]
+    #[test]
+    fn serialize_datetime() {
+        // Minute precision
+        let datetime = time::macros::datetime!(2024-02-09 16:48 UTC);
+        let ua_datetime = ua::DateTime::try_from(datetime).unwrap();
+        let ua_variant = ua::Variant::init().with_scalar(&ua_datetime);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#""2024-02-09T16:48:00Z""#, json);
+
+        // Microsecond precision
+        let datetime = time::macros::datetime!(2024-02-09 16:48:52.123456 UTC);
+        let ua_datetime = ua::DateTime::try_from(datetime).unwrap();
+        let ua_variant = ua::Variant::init().with_scalar(&ua_datetime);
+        let json = serde_json::to_string(&ua_variant).unwrap();
+        assert_eq!(r#""2024-02-09T16:48:52.123456Z""#, json);
     }
 }
