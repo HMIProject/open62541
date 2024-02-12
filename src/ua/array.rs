@@ -1,4 +1,10 @@
-use std::{ffi::c_void, mem, num::NonZeroUsize, ptr::NonNull, slice};
+use std::{
+    ffi::c_void,
+    mem,
+    num::NonZeroUsize,
+    ptr::{self, NonNull},
+    slice,
+};
 
 use open62541_sys::{
     UA_Array_delete, UA_Array_new, UA_copy, UA_init, UA_EMPTY_ARRAY_SENTINEL, UA_STATUSCODE_GOOD,
@@ -70,7 +76,7 @@ impl<T: DataType> Array<T> {
         let slice: &mut [T::Inner] =
             unsafe { slice::from_raw_parts_mut(array.as_ptr(), size.get()) };
         for element in slice {
-            unsafe { UA_init((element as *mut T::Inner).cast::<c_void>(), T::data_type()) }
+            unsafe { UA_init(ptr::from_mut(element).cast::<c_void>(), T::data_type()) }
         }
 
         Self(State::NonEmpty { ptr: array, size })
@@ -125,7 +131,7 @@ impl<T: DataType> Array<T> {
             let result = unsafe {
                 UA_copy(
                     src.as_ptr().cast::<c_void>(),
-                    (dst as *mut T::Inner).cast::<c_void>(),
+                    ptr::from_mut(dst).cast::<c_void>(),
                     T::data_type(),
                 )
             };
@@ -333,7 +339,7 @@ mod tests {
         // Create array in `open62541`, delete locally.
         //
         let size = LEN;
-        let ptr: *mut <T as DataType>::Inner = unsafe { UA_Array_new(size, T::data_type()) }.cast();
+        let ptr = unsafe { UA_Array_new(size, T::data_type()) }.cast::<<T as DataType>::Inner>();
         // Copy value with allocated data into array to catch double free.
         let string = CString::new(STRING).unwrap();
         *unsafe { ptr.add(POS).as_mut() }.unwrap() =
