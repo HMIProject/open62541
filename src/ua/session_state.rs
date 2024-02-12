@@ -1,6 +1,6 @@
 use open62541_sys::UA_SessionState;
 
-/// Wrapper for secure channel state from [`open62541_sys`].
+/// Wrapper for session state from [`open62541_sys`].
 pub struct SessionState(UA_SessionState);
 
 impl SessionState {
