@@ -74,7 +74,7 @@ jobs:
       - name: Install Rust toolchain
         # Use specific Rust version that is the minimum supported `rust-version`
         # (MSRV) from `Cargo.toml`.
-        uses: dtolnay/rust-toolchain@1.72
+        uses: dtolnay/rust-toolchain@1.76
         with:
           # This target also needs to be specified explicitly in every build step!
           # Otherwise the default toolchain might be used unintentionally.
