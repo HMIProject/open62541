@@ -102,7 +102,7 @@ impl AsyncClient {
     ///
     /// [`read_attribute()`]: Self::read_attribute
     pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<ua::DataValue, Error> {
-        read_attribute(&self.client, node_id, &ua::AttributeId::VALUE).await
+        self.read_attribute(node_id, &ua::AttributeId::VALUE).await
     }
 
     /// Writes node value.
