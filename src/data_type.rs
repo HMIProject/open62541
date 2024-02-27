@@ -254,7 +254,7 @@ pub unsafe trait DataType: Clone {
     }
 }
 
-/// Define wrapper for OPC UA data type from [`open62541_sys`].
+/// Defines wrapper for OPC UA data type from [`open62541_sys`].
 ///
 /// This provides the basic interface to convert from and back into the [`open62541_sys`] types. Use
 /// another `impl` block to add additional methods to each type if necessary.
@@ -387,5 +387,41 @@ macro_rules! data_type {
 }
 
 pub(crate) use data_type;
+
+/// Defines known enum variants for wrapper.
+///
+/// This allows implementing data types that wrap an enum type from [`open62541_sys`]. This provides
+/// `const` members for each given variant and implements [`Display`]. Use this with [`data_type!`].
+///
+/// [`Display`]: std::fmt::Display
+macro_rules! enum_variants {
+    ($name:ident, $inner:ident, [$( $value:ident ),* $(,)?]) => {
+        impl $name {
+            $(
+                pub const $value: Self = Self(
+                    paste::paste! { open62541_sys::$inner::[<$inner:upper _ $value>] }
+                );
+            )*
+        }
+
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let str = match self.0 {
+                    $(
+                        paste::paste! { open62541_sys::$inner::[<$inner:upper _ $value>] } => {
+                            stringify!($value)
+                        },
+                    )*
+
+                    _ => return write!(f, "{}", self.as_u32()),
+                };
+
+                f.write_str(str)
+            }
+        }
+    };
+}
+
+pub(crate) use enum_variants;
 
 use crate::ua;

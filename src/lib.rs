@@ -92,7 +92,7 @@ pub use self::{
     error::Error,
 };
 pub(crate) use self::{
-    data_type::data_type,
+    data_type::{data_type, enum_variants},
     service::{ServiceRequest, ServiceResponse},
 };
 

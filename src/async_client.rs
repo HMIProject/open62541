@@ -75,16 +75,37 @@ impl AsyncClient {
         Ok(client.state())
     }
 
-    /// Reads value from server.
+    /// Reads node attribute.
+    ///
+    /// To read only the value attribute, you can also use [`read_value()`].
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or the attribute cannot be read.
+    ///
+    /// [`read_value()`]: Self::read_value
+    pub async fn read_attribute(
+        &self,
+        node_id: &ua::NodeId,
+        attribute_id: &ua::AttributeId,
+    ) -> Result<ua::DataValue, Error> {
+        read_attribute(&self.client, node_id, attribute_id).await
+    }
+
+    /// Reads node value.
+    ///
+    /// To read other attributes, see [`read_attribute()`].
     ///
     /// # Errors
     ///
     /// This fails when the node does not exist or its value attribute cannot be read.
+    ///
+    /// [`read_attribute()`]: Self::read_attribute
     pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<ua::DataValue, Error> {
-        read_attribute(&self.client, node_id, &ua::AttributeId::value()).await
+        self.read_attribute(node_id, &ua::AttributeId::VALUE).await
     }
 
-    /// Writes value from server.
+    /// Writes node value.
     ///
     /// # Errors
     ///
@@ -94,7 +115,7 @@ impl AsyncClient {
         node_id: &ua::NodeId,
         value: &ua::DataValue,
     ) -> Result<(), Error> {
-        let attribute_id = ua::AttributeId::value();
+        let attribute_id = ua::AttributeId::VALUE;
 
         let request = ua::WriteRequest::init().with_nodes_to_write(&[ua::WriteValue::init()
             .with_node_id(node_id)
@@ -317,7 +338,7 @@ async fn read_attribute(
         status: UA_StatusCode,
         attribute: *mut UA_DataValue,
     ) {
-        log::debug!("readValueAttribute() completed");
+        log::debug!("readAttribute() completed");
 
         let status_code = ua::StatusCode::new(status);
 
@@ -350,7 +371,7 @@ async fn read_attribute(
             return Err(Error::internal("should be able to lock client"));
         };
 
-        log::debug!("Calling readValueAttribute(), node_id={node_id:?}");
+        log::debug!("Calling readAttribute(), node_id={node_id:?}");
 
         let read_value_id = ua::ReadValueId::init()
             .with_node_id(node_id)
