@@ -395,13 +395,19 @@ pub(crate) use data_type;
 ///
 /// [`Display`]: std::fmt::Display
 macro_rules! enum_variants {
-    ($name:ident, $inner:ident, [$( $value:ident ),* $(,)?]) => {
+    ($name:ident, $inner:ident, [$( $value:ident ),* $(,)?] $(,)?) => {
         impl $name {
             $(
                 pub const $value: Self = Self(
                     paste::paste! { open62541_sys::$inner::[<$inner:upper _ $value>] }
                 );
             )*
+
+            pub(crate) fn as_u32(&self) -> u32 {
+                // This cast is necessary on Windows builds with inner type `i32`.
+                #[allow(clippy::useless_conversion)]
+                u32::try_from((self.0).0).expect("should convert to u32")
+            }
         }
 
         impl std::fmt::Display for $name {

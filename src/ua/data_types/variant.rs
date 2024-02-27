@@ -58,7 +58,7 @@ impl Variant {
         }
 
         macro_rules! check {
-            ([ $( $name:ident ),* $(,)? ]) => {
+            ($( $name:ident ),* $(,)?) => {
                 $(
                     if let Some(value) = self.to_scalar::<ua::$name>() {
                         return ua::VariantValue::Scalar(ua::ScalarValue::$name(value));
@@ -67,7 +67,7 @@ impl Variant {
             };
         }
 
-        check!([
+        check!(
             Boolean,  // Data type ns=0;i=1
             SByte,    // Data type ns=0;i=2
             Byte,     // Data type ns=0;i=3
@@ -81,7 +81,7 @@ impl Variant {
             Double,   // Data type ns=0;i=11
             String,   // Data type ns=0;i=12
             DateTime, // Data type ns=0;i=13
-        ]);
+        );
 
         ua::VariantValue::Scalar(ua::ScalarValue::Unknown)
     }
@@ -100,7 +100,7 @@ impl serde::Serialize for Variant {
         S: serde::Serializer,
     {
         macro_rules! serialize {
-            ($self:ident, $serializer:ident, [ $( $( #[cfg($cfg: meta)] )? $name:ident ),* $(,)? ]) => {
+            ($self:ident, $serializer:ident, [$( $( #[cfg($cfg: meta)] )? $name:ident ),* $(,)?]) => {
                 $(
                     $( #[cfg($cfg)] )?
                     if let Some(value) = self.as_scalar::<crate::ua::$name>() {
