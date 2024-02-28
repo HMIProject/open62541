@@ -51,3 +51,9 @@ impl hash::Hash for AttributeId {
         self.0.hash(state);
     }
 }
+
+impl hash::Hash for AttributeId {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
