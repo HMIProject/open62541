@@ -11,6 +11,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Allow reading node attributes with `AsyncClient::read_attribute()`
 
+### Changed
+
+- Provide uppercase variants for enum data types, e.g. `ua::AttributedId::VALUE`. This deprecates
+  the associated functions such as `ua::AttributedId::value()` formerly used for this purpose.
+
 ## [0.4.0] - 2024-02-12
 
 [0.4.0]: https://github.com/HMIProject/open62541/compare/v0.3.0...v0.4.0
