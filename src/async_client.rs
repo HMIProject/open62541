@@ -377,7 +377,7 @@ async fn read_attribute(
             .with_node_id(node_id)
             .with_attribute_id(attribute_id);
 
-        let timestamps_to_return = ua::TimestampsToReturn::both();
+        let timestamps_to_return = ua::TimestampsToReturn::BOTH;
 
         // SAFETY: `UA_Client_readAttribute_async()` expects the request passed by value but does
         // not take ownership.
