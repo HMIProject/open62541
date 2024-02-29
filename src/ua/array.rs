@@ -243,8 +243,6 @@ impl<T: DataType> Array<T> {
             State::Empty => Vec::new(),
 
             State::NonEmpty { ptr, size } => {
-                let mut vec = Vec::with_capacity(size.get());
-
                 // We may construct `&mut [T]` here instead of `&mut [T::Inner]` as `T: DataType`
                 // guarantees us that we can transmute between the two types.
                 let slice =
@@ -256,14 +254,14 @@ impl<T: DataType> Array<T> {
                 // be cleaned up when `self` is dropped. In fact, this is what `UA_Array_resize()`
                 // does when making space for new elements, which in turn means that we can safely
                 // rely on `UA_Array_delete()` to work correctly when it frees each dummy element.
-                for element in slice {
-                    vec.push(mem::replace(element, T::init()));
-                }
-
-                // The vector now contains all elements. The original elements have been replaced
-                // with zero-initialized memory. Dynamic memory allocations held by the elements
-                // have not been touched, i.e. there is now (as before) only a single owner.
-                vec
+                slice
+                    .iter_mut()
+                    .map(|element| mem::replace(element, T::init()))
+                    .collect::<Vec<_>>()
+                // The resulting vector contains all elements. The original elements in the array
+                // have been replaced with zero-initialized memory. Dynamic memory allocations
+                // held by the elements have not been touched, i.e. there is now (as before)
+                // only a single owner.
             }
         }
     }
