@@ -4,6 +4,20 @@ use rand::Rng as _;
 
 const CYCLE_TIME: tokio::time::Duration = tokio::time::Duration::from_millis(100);
 
+const ATTRIBUTE_IDS: [ua::AttributeId; 11] = [
+    ua::AttributeId::NODEID,
+    ua::AttributeId::NODECLASS,
+    ua::AttributeId::BROWSENAME,
+    ua::AttributeId::DISPLAYNAME,
+    ua::AttributeId::VALUE,
+    ua::AttributeId::DATATYPE,
+    ua::AttributeId::VALUERANK,
+    ua::AttributeId::ARRAYDIMENSIONS,
+    ua::AttributeId::ACCESSLEVEL,
+    ua::AttributeId::USERACCESSLEVEL,
+    ua::AttributeId::DATATYPEDEFINITION,
+];
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -16,23 +30,9 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Reading node {node_id}");
 
-    let attribute_ids = &[
-        ua::AttributeId::NODEID,
-        ua::AttributeId::NODECLASS,
-        ua::AttributeId::BROWSENAME,
-        ua::AttributeId::DISPLAYNAME,
-        ua::AttributeId::VALUE,
-        ua::AttributeId::DATATYPE,
-        ua::AttributeId::VALUERANK,
-        ua::AttributeId::ARRAYDIMENSIONS,
-        ua::AttributeId::ACCESSLEVEL,
-        ua::AttributeId::USERACCESSLEVEL,
-        ua::AttributeId::DATATYPEDEFINITION,
-    ];
+    let attribute_values = client.read_attributes(&node_id, &ATTRIBUTE_IDS).await?;
 
-    let attribute_values = client.read_attributes(&node_id, attribute_ids).await?;
-
-    for (attribute_id, value) in attribute_ids.iter().zip(attribute_values) {
+    for (attribute_id, value) in ATTRIBUTE_IDS.iter().zip(attribute_values) {
         if let Some(value) = value.value() {
             println!("{attribute_id} -> {value:?}");
         }
