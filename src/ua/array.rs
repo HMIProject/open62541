@@ -234,6 +234,40 @@ impl<T: DataType> Array<T> {
         self.as_slice().iter()
     }
 
+    /// Converts the array into a `Vec`.
+    ///
+    /// This avoids cloning the contained values and moves them into the `Vec` directly.
+    #[must_use]
+    pub fn into_vec(self) -> Vec<T> {
+        match self.0 {
+            State::Empty => Vec::new(),
+
+            State::NonEmpty { ptr, size } => {
+                let mut vec = Vec::with_capacity(size.get());
+
+                // We may construct `&mut [T]` here instead of `&mut [T::Inner]` as `T: DataType`
+                // guarantees us that we can transmute between the two types.
+                let slice =
+                    unsafe { slice::from_raw_parts_mut(ptr.as_ptr().cast::<T>(), size.get()) };
+
+                // This looks more expensive than it is: `DataType::init()` uses `UA_init()` which
+                // zero-initializes the memory region left in place of the moved-out element. This
+                // means that there are no dynamic memory allocations involved which would have to
+                // be cleaned up when `self` is dropped. In fact, this is what `UA_Array_resize()`
+                // does when making space for new elements, which in turn means that we can safely
+                // rely on `UA_Array_delete()` to work correctly when it frees each dummy element.
+                for element in slice {
+                    vec.push(mem::replace(element, T::init()));
+                }
+
+                // The vector now contains all elements. The original elements have been replaced
+                // with zero-initialized memory. Dynamic memory allocations held by the elements
+                // have not been touched, i.e. there is now (as before) only a single owner.
+                vec
+            }
+        }
+    }
+
     /// Gives up ownership and returns raw parts.
     ///
     /// The returned raw parts must be deallocated with [`UA_Array_delete()`] to prevent leaking any
