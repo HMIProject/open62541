@@ -219,7 +219,7 @@ impl AsyncClient {
             return Ok(None);
         };
 
-        Ok(Some(output_arguments.as_slice().to_vec()))
+        Ok(Some(output_arguments.into_vec()))
     }
 
     /// Browses specific node.
@@ -248,7 +248,7 @@ impl AsyncClient {
             return Err(Error::internal("browse should return references"));
         };
 
-        Ok((references.as_slice().to_vec(), result.continuation_point()))
+        Ok((references.into_vec(), result.continuation_point()))
     }
 
     /// Browses several nodes at once.
@@ -286,7 +286,7 @@ impl AsyncClient {
             .map(|result| {
                 result
                     .references()
-                    .map(|references| (references.as_slice().to_vec(), result.continuation_point()))
+                    .map(|references| (references.into_vec(), result.continuation_point()))
             })
             .collect();
 
@@ -329,7 +329,7 @@ impl AsyncClient {
             .map(|result| {
                 result
                     .references()
-                    .map(|references| (references.as_slice().to_vec(), result.continuation_point()))
+                    .map(|references| (references.into_vec(), result.continuation_point()))
             })
             .collect();
 
