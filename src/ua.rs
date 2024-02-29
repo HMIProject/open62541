@@ -2,6 +2,7 @@
 
 mod array;
 mod client;
+mod continuation_point;
 mod data_types;
 mod monitored_item_id;
 mod node_class_mask;
@@ -13,6 +14,7 @@ mod values;
 pub use self::{
     array::Array,
     client::{Client, ClientState},
+    continuation_point::ContinuationPoint,
     data_types::*,
     monitored_item_id::MonitoredItemId,
     node_class_mask::NodeClassMask,

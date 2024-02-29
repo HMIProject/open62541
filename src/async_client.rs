@@ -182,7 +182,7 @@ impl AsyncClient {
     pub async fn browse(
         &self,
         node_id: &ua::NodeId,
-    ) -> Result<Vec<ua::ReferenceDescription>, Error> {
+    ) -> Result<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>), Error> {
         let request = ua::BrowseRequest::init()
             .with_nodes_to_browse(&[ua::BrowseDescription::default().with_node_id(node_id)]);
 
@@ -200,7 +200,7 @@ impl AsyncClient {
             return Err(Error::internal("browse should return references"));
         };
 
-        Ok(references.as_slice().to_vec())
+        Ok((references.as_slice().to_vec(), result.continuation_point()))
     }
 
     /// Browses several nodes at once.
@@ -218,7 +218,8 @@ impl AsyncClient {
     pub async fn browse_many(
         &self,
         node_ids: &[impl Borrow<ua::NodeId>],
-    ) -> Result<Vec<Option<Vec<ua::ReferenceDescription>>>, Error> {
+    ) -> Result<Vec<Option<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>>, Error>
+    {
         let nodes_to_browse: Vec<_> = node_ids
             .iter()
             .map(|node_id| ua::BrowseDescription::default().with_node_id(node_id.borrow()))
@@ -237,7 +238,7 @@ impl AsyncClient {
             .map(|result| {
                 result
                     .references()
-                    .map(|references| references.iter().cloned().collect())
+                    .map(|references| (references.as_slice().to_vec(), result.continuation_point()))
             })
             .collect();
 

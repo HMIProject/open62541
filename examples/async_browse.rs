@@ -66,7 +66,7 @@ async fn browse_hierarchy(
                 Entry::Vacant(entry) => entry.insert(Vec::new()),
             };
 
-            let Some(references) = result else {
+            let Some((references, _)) = result else {
                 continue;
             };
 
