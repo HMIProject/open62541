@@ -15,6 +15,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Provide uppercase variants for enum data types, e.g. `ua::AttributedId::VALUE`. This deprecates
   the associated functions such as `ua::AttributedId::value()` formerly used for this purpose.
+- Breaking: Simplify argument type `node_ids: &[impl Borrow<ua::NodeId>]` to `&[ua::NodeId]` in
+  `AsyncClient::browse_many()`
 
 ## [0.4.0] - 2024-02-12
 
