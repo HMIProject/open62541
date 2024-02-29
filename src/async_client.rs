@@ -1,5 +1,4 @@
 use std::{
-    borrow::Borrow,
     ffi::c_void,
     ptr, slice,
     sync::{Arc, Mutex},
@@ -266,11 +265,11 @@ impl AsyncClient {
     /// [`browse()`]: Self::browse
     pub async fn browse_many(
         &self,
-        node_ids: &[impl Borrow<ua::NodeId>],
+        node_ids: &[ua::NodeId],
     ) -> Result<Vec<Option<Vec<ua::ReferenceDescription>>>, Error> {
         let nodes_to_browse: Vec<_> = node_ids
             .iter()
-            .map(|node_id| ua::BrowseDescription::default().with_node_id(node_id.borrow()))
+            .map(|node_id| ua::BrowseDescription::default().with_node_id(node_id))
             .collect();
 
         let request = ua::BrowseRequest::init().with_nodes_to_browse(&nodes_to_browse);
