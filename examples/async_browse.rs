@@ -66,7 +66,8 @@ async fn browse_hierarchy(
                 Entry::Vacant(entry) => entry.insert(Vec::new()),
             };
 
-            let Some((references, _)) = result else {
+            // TODO: Use continuation point to fetch remaining references if necessary.
+            let Some((references, _continuation_point)) = result else {
                 continue;
             };
 
