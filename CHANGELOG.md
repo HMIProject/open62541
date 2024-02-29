@@ -16,9 +16,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Provide uppercase variants for enum data types, e.g. `ua::AttributedId::VALUE`. This deprecates
   the associated functions such as `ua::AttributedId::value()` formerly used for this purpose.
-- Rename `ua::String::as_slice()` to `as_bytes()`. Deprecate the former method.
 - Breaking: Return continuation points from `AsyncClient::browse()` and `browse_many()` (when not
   all references were returned, to be used with `AsyncClient::browse_next()`)
+- Breaking: Simplify argument type `node_ids: &[impl Borrow<ua::NodeId>]` to `&[ua::NodeId]` in
+  `AsyncClient::browse_many()`
+- Rename `ua::String::as_slice()` to `as_bytes()`. Deprecate the former method.
 
 ## [0.4.0] - 2024-02-12
 
