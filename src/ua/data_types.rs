@@ -3,6 +3,8 @@
 mod attribute_id;
 mod browse_description;
 mod browse_direction;
+mod browse_next_request;
+mod browse_next_response;
 mod browse_request;
 mod browse_response;
 mod browse_result;
@@ -44,7 +46,8 @@ mod write_value;
 
 pub use self::{
     attribute_id::AttributeId, browse_description::BrowseDescription,
-    browse_direction::BrowseDirection, browse_request::BrowseRequest,
+    browse_direction::BrowseDirection, browse_next_request::BrowseNextRequest,
+    browse_next_response::BrowseNextResponse, browse_request::BrowseRequest,
     browse_response::BrowseResponse, browse_result::BrowseResult,
     browse_result_mask::BrowseResultMask, byte_string::ByteString,
     call_method_request::CallMethodRequest, call_method_result::CallMethodResult,

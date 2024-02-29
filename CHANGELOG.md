@@ -10,12 +10,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Allow reading node attributes with `AsyncClient::read_attribute()`
+- Allow continuing browsing from continuation points with `AsyncClient::browse_next()`
 
 ### Changed
 
 - Provide uppercase variants for enum data types, e.g. `ua::AttributedId::VALUE`. This deprecates
   the associated functions such as `ua::AttributedId::value()` formerly used for this purpose.
 - Rename `ua::String::as_slice()` to `as_bytes()`. Deprecate the former method.
+- Breaking: Return continuation points from `AsyncClient::browse()` and `browse_many()` (when not
+  all references were returned, to be used with `AsyncClient::browse_next()`)
 
 ## [0.4.0] - 2024-02-12
 
