@@ -12,6 +12,10 @@ use open62541_sys::{
 /// type [`Inner`]. This implies that `#[repr(transparent)]` must be used on types that implement
 /// this trait and the inner type must be [`Inner`].
 ///
+/// In addition, the inner type must not contain self-references (in Rust terms, it would have to
+/// implement the [`Unpin`] trait). This is usually the case for types from [`open62541_sys`], as
+/// they are regularly passed by value to functions in order to transfer ownership.
+///
 /// [`Inner`]: DataType::Inner
 pub unsafe trait DataType: Clone {
     /// Inner type.

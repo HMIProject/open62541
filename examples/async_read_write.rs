@@ -1,10 +1,22 @@
-use std::collections::HashMap;
-
 use anyhow::Context as _;
 use open62541::{ua, AsyncClient, DataType as _};
 use rand::Rng as _;
 
 const CYCLE_TIME: tokio::time::Duration = tokio::time::Duration::from_millis(100);
+
+const ATTRIBUTE_IDS: [ua::AttributeId; 11] = [
+    ua::AttributeId::NODEID,
+    ua::AttributeId::NODECLASS,
+    ua::AttributeId::BROWSENAME,
+    ua::AttributeId::DISPLAYNAME,
+    ua::AttributeId::VALUE,
+    ua::AttributeId::DATATYPE,
+    ua::AttributeId::VALUERANK,
+    ua::AttributeId::ARRAYDIMENSIONS,
+    ua::AttributeId::ACCESSLEVEL,
+    ua::AttributeId::USERACCESSLEVEL,
+    ua::AttributeId::DATATYPEDEFINITION,
+];
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
@@ -18,26 +30,9 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Reading node {node_id}");
 
-    let attributes = read_attributes(
-        &client,
-        &node_id,
-        &[
-            ua::AttributeId::NODEID,
-            ua::AttributeId::NODECLASS,
-            ua::AttributeId::BROWSENAME,
-            ua::AttributeId::DISPLAYNAME,
-            ua::AttributeId::VALUE,
-            ua::AttributeId::DATATYPE,
-            ua::AttributeId::VALUERANK,
-            ua::AttributeId::ARRAYDIMENSIONS,
-            ua::AttributeId::ACCESSLEVEL,
-            ua::AttributeId::USERACCESSLEVEL,
-            ua::AttributeId::DATATYPEDEFINITION,
-        ],
-    )
-    .await?;
+    let attribute_values = client.read_attributes(&node_id, &ATTRIBUTE_IDS).await?;
 
-    for (attribute_id, value) in attributes {
+    for (attribute_id, value) in ATTRIBUTE_IDS.iter().zip(attribute_values) {
         if let Some(value) = value.value() {
             println!("{attribute_id} -> {value:?}");
         }
@@ -67,19 +62,4 @@ async fn main() -> anyhow::Result<()> {
     println!("-> {value:?}");
 
     Ok(())
-}
-
-async fn read_attributes(
-    client: &AsyncClient,
-    node_id: &ua::NodeId,
-    attribute_ids: &[ua::AttributeId],
-) -> anyhow::Result<HashMap<ua::AttributeId, ua::DataValue>> {
-    let mut result = HashMap::new();
-
-    for attribute_id in attribute_ids {
-        let value = client.read_attribute(node_id, attribute_id).await?;
-        result.insert(attribute_id.clone(), value);
-    }
-
-    Ok(result)
 }
