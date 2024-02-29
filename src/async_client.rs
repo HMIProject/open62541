@@ -1,14 +1,13 @@
 use std::{
     borrow::Borrow,
     ffi::c_void,
-    ptr,
+    ptr, slice,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
 use open62541_sys::{
-    UA_Client, UA_Client_disconnect, UA_Client_readAttribute_async, UA_Client_run_iterate,
-    UA_Client_sendAsyncRequest, UA_DataValue, UA_StatusCode, UA_UInt32,
+    UA_Client, UA_Client_disconnect, UA_Client_run_iterate, UA_Client_sendAsyncRequest, UA_UInt32,
     UA_STATUSCODE_BADDISCONNECT,
 };
 use tokio::{
@@ -84,25 +83,75 @@ impl AsyncClient {
     /// This fails when the node does not exist or the attribute cannot be read.
     ///
     /// [`read_value()`]: Self::read_value
+    #[allow(clippy::missing_panics_doc)]
     pub async fn read_attribute(
         &self,
         node_id: &ua::NodeId,
         attribute_id: &ua::AttributeId,
     ) -> Result<ua::DataValue, Error> {
-        read_attribute(&self.client, node_id, attribute_id).await
+        let mut values = self
+            .read_attributes(node_id, slice::from_ref(attribute_id))
+            .await?;
+
+        // ERROR: We give a slice with one item to `read_attributes()`.
+        Ok(values.pop().expect("should contain exactly one attribute"))
     }
 
     /// Reads node value.
     ///
-    /// To read other attributes, see [`read_attribute()`].
+    /// To read other attributes, see [`read_attribute()`] and [`read_attributes()`].
     ///
     /// # Errors
     ///
     /// This fails when the node does not exist or its value attribute cannot be read.
     ///
     /// [`read_attribute()`]: Self::read_attribute
+    /// [`read_attributes()`]: Self::read_attributes
     pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<ua::DataValue, Error> {
         self.read_attribute(node_id, &ua::AttributeId::VALUE).await
+    }
+
+    /// Reads several node attributes.
+    ///
+    /// The size and order of the result list matches the size and order of the given attribute ID
+    /// list.
+    ///
+    /// To read only a single attribute, you can also use [`read_attributes()`].
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or one of the attributes cannot be read.
+    ///
+    /// [`read_attributes()`]: Self::read_attributes
+    pub async fn read_attributes(
+        &self,
+        node_id: &ua::NodeId,
+        attribute_ids: &[ua::AttributeId],
+    ) -> Result<Vec<ua::DataValue>, Error> {
+        let nodes_to_read: Vec<_> = attribute_ids
+            .iter()
+            .map(|attribute_id| {
+                ua::ReadValueId::init()
+                    .with_node_id(node_id)
+                    .with_attribute_id(attribute_id)
+            })
+            .collect();
+
+        let request = ua::ReadRequest::init().with_nodes_to_read(&nodes_to_read);
+
+        let response = service_request(&self.client, request).await?;
+
+        let Some(results) = response.results() else {
+            return Err(Error::internal("read should return results"));
+        };
+
+        let results = results.into_vec();
+
+        // The OPC UA specification state that the resulting list has the same number of elements as
+        // the request list. If not, we would not be able to match elements in the two lists anyway.
+        debug_assert_eq!(results.len(), attribute_ids.len());
+
+        Ok(results)
     }
 
     /// Writes node value.
@@ -366,86 +415,6 @@ async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: Duration) {
             log::trace!("Iterate run took {time_taken:?}");
         }
     }
-}
-
-async fn read_attribute(
-    client: &Mutex<ua::Client>,
-    node_id: &ua::NodeId,
-    attribute_id: &ua::AttributeId,
-) -> Result<ua::DataValue, Error> {
-    type Cb = CallbackOnce<Result<ua::DataValue, ua::StatusCode>>;
-
-    unsafe extern "C" fn callback_c(
-        _client: *mut UA_Client,
-        userdata: *mut c_void,
-        _request_id: UA_UInt32,
-        status: UA_StatusCode,
-        attribute: *mut UA_DataValue,
-    ) {
-        log::debug!("readAttribute() completed");
-
-        let status_code = ua::StatusCode::new(status);
-
-        let result = if status_code.is_good() {
-            // SAFETY: Incoming pointer is valid for access.
-            // PANIC: We expect pointer to be valid when good.
-            let value = unsafe { attribute.as_ref() }.expect("value should be set");
-            Ok(ua::DataValue::clone_raw(value))
-        } else {
-            Err(status_code)
-        };
-
-        // SAFETY: `userdata` is the result of `Cb::prepare()` and is used only once.
-        unsafe {
-            Cb::execute(userdata, result);
-        }
-    }
-
-    let (tx, rx) = oneshot::channel::<Result<ua::DataValue, Error>>();
-
-    let callback = |result: Result<ua::DataValue, _>| {
-        // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
-        // care if that succeeds though: the receiver might already have gone out of scope (when its
-        // future has been canceled) and we must not panic in FFI callbacks.
-        let _unused = tx.send(result.map_err(Error::new));
-    };
-
-    let status_code = ua::StatusCode::new({
-        let Ok(mut client) = client.lock() else {
-            return Err(Error::internal("should be able to lock client"));
-        };
-
-        log::debug!("Calling readAttribute(), node_id={node_id:?}");
-
-        let read_value_id = ua::ReadValueId::init()
-            .with_node_id(node_id)
-            .with_attribute_id(attribute_id);
-
-        let timestamps_to_return = ua::TimestampsToReturn::BOTH;
-
-        // SAFETY: `UA_Client_readAttribute_async()` expects the request passed by value but does
-        // not take ownership.
-        let timestamps_to_return =
-            unsafe { ua::TimestampsToReturn::to_raw_copy(&timestamps_to_return) };
-
-        unsafe {
-            UA_Client_readAttribute_async(
-                client.as_mut_ptr(),
-                read_value_id.as_ptr(),
-                timestamps_to_return,
-                Some(callback_c),
-                Cb::prepare(callback),
-                ptr::null_mut(),
-            )
-        }
-    });
-    Error::verify_good(&status_code)?;
-
-    // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
-    // is only dropped after placing a value into the channel and `rx.await` always finds this value
-    // there.
-    rx.await
-        .unwrap_or(Err(Error::internal("callback should send result")))
 }
 
 async fn service_request<R: ServiceRequest>(

@@ -9,7 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Allow reading node attributes with `AsyncClient::read_attribute()`
+- Allow reading node attributes with ``AsyncClient::read_attribute()` and `read_attributes()`
 - Allow continuing browsing from continuation points with `AsyncClient::browse_next()`
 
 ### Changed
