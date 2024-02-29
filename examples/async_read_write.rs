@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::Context as _;
 use open62541::{ua, AsyncClient, DataType as _};
 use rand::Rng as _;
@@ -18,26 +16,23 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Reading node {node_id}");
 
-    let attributes = read_attributes(
-        &client,
-        &node_id,
-        &[
-            ua::AttributeId::NODEID,
-            ua::AttributeId::NODECLASS,
-            ua::AttributeId::BROWSENAME,
-            ua::AttributeId::DISPLAYNAME,
-            ua::AttributeId::VALUE,
-            ua::AttributeId::DATATYPE,
-            ua::AttributeId::VALUERANK,
-            ua::AttributeId::ARRAYDIMENSIONS,
-            ua::AttributeId::ACCESSLEVEL,
-            ua::AttributeId::USERACCESSLEVEL,
-            ua::AttributeId::DATATYPEDEFINITION,
-        ],
-    )
-    .await?;
+    let attribute_ids = &[
+        ua::AttributeId::NODEID,
+        ua::AttributeId::NODECLASS,
+        ua::AttributeId::BROWSENAME,
+        ua::AttributeId::DISPLAYNAME,
+        ua::AttributeId::VALUE,
+        ua::AttributeId::DATATYPE,
+        ua::AttributeId::VALUERANK,
+        ua::AttributeId::ARRAYDIMENSIONS,
+        ua::AttributeId::ACCESSLEVEL,
+        ua::AttributeId::USERACCESSLEVEL,
+        ua::AttributeId::DATATYPEDEFINITION,
+    ];
 
-    for (attribute_id, value) in attributes {
+    let attribute_values = client.read_attributes(&node_id, attribute_ids).await?;
+
+    for (attribute_id, value) in attribute_ids.iter().zip(attribute_values) {
         if let Some(value) = value.value() {
             println!("{attribute_id} -> {value:?}");
         }
@@ -67,19 +62,4 @@ async fn main() -> anyhow::Result<()> {
     println!("-> {value:?}");
 
     Ok(())
-}
-
-async fn read_attributes(
-    client: &AsyncClient,
-    node_id: &ua::NodeId,
-    attribute_ids: &[ua::AttributeId],
-) -> anyhow::Result<HashMap<ua::AttributeId, ua::DataValue>> {
-    let mut result = HashMap::new();
-
-    for attribute_id in attribute_ids {
-        let value = client.read_attribute(node_id, attribute_id).await?;
-        result.insert(attribute_id.clone(), value);
-    }
-
-    Ok(result)
 }
