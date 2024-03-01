@@ -234,6 +234,10 @@ impl<T: DataType> Array<T> {
         self.as_slice().iter()
     }
 
+    pub fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut T> {
+        self.as_slice_mut().iter_mut()
+    }
+
     /// Consumes the array elements as an iterator.
     ///
     /// Replaces the elements of the array by zero-initialized memory.
@@ -250,8 +254,7 @@ impl<T: DataType> Array<T> {
         // be cleaned up when `self` is dropped. In fact, this is what `UA_Array_resize()`
         // does when making space for new elements, which in turn means that we can safely
         // rely on `UA_Array_delete()` to work correctly when it frees each dummy element.
-        self.as_slice_mut()
-            .iter_mut()
+        self.iter_mut()
             .map(|element| mem::replace(element, T::init()))
         // The resulting iterator contains all elements. The original elements in the array
         // have been replaced with zero-initialized memory. Dynamic memory allocations
