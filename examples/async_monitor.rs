@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
 
     let client = Arc::new(
         AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", CYCLE_TIME)
-            .with_context(|| "connect")?,
+            .context("connect")?,
     );
 
     println!("Creating subscription");
@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
         client
             .create_subscription()
             .await
-            .with_context(|| "create first subscription")?,
+            .context("create first subscription")?,
     );
 
     // `/Root/Objects/1:Boiler#1/1:CustomController/1:Input1`
@@ -72,7 +72,7 @@ async fn monitor_background(
     let mut monitored_item = subscription
         .create_monitored_item(&node_id)
         .await
-        .with_context(|| "create monitored item")?;
+        .context("create monitored item")?;
 
     let task = {
         let node_id = node_id.clone();
@@ -108,7 +108,7 @@ async fn write_background(client: Arc<AsyncClient>, node_id: ua::NodeId) -> anyh
     client
         .write_value(&node_id, &value)
         .await
-        .with_context(|| "write value")?;
+        .context("write value")?;
 
     Ok(())
 }
