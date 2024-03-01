@@ -10,6 +10,7 @@ fmt:
 # Run code checks
 clippy:
     cargo clippy --locked --no-deps --all-targets --all-features -- -D warnings --cap-lints warn
+    cargo clippy --locked --no-deps --all-targets --no-default-features -- -D warnings --cap-lints warn
 
 # Check the standalone build of all crates for each feature
 check-features:
