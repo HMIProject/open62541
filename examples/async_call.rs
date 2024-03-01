@@ -8,7 +8,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", CYCLE_TIME)
-        .with_context(|| "connect")?;
+        .context("connect")?;
 
     // `/Root/Objects/8:Simulation/8:ObjectWithMethods`
     let object_node_id = ua::NodeId::string(8, "ObjectWithMethods");
@@ -24,7 +24,7 @@ async fn main() -> anyhow::Result<()> {
     let output_arguments = client
         .call_method(&object_node_id, &method_no_args_node_id, &input_arguments)
         .await
-        .with_context(|| "call")?;
+        .context("call")?;
 
     println!("-> {output_arguments:?}");
 
@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
     let output_arguments = client
         .call_method(&object_node_id, &method_io_node_id, &input_arguments)
         .await
-        .with_context(|| "call")?;
+        .context("call")?;
 
     println!("-> {output_arguments:?}");
 

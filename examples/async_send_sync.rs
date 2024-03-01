@@ -13,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", CYCLE_TIME)
-        .with_context(|| "connect")?;
+        .context("connect")?;
 
     println!("Client connected successfully");
 
@@ -37,10 +37,7 @@ async fn main() -> anyhow::Result<()> {
 async fn read_background(client: Arc<AsyncClient>) -> anyhow::Result<()> {
     let node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
 
-    let value = client
-        .read_value(&node_id)
-        .await
-        .with_context(|| "read value")?;
+    let value = client.read_value(&node_id).await.context("read value")?;
 
     println!(
         "Node {node_id} has value {:?}",
@@ -59,12 +56,12 @@ async fn watch_background(client: Arc<AsyncClient>) -> anyhow::Result<()> {
     let subscription = client
         .create_subscription()
         .await
-        .with_context(|| "create subscription")?;
+        .context("create subscription")?;
 
     let monitored_item = subscription
         .create_monitored_item(&node_id)
         .await
-        .with_context(|| "create monitored item")?;
+        .context("create monitored item")?;
 
     let mut stream = pin!(monitored_item.into_stream().take(3).enumerate());
 
