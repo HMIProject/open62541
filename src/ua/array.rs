@@ -230,7 +230,7 @@ impl<T: DataType> Array<T> {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &T> {
         self.as_slice().iter()
     }
 
