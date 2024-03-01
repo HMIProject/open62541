@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", CYCLE_TIME)
-        .with_context(|| "connect")?;
+        .context("connect")?;
 
     println!("Connected successfully");
 
@@ -27,14 +27,14 @@ async fn main() -> anyhow::Result<()> {
     let subscription = client
         .create_subscription()
         .await
-        .with_context(|| "create subscription")?;
+        .context("create subscription")?;
 
     let node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
 
     let mut monitored_item = subscription
         .create_monitored_item(&node_id)
         .await
-        .with_context(|| "monitor item")?;
+        .context("monitor item")?;
 
     tokio::spawn(async move {
         println!("Watching for monitored item values");

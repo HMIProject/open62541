@@ -14,7 +14,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", CYCLE_TIME)
-        .with_context(|| "connect")?;
+        .context("connect")?;
 
     let hierarchy = browse_hierarchy(&client, &ua::NodeId::numeric(0, UA_NS0ID_SERVERTYPE)).await?;
 
@@ -56,7 +56,7 @@ async fn browse_hierarchy(
 
         let results = browse_many_contd(client, &browse_node_ids)
             .await
-            .with_context(|| "browse")?;
+            .context("browse")?;
 
         for (node_id, references) in browse_node_ids.into_iter().zip(results) {
             let children = match children.entry(node_id) {
