@@ -239,6 +239,8 @@ impl<T: DataType> Array<T> {
     /// Replaces the elements of the array by zero-initialized memory.
     /// Ownership of the original elements is transferred to the resulting
     /// iterator items.
+    ///
+    /// Other than [`Vec::drain()`], this method does not shrink the array.
     // TODO: How to implement `IntoIterator` on `self` instead of `&mut self`?
     #[must_use]
     pub fn drain_all(&mut self) -> impl ExactSizeIterator<Item = T> + '_ {

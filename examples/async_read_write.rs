@@ -30,9 +30,9 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Reading node {node_id}");
 
-    let attribute_values = client.read_attributes(&node_id, &ATTRIBUTE_IDS).await?;
+    let mut attribute_values = client.read_attributes(&node_id, &ATTRIBUTE_IDS).await?;
 
-    for (attribute_id, value) in ATTRIBUTE_IDS.iter().zip(attribute_values) {
+    for (attribute_id, value) in ATTRIBUTE_IDS.iter().zip(attribute_values.drain_all()) {
         if let Some(value) = value.value() {
             println!("{attribute_id} -> {value:?}");
         }
