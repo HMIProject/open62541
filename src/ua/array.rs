@@ -216,7 +216,6 @@ impl<T: DataType> Array<T> {
         }
     }
 
-    #[allow(private_interfaces)]
     #[must_use]
     pub fn as_slice_mut(&mut self) -> &mut [T] {
         match self.0 {
@@ -230,8 +229,38 @@ impl<T: DataType> Array<T> {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
+    #[must_use]
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &T> {
         self.as_slice().iter()
+    }
+
+    #[must_use]
+    pub fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut T> {
+        self.as_slice_mut().iter_mut()
+    }
+
+    /// Consumes the array elements as an iterator.
+    ///
+    /// Replaces the elements of the array by zero-initialized memory.
+    /// Ownership of the original elements is transferred to the resulting
+    /// iterator items.
+    ///
+    /// Other than [`Vec::drain()`], this method does not shrink the array.
+    // TODO: How to implement `IntoIterator` on `self` instead of `&mut self`?
+    #[must_use]
+    pub(crate) fn drain_all(&mut self) -> impl ExactSizeIterator<Item = T> + '_ {
+        // This looks more expensive than it is: `DataType::init()` uses `UA_init()` which
+        // zero-initializes the memory region left in place of the moved-out element. This
+        // means that there are no dynamic memory allocations involved which would have to
+        // be cleaned up when `self` is dropped. In fact, this is what `UA_Array_resize()`
+        // does when making space for new elements, which in turn means that we can safely
+        // rely on `UA_Array_delete()` to work correctly when it frees each dummy element.
+        self.iter_mut()
+            .map(|element| mem::replace(element, T::init()))
+        // The resulting iterator contains all elements. The original elements in the array
+        // have been replaced with zero-initialized memory. Dynamic memory allocations
+        // held by the elements have not been touched, i.e. there is now (as before)
+        // only a single owner.
     }
 
     /// Converts the array into a `Vec`.
@@ -239,20 +268,7 @@ impl<T: DataType> Array<T> {
     /// This avoids cloning the contained values and moves them into the `Vec` directly.
     #[must_use]
     pub fn into_vec(mut self) -> Vec<T> {
-        // This looks more expensive than it is: `DataType::init()` uses `UA_init()` which
-        // zero-initializes the memory region left in place of the moved-out element. This
-        // means that there are no dynamic memory allocations involved which would have to
-        // be cleaned up when `self` is dropped. In fact, this is what `UA_Array_resize()`
-        // does when making space for new elements, which in turn means that we can safely
-        // rely on `UA_Array_delete()` to work correctly when it frees each dummy element.
-        self.as_slice_mut()
-            .iter_mut()
-            .map(|element| mem::replace(element, T::init()))
-            .collect::<Vec<_>>()
-        // The resulting vector contains all elements. The original elements in the array
-        // have been replaced with zero-initialized memory. Dynamic memory allocations
-        // held by the elements have not been touched, i.e. there is now (as before)
-        // only a single owner.
+        self.drain_all().collect()
     }
 
     /// Gives up ownership and returns raw parts.
