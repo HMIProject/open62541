@@ -48,7 +48,11 @@ repos:
       - id: fmt
         args: [--all, --]
       - id: clippy
+        name: clippy --all-features
         args: [--locked, --all-features, --all-targets, --, -D, warnings]
+      - id: clippy
+        name: clippy --no-default-features
+        args: [--locked, --no-default-features, --all-targets, --, -D, warnings]
   - repo: local
     hooks:
       - id: cargo-doc

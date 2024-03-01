@@ -34,13 +34,13 @@ impl Client {
         self.0.as_ptr()
     }
 
-    #[allow(dead_code)]
     #[must_use]
     pub(crate) fn as_mut_ptr(&mut self) -> *mut UA_Client {
         self.0.as_ptr()
     }
 
     /// Gets current channel and session state, and connect status.
+    #[allow(dead_code)] // --no-default-features
     pub(crate) fn state(&mut self) -> ClientState {
         log::debug!("Getting state");
 
