@@ -1,4 +1,7 @@
-use std::collections::{hash_map::Entry, HashMap, VecDeque};
+use std::{
+    collections::{hash_map::Entry, HashMap, VecDeque},
+    mem,
+};
 
 use anyhow::Context as _;
 use open62541::{ua, AsyncClient, DataType as _};
@@ -51,12 +54,11 @@ async fn browse_hierarchy(
             browse_node_ids.len()
         );
 
-        let results = client
-            .browse_many(&browse_node_ids)
+        let results = browse_many_contd(client, &browse_node_ids)
             .await
             .with_context(|| "browse")?;
 
-        for (node_id, result) in browse_node_ids.into_iter().zip(results) {
+        for (node_id, references) in browse_node_ids.into_iter().zip(results) {
             let children = match children.entry(node_id) {
                 Entry::Occupied(child) => {
                     let node_id = child.key();
@@ -64,11 +66,6 @@ async fn browse_hierarchy(
                     continue;
                 }
                 Entry::Vacant(entry) => entry.insert(Vec::new()),
-            };
-
-            // TODO: Use continuation point to fetch remaining references if necessary.
-            let Some((references, _continuation_point)) = result else {
-                continue;
             };
 
             for reference in references {
@@ -101,6 +98,56 @@ async fn browse_hierarchy(
     });
 
     Ok(tree_node)
+}
+
+/// Exhaustively browses several nodes at once.
+///
+/// This consumes any continuation points that might be returned from browsing, ensuring that all
+/// references are returned eventually.
+async fn browse_many_contd(
+    client: &AsyncClient,
+    node_ids: &[ua::NodeId],
+) -> anyhow::Result<Vec<Vec<ua::ReferenceDescription>>> {
+    let mut results = client.browse_many(node_ids).await?;
+
+    debug_assert_eq!(results.len(), node_ids.len());
+    // Tracks index of the original node ID for this result index.
+    let mut result_indices: Vec<usize> = (0..results.len()).collect();
+    // Collects all references for the given original node ID (index).
+    let mut collected_references: Vec<Vec<ua::ReferenceDescription>> =
+        vec![Vec::new(); results.len()];
+
+    loop {
+        let mut continuation_points = Vec::new();
+
+        // Walk results from previous iteration. Use associated index to know which node ID was
+        // browsed (or continued to be browsed). While consuming the old `result_indices`, build a
+        // list of continuation points with matching new `result_indices` for every browse that is
+        // still not complete.
+        for (index, result) in mem::take(&mut result_indices).into_iter().zip(results) {
+            if let Some((references, continuation_point)) = result {
+                collected_references[index].extend(references);
+
+                if let Some(continuation_point) = continuation_point {
+                    continuation_points.push(continuation_point);
+                    result_indices.push(index);
+                }
+            }
+        }
+
+        // When every browse has returned without continuation point, we are done.
+        if continuation_points.is_empty() {
+            break;
+        }
+
+        // Otherwise, use continuation points to continue browsing (only) those node IDs that have
+        // still references to be returned from the server. Use `result_indices` to remember which
+        // index from `continuation_points` belongs to which index in `collected_references`.
+        results = client.browse_next(&continuation_points).await?;
+        debug_assert_eq!(results.len(), result_indices.len());
+    }
+
+    Ok(collected_references)
 }
 
 #[derive(Debug)]
