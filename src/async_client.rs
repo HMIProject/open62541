@@ -233,7 +233,7 @@ impl AsyncClient {
             return Ok(None);
         };
 
-        Ok(Some(output_arguments.as_slice().to_vec()))
+        Ok(Some(output_arguments.into_vec()))
     }
 
     /// Browses specific node.
@@ -244,7 +244,7 @@ impl AsyncClient {
     pub async fn browse(
         &self,
         node_id: &ua::NodeId,
-    ) -> Result<Vec<ua::ReferenceDescription>, Error> {
+    ) -> Result<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>), Error> {
         let request = ua::BrowseRequest::init()
             .with_nodes_to_browse(&[ua::BrowseDescription::default().with_node_id(node_id)]);
 
@@ -262,7 +262,7 @@ impl AsyncClient {
             return Err(Error::internal("browse should return references"));
         };
 
-        Ok(references.as_slice().to_vec())
+        Ok((references.into_vec(), result.continuation_point()))
     }
 
     /// Browses several nodes at once.
@@ -280,7 +280,8 @@ impl AsyncClient {
     pub async fn browse_many(
         &self,
         node_ids: &[ua::NodeId],
-    ) -> Result<Vec<Option<Vec<ua::ReferenceDescription>>>, Error> {
+    ) -> Result<Vec<Option<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>>, Error>
+    {
         let nodes_to_browse: Vec<_> = node_ids
             .iter()
             .map(|node_id| ua::BrowseDescription::default().with_node_id(node_id))
@@ -299,13 +300,56 @@ impl AsyncClient {
             .map(|result| {
                 result
                     .references()
-                    .map(|references| references.iter().cloned().collect())
+                    .map(|references| (references.into_vec(), result.continuation_point()))
             })
             .collect();
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
         debug_assert_eq!(results.len(), node_ids.len());
+
+        Ok(results)
+    }
+
+    /// Browses continuation points for more references.
+    ///
+    /// This uses continuation points returned from [`browse()`] and [`browse_many()`] whenever not
+    /// all references were returned (due to client or server limits).
+    ///
+    /// The size and order of the result list matches the size and order of the given continuation
+    /// point list.
+    ///
+    /// # Errors
+    ///
+    /// This fails when any of the given continuation points is invalid.
+    ///
+    /// [`browse()`]: Self::browse
+    /// [`browse_many()`]: Self::browse_many
+    pub async fn browse_next(
+        &self,
+        continuation_points: &[ua::ContinuationPoint],
+    ) -> Result<Vec<Option<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>>, Error>
+    {
+        let request = ua::BrowseNextRequest::init().with_continuation_points(continuation_points);
+
+        let response = service_request(&self.client, request).await?;
+
+        let Some(results) = response.results() else {
+            return Err(Error::internal("browse should return results"));
+        };
+
+        let results: Vec<_> = results
+            .iter()
+            .map(|result| {
+                result
+                    .references()
+                    .map(|references| (references.into_vec(), result.continuation_point()))
+            })
+            .collect();
+
+        // The OPC UA specification state that the resulting list has the same number of elements as
+        // the request list. If not, we would not be able to match elements in the two lists anyway.
+        debug_assert_eq!(results.len(), continuation_points.len());
 
         Ok(results)
     }
