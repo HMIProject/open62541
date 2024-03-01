@@ -216,7 +216,6 @@ impl<T: DataType> Array<T> {
         }
     }
 
-    #[allow(private_interfaces)]
     #[must_use]
     pub fn as_slice_mut(&mut self) -> &mut [T] {
         match self.0 {
