@@ -25,7 +25,6 @@ use crate::DataType;
 ///
 /// This type tracks only the first two kinds of arrays. Thus when converting from raw parts, we may
 /// return `None` to indicate that the given array is "undefined" (as specified by OPC UA).
-#[allow(private_bounds)]
 pub struct Array<T: DataType>(State<T>);
 
 /// Internal state of array.
@@ -48,7 +47,6 @@ enum State<T: DataType> {
     },
 }
 
-#[allow(private_bounds)]
 impl<T: DataType> Array<T> {
     /// Creates new array with default-initialized elements.
     ///
@@ -158,7 +156,6 @@ impl<T: DataType> Array<T> {
     /// # Panics
     ///
     /// Enough memory must be available to allocate array.
-    #[allow(private_interfaces)]
     #[must_use]
     pub(crate) fn from_raw_parts(ptr: *const T::Inner, size: usize) -> Option<Self> {
         if size == 0 {
@@ -202,7 +199,6 @@ impl<T: DataType> Array<T> {
         }
     }
 
-    #[allow(private_interfaces)]
     #[must_use]
     pub const fn as_slice(&self) -> &[T] {
         match self.0 {
