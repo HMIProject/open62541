@@ -234,11 +234,14 @@ impl<T: DataType> Array<T> {
         self.as_slice().iter()
     }
 
-    /// Converts the array into a `Vec`.
+    /// Consumes the array elements as an iterator.
     ///
-    /// This avoids cloning the contained values and moves them into the `Vec` directly.
+    /// Replaces the elements of the array by zero-initialized memory.
+    /// Ownership of the original elements is transferred to the resulting
+    /// iterator items.
+    // TODO: How to implement `IntoIterator` on `self` instead of `&mut self`?
     #[must_use]
-    pub fn into_vec(mut self) -> Vec<T> {
+    pub fn drain_all(&mut self) -> impl ExactSizeIterator<Item = T> + '_ {
         // This looks more expensive than it is: `DataType::init()` uses `UA_init()` which
         // zero-initializes the memory region left in place of the moved-out element. This
         // means that there are no dynamic memory allocations involved which would have to
@@ -248,11 +251,18 @@ impl<T: DataType> Array<T> {
         self.as_slice_mut()
             .iter_mut()
             .map(|element| mem::replace(element, T::init()))
-            .collect::<Vec<_>>()
-        // The resulting vector contains all elements. The original elements in the array
+        // The resulting iterator contains all elements. The original elements in the array
         // have been replaced with zero-initialized memory. Dynamic memory allocations
         // held by the elements have not been touched, i.e. there is now (as before)
         // only a single owner.
+    }
+
+    /// Converts the array into a `Vec`.
+    ///
+    /// This avoids cloning the contained values and moves them into the `Vec` directly.
+    #[must_use]
+    pub fn into_vec(mut self) -> Vec<T> {
+        self.drain_all().collect()
     }
 
     /// Gives up ownership and returns raw parts.
