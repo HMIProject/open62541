@@ -89,7 +89,7 @@ impl AsyncClient {
         attribute_id: &ua::AttributeId,
     ) -> Result<ua::DataValue, Error> {
         let mut values = self
-            .read_attributes(node_id, slice::from_ref(attribute_id))
+            .read_attributes_array(node_id, slice::from_ref(attribute_id))
             .await?;
 
         // ERROR: We give a slice with one item to `read_attributes()` and expect
@@ -129,6 +129,16 @@ impl AsyncClient {
     ///
     /// [`read_attributes()`]: Self::read_attributes
     pub async fn read_attributes(
+        &self,
+        node_id: &ua::NodeId,
+        attribute_ids: &[ua::AttributeId],
+    ) -> Result<Vec<ua::DataValue>, Error> {
+        self.read_attributes_array(node_id, attribute_ids)
+            .await
+            .map(ua::Array::into_vec)
+    }
+
+    pub(crate) async fn read_attributes_array(
         &self,
         node_id: &ua::NodeId,
         attribute_ids: &[ua::AttributeId],
