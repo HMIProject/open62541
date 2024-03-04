@@ -68,9 +68,13 @@ async fn browse_hierarchy(
                 Entry::Vacant(entry) => entry.insert(Vec::new()),
             };
 
+            let Some(references) = references else {
+                // No child references for this node.
+                continue;
+            };
+
             for reference in references {
                 pending_node_ids.push_back(reference.node_id().node_id().clone());
-
                 children.push(reference);
             }
         }
@@ -107,15 +111,17 @@ async fn browse_hierarchy(
 async fn browse_many_contd(
     client: &AsyncClient,
     node_ids: &[ua::NodeId],
-) -> anyhow::Result<Vec<Vec<ua::ReferenceDescription>>> {
+) -> anyhow::Result<Vec<Option<Vec<ua::ReferenceDescription>>>> {
     let mut results = client.browse_many(node_ids).await?;
 
     debug_assert_eq!(results.len(), node_ids.len());
     // Tracks index of the original node ID for this result index.
     let mut result_indices: Vec<usize> = (0..results.len()).collect();
+
     // Collects all references for the given original node ID (index).
-    let mut collected_references: Vec<Vec<ua::ReferenceDescription>> =
-        vec![Vec::new(); results.len()];
+    // Slots for nodes without any references will remain `None`.
+    let mut collected_references: Vec<Option<Vec<ua::ReferenceDescription>>> =
+        vec![None; results.len()];
 
     loop {
         let mut continuation_points = Vec::new();
@@ -126,7 +132,11 @@ async fn browse_many_contd(
         // still not complete.
         for (index, result) in mem::take(&mut result_indices).into_iter().zip(results) {
             if let Some((references, continuation_point)) = result {
-                collected_references[index].extend(references);
+                if let Some(collected_references) = &mut collected_references[index] {
+                    collected_references.extend(references);
+                } else {
+                    collected_references[index] = Some(references);
+                }
 
                 if let Some(continuation_point) = continuation_point {
                     continuation_points.push(continuation_point);
