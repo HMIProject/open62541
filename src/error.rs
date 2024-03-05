@@ -2,7 +2,10 @@ use thiserror::Error;
 
 use crate::ua;
 
-/// Generic error.
+/// Result type used in this crate.
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// Error type used in this crate.
 ///
 /// This error may be returned from many different OPC UA calls. It represents any status code other
 /// than [`UA_STATUSCODE_GOOD`].
@@ -25,7 +28,7 @@ impl Error {
         Self::Server(status_code)
     }
 
-    pub(crate) fn verify_good(status_code: &ua::StatusCode) -> Result<(), Self> {
+    pub(crate) fn verify_good(status_code: &ua::StatusCode) -> Result<()> {
         if status_code.is_good() {
             Ok(())
         } else {

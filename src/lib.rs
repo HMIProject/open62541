@@ -89,7 +89,7 @@ mod callback;
 pub use self::{
     client::{Client, ClientBuilder},
     data_type::DataType,
-    error::Error,
+    error::{Error, Result},
 };
 pub(crate) use self::{
     data_type::{data_type, enum_variants},

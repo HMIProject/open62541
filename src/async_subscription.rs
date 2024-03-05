@@ -10,7 +10,7 @@ use open62541_sys::{
     UA_CreateSubscriptionResponse, UA_UInt32,
 };
 
-use crate::{ua, AsyncMonitoredItem, CallbackOnce, DataType as _, Error};
+use crate::{ua, AsyncMonitoredItem, CallbackOnce, DataType as _, Error, Result};
 
 /// Subscription (with asynchronous API).
 pub struct AsyncSubscription {
@@ -19,7 +19,7 @@ pub struct AsyncSubscription {
 }
 
 impl AsyncSubscription {
-    pub(crate) async fn new(client: &Arc<Mutex<ua::Client>>) -> Result<Self, Error> {
+    pub(crate) async fn new(client: &Arc<Mutex<ua::Client>>) -> Result<Self> {
         let request = ua::CreateSubscriptionRequest::default();
 
         let response = create_subscription(client, &request).await?;
@@ -37,10 +37,7 @@ impl AsyncSubscription {
     /// # Errors
     ///
     /// This fails when the node does not exist.
-    pub async fn create_monitored_item(
-        &self,
-        node_id: &ua::NodeId,
-    ) -> Result<AsyncMonitoredItem, Error> {
+    pub async fn create_monitored_item(&self, node_id: &ua::NodeId) -> Result<AsyncMonitoredItem> {
         let Some(client) = self.client.upgrade() else {
             return Err(Error::internal("client should not be dropped"));
         };
@@ -65,8 +62,8 @@ impl Drop for AsyncSubscription {
 async fn create_subscription(
     client: &Mutex<ua::Client>,
     request: &ua::CreateSubscriptionRequest,
-) -> Result<ua::CreateSubscriptionResponse, Error> {
-    type Cb = CallbackOnce<Result<ua::CreateSubscriptionResponse, ua::StatusCode>>;
+) -> Result<ua::CreateSubscriptionResponse> {
+    type Cb = CallbackOnce<std::result::Result<ua::CreateSubscriptionResponse, ua::StatusCode>>;
 
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
@@ -94,9 +91,9 @@ async fn create_subscription(
         }
     }
 
-    let (tx, rx) = oneshot::channel::<Result<ua::CreateSubscriptionResponse, Error>>();
+    let (tx, rx) = oneshot::channel::<Result<ua::CreateSubscriptionResponse>>();
 
-    let callback = |result: Result<ua::CreateSubscriptionResponse, _>| {
+    let callback = |result: std::result::Result<ua::CreateSubscriptionResponse, _>| {
         // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
         // care if that succeeds though: the receiver might already have gone out of scope (when its
         // future has been canceled) and we must not panic in FFI callbacks.
