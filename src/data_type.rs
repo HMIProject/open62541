@@ -402,6 +402,9 @@ macro_rules! enum_variants {
     ($name:ident, $inner:ident, [$( $value:ident ),* $(,)?] $(,)?) => {
         impl $name {
             $(
+                /// Enum variant
+                #[doc = paste::paste! { concat!("[`", stringify!([< $inner:upper _ $value >]), "`](open62541_sys::", stringify!($inner), "::", stringify!([< $inner:upper _ $value >]), ")") }]
+                /// from [`open62541_sys`].
                 pub const $value: Self = Self(
                     paste::paste! { open62541_sys::$inner::[<$inner:upper _ $value>] }
                 );

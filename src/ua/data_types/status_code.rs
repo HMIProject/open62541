@@ -3,6 +3,9 @@ use open62541_sys::{UA_StatusCode, UA_STATUSCODE_GOOD};
 crate::data_type!(StatusCode);
 
 impl StatusCode {
+    /// Enum variant [`UA_STATUSCODE_GOOD`] from [`open62541_sys`].
+    pub const GOOD: Self = Self(UA_STATUSCODE_GOOD);
+
     /// Creates wrapper by taking ownership of `src`.
     #[must_use]
     pub(crate) const fn new(src: UA_StatusCode) -> Self {

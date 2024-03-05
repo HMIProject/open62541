@@ -103,17 +103,13 @@ impl AsyncClient {
         attribute_id: &ua::AttributeId,
     ) -> Result<ua::DataValue> {
         let mut values = self
-            .read_attributes_array(node_id, slice::from_ref(attribute_id))
+            .read_attributes(node_id, slice::from_ref(attribute_id))
             .await?;
 
-        // ERROR: We give a slice with one item to `read_attributes()` and expect
-        // a single result value.
+        // ERROR: We give a slice with one item to `read_attributes()` and expect a single result
+        // value.
         debug_assert_eq!(values.len(), 1);
-        let value = values
-            .drain_all()
-            .next()
-            .expect("should contain exactly one attribute");
-        Ok(value)
+        values.pop().expect("should contain exactly one attribute")
     }
 
     /// Reads several node attributes.
@@ -132,17 +128,7 @@ impl AsyncClient {
         &self,
         node_id: &ua::NodeId,
         attribute_ids: &[ua::AttributeId],
-    ) -> Result<Vec<ua::DataValue>> {
-        self.read_attributes_array(node_id, attribute_ids)
-            .await
-            .map(ua::Array::into_vec)
-    }
-
-    pub(crate) async fn read_attributes_array(
-        &self,
-        node_id: &ua::NodeId,
-        attribute_ids: &[ua::AttributeId],
-    ) -> Result<ua::Array<ua::DataValue>> {
+    ) -> Result<Vec<Result<ua::DataValue>>> {
         let nodes_to_read: Vec<_> = attribute_ids
             .iter()
             .map(|attribute_id| {
@@ -159,6 +145,17 @@ impl AsyncClient {
         let Some(results) = response.results() else {
             return Err(Error::internal("read should return results"));
         };
+
+        let results: Vec<_> = results
+            .iter()
+            .map(|result| -> Result<ua::DataValue> {
+                // An unset status code is considered valid: servers are not required to include the
+                // status code in their response when not necessary.
+                Error::verify_good(&result.status_code().unwrap_or(ua::StatusCode::GOOD))?;
+
+                Ok(result.clone())
+            })
+            .collect();
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.

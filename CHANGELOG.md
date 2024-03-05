@@ -11,10 +11,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Breaking: Return `Result` instead of `Option` for references in `AsyncClient::browse_many()` and
   `browse_next()` (#59).
+- Breaking: Return `Result` instead of raw `ua::DataValue` from `AsyncClient::read_attributes()`.
 
 ### Fixed
 
 - Return browsing error instead of empty references list from `AsyncClient::browse()`.
+- Return reading error instead of unset `ua::DataValue` from `AsyncClient::read_value()` and
+  `read_attribute()`.
 
 ## [0.5.0] - 2024-03-01
 

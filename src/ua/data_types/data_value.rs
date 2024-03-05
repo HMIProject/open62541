@@ -12,10 +12,15 @@ impl DataValue {
 
     #[must_use]
     pub fn value(&self) -> Option<&ua::Variant> {
-        if self.0.hasValue() {
-            Some(ua::Variant::raw_ref(&self.0.value))
-        } else {
-            None
-        }
+        self.0
+            .hasValue()
+            .then(|| ua::Variant::raw_ref(&self.0.value))
+    }
+
+    #[must_use]
+    pub fn status_code(&self) -> Option<ua::StatusCode> {
+        self.0
+            .hasStatus()
+            .then(|| ua::StatusCode::new(self.0.status))
     }
 }
