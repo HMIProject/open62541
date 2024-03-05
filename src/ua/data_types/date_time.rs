@@ -1,5 +1,3 @@
-use crate::Error;
-
 crate::data_type!(DateTime);
 
 impl DateTime {
@@ -20,7 +18,8 @@ impl DateTime {
 
 #[cfg(feature = "time")]
 impl TryFrom<time::OffsetDateTime> for DateTime {
-    type Error = Error;
+    // Explicit module path to avoid linter errors when feature is not enable by `#[cfg()]`.
+    type Error = crate::Error;
 
     /// Creates [`DateTime`] from [`time::OffsetDateTime`].
     ///
@@ -46,7 +45,8 @@ impl TryFrom<time::OffsetDateTime> for DateTime {
         let ticks_ua = ticks_unix + i128::from(UA_DATETIME_UNIX_EPOCH);
 
         i64::try_from(ticks_ua)
-            .map_err(|_| Error::internal("DateTime should be in range"))
+            // Explicit module path to avoid linter errors when feature is not enable by `#[cfg()]`.
+            .map_err(|_| crate::Error::internal("DateTime should be in range"))
             .map(Self)
     }
 }
