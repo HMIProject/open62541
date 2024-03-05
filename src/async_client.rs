@@ -151,7 +151,7 @@ impl AsyncClient {
             .map(|result| -> Result<ua::DataValue> {
                 // An unset status code is considered valid: servers are not required to include the
                 // status code in their response when not necessary.
-                Error::verify_good(&result.status_code().unwrap_or(ua::StatusCode::new(0)))?;
+                Error::verify_good(&result.status_code().unwrap_or(ua::StatusCode::GOOD))?;
 
                 Ok(result.clone())
             })
