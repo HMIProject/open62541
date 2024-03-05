@@ -33,8 +33,12 @@ async fn main() -> anyhow::Result<()> {
     let attribute_values = client.read_attributes(&node_id, &ATTRIBUTE_IDS).await?;
 
     for (attribute_id, value) in ATTRIBUTE_IDS.iter().zip(attribute_values.iter()) {
-        if let Some(value) = value.value() {
-            println!("{attribute_id} -> {value:?}");
+        match value {
+            Ok(value) => match value.value() {
+                Some(value) => println!("- {attribute_id} -> {value:?}"),
+                None => println!("- {attribute_id} -> (no value)"),
+            },
+            Err(err) => println!("- {attribute_id} -> {err}"),
         }
     }
 
