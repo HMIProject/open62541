@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- Add `ua::StatusCode::is_uncertain()`, `is_bad()` for checking status code severity.
+
 ### Changed
 
 - Breaking: Return `Result` instead of `Option` for references in `AsyncClient::browse_many()` and
@@ -18,6 +22,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Return browsing error instead of empty references list from `AsyncClient::browse()`.
 - Return reading error instead of unset `ua::DataValue` from `AsyncClient::read_value()` and
   `read_attribute()`.
+- Check only severity in `ua::StatusCode::is_good()`. Previously this would be an exact comparison
+  to `ua::StatusCode::GOOD`.
 
 ## [0.5.0] - 2024-03-01
 
