@@ -9,7 +9,7 @@ use open62541_sys::{
     UA_Client_connect, UA_Client_getConfig, UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
 };
 
-use crate::{ua, Error};
+use crate::{ua, Error, Result};
 
 /// Builder for [`Client`].
 ///
@@ -77,7 +77,7 @@ impl ClientBuilder {
     /// # Panics
     ///
     /// The endpoint URL must not contain any NUL bytes.
-    pub fn connect(mut self, endpoint_url: &str) -> Result<Client, Error> {
+    pub fn connect(mut self, endpoint_url: &str) -> Result<Client> {
         log::info!("Connecting to endpoint {endpoint_url}");
 
         let endpoint_url =
@@ -140,7 +140,7 @@ impl Client {
     /// # Panics
     ///
     /// See [`ClientBuilder::connect()`].
-    pub fn new(endpoint_url: &str) -> Result<Self, Error> {
+    pub fn new(endpoint_url: &str) -> Result<Self> {
         ClientBuilder::default().connect(endpoint_url)
     }
 

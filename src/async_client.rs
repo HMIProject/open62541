@@ -16,7 +16,7 @@ use tokio::{
 };
 
 use crate::{
-    ua, AsyncSubscription, CallbackOnce, ClientBuilder, DataType, Error, ServiceRequest,
+    ua, AsyncSubscription, CallbackOnce, ClientBuilder, DataType, Error, Result, ServiceRequest,
     ServiceResponse,
 };
 
@@ -40,7 +40,7 @@ impl AsyncClient {
     /// # Panics
     ///
     /// See [`ClientBuilder::connect()`].
-    pub fn new(endpoint_url: &str, cycle_time: Duration) -> Result<Self, Error> {
+    pub fn new(endpoint_url: &str, cycle_time: Duration) -> Result<Self> {
         Ok(ClientBuilder::default()
             .connect(endpoint_url)?
             .into_async(cycle_time))
@@ -65,7 +65,7 @@ impl AsyncClient {
     /// # Errors
     ///
     /// This only fails when the client has an internal error.
-    pub fn state(&self) -> Result<ua::ClientState, Error> {
+    pub fn state(&self) -> Result<ua::ClientState> {
         let Ok(mut client) = self.client.lock() else {
             return Err(Error::internal("should be able to lock client"));
         };
@@ -83,7 +83,7 @@ impl AsyncClient {
     ///
     /// [`read_attribute()`]: Self::read_attribute
     /// [`read_attributes()`]: Self::read_attributes
-    pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<ua::DataValue, Error> {
+    pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<ua::DataValue> {
         self.read_attribute(node_id, &ua::AttributeId::VALUE).await
     }
 
@@ -101,7 +101,7 @@ impl AsyncClient {
         &self,
         node_id: &ua::NodeId,
         attribute_id: &ua::AttributeId,
-    ) -> Result<ua::DataValue, Error> {
+    ) -> Result<ua::DataValue> {
         let mut values = self
             .read_attributes_array(node_id, slice::from_ref(attribute_id))
             .await?;
@@ -132,7 +132,7 @@ impl AsyncClient {
         &self,
         node_id: &ua::NodeId,
         attribute_ids: &[ua::AttributeId],
-    ) -> Result<Vec<ua::DataValue>, Error> {
+    ) -> Result<Vec<ua::DataValue>> {
         self.read_attributes_array(node_id, attribute_ids)
             .await
             .map(ua::Array::into_vec)
@@ -142,7 +142,7 @@ impl AsyncClient {
         &self,
         node_id: &ua::NodeId,
         attribute_ids: &[ua::AttributeId],
-    ) -> Result<ua::Array<ua::DataValue>, Error> {
+    ) -> Result<ua::Array<ua::DataValue>> {
         let nodes_to_read: Vec<_> = attribute_ids
             .iter()
             .map(|attribute_id| {
@@ -172,11 +172,7 @@ impl AsyncClient {
     /// # Errors
     ///
     /// This fails when the node does not exist or its value attribute cannot be written.
-    pub async fn write_value(
-        &self,
-        node_id: &ua::NodeId,
-        value: &ua::DataValue,
-    ) -> Result<(), Error> {
+    pub async fn write_value(&self, node_id: &ua::NodeId, value: &ua::DataValue) -> Result<()> {
         let attribute_id = ua::AttributeId::VALUE;
 
         let request = ua::WriteRequest::init().with_nodes_to_write(&[ua::WriteValue::init()
@@ -210,7 +206,7 @@ impl AsyncClient {
         object_id: &ua::NodeId,
         method_id: &ua::NodeId,
         input_arguments: &[ua::Variant],
-    ) -> Result<Option<Vec<ua::Variant>>, Error> {
+    ) -> Result<Option<Vec<ua::Variant>>> {
         let request =
             ua::CallRequest::init().with_methods_to_call(&[ua::CallMethodRequest::init()
                 .with_object_id(object_id)
@@ -244,7 +240,7 @@ impl AsyncClient {
     pub async fn browse(
         &self,
         node_id: &ua::NodeId,
-    ) -> Result<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>), Error> {
+    ) -> Result<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)> {
         let request = ua::BrowseRequest::init()
             .with_nodes_to_browse(&[ua::BrowseDescription::default().with_node_id(node_id)]);
 
@@ -280,7 +276,7 @@ impl AsyncClient {
     pub async fn browse_many(
         &self,
         node_ids: &[ua::NodeId],
-    ) -> Result<Vec<Option<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>>, Error>
+    ) -> Result<Vec<Option<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>>>
     {
         let nodes_to_browse: Vec<_> = node_ids
             .iter()
@@ -328,7 +324,7 @@ impl AsyncClient {
     pub async fn browse_next(
         &self,
         continuation_points: &[ua::ContinuationPoint],
-    ) -> Result<Vec<Option<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>>, Error>
+    ) -> Result<Vec<Option<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>>>
     {
         let request = ua::BrowseNextRequest::init().with_continuation_points(continuation_points);
 
@@ -359,7 +355,7 @@ impl AsyncClient {
     /// # Errors
     ///
     /// This fails when the client is not connected.
-    pub async fn create_subscription(&self) -> Result<AsyncSubscription, Error> {
+    pub async fn create_subscription(&self) -> Result<AsyncSubscription> {
         AsyncSubscription::new(&self.client).await
     }
 }
@@ -433,8 +429,8 @@ async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: Duration) {
 async fn service_request<R: ServiceRequest>(
     client: &Mutex<ua::Client>,
     request: R,
-) -> Result<R::Response, Error> {
-    type Cb<R> = CallbackOnce<Result<<R as ServiceRequest>::Response, ua::StatusCode>>;
+) -> Result<R::Response> {
+    type Cb<R> = CallbackOnce<std::result::Result<<R as ServiceRequest>::Response, ua::StatusCode>>;
 
     unsafe extern "C" fn callback_c<R: ServiceRequest>(
         _client: *mut UA_Client,
@@ -463,9 +459,9 @@ async fn service_request<R: ServiceRequest>(
         }
     }
 
-    let (tx, rx) = oneshot::channel::<Result<R::Response, Error>>();
+    let (tx, rx) = oneshot::channel::<Result<R::Response>>();
 
-    let callback = |result: Result<R::Response, _>| {
+    let callback = |result: std::result::Result<R::Response, _>| {
         // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
         // care if that succeeds though: the receiver might already have gone out of scope (when its
         // future has been canceled) and we must not panic in FFI callbacks.

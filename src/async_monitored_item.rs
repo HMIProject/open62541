@@ -16,7 +16,7 @@ use open62541_sys::{
 };
 use tokio::sync::mpsc;
 
-use crate::{ua, CallbackOnce, CallbackStream, DataType as _, Error};
+use crate::{ua, CallbackOnce, CallbackStream, DataType as _, Error, Result};
 
 /// Monitored item (with asynchronous API).
 pub struct AsyncMonitoredItem {
@@ -30,7 +30,7 @@ impl AsyncMonitoredItem {
         client: &Arc<Mutex<ua::Client>>,
         subscription_id: &ua::SubscriptionId,
         node_id: &ua::NodeId,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self> {
         let create_request = ua::MonitoredItemCreateRequest::default().with_node_id(node_id);
 
         let request = ua::CreateMonitoredItemsRequest::init()
@@ -97,15 +97,12 @@ const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
 async fn create_monitored_items(
     client: &Mutex<ua::Client>,
     request: &ua::CreateMonitoredItemsRequest,
-) -> Result<
-    (
-        ua::CreateMonitoredItemsResponse,
-        mpsc::Receiver<ua::DataValue>,
-    ),
-    Error,
-> {
+) -> Result<(
+    ua::CreateMonitoredItemsResponse,
+    mpsc::Receiver<ua::DataValue>,
+)> {
     type St = CallbackStream<ua::DataValue>;
-    type Cb = CallbackOnce<Result<ua::CreateMonitoredItemsResponse, ua::StatusCode>>;
+    type Cb = CallbackOnce<std::result::Result<ua::CreateMonitoredItemsResponse, ua::StatusCode>>;
 
     // Wrapper type so that we can mark `*mut c_void` for callbacks as safe to send. Otherwise, this
     // would make any closure that uses `AsyncMonitoredItem::new()` not `Send`.
@@ -176,11 +173,11 @@ async fn create_monitored_items(
         }
     }
 
-    let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse, Error>>();
+    let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse>>();
     // TODO: Think about appropriate buffer size or let the caller decide.
     let (st_tx, st_rx) = mpsc::channel::<ua::DataValue>(MONITORED_ITEM_BUFFER_SIZE);
 
-    let callback = |result: Result<ua::CreateMonitoredItemsResponse, _>| {
+    let callback = |result: std::result::Result<ua::CreateMonitoredItemsResponse, _>| {
         // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
         // care if that succeeds though: the receiver might already have gone out of scope (when its
         // future has been canceled) and we must not panic in FFI callbacks.
