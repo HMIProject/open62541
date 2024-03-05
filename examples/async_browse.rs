@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::Context as _;
-use open62541::{ua, AsyncClient, DataType as _};
+use open62541::{ua, AsyncClient, DataType as _, Result};
 use open62541_sys::UA_NS0ID_SERVERTYPE;
 
 const CYCLE_TIME: tokio::time::Duration = tokio::time::Duration::from_millis(100);
@@ -59,6 +59,14 @@ async fn browse_hierarchy(
             .context("browse")?;
 
         for (node_id, references) in browse_node_ids.into_iter().zip(results) {
+            let references = match references {
+                Err(err) => {
+                    println!("Ignoring node `{node_id}` that cannot be browsed: {err}");
+                    continue;
+                }
+                Ok(references) => references,
+            };
+
             let children = match children.entry(node_id) {
                 Entry::Occupied(child) => {
                     let node_id = child.key();
@@ -70,7 +78,6 @@ async fn browse_hierarchy(
 
             for reference in references {
                 pending_node_ids.push_back(reference.node_id().node_id().clone());
-
                 children.push(reference);
             }
         }
@@ -107,15 +114,15 @@ async fn browse_hierarchy(
 async fn browse_many_contd(
     client: &AsyncClient,
     node_ids: &[ua::NodeId],
-) -> anyhow::Result<Vec<Vec<ua::ReferenceDescription>>> {
+) -> Result<Vec<Result<Vec<ua::ReferenceDescription>>>> {
     let mut results = client.browse_many(node_ids).await?;
 
     debug_assert_eq!(results.len(), node_ids.len());
     // Tracks index of the original node ID for this result index.
     let mut result_indices: Vec<usize> = (0..results.len()).collect();
     // Collects all references for the given original node ID (index).
-    let mut collected_references: Vec<Vec<ua::ReferenceDescription>> =
-        vec![Vec::new(); results.len()];
+    let mut collected_references: Vec<Result<Vec<ua::ReferenceDescription>>> =
+        (0..results.len()).map(|_| Ok(Vec::new())).collect();
 
     loop {
         let mut continuation_points = Vec::new();
@@ -125,12 +132,27 @@ async fn browse_many_contd(
         // list of continuation points with matching new `result_indices` for every browse that is
         // still not complete.
         for (index, result) in mem::take(&mut result_indices).into_iter().zip(results) {
-            if let Some((references, continuation_point)) = result {
-                collected_references[index].extend(references);
+            match result {
+                Ok((references, continuation_point)) => {
+                    // PANIC: Once browsing has failed for a node, we never continue browsing the
+                    // node again. (In fact, we could not if we wanted as we have no continuation
+                    // point).
+                    collected_references[index]
+                        .as_mut()
+                        .expect("should not have failed when browsing continues")
+                        .extend(references);
 
-                if let Some(continuation_point) = continuation_point {
-                    continuation_points.push(continuation_point);
-                    result_indices.push(index);
+                    if let Some(continuation_point) = continuation_point {
+                        continuation_points.push(continuation_point);
+                        result_indices.push(index);
+                    }
+                }
+
+                Err(err) => {
+                    // When browsing fails, take note of error. But when continuation of browsing
+                    // fails, this also throws away any previously accumulated references. That is
+                    // okay for now, because most errors should manifest in the first browse call.
+                    collected_references[index] = Err(err);
                 }
             }
         }

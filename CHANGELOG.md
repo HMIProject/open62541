@@ -5,23 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+
+- Breaking: Return `Result` instead of `Option` for references in `AsyncClient::browse_many()` and
+  `browse_next()` (#59).
+
+### Fixed
+
+- Return browsing error instead of empty references list from `AsyncClient::browse()`.
+
 ## [0.5.0] - 2024-03-01
 
 [0.5.0]: https://github.com/HMIProject/open62541/compare/v0.4.0...v0.5.0
 
 ### Added
 
-- Allow reading node attributes with ``AsyncClient::read_attribute()` and `read_attributes()`
-- Allow continuing browsing from continuation points with `AsyncClient::browse_next()`
+- Allow reading node attributes with ``AsyncClient::read_attribute()` and `read_attributes()`.
+- Allow continuing browsing from continuation points with `AsyncClient::browse_next()`.
 
 ### Changed
 
 - Provide uppercase variants for enum data types, e.g. `ua::AttributedId::VALUE`. This deprecates
   the associated functions such as `ua::AttributedId::value()` formerly used for this purpose.
 - Breaking: Return continuation points from `AsyncClient::browse()` and `browse_many()` (when not
-  all references were returned, to be used with `AsyncClient::browse_next()`)
+  all references were returned, to be used with `AsyncClient::browse_next()`).
 - Breaking: Simplify argument type `node_ids: &[impl Borrow<ua::NodeId>]` to `&[ua::NodeId]` in
-  `AsyncClient::browse_many()`
+  `AsyncClient::browse_many()`.
 - Rename `ua::String::as_slice()` to `as_bytes()`. Deprecate the former method.
 
 ## [0.4.0] - 2024-02-12

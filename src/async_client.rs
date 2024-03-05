@@ -237,10 +237,7 @@ impl AsyncClient {
     /// # Errors
     ///
     /// This fails when the node does not exist or it cannot be browsed.
-    pub async fn browse(
-        &self,
-        node_id: &ua::NodeId,
-    ) -> Result<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)> {
+    pub async fn browse(&self, node_id: &ua::NodeId) -> BrowseResult {
         let request = ua::BrowseRequest::init()
             .with_nodes_to_browse(&[ua::BrowseDescription::default().with_node_id(node_id)]);
 
@@ -254,11 +251,7 @@ impl AsyncClient {
             return Err(Error::internal("browse should return a result"));
         };
 
-        let Some(references) = result.references() else {
-            return Err(Error::internal("browse should return references"));
-        };
-
-        Ok((references.into_vec(), result.continuation_point()))
+        to_browse_result(result)
     }
 
     /// Browses several nodes at once.
@@ -273,11 +266,7 @@ impl AsyncClient {
     /// This fails when any of the given nodes does not exist or cannot be browsed.
     ///
     /// [`browse()`]: Self::browse
-    pub async fn browse_many(
-        &self,
-        node_ids: &[ua::NodeId],
-    ) -> Result<Vec<Option<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>>>
-    {
+    pub async fn browse_many(&self, node_ids: &[ua::NodeId]) -> Result<Vec<BrowseResult>> {
         let nodes_to_browse: Vec<_> = node_ids
             .iter()
             .map(|node_id| ua::BrowseDescription::default().with_node_id(node_id))
@@ -291,14 +280,7 @@ impl AsyncClient {
             return Err(Error::internal("browse should return results"));
         };
 
-        let results: Vec<_> = results
-            .iter()
-            .map(|result| {
-                result
-                    .references()
-                    .map(|references| (references.into_vec(), result.continuation_point()))
-            })
-            .collect();
+        let results: Vec<_> = results.iter().map(to_browse_result).collect();
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
@@ -324,8 +306,7 @@ impl AsyncClient {
     pub async fn browse_next(
         &self,
         continuation_points: &[ua::ContinuationPoint],
-    ) -> Result<Vec<Option<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>>>
-    {
+    ) -> Result<Vec<BrowseResult>> {
         let request = ua::BrowseNextRequest::init().with_continuation_points(continuation_points);
 
         let response = service_request(&self.client, request).await?;
@@ -334,14 +315,7 @@ impl AsyncClient {
             return Err(Error::internal("browse should return results"));
         };
 
-        let results: Vec<_> = results
-            .iter()
-            .map(|result| {
-                result
-                    .references()
-                    .map(|references| (references.into_vec(), result.continuation_point()))
-            })
-            .collect();
+        let results: Vec<_> = results.iter().map(to_browse_result).collect();
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
@@ -494,4 +468,20 @@ async fn service_request<R: ServiceRequest>(
     // there.
     rx.await
         .unwrap_or(Err(Error::internal("callback should send result")))
+}
+
+/// Result type for browsing.
+pub type BrowseResult = Result<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>;
+
+/// Converts [`ua::BrowseResult`] to our public result type.
+fn to_browse_result(result: &ua::BrowseResult) -> BrowseResult {
+    // Make sure to verify the inner status code inside `BrowseResult`. The service request itself
+    // finishes without error, even when browsing the node has failed.
+    Error::verify_good(&result.status_code())?;
+
+    let Some(references) = result.references() else {
+        return Err(Error::internal("browse should return references"));
+    };
+
+    Ok((references.into_vec(), result.continuation_point()))
 }
