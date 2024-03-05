@@ -7,10 +7,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// Error type used in this crate.
 ///
-/// This error may be returned from many different OPC UA calls. It represents any status code other
-/// than [`UA_STATUSCODE_GOOD`].
+/// This error may be returned from many different OPC UA calls. It represents any status code
+/// that doesn't qualify as [`is_good()`].
 ///
-/// [`UA_STATUSCODE_GOOD`]: open62541_sys::UA_STATUSCODE_GOOD
+/// [`is_good()`]: crate::ua::StatusCode::is_good
 #[derive(Debug, Error)]
 pub enum Error {
     /// Error from server.
