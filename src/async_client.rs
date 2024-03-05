@@ -73,6 +73,20 @@ impl AsyncClient {
         Ok(client.state())
     }
 
+    /// Reads node value.
+    ///
+    /// To read other attributes, see [`read_attribute()`] and [`read_attributes()`].
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or its value attribute cannot be read.
+    ///
+    /// [`read_attribute()`]: Self::read_attribute
+    /// [`read_attributes()`]: Self::read_attributes
+    pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<ua::DataValue, Error> {
+        self.read_attribute(node_id, &ua::AttributeId::VALUE).await
+    }
+
     /// Reads node attribute.
     ///
     /// To read only the value attribute, you can also use [`read_value()`].
@@ -100,20 +114,6 @@ impl AsyncClient {
             .next()
             .expect("should contain exactly one attribute");
         Ok(value)
-    }
-
-    /// Reads node value.
-    ///
-    /// To read other attributes, see [`read_attribute()`] and [`read_attributes()`].
-    ///
-    /// # Errors
-    ///
-    /// This fails when the node does not exist or its value attribute cannot be read.
-    ///
-    /// [`read_attribute()`]: Self::read_attribute
-    /// [`read_attributes()`]: Self::read_attributes
-    pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<ua::DataValue, Error> {
-        self.read_attribute(node_id, &ua::AttributeId::VALUE).await
     }
 
     /// Reads several node attributes.
