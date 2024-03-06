@@ -30,8 +30,8 @@ async fn main() -> anyhow::Result<()> {
             .context("create first subscription")?,
     );
 
-    // `/Root/Objects/1:Boiler#1/1:CustomController/1:Input1`
-    let input_node_id = ua::NodeId::numeric(1, 1773);
+    // `/Root/Objects/2:DeviceSet/1:CoffeeMachine/1:Espresso/7:BeverageSize`
+    let input_node_id = ua::NodeId::numeric(1, 1074);
 
     // `/Root/Objects/Server/ServerStatus/CurrentTime`
     let current_time_node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);

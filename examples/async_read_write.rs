@@ -25,8 +25,8 @@ async fn main() -> anyhow::Result<()> {
     let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", CYCLE_TIME)
         .context("connect")?;
 
-    // `/Root/Objects/1:Boiler#1/1:CustomController/1:Input1`
-    let node_id = ua::NodeId::numeric(1, 1773);
+    // `/Root/Objects/2:DeviceSet/1:CoffeeMachine/1:Espresso/7:BeverageSize`
+    let node_id = ua::NodeId::numeric(1, 1074);
 
     println!("Reading node {node_id}");
 
@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
         .write_value(
             &node_id,
             &ua::DataValue::init()
-                .with_value(&ua::Variant::init().with_scalar(&ua::Double::new(value))),
+                .with_value(&ua::Variant::init().with_scalar(&ua::Float::new(value))),
         )
         .await
         .context("write")?;
