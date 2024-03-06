@@ -17,16 +17,16 @@ use tokio::sync::mpsc;
 ///
 /// ```
 /// use open62541::CallbackOnce;
-/// use std::{cell::RefCell, rc::Rc};
+/// use std::{cell::Cell, rc::Rc};
 /// # use std::ffi::c_void;
 ///
-/// let cell = Rc::new(RefCell::new(0));
+/// let cell = Rc::new(Cell::new(0));
 ///
 /// // Turn `tx` into type-erased void pointer for FFI.
 /// let raw_data: *mut c_void = CallbackOnce::<u32>::prepare({
 ///     let cell = Rc::clone(&cell);
 ///     move |value| {
-///         *cell.borrow_mut() = value;
+///         cell.set(value);
 ///     }
 /// });
 ///
@@ -35,7 +35,7 @@ use tokio::sync::mpsc;
 ///
 /// // Value has been received.
 ///
-/// assert_eq!(*cell.borrow(), 123);
+/// assert_eq!(cell.get(), 123);
 /// ```
 #[allow(clippy::module_name_repetitions)]
 pub struct CallbackOnce<T>(Box<dyn FnOnce(T)>);
