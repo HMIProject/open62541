@@ -1,26 +1,8 @@
-use std::{ffi::c_void, marker::PhantomData};
+use std::ffi::c_void;
 
 use tokio::sync::mpsc;
 
-pub struct Userdata<T>(T);
-
-impl<T> Userdata<T> {
-    pub fn prepare(value: T) -> *mut c_void {
-        let userdata = Userdata(value);
-        // Move `userdata` onto the heap and leak its memory into a raw pointer.
-        let ptr: *mut Userdata<T> = Box::into_raw(Box::new(userdata));
-        ptr.cast::<c_void>()
-    }
-
-    pub unsafe fn consume(data: *mut c_void) -> T {
-        let ptr: *mut Userdata<T> = data.cast::<Userdata<T>>();
-        // Reconstruct heap-allocated `userdata` back into its `Box`.
-        let userdata = unsafe { Box::from_raw(ptr) };
-        // TODO: Prefer `Box::into_inner()` when it becomes stable.
-        // https://github.com/rust-lang/rust/issues/80437
-        (*userdata).0
-    }
-}
+use crate::Userdata;
 
 /// Type-removed one-shot callback.
 ///
@@ -54,11 +36,15 @@ impl<T> Userdata<T> {
 /// unsafe { CallbackOnce::<u32>::execute(raw_data, 123); }
 ///
 /// // Value has been received.
-///
 /// assert_eq!(cell.get(), 123);
 /// ```
 #[allow(clippy::module_name_repetitions)]
-pub struct CallbackOnce<T>(PhantomData<T>);
+pub struct CallbackOnce<T>(T);
+
+// TODO: Use inherent associated type to define this directly on `CallbackOnce`. At the moment, this
+// is not possible yet.
+// https://github.com/rust-lang/rust/issues/8995
+type CallbackOnceUserdata<T> = Userdata<Box<dyn FnOnce(T) + 'static>>;
 
 impl<T> CallbackOnce<T> {
     /// Prepares closure for later call.
@@ -69,8 +55,7 @@ impl<T> CallbackOnce<T> {
     where
         F: FnOnce(T) + 'static,
     {
-        let userdata: Box<dyn FnOnce(T) + 'static> = Box::new(f);
-        Userdata::<Box<dyn FnOnce(T) + 'static>>::prepare(userdata)
+        CallbackOnceUserdata::<T>::prepare(Box::new(f))
     }
 
     /// Unwraps [`c_void`] pointer and calls closure.
@@ -82,8 +67,8 @@ impl<T> CallbackOnce<T> {
     ///
     /// The value type `T` must be the same as in [`prepare()`](CallbackOnce::prepare).
     pub unsafe fn execute(data: *mut c_void, payload: T) {
-        let userdata = unsafe { Userdata::<Box<dyn FnOnce(T) + 'static>>::consume(data) };
-        userdata(payload);
+        let f = unsafe { CallbackOnceUserdata::<T>::consume(data) };
+        f(payload);
     }
 }
 
@@ -120,18 +105,21 @@ impl<T> CallbackOnce<T> {
 /// unsafe { CallbackStream::<u32>::notify(raw_data, 3); }
 ///
 /// // Clean up resources held by pointer.
-///
 /// unsafe { CallbackStream::<u32>::delete(raw_data); }
 ///
 /// // Values have been received.
-///
 /// assert_eq!(block_on(rx.recv()), Some(1));
 /// assert_eq!(block_on(rx.recv()), Some(2));
 /// assert_eq!(block_on(rx.recv()), Some(3));
 /// assert_eq!(block_on(rx.recv()), None);
 /// ```
 #[allow(clippy::module_name_repetitions)]
-pub struct CallbackStream<T>(mpsc::Sender<T>);
+pub struct CallbackStream<T>(T);
+
+// TODO: Use inherent associated type to define this directly on `CallbackOnce`. At the moment, this
+// is not possible yet.
+// https://github.com/rust-lang/rust/issues/8995
+type CallbackStreamUserdata<T> = Userdata<mpsc::Sender<T>>;
 
 impl<T> CallbackStream<T> {
     /// Prepares sender for later use.
@@ -140,10 +128,7 @@ impl<T> CallbackStream<T> {
     /// the returned pointer exactly once.
     #[must_use]
     pub fn prepare(tx: mpsc::Sender<T>) -> *mut c_void {
-        let callback = CallbackStream(tx);
-        // Move `callback` onto the heap and leak its memory into a raw pointer.
-        let ptr: *mut CallbackStream<T> = Box::into_raw(Box::new(callback));
-        ptr.cast::<c_void>()
+        CallbackStreamUserdata::<T>::prepare(tx)
     }
 
     /// Uses [`c_void`] pointer and sends message.
@@ -155,15 +140,11 @@ impl<T> CallbackStream<T> {
     ///
     /// The value type `T` must be the same as in [`prepare()`](CallbackStream::prepare).
     pub unsafe fn notify(data: *mut c_void, payload: T) {
-        let ptr: *mut CallbackStream<T> = data.cast::<CallbackStream<T>>();
-        // Reconstruct heap-allocated `callback` back into its `Box`.
-        let callback = unsafe { Box::from_raw(ptr) };
+        let tx = unsafe { CallbackStreamUserdata::<T>::peek_at(data) };
         // Send message. Ignore disconnects and full buffers. (There is not much we can do here when
         // the buffer is full. We could blockingly wait but that blocks `UA_Client_run_iterate()` in
         // our event loop, potentially preventing the receiver from clearing the stream.)
-        let _unused = callback.0.try_send(payload);
-        // Leak `callback` again to allow future notification calls.
-        let _unused = Box::into_raw(callback);
+        let _unused = tx.try_send(payload);
     }
 
     /// Unwraps [`c_void`] pointer and closes channel.
@@ -173,10 +154,6 @@ impl<T> CallbackStream<T> {
     /// The given pointer must have been returned from [`prepare()`](CallbackStream::prepare) and
     /// must not have been passed into [`delete()`](CallbackStream::delete) yet.
     pub unsafe fn delete(data: *mut c_void) {
-        let ptr: *mut CallbackStream<T> = data.cast::<CallbackStream<T>>();
-        // Reconstruct heap-allocated `callback` back into its `Box`.
-        let callback = unsafe { Box::from_raw(ptr) };
-        // Here, the `Box` is dropped and its memory freed.
-        drop(callback);
+        let _tx = unsafe { CallbackStreamUserdata::<T>::consume(data) };
     }
 }

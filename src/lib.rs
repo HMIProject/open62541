@@ -85,6 +85,7 @@ mod async_monitored_item;
 mod async_subscription;
 #[cfg(feature = "tokio")]
 mod callback;
+mod userdata;
 
 pub use self::{
     client::{Client, ClientBuilder},
@@ -102,4 +103,5 @@ pub use self::{
     async_monitored_item::AsyncMonitoredItem,
     async_subscription::AsyncSubscription,
     callback::{CallbackOnce, CallbackStream},
+    userdata::Userdata,
 };
