@@ -10,12 +10,12 @@ async fn main() -> anyhow::Result<()> {
     let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", CYCLE_TIME)
         .context("connect")?;
 
-    // `/Root/Objects/8:Simulation/8:ObjectWithMethods`
-    let object_node_id = ua::NodeId::string(8, "ObjectWithMethods");
-    // `/Root/Objects/8:Simulation/8:ObjectWithMethods/8:MethodNoArgs`
-    let method_no_args_node_id = ua::NodeId::string(8, "MethodNoArgs");
-    // `/Root/Objects/8:Simulation/8:ObjectWithMethods/8:MethodIO`
-    let method_io_node_id = ua::NodeId::string(8, "MethodIO");
+    // `/Root/Objects/9:Simulation/9:ObjectWithMethods`
+    let object_node_id = ua::NodeId::string(9, "ObjectWithMethods");
+    // `/Root/Objects/9:Simulation/9:ObjectWithMethods/9:MethodNoArgs`
+    let method_no_args_node_id = ua::NodeId::string(9, "MethodNoArgs");
+    // `/Root/Objects/9:Simulation/9:ObjectWithMethods/9:MethodIO`
+    let method_io_node_id = ua::NodeId::string(9, "MethodIO");
 
     println!("Calling node {method_no_args_node_id}");
 
