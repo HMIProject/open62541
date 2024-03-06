@@ -1,6 +1,26 @@
-use std::ffi::c_void;
+use std::{ffi::c_void, marker::PhantomData};
 
 use tokio::sync::mpsc;
+
+pub struct Userdata<T>(T);
+
+impl<T> Userdata<T> {
+    pub fn prepare(value: T) -> *mut c_void {
+        let userdata = Userdata(value);
+        // Move `userdata` onto the heap and leak its memory into a raw pointer.
+        let ptr: *mut Userdata<T> = Box::into_raw(Box::new(userdata));
+        ptr.cast::<c_void>()
+    }
+
+    pub unsafe fn consume(data: *mut c_void) -> T {
+        let ptr: *mut Userdata<T> = data.cast::<Userdata<T>>();
+        // Reconstruct heap-allocated `userdata` back into its `Box`.
+        let userdata = unsafe { Box::from_raw(ptr) };
+        // TODO: Prefer `Box::into_inner()` when it becomes stable.
+        // https://github.com/rust-lang/rust/issues/80437
+        (*userdata).0
+    }
+}
 
 /// Type-removed one-shot callback.
 ///
@@ -38,7 +58,7 @@ use tokio::sync::mpsc;
 /// assert_eq!(cell.get(), 123);
 /// ```
 #[allow(clippy::module_name_repetitions)]
-pub struct CallbackOnce<T>(Box<dyn FnOnce(T)>);
+pub struct CallbackOnce<T>(PhantomData<T>);
 
 impl<T> CallbackOnce<T> {
     /// Prepares closure for later call.
@@ -49,10 +69,8 @@ impl<T> CallbackOnce<T> {
     where
         F: FnOnce(T) + 'static,
     {
-        let callback = CallbackOnce(Box::new(f));
-        // Move `callback` onto the heap and leak its memory into a raw pointer.
-        let ptr: *mut CallbackOnce<T> = Box::into_raw(Box::new(callback));
-        ptr.cast::<c_void>()
+        let userdata: Box<dyn FnOnce(T) + 'static> = Box::new(f);
+        Userdata::<Box<dyn FnOnce(T) + 'static>>::prepare(userdata)
     }
 
     /// Unwraps [`c_void`] pointer and calls closure.
@@ -64,11 +82,8 @@ impl<T> CallbackOnce<T> {
     ///
     /// The value type `T` must be the same as in [`prepare()`](CallbackOnce::prepare).
     pub unsafe fn execute(data: *mut c_void, payload: T) {
-        let ptr: *mut CallbackOnce<T> = data.cast::<CallbackOnce<T>>();
-        // Reconstruct heap-allocated `callback` back into its `Box`.
-        let callback = unsafe { Box::from_raw(ptr) };
-        callback.0(payload);
-        // Here, the `Box` is dropped and its memory freed.
+        let userdata = unsafe { Userdata::<Box<dyn FnOnce(T) + 'static>>::consume(data) };
+        userdata(payload);
     }
 }
 

@@ -1,6 +1,6 @@
 use std::{
     ffi::c_void,
-    ptr, slice,
+    slice,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -406,9 +406,11 @@ async fn service_request<R: ServiceRequest>(
     unsafe extern "C" fn callback_c<R: ServiceRequest>(
         _client: *mut UA_Client,
         userdata: *mut c_void,
-        _request_id: UA_UInt32,
+        request_id: UA_UInt32,
         response: *mut c_void,
     ) {
+        let request_id = unsafe { ua::UInt32::from_raw(request_id) };
+        log::debug!("<- {request_id:?}");
         log::debug!("Request completed");
 
         // SAFETY: Incoming pointer is valid for access.
@@ -446,7 +448,9 @@ async fn service_request<R: ServiceRequest>(
 
         log::debug!("Calling request");
 
-        unsafe {
+        let mut request_id: ua::UInt32 = ua::UInt32::new(0);
+
+        let result = unsafe {
             UA_Client_sendAsyncRequest(
                 client.as_mut_ptr(),
                 request.as_ptr().cast::<c_void>(),
@@ -454,9 +458,12 @@ async fn service_request<R: ServiceRequest>(
                 Some(callback_c::<R>),
                 R::Response::data_type(),
                 Cb::<R>::prepare(callback),
-                ptr::null_mut(),
+                request_id.as_mut_ptr(),
             )
-        }
+        };
+
+        log::debug!("-> {request_id:?}");
+        result
     });
     Error::verify_good(&status_code)?;
 
