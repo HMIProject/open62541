@@ -85,11 +85,13 @@ mod async_monitored_item;
 mod async_subscription;
 #[cfg(feature = "tokio")]
 mod callback;
+mod userdata;
 
 pub use self::{
     client::{Client, ClientBuilder},
     data_type::DataType,
     error::{Error, Result},
+    userdata::Userdata,
 };
 pub(crate) use self::{
     data_type::{data_type, enum_variants},
