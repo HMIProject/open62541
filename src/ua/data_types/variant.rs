@@ -81,6 +81,7 @@ impl Variant {
             Double,   // Data type ns=0;i=11
             String,   // Data type ns=0;i=12
             DateTime, // Data type ns=0;i=13
+            Argument, // Data type ns=0;i=296
         );
 
         ua::VariantValue::Scalar(ua::ScalarValue::Unknown)

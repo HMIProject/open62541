@@ -27,6 +27,7 @@ pub enum ScalarValue {
     Double(ua::Double),     // Data type ns=0;i=11
     String(ua::String),     // Data type ns=0;i=12
     DateTime(ua::DateTime), // Data type ns=0;i=13
+    Argument(ua::Argument), // Data type ns=0;i=296
 }
 
 /// Value that may be invalid or empty.
