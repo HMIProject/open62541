@@ -91,6 +91,7 @@ pub use self::{
     client::{Client, ClientBuilder},
     data_type::DataType,
     error::{Error, Result},
+    userdata::Userdata,
 };
 pub(crate) use self::{
     data_type::{data_type, enum_variants},
@@ -103,5 +104,4 @@ pub use self::{
     async_monitored_item::AsyncMonitoredItem,
     async_subscription::AsyncSubscription,
     callback::{CallbackOnce, CallbackStream},
-    userdata::Userdata,
 };
