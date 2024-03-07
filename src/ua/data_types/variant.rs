@@ -1,7 +1,8 @@
 use std::ffi::c_void;
 
 use open62541_sys::{
-    UA_Variant_hasScalarType, UA_Variant_isEmpty, UA_Variant_isScalar, UA_Variant_setScalarCopy,
+    UA_Variant_hasArrayType, UA_Variant_hasScalarType, UA_Variant_isEmpty, UA_Variant_isScalar,
+    UA_Variant_setScalarCopy,
 };
 
 use crate::{data_type::DataType, ua};
@@ -45,6 +46,14 @@ impl Variant {
             return None;
         }
         unsafe { self.0.data.cast::<T::Inner>().as_ref() }.map(|value| T::clone_raw(value))
+    }
+
+    #[must_use]
+    pub fn to_array<T: DataType>(&self) -> Option<ua::Array<T>> {
+        if !unsafe { UA_Variant_hasArrayType(self.as_ptr(), T::data_type()) } {
+            return None;
+        }
+        ua::Array::from_raw_parts(self.0.data.cast::<T::Inner>(), self.0.arrayLength)
     }
 
     #[must_use]
