@@ -55,7 +55,8 @@ impl<T> CallbackOnce<T> {
     where
         F: FnOnce(T) + 'static,
     {
-        CallbackOnceUserdata::<T>::prepare(Box::new(f))
+        // `Userdata` requires `T: Sized`, so we double-box here.
+        CallbackOnceUserdata::<T>::prepare(Box::new(Box::new(f)))
     }
 
     /// Unwraps [`c_void`] pointer and calls closure.
@@ -128,7 +129,7 @@ impl<T> CallbackStream<T> {
     /// the returned pointer exactly once.
     #[must_use]
     pub fn prepare(tx: mpsc::Sender<T>) -> *mut c_void {
-        CallbackStreamUserdata::<T>::prepare(tx)
+        CallbackStreamUserdata::<T>::prepare(Box::new(tx))
     }
 
     /// Uses [`c_void`] pointer and sends message.

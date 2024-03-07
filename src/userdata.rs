@@ -27,7 +27,7 @@ use std::{ffi::c_void, marker::PhantomData};
 /// # use std::ffi::c_void;
 ///
 /// // Turn user data into type-erased void pointer for FFI.
-/// let raw_data: *mut c_void = Userdata::<u32>::prepare(0);
+/// let raw_data: *mut c_void = Userdata::<u32>::prepare(Box::new(0));
 ///
 /// // Use type-erased pointer to get/manipulate user data.
 /// unsafe {
@@ -42,7 +42,7 @@ use std::{ffi::c_void, marker::PhantomData};
 /// };
 ///
 /// // Got user data. `raw_data` is no longer valid.
-/// assert_eq!(userdata, 123);
+/// assert_eq!(*userdata, 123);
 /// ```
 pub struct Userdata<T>(PhantomData<T>);
 
@@ -53,10 +53,11 @@ impl<T> Userdata<T> {
     /// pointer exactly once.
     ///
     /// [`consume()`]: Self::consume
-    pub fn prepare(userdata: T) -> *mut c_void {
+    #[must_use]
+    pub fn prepare(userdata: Box<T>) -> *mut c_void {
         // Move `userdata` onto the heap and leak its memory into a raw pointer. This region will be
         // reclaimed later in `consume()`.
-        let ptr: *mut T = Box::into_raw(Box::new(userdata));
+        let ptr: *mut T = Box::into_raw(userdata);
         ptr.cast::<c_void>()
     }
 
@@ -92,12 +93,9 @@ impl<T> Userdata<T> {
     /// [`prepare()`]: Self::prepare
     /// [`peek_at()`]: Self::peek_at
     /// [`consume()`]: Self::consume
-    pub unsafe fn consume(data: *mut c_void) -> T {
+    pub unsafe fn consume(data: *mut c_void) -> Box<T> {
         let ptr: *mut T = data.cast::<T>();
         // Reconstruct heap-allocated `userdata` back into its `Box`.
-        let userdata = unsafe { Box::from_raw(ptr) };
-        // TODO: Prefer `Box::into_inner()` when it becomes stable.
-        // https://github.com/rust-lang/rust/issues/80437
-        *userdata
+        unsafe { Box::from_raw(ptr) }
     }
 }
