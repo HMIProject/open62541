@@ -102,6 +102,11 @@ async fn get_definition(
         }
     }
 
+    let x = [input_arguments, output_arguments]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+
     // TODO: Refactor. Query input/output argument definitions in single request.
     let input_arguments = match input_arguments {
         Some(arguments) => Some(get_arguments(client, arguments.node_id()).await?),
@@ -116,6 +121,28 @@ async fn get_definition(
         input_arguments,
         output_arguments,
     })
+}
+
+async fn read_nodes(
+    client: &AsyncClient,
+    node_ids: &[Option<ua::NodeId>],
+) -> anyhow::Result<Vec<Option<ua::DataValue>>> {
+    let values: Vec<_> = node_ids
+        .iter()
+        .flatten()
+        .map(|node_id| (node_id.clone(), ua::AttributeId::VALUE))
+        .collect();
+
+    let values = client.read_many_attributes(&values).await?;
+
+    let _: Vec<_> = node_ids
+        .iter()
+        .enumerate()
+        .flat_map(|(index, node_id)| node_id.as_ref().map(|_| index))
+        .zip(values)
+        .collect();
+
+    todo!()
 }
 
 async fn get_arguments(
