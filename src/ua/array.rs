@@ -1,6 +1,6 @@
 use std::{
     ffi::c_void,
-    mem,
+    fmt, mem,
     num::NonZeroUsize,
     ptr::{self, NonNull},
     slice,
@@ -324,12 +324,11 @@ impl<T: DataType> Drop for Array<T> {
 //     }
 // }
 
-// TODO
-// impl<T: DataType> fmt::Debug for Array<T> {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         todo!()
-//     }
-// }
+impl<T: DataType> fmt::Debug for Array<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.as_slice())
+    }
+}
 
 #[cfg(test)]
 mod tests {
