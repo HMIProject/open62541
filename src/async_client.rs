@@ -117,13 +117,14 @@ impl AsyncClient {
     /// The size and order of the result list matches the size and order of the given attribute ID
     /// list.
     ///
-    /// To read only a single attribute, you can also use [`read_attributes()`].
+    /// To read only a single attribute, you can also use [`read_attribute()`].
     ///
     /// # Errors
     ///
-    /// This fails when the node does not exist or one of the attributes cannot be read.
+    /// This fails only when the entire request fails. When the node does not exist or one of the
+    /// attributes cannot be read, an inner `Err` is returned.
     ///
-    /// [`read_attributes()`]: Self::read_attributes
+    /// [`read_attribute()`]: Self::read_attribute
     pub async fn read_attributes(
         &self,
         node_id: &ua::NodeId,
@@ -260,7 +261,8 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails when any of the given nodes does not exist or cannot be browsed.
+    /// This fails only when the entire request fails. When a node does not exist or cannot be
+    /// browsed, an inner `Err` is returned.
     ///
     /// [`browse()`]: Self::browse
     pub async fn browse_many(&self, node_ids: &[ua::NodeId]) -> Result<Vec<BrowseResult>> {
@@ -296,7 +298,8 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails when any of the given continuation points is invalid.
+    /// This fails only when the entire request fails. When a continuation point is invalid, an
+    /// inner `Err` is returned.
     ///
     /// [`browse()`]: Self::browse
     /// [`browse_many()`]: Self::browse_many
