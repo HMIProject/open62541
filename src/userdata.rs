@@ -1,6 +1,6 @@
 use std::{ffi::c_void, marker::PhantomData};
 
-/// Type-removed user data.
+/// Type-erased user data.
 ///
 /// Use this to wrap arbitrary data into a structure which may be passed via a [`c_void`] pointer to
 /// an external library. Later, when this `extern` callback is run with that data, you may unwrap it

@@ -4,7 +4,7 @@ use tokio::sync::mpsc;
 
 use crate::Userdata;
 
-/// Type-removed one-shot callback.
+/// Type-erased one-shot callback.
 ///
 /// Use this to wrap an [`FnOnce`] closure into a data structure that may be passed via a [`c_void`]
 /// pointer as user data to an external library. Later, when this `extern` callback is run with that
@@ -72,7 +72,7 @@ impl<T> CallbackOnce<T> {
     }
 }
 
-/// Type-removed stream sender.
+/// Type-erased stream sender.
 ///
 /// Use this to wrap a [`Sender`] into a data structure that may be passed via a [`c_void`] pointer
 /// as user data to an external library. Later, when this `extern` callback is run with that data,
