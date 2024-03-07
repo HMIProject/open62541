@@ -6,6 +6,7 @@ crate::data_type!(ExtensionObject);
 
 impl ExtensionObject {
     /// Gets encoded byte string content.
+    #[must_use]
     pub fn encoded_content_bytestring(&self) -> Option<(&ua::NodeId, &ua::ByteString)> {
         match self.0.encoding {
             UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_BYTESTRING => {}
@@ -21,6 +22,7 @@ impl ExtensionObject {
     }
 
     /// Gets encoded XML content.
+    #[must_use]
     pub fn encoded_content_xml(&self) -> Option<(&ua::NodeId, &ua::String)> {
         match self.0.encoding {
             UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_XML => {}
@@ -36,6 +38,7 @@ impl ExtensionObject {
     }
 
     /// Gets decoded content.
+    #[must_use]
     pub fn decoded_content<T: DataType>(&self) -> Option<&T> {
         match self.0.encoding {
             UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_DECODED
@@ -45,11 +48,10 @@ impl ExtensionObject {
 
         let decoded_content = unsafe { self.0.content.decoded.as_ref() };
 
-        (decoded_content.type_ == T::data_type()).then(|| {
-            T::raw_ref(
-                unsafe { decoded_content.data.cast::<T::Inner>().as_ref() }
-                    .expect("data should be set"),
-            )
-        })
+        if decoded_content.type_ != T::data_type() {
+            return None;
+        }
+
+        unsafe { decoded_content.data.cast::<T::Inner>().as_ref() }.map(T::raw_ref)
     }
 }

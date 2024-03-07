@@ -14,7 +14,7 @@ impl ExpandedNodeId {
     }
 
     #[must_use]
-    pub fn server_index(&self) -> u32 {
+    pub const fn server_index(&self) -> u32 {
         self.0.serverIndex
     }
 }
