@@ -82,8 +82,8 @@ struct MethodDefinition {
     output_arguments: Option<Vec<(ua::String, ua::NodeId)>>,
 }
 
-const INPUT_ARGUMENTS_PROPERTY_NAME: &'static str = "InputArguments";
-const OUTPUT_ARGUMENTS_PROPERTY_NAME: &'static str = "OutputArguments";
+const INPUT_ARGUMENTS_PROPERTY_NAME: &str = "InputArguments";
+const OUTPUT_ARGUMENTS_PROPERTY_NAME: &str = "OutputArguments";
 
 async fn get_definition(
     client: &AsyncClient,
