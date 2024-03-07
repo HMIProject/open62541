@@ -1,4 +1,4 @@
-use std::{ffi::c_void, mem::MaybeUninit, ptr};
+use std::{ffi::c_void, fmt::Debug, mem::MaybeUninit, ptr};
 
 use open62541_sys::{
     UA_DataType, UA_Order, UA_clear, UA_copy, UA_init, UA_order, UA_print, UA_STATUSCODE_GOOD,
@@ -17,7 +17,7 @@ use open62541_sys::{
 /// they are regularly passed by value to functions in order to transfer ownership.
 ///
 /// [`Inner`]: DataType::Inner
-pub unsafe trait DataType: Clone {
+pub unsafe trait DataType: Debug + Clone {
     /// Inner type.
     ///
     /// It must be possible to transmute between the inner type and the type that implements
