@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+use std::{ffi::c_void, marker::PhantomData};
 
 use tokio::sync::mpsc;
 
@@ -39,7 +39,7 @@ use crate::Userdata;
 /// assert_eq!(cell.get(), 123);
 /// ```
 #[allow(clippy::module_name_repetitions)]
-pub struct CallbackOnce<T>(T);
+pub struct CallbackOnce<T>(PhantomData<T>);
 
 // TODO: Use inherent associated type to define this directly on `CallbackOnce`. At the moment, this
 // is not possible yet.
@@ -114,7 +114,7 @@ impl<T> CallbackOnce<T> {
 /// assert_eq!(block_on(rx.recv()), None);
 /// ```
 #[allow(clippy::module_name_repetitions)]
-pub struct CallbackStream<T>(T);
+pub struct CallbackStream<T>(PhantomData<T>);
 
 // TODO: Use inherent associated type to define this directly on `CallbackOnce`. At the moment, this
 // is not possible yet.

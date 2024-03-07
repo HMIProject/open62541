@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+use std::{ffi::c_void, marker::PhantomData};
 
 /// Type-removed user data.
 ///
@@ -44,7 +44,7 @@ use std::ffi::c_void;
 /// // Got user data. `raw_data` is no longer valid.
 /// assert_eq!(userdata, 123);
 /// ```
-pub struct Userdata<T>(T);
+pub struct Userdata<T>(PhantomData<T>);
 
 impl<T> Userdata<T> {
     /// Wraps user data.
@@ -53,11 +53,10 @@ impl<T> Userdata<T> {
     /// pointer exactly once.
     ///
     /// [`consume()`]: Self::consume
-    pub fn prepare(value: T) -> *mut c_void {
-        let userdata = Userdata(value);
+    pub fn prepare(userdata: T) -> *mut c_void {
         // Move `userdata` onto the heap and leak its memory into a raw pointer. This region will be
         // reclaimed later in `consume()`.
-        let ptr: *mut Userdata<T> = Box::into_raw(Box::new(userdata));
+        let ptr: *mut T = Box::into_raw(Box::new(userdata));
         ptr.cast::<c_void>()
     }
 
@@ -69,18 +68,18 @@ impl<T> Userdata<T> {
     /// It must not have been given to [`consume()`] yet.
     ///
     /// The lifetime of the returned reference is not allowed to extend past the next call to either
-    /// [`peek_at()`] or [`consume()`].
+    /// [`peek_at()`] or [`consume()`] and must not outlive the lifetime of `T` itself.
     ///
     /// [`prepare()`]: Self::prepare
     /// [`peek_at()`]: Self::peek_at
     /// [`consume()`]: Self::consume
     pub unsafe fn peek_at<'a>(data: *mut c_void) -> &'a mut T {
-        let ptr: *mut Userdata<T> = data.cast::<Userdata<T>>();
+        let ptr: *mut T = data.cast::<T>();
         // Reconstruct heap-allocated `userdata` back into its `Box`.
         let userdata = unsafe { Box::from_raw(ptr) };
         // Leak box as we do not want to destroy the data yet. This happens only when `consume()` is
         // called later.
-        &mut Box::leak(userdata).0
+        Box::leak(userdata)
     }
 
     /// Unwraps [`c_void`] pointer and release memory.
@@ -94,11 +93,11 @@ impl<T> Userdata<T> {
     /// [`peek_at()`]: Self::peek_at
     /// [`consume()`]: Self::consume
     pub unsafe fn consume(data: *mut c_void) -> T {
-        let ptr: *mut Userdata<T> = data.cast::<Userdata<T>>();
+        let ptr: *mut T = data.cast::<T>();
         // Reconstruct heap-allocated `userdata` back into its `Box`.
         let userdata = unsafe { Box::from_raw(ptr) };
         // TODO: Prefer `Box::into_inner()` when it becomes stable.
         // https://github.com/rust-lang/rust/issues/80437
-        (*userdata).0
+        *userdata
     }
 }
