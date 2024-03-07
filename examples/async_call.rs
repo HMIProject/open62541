@@ -17,28 +17,18 @@ async fn main() -> anyhow::Result<()> {
     // `/Root/Objects/9:Simulation/9:ObjectWithMethods/9:MethodIO`
     let method_io_node_id = ua::NodeId::string(9, "MethodIO");
 
-    println!("Calling node {method_no_args_node_id}");
+    let _output_arguments =
+        call_method(&client, &object_node_id, &method_no_args_node_id, &[]).await?;
 
-    let input_arguments: Vec<ua::Variant> = vec![];
+    println!();
 
-    let output_arguments = client
-        .call_method(&object_node_id, &method_no_args_node_id, &input_arguments)
-        .await
-        .context("call")?;
-
-    println!("-> {output_arguments:?}");
-
-    println!("Calling node {method_io_node_id}");
-
-    let input_arguments: Vec<ua::Variant> =
-        vec![ua::Variant::init().with_scalar(&ua::UInt32::new(123))];
-
-    let output_arguments = client
-        .call_method(&object_node_id, &method_io_node_id, &input_arguments)
-        .await
-        .context("call")?;
-
-    println!("-> {output_arguments:?}");
+    let output_arguments = call_method(
+        &client,
+        &object_node_id,
+        &method_io_node_id,
+        &[ua::Variant::init().with_scalar(&ua::UInt32::new(123))],
+    )
+    .await?;
 
     let value: i32 = output_arguments
         .ok_or(anyhow!("output arguments"))?
@@ -51,4 +41,22 @@ async fn main() -> anyhow::Result<()> {
     println!("-> {value}");
 
     Ok(())
+}
+
+async fn call_method(
+    client: &AsyncClient,
+    object_node_id: &ua::NodeId,
+    method_node_id: &ua::NodeId,
+    input_arguments: &[ua::Variant],
+) -> anyhow::Result<Option<Vec<ua::Variant>>> {
+    println!("Calling node {method_node_id}");
+
+    let output_arguments = client
+        .call_method(object_node_id, method_node_id, input_arguments)
+        .await
+        .context("call")?;
+
+    println!("-> {output_arguments:?}");
+
+    Ok(output_arguments)
 }
