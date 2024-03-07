@@ -10,7 +10,16 @@ use crate::{data_type::DataType, ua, Error};
 crate::data_type!(NodeId);
 
 impl NodeId {
-    /// Creates node ID for numeric identifier.
+    /// Creates numeric node ID in namespace 0.
+    ///
+    /// Namespace 0 is always the UA namespace `http://opcfoundation.org/UA/` itself and is used for
+    /// fixed definitions as laid out in the OPC UA specification.
+    #[must_use]
+    pub fn ns0(numeric: u32) -> Self {
+        Self::numeric(0, numeric)
+    }
+
+    /// Creates numeric node ID.
     #[must_use]
     pub fn numeric(ns_index: u16, numeric: u32) -> Self {
         let inner = unsafe { UA_NODEID_NUMERIC(ns_index, numeric) };
@@ -23,7 +32,7 @@ impl NodeId {
         Self(inner)
     }
 
-    /// Creates node ID for string identifier.
+    /// Creates string node ID.
     ///
     /// # Panics
     ///
@@ -52,9 +61,38 @@ impl NodeId {
         Self(inner)
     }
 
+    /// Gets node ID type.
     #[must_use]
     pub fn identifier_type(&self) -> &ua::NodeIdType {
         ua::NodeIdType::raw_ref(&self.0.identifierType)
+    }
+
+    /// Gets identifier of numeric node ID in namespace 0.
+    ///
+    /// Namespace 0 is always the UA namespace `http://opcfoundation.org/UA/` itself and is used for
+    /// fixed definitions as laid out in the OPC UA specification.
+    #[must_use]
+    pub fn as_ns0(&self) -> Option<u32> {
+        self.as_numeric()
+            .and_then(|(ns_index, numeric)| (ns_index == 0).then_some(numeric))
+    }
+
+    /// Gets namespace and identifier of numeric node ID.
+    #[must_use]
+    pub fn as_numeric(&self) -> Option<(u16, u32)> {
+        (self.0.identifierType == UA_NodeIdType::UA_NODEIDTYPE_NUMERIC).then(|| {
+            let identifier = unsafe { self.0.identifier.numeric.as_ref() };
+            (self.0.namespaceIndex, *identifier)
+        })
+    }
+
+    /// Gets namespace and identifier of string node ID.
+    #[must_use]
+    pub fn as_string(&self) -> Option<(u16, &ua::String)> {
+        (self.0.identifierType == UA_NodeIdType::UA_NODEIDTYPE_STRING).then(|| {
+            let identifier = unsafe { self.0.identifier.string.as_ref() };
+            (self.0.namespaceIndex, ua::String::raw_ref(identifier))
+        })
     }
 }
 

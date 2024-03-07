@@ -1,5 +1,6 @@
 //! Thin wrappers for OPC UA data types from [`open62541_sys`].
 
+mod argument;
 mod attribute_id;
 mod browse_description;
 mod browse_direction;
@@ -25,6 +26,7 @@ mod delete_monitored_items_response;
 mod delete_subscriptions_request;
 mod delete_subscriptions_response;
 mod expanded_node_id;
+mod extension_object;
 mod localized_text;
 mod monitored_item_create_request;
 mod monitored_item_create_result;
@@ -45,7 +47,7 @@ mod write_response;
 mod write_value;
 
 pub use self::{
-    attribute_id::AttributeId, browse_description::BrowseDescription,
+    argument::Argument, attribute_id::AttributeId, browse_description::BrowseDescription,
     browse_direction::BrowseDirection, browse_next_request::BrowseNextRequest,
     browse_next_response::BrowseNextResponse, browse_request::BrowseRequest,
     browse_response::BrowseResponse, browse_result::BrowseResult,
@@ -60,7 +62,8 @@ pub use self::{
     delete_monitored_items_response::DeleteMonitoredItemsResponse,
     delete_subscriptions_request::DeleteSubscriptionsRequest,
     delete_subscriptions_response::DeleteSubscriptionsResponse, expanded_node_id::ExpandedNodeId,
-    localized_text::LocalizedText, monitored_item_create_request::MonitoredItemCreateRequest,
+    extension_object::ExtensionObject, localized_text::LocalizedText,
+    monitored_item_create_request::MonitoredItemCreateRequest,
     monitored_item_create_result::MonitoredItemCreateResult, node_class::NodeClass,
     node_id::NodeId, node_id_type::NodeIdType, qualified_name::QualifiedName,
     read_request::ReadRequest, read_response::ReadResponse, read_value_id::ReadValueId,
