@@ -49,3 +49,15 @@ impl ByteString {
         ua::ArrayValue::from_ptr(self.0.data)
     }
 }
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for ByteString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.as_bytes()
+            .ok_or(serde::ser::Error::custom("String should be valid"))
+            .and_then(|bytes| serializer.serialize_bytes(bytes))
+    }
+}

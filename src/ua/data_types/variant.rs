@@ -1,7 +1,8 @@
 use std::ffi::c_void;
 
 use open62541_sys::{
-    UA_Variant_hasScalarType, UA_Variant_isEmpty, UA_Variant_isScalar, UA_Variant_setScalarCopy,
+    UA_Variant_hasArrayType, UA_Variant_hasScalarType, UA_Variant_isEmpty, UA_Variant_isScalar,
+    UA_Variant_setScalarCopy,
 };
 
 use crate::{data_type::DataType, ua};
@@ -48,6 +49,14 @@ impl Variant {
     }
 
     #[must_use]
+    pub fn to_array<T: DataType>(&self) -> Option<ua::Array<T>> {
+        if !unsafe { UA_Variant_hasArrayType(self.as_ptr(), T::data_type()) } {
+            return None;
+        }
+        ua::Array::from_raw_parts(self.0.data.cast::<T::Inner>(), self.0.arrayLength)
+    }
+
+    #[must_use]
     pub fn to_value(&self) -> ua::VariantValue {
         if self.is_empty() {
             return ua::VariantValue::Empty;
@@ -68,19 +77,26 @@ impl Variant {
         }
 
         check!(
-            Boolean,  // Data type ns=0;i=1
-            SByte,    // Data type ns=0;i=2
-            Byte,     // Data type ns=0;i=3
-            Int16,    // Data type ns=0;i=4
-            UInt16,   // Data type ns=0;i=5
-            Int32,    // Data type ns=0;i=6
-            UInt32,   // Data type ns=0;i=7
-            Int64,    // Data type ns=0;i=8
-            UInt64,   // Data type ns=0;i=9
-            Float,    // Data type ns=0;i=10
-            Double,   // Data type ns=0;i=11
-            String,   // Data type ns=0;i=12
-            DateTime, // Data type ns=0;i=13
+            Boolean,        // Data type ns=0;i=1
+            SByte,          // Data type ns=0;i=2
+            Byte,           // Data type ns=0;i=3
+            Int16,          // Data type ns=0;i=4
+            UInt16,         // Data type ns=0;i=5
+            Int32,          // Data type ns=0;i=6
+            UInt32,         // Data type ns=0;i=7
+            Int64,          // Data type ns=0;i=8
+            UInt64,         // Data type ns=0;i=9
+            Float,          // Data type ns=0;i=10
+            Double,         // Data type ns=0;i=11
+            String,         // Data type ns=0;i=12
+            DateTime,       // Data type ns=0;i=13
+            ByteString,     // Data type ns=0;i=15
+            NodeId,         // Data type ns=0;i=17
+            ExpandedNodeId, // Data type ns=0;i=18
+            StatusCode,     // Data type ns=0;i=19
+            QualifiedName,  // Data type ns=0;i=20
+            LocalizedText,  // Data type ns=0;i=21
+            Argument,       // Data type ns=0;i=296
         );
 
         ua::VariantValue::Scalar(ua::ScalarValue::Unknown)
@@ -100,7 +116,7 @@ impl serde::Serialize for Variant {
         S: serde::Serializer,
     {
         macro_rules! serialize {
-            ($self:ident, $serializer:ident, [$( $( #[cfg($cfg: meta)] )? $name:ident ),* $(,)?]) => {
+            ($self:ident, $serializer:ident, [$( $( #[cfg($cfg: meta)] )? $name:ident ),* $(,)?] $(,)?) => {
                 $(
                     $( #[cfg($cfg)] )?
                     if let Some(value) = self.as_scalar::<crate::ua::$name>() {
@@ -128,8 +144,19 @@ impl serde::Serialize for Variant {
                 String,  // Data type ns=0;i=12
                 #[cfg(feature = "time")]
                 DateTime, // Data type ns=0;i=13
-            ]
+                ByteString, // Data type ns=0;i=15
+                NodeId,  // Data type ns=0;i=17
+            ],
         );
+
+        // The following types are deliberately missing from the list abvove because we don't have a
+        // good serialization for them:
+        //
+        // - ExpandedNodeId, // Data type ns=0;i=18
+        // - StatusCode,     // Data type ns=0;i=19
+        // - QualifiedName,  // Data type ns=0;i=20
+        // - LocalizedText,  // Data type ns=0;i=21
+        // - Argument,       // Data type ns=0;i=296
 
         Err(serde::ser::Error::custom("non-primitive value in Variant"))
     }
