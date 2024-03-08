@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context as _};
-use open62541::{ua, AsyncClient, DataType as _};
+use open62541::{ua, AsyncClient, DataType as _, ValueType};
 use open62541_sys::{UA_NS0ID_HASPROPERTY, UA_NS0ID_PROPERTYTYPE};
 
 const CYCLE_TIME: tokio::time::Duration = tokio::time::Duration::from_millis(100);
@@ -11,12 +11,12 @@ async fn main() -> anyhow::Result<()> {
     let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", CYCLE_TIME)
         .context("connect")?;
 
-    // `/Root/Objects/9:Simulation/9:ObjectWithMethods`
-    let object_node_id = ua::NodeId::string(9, "ObjectWithMethods");
-    // `/Root/Objects/9:Simulation/9:ObjectWithMethods/9:MethodNoArgs`
-    let method_no_args_node_id = ua::NodeId::string(9, "MethodNoArgs");
-    // `/Root/Objects/9:Simulation/9:ObjectWithMethods/9:MethodIO`
-    let method_io_node_id = ua::NodeId::string(9, "MethodIO");
+    // `/Root/Objects/10:Simulation/10:ObjectWithMethods`
+    let object_node_id = ua::NodeId::string(10, "ObjectWithMethods");
+    // `/Root/Objects/10:Simulation/10:ObjectWithMethods/10:MethodNoArgs`
+    let method_no_args_node_id = ua::NodeId::string(10, "MethodNoArgs");
+    // `/Root/Objects/10:Simulation/10:ObjectWithMethods/10:MethodIO`
+    let method_io_node_id = ua::NodeId::string(10, "MethodIO");
 
     let _output_arguments =
         call_method(&client, &object_node_id, &method_no_args_node_id, &[]).await?;
@@ -77,9 +77,8 @@ async fn call_method(
 
 #[derive(Debug)]
 struct MethodDefinition {
-    // TODO: Return `ScalarValueType` or similar instead of raw node ID for argument type.
-    input_arguments: Option<Vec<(ua::String, ua::NodeId)>>,
-    output_arguments: Option<Vec<(ua::String, ua::NodeId)>>,
+    input_arguments: Option<Vec<(ua::String, ValueType)>>,
+    output_arguments: Option<Vec<(ua::String, ValueType)>>,
 }
 
 const INPUT_ARGUMENTS_PROPERTY_NAME: &str = "InputArguments";
@@ -148,7 +147,7 @@ async fn read_nodes(
 async fn get_arguments(
     client: &AsyncClient,
     arguments: &ua::NodeId,
-) -> anyhow::Result<Vec<(ua::String, ua::NodeId)>> {
+) -> anyhow::Result<Vec<(ua::String, ValueType)>> {
     let arguments = client.read_value(arguments).await?;
 
     let arguments = arguments
@@ -163,7 +162,7 @@ async fn get_arguments(
             let argument = object
                 .decoded_content::<ua::Argument>()
                 .ok_or(anyhow::anyhow!("should have argument"))?;
-            Ok((argument.name().clone(), argument.data_type().clone()))
+            Ok((argument.name().clone(), argument.value_type()))
         })
         .collect()
 }

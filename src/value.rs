@@ -4,6 +4,89 @@ use open62541_sys::UA_EMPTY_ARRAY_SENTINEL;
 
 use crate::ua;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+#[allow(clippy::module_name_repetitions)]
+pub enum ValueType {
+    Unknown,
+    Boolean,        // Data type ns=0;i=1
+    SByte,          // Data type ns=0;i=2
+    Byte,           // Data type ns=0;i=3
+    Int16,          // Data type ns=0;i=4
+    UInt16,         // Data type ns=0;i=5
+    Int32,          // Data type ns=0;i=6
+    UInt32,         // Data type ns=0;i=7
+    Int64,          // Data type ns=0;i=8
+    UInt64,         // Data type ns=0;i=9
+    Float,          // Data type ns=0;i=10
+    Double,         // Data type ns=0;i=11
+    String,         // Data type ns=0;i=12
+    DateTime,       // Data type ns=0;i=13
+    ByteString,     // Data type ns=0;i=15
+    NodeId,         // Data type ns=0;i=17
+    ExpandedNodeId, // Data type ns=0;i=18
+    StatusCode,     // Data type ns=0;i=19
+    QualifiedName,  // Data type ns=0;i=20
+    LocalizedText,  // Data type ns=0;i=21
+    Argument,       // Data type ns=0;i=296
+}
+
+impl ValueType {
+    /// Gets value type from data type's node ID.
+    ///
+    /// This gets the [`ValueType`] corresponding to the given data type's node ID. If the node ID
+    /// is not a known data type, [`ValueType::Unknown`] is returned.
+    #[must_use]
+    pub fn from_data_type(node_id: &ua::NodeId) -> Self {
+        macro_rules! check {
+            ($numeric:ident, [$( $name:ident ),* $(,)?] $(,)?) => {
+                if false {
+                    unreachable!()
+                }
+                $(
+                    else if $numeric == paste::paste!{ open62541_sys::[<UA_NS0ID_ $name:upper>] } {
+                        ValueType::$name
+                    }
+                )*
+                else {
+                    ValueType::Unknown
+                }
+            };
+        }
+
+        // We only support known data types in namespace 0.
+        let Some(numeric) = node_id.as_ns0() else {
+            return ValueType::Unknown;
+        };
+
+        check!(
+            numeric,
+            [
+                Boolean,        // Data type ns=0;i=1
+                SByte,          // Data type ns=0;i=2
+                Byte,           // Data type ns=0;i=3
+                Int16,          // Data type ns=0;i=4
+                UInt16,         // Data type ns=0;i=5
+                Int32,          // Data type ns=0;i=6
+                UInt32,         // Data type ns=0;i=7
+                Int64,          // Data type ns=0;i=8
+                UInt64,         // Data type ns=0;i=9
+                Float,          // Data type ns=0;i=10
+                Double,         // Data type ns=0;i=11
+                String,         // Data type ns=0;i=12
+                DateTime,       // Data type ns=0;i=13
+                ByteString,     // Data type ns=0;i=15
+                NodeId,         // Data type ns=0;i=17
+                ExpandedNodeId, // Data type ns=0;i=18
+                StatusCode,     // Data type ns=0;i=19
+                QualifiedName,  // Data type ns=0;i=20
+                LocalizedText,  // Data type ns=0;i=21
+                Argument,       // Data type ns=0;i=296
+            ],
+        )
+    }
+}
+
 /// Value of [`ua::Variant`].
 #[derive(Debug, Clone)]
 #[allow(clippy::module_name_repetitions)]
@@ -17,6 +100,7 @@ pub enum VariantValue {
 
 /// Scalar value.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 #[allow(clippy::module_name_repetitions)]
 pub enum ScalarValue {
     Unknown,

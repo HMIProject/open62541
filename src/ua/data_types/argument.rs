@@ -1,4 +1,4 @@
-use crate::{ua, DataType};
+use crate::{ua, DataType, ValueType};
 
 crate::data_type!(Argument);
 
@@ -27,5 +27,10 @@ impl Argument {
     #[must_use]
     pub fn description(&self) -> &ua::LocalizedText {
         ua::LocalizedText::raw_ref(&self.0.description)
+    }
+
+    #[must_use]
+    pub fn value_type(&self) -> ValueType {
+        ValueType::from_data_type(self.data_type())
     }
 }
