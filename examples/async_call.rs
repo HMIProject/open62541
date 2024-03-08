@@ -88,33 +88,38 @@ async fn get_definition(
     client: &AsyncClient,
     method_node_id: &ua::NodeId,
 ) -> anyhow::Result<MethodDefinition> {
+    // Look at children of the method node. We expect properties for input and output arguments.
+    // TODO: Allow limiting set of returned children by passing filters to `BrowseDescription`.
     let (references, _) = client.browse(method_node_id).await?;
 
+    // Either of input and output arguments may be absent when the method has no arguments.
     let mut input_arguments = None;
     let mut output_arguments = None;
 
     for reference in &references {
+        // This skips over all non-property children.
+        // TODO: Use filter in `browse()` to remove other children upfront.
         match property_name(reference) {
-            Some(INPUT_ARGUMENTS_PROPERTY_NAME) => input_arguments = Some(reference.node_id()),
-            Some(OUTPUT_ARGUMENTS_PROPERTY_NAME) => output_arguments = Some(reference.node_id()),
+            Some(INPUT_ARGUMENTS_PROPERTY_NAME) => {
+                input_arguments = Some(reference.node_id().node_id().clone());
+            }
+            Some(OUTPUT_ARGUMENTS_PROPERTY_NAME) => {
+                output_arguments = Some(reference.node_id().node_id().clone());
+            }
             _ => {}
         }
     }
 
-    let x = [input_arguments, output_arguments]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>();
+    // Use a single request to read input and output arguments in one go (if found).
+    let node_values = read_sparse_node_values(client, &[input_arguments, output_arguments]).await?;
 
-    // TODO: Refactor. Query input/output argument definitions in single request.
-    let input_arguments = match input_arguments {
-        Some(arguments) => Some(get_arguments(client, arguments.node_id()).await?),
-        None => None,
+    let [ref input_arguments, ref output_arguments] = node_values[..] else {
+        // PANIC: We give two node IDs to get two values.
+        panic!("should have expected number of values");
     };
-    let output_arguments = match output_arguments {
-        Some(arguments) => Some(get_arguments(client, arguments.node_id()).await?),
-        None => None,
-    };
+
+    let input_arguments = input_arguments.as_ref().map(get_arguments).transpose()?;
+    let output_arguments = output_arguments.as_ref().map(get_arguments).transpose()?;
 
     Ok(MethodDefinition {
         input_arguments,
@@ -122,35 +127,52 @@ async fn get_definition(
     })
 }
 
-async fn read_nodes(
+/// Reads values from sparse list of nodes.
+///
+/// Returns the same number of results as the given list. Bubbles errors to the top-level `Result`.
+/// Positions with `None` in `node_ids` lead to corresponding `None` entries in the resulting list.
+async fn read_sparse_node_values(
     client: &AsyncClient,
     node_ids: &[Option<ua::NodeId>],
 ) -> anyhow::Result<Vec<Option<ua::DataValue>>> {
-    let values: Vec<_> = node_ids
+    // Condense sparse list into dense list for request.
+    let node_attributes: Vec<_> = node_ids
         .iter()
         .flatten()
         .map(|node_id| (node_id.clone(), ua::AttributeId::VALUE))
         .collect();
 
-    let values = client.read_many_attributes(&values).await?;
+    // Empty requests would return `BadNothingToDo` error.
+    let values = if node_attributes.is_empty() {
+        Vec::new()
+    } else {
+        client.read_many_attributes(&node_attributes).await?
+    };
 
-    let _: Vec<_> = node_ids
-        .iter()
-        .enumerate()
-        .flat_map(|(index, node_id)| node_id.as_ref().map(|_| index))
-        .zip(values)
-        .collect();
+    let mut result = Vec::with_capacity(node_ids.len());
+    let mut values = values.into_iter();
 
-    todo!()
+    for node_id in node_ids {
+        match node_id {
+            Some(_) => result.push(Some(values.next().expect("should have value")?)),
+            None => result.push(None),
+        }
+    }
+
+    debug_assert!(values.next().is_none());
+
+    Ok(result)
 }
 
-async fn get_arguments(
-    client: &AsyncClient,
-    arguments: &ua::NodeId,
-) -> anyhow::Result<Vec<(ua::String, ValueType)>> {
-    let arguments = client.read_value(arguments).await?;
+/// Extracts argument definitions from property.
+///
+/// This looks into the value returned from reading `InputArguments` and `OutputArguments` property
+/// and returns the list of argument names and their value types.
+fn get_arguments(value: &ua::DataValue) -> anyhow::Result<Vec<(ua::String, ValueType)>> {
+    // `InputArguments` and `OutputArguments` nodes are expected to hold an array of objects of the
+    // `Argument` type.
 
-    let arguments = arguments
+    let arguments = value
         .value()
         .ok_or(anyhow::anyhow!("should have value"))?
         .to_array::<ua::ExtensionObject>()
@@ -168,7 +190,10 @@ async fn get_arguments(
 }
 
 /// Gets name of referenced property.
+///
+/// Returns `None` for non-property references.
 fn property_name(reference: &ua::ReferenceDescription) -> Option<&str> {
+    // TODO: Add methods for these checks?
     (reference.node_class() == &ua::NodeClass::VARIABLE
         && reference.reference_type_id().as_ns0() == Some(UA_NS0ID_HASPROPERTY)
         && reference.type_definition().node_id().as_ns0() == Some(UA_NS0ID_PROPERTYTYPE))

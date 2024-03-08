@@ -98,6 +98,7 @@ impl AsyncClient {
     /// This fails when the node does not exist or the attribute cannot be read.
     ///
     /// [`read_value()`]: Self::read_value
+    // TODO: Return inner `ua::Variant` instead of `ua::DataValue`.
     #[allow(clippy::missing_panics_doc)]
     pub async fn read_attribute(
         &self,
@@ -127,6 +128,7 @@ impl AsyncClient {
     /// attributes cannot be read, an inner `Err` is returned.
     ///
     /// [`read_attribute()`]: Self::read_attribute
+    // TODO: Return inner `ua::Variant` instead of `ua::DataValue`.
     pub async fn read_attributes(
         &self,
         node_id: &ua::NodeId,
@@ -155,11 +157,12 @@ impl AsyncClient {
     /// attributes cannot be read, an inner `Err` is returned.
     ///
     /// [`read_attributes()`]: Self::read_attributes
+    // TODO: Return inner `ua::Variant` instead of `ua::DataValue`.
     pub async fn read_many_attributes(
         &self,
-        values: &[(ua::NodeId, ua::AttributeId)],
+        node_attributes: &[(ua::NodeId, ua::AttributeId)],
     ) -> Result<Vec<Result<ua::DataValue>>> {
-        let nodes_to_read: Vec<_> = values
+        let nodes_to_read: Vec<_> = node_attributes
             .iter()
             .map(|(node_id, attribute_id)| {
                 ua::ReadValueId::init()
@@ -189,7 +192,7 @@ impl AsyncClient {
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
-        debug_assert_eq!(results.len(), values.len());
+        debug_assert_eq!(results.len(), node_attributes.len());
 
         Ok(results)
     }
