@@ -5,7 +5,7 @@ use open62541_sys::{
     UA_Variant_setScalarCopy,
 };
 
-use crate::{data_type::DataType, ua};
+use crate::{data_type::DataType, ua, ScalarValue, VariantValue};
 
 crate::data_type!(Variant);
 
@@ -57,9 +57,9 @@ impl Variant {
     }
 
     #[must_use]
-    pub fn to_value(&self) -> ua::VariantValue {
+    pub fn to_value(&self) -> VariantValue {
         if self.is_empty() {
-            return ua::VariantValue::Empty;
+            return VariantValue::Empty;
         }
 
         if !self.is_scalar() {
@@ -70,7 +70,7 @@ impl Variant {
             ($( $name:ident ),* $(,)?) => {
                 $(
                     if let Some(value) = self.to_scalar::<ua::$name>() {
-                        return ua::VariantValue::Scalar(ua::ScalarValue::$name(value));
+                        return VariantValue::Scalar(ScalarValue::$name(value));
                     }
                 )*
             };
@@ -99,7 +99,7 @@ impl Variant {
             Argument,       // Data type ns=0;i=296
         );
 
-        ua::VariantValue::Scalar(ua::ScalarValue::Unknown)
+        VariantValue::Scalar(ScalarValue::Unknown)
     }
 
     #[cfg(feature = "serde")]

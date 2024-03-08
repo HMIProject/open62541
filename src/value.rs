@@ -5,6 +5,7 @@ use open62541_sys::UA_EMPTY_ARRAY_SENTINEL;
 use crate::ua;
 
 #[derive(Debug, Clone)]
+#[allow(clippy::module_name_repetitions)]
 pub enum VariantValue {
     Empty,
     Scalar(ScalarValue),
@@ -12,6 +13,7 @@ pub enum VariantValue {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::module_name_repetitions)]
 pub enum ScalarValue {
     Unknown,
     Boolean(ua::Boolean),               // Data type ns=0;i=1
@@ -40,8 +42,9 @@ pub enum ScalarValue {
 ///
 /// For some types (notably arrays and strings) OPC UA defines different states: an empty state and
 /// an invalid state, in addition to the regular valid/non-empty state.
+// TODO: Think about making this public.
 #[derive(Debug, Clone)]
-pub enum ArrayValue<T> {
+pub(crate) enum ArrayValue<T> {
     Invalid,
     Empty,
     Valid(NonNull<T>),

@@ -16,6 +16,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Return `Result` instead of `Option` for references in `AsyncClient::browse_many()` and
   `browse_next()` (#59).
 - Breaking: Return `Result` instead of raw `ua::DataValue` from `AsyncClient::read_attributes()`.
+- Breaking: Move `ua::VariantValue` and `ua::ScalarValue` to top-level export outside `ua`
+- Breaking: Remove `ua::ArrayValue` for now
 
 ### Fixed
 
