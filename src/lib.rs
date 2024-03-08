@@ -98,7 +98,7 @@ pub use self::{
 pub(crate) use self::{
     data_type::{data_type, enum_variants},
     service::{ServiceRequest, ServiceResponse},
-    value::ArrayValue,
+    value::{ArrayValue, NonScalarValue},
 };
 
 #[cfg(feature = "tokio")]

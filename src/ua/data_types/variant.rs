@@ -5,7 +5,7 @@ use open62541_sys::{
     UA_Variant_setScalarCopy,
 };
 
-use crate::{data_type::DataType, ua, ScalarValue, VariantValue};
+use crate::{data_type::DataType, ua, NonScalarValue, ScalarValue, VariantValue};
 
 crate::data_type!(Variant);
 
@@ -63,7 +63,8 @@ impl Variant {
         }
 
         if !self.is_scalar() {
-            todo!("should handle non-scalar value");
+            // TODO: Handle non-scalar (array) values.
+            return VariantValue::NonScalar(NonScalarValue);
         }
 
         macro_rules! check {

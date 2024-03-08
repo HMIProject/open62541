@@ -4,14 +4,18 @@ use open62541_sys::UA_EMPTY_ARRAY_SENTINEL;
 
 use crate::ua;
 
+/// Value of [`ua::Variant`].
 #[derive(Debug, Clone)]
 #[allow(clippy::module_name_repetitions)]
 pub enum VariantValue {
     Empty,
     Scalar(ScalarValue),
-    // TODO: Support arrays.
+    // TODO: Add proper interface.
+    #[allow(private_interfaces)]
+    NonScalar(NonScalarValue),
 }
 
+/// Scalar value.
 #[derive(Debug, Clone)]
 #[allow(clippy::module_name_repetitions)]
 pub enum ScalarValue {
@@ -37,6 +41,10 @@ pub enum ScalarValue {
     LocalizedText(ua::LocalizedText),   // Data type ns=0;i=21
     Argument(ua::Argument),             // Data type ns=0;i=296
 }
+
+// TODO: Add proper interface.
+#[derive(Debug, Clone)]
+pub(crate) struct NonScalarValue;
 
 /// Value that may be invalid or empty.
 ///
