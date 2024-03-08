@@ -10,6 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Add `ua::StatusCode::is_uncertain()`, `is_bad()` for checking status code severity.
+- Add support for `ua::Argument` data type and basic support for `ua::ExtensionObject`.
+- Add `Debug` implementation for `ua::Array<T>` data types.
 
 ### Changed
 
