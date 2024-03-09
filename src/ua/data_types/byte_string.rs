@@ -46,7 +46,7 @@ impl ByteString {
     fn array_value(&self) -> ArrayValue<u8> {
         // Internally, `open62541` represents strings as `Byte` array and has the same special cases
         // as regular arrays, i.e. empty and invalid states.
-        ArrayValue::from_ptr(self.0.data)
+        unsafe { ArrayValue::from_ptr(self.0.data) }
     }
 }
 
