@@ -8,7 +8,13 @@ use crate::ua;
 #[non_exhaustive]
 #[allow(clippy::module_name_repetitions)]
 pub enum ValueType {
-    Unknown,
+    /// Unsupported data type.
+    ///
+    /// This is a sentinel for an existing and set value that we do not support (yet). Depending on
+    /// the circumstances, you might be able to use [`Variant::as_scalar()`] et al. instead.
+    ///
+    /// [`Variant::as_scalar()`]: ua::Variant::as_scalar
+    Unsupported,
     Boolean,        // Data type ns=0;i=1
     SByte,          // Data type ns=0;i=2
     Byte,           // Data type ns=0;i=3
@@ -35,7 +41,7 @@ impl ValueType {
     /// Gets value type from data type's node ID.
     ///
     /// This gets the [`ValueType`] corresponding to the given data type's node ID. If the node ID
-    /// is not a known data type, [`ValueType::Unknown`] is returned.
+    /// is not a known data type, [`ValueType::Unsupported`] is returned.
     #[must_use]
     pub fn from_data_type(node_id: &ua::NodeId) -> Self {
         macro_rules! check {
@@ -49,14 +55,14 @@ impl ValueType {
                     }
                 )*
                 else {
-                    ValueType::Unknown
+                    ValueType::Unsupported
                 }
             };
         }
 
         // We only support known data types in namespace 0.
         let Some(numeric) = node_id.as_ns0() else {
-            return ValueType::Unknown;
+            return ValueType::Unsupported;
         };
 
         check!(
@@ -103,7 +109,13 @@ pub enum VariantValue {
 #[non_exhaustive]
 #[allow(clippy::module_name_repetitions)]
 pub enum ScalarValue {
-    Unknown,
+    /// Unsupported data type.
+    ///
+    /// This is a sentinel for an existing and set value that we do not support (yet). Depending on
+    /// the circumstances, you might be able to use [`Variant::to_scalar()`] et al. instead.
+    ///
+    /// [`Variant::to_scalar()`]: ua::Variant::to_scalar
+    Unsupported,
     Boolean(ua::Boolean),               // Data type ns=0;i=1
     SByte(ua::SByte),                   // Data type ns=0;i=2
     Byte(ua::Byte),                     // Data type ns=0;i=3

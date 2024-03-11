@@ -117,7 +117,7 @@ impl Variant {
             Argument,       // Data type ns=0;i=296
         );
 
-        VariantValue::Scalar(ScalarValue::Unknown)
+        VariantValue::Scalar(ScalarValue::Unsupported)
     }
 
     #[cfg(feature = "serde")]
