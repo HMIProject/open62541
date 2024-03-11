@@ -147,7 +147,7 @@ impl<T> ArrayValue<T> {
     ///
     /// This checks for different states (null pointer, sentinel value) and returns the appropriate
     /// value from [`ArrayValue`].
-    pub fn from_ptr(data: *mut T) -> Self {
+    pub(crate) fn from_ptr(data: *mut T) -> Self {
         // Check for sentinel value first. We must not treat it as valid pointer below.
         if data.cast_const().cast::<c_void>() == unsafe { UA_EMPTY_ARRAY_SENTINEL } {
             return ArrayValue::Empty;
