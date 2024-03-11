@@ -5,7 +5,9 @@ use open62541_sys::{
     UA_Variant_setScalarCopy,
 };
 
-use crate::{ua, DataType, NonScalarValue, ScalarValue, ValueType, VariantValue};
+use crate::{
+    ua, value::UnsupportedValueType, DataType, NonScalarValue, ScalarValue, ValueType, VariantValue,
+};
 
 crate::data_type!(Variant);
 
@@ -35,7 +37,7 @@ impl Variant {
     ///
     /// Returns `None` when the variant is empty.
     #[must_use]
-    pub fn value_type(&self) -> Option<ValueType> {
+    pub fn value_type(&self) -> Option<Result<ValueType, UnsupportedValueType>> {
         self.type_id().map(ValueType::from_data_type)
     }
 
@@ -73,22 +75,26 @@ impl Variant {
         ua::Array::from_raw_parts(self.0.data.cast::<T::Inner>(), self.0.arrayLength)
     }
 
-    #[must_use]
-    pub fn to_value(&self) -> VariantValue {
+    /// Gets value of the variant.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the data type is not supported (yet).
+    pub fn to_value(&self) -> Result<VariantValue, UnsupportedValueType> {
         if self.is_empty() {
-            return VariantValue::Empty;
+            return Ok(VariantValue::Empty);
         }
 
         if !self.is_scalar() {
             // TODO: Handle non-scalar (array) values.
-            return VariantValue::NonScalar(NonScalarValue);
+            return Ok(VariantValue::NonScalar(NonScalarValue));
         }
 
         macro_rules! check {
             ($( $name:ident ),* $(,)?) => {
                 $(
                     if let Some(value) = self.to_scalar::<ua::$name>() {
-                        return VariantValue::Scalar(ScalarValue::$name(value));
+                        return Ok(VariantValue::Scalar(ScalarValue::$name(value)));
                     }
                 )*
             };
@@ -117,7 +123,7 @@ impl Variant {
             Argument,       // Data type ns=0;i=296
         );
 
-        VariantValue::Scalar(ScalarValue::Unsupported)
+        Err(UnsupportedValueType)
     }
 
     #[cfg(feature = "serde")]
@@ -194,7 +200,7 @@ mod tests {
         let type_id = ua_variant.type_id();
         assert_eq!(type_id, None);
         let value_type = ua_variant.value_type();
-        assert_eq!(value_type, None);
+        assert!(value_type.is_none());
     }
 
     #[test]
@@ -204,7 +210,7 @@ mod tests {
         let type_id = ua_variant.type_id();
         assert_eq!(type_id, Some(&ua::NodeId::ns0(UA_NS0ID_BOOLEAN)));
         let value_type = ua_variant.value_type();
-        assert_eq!(value_type, Some(ValueType::Boolean));
+        assert_eq!(value_type.unwrap().unwrap(), ValueType::Boolean);
     }
 
     #[test]
@@ -215,7 +221,7 @@ mod tests {
         let type_id = ua_variant.type_id();
         assert_eq!(type_id, Some(&ua::NodeId::ns0(UA_NS0ID_BYTE)));
         let value_type = ua_variant.value_type();
-        assert_eq!(value_type, Some(ValueType::Byte));
+        assert_eq!(value_type.unwrap().unwrap(), ValueType::Byte);
 
         // Int16
         let ua_int16 = ua::Int16::new(-12345);
@@ -223,7 +229,7 @@ mod tests {
         let type_id = ua_variant.type_id();
         assert_eq!(type_id, Some(&ua::NodeId::ns0(UA_NS0ID_INT16)));
         let value_type = ua_variant.value_type();
-        assert_eq!(value_type, Some(ValueType::Int16));
+        assert_eq!(value_type.unwrap().unwrap(), ValueType::Int16);
 
         // UInt32
         let ua_uint32 = ua::UInt32::new(123_456_789);
@@ -231,7 +237,7 @@ mod tests {
         let type_id = ua_variant.type_id();
         assert_eq!(type_id, Some(&ua::NodeId::ns0(UA_NS0ID_UINT32)));
         let value_type = ua_variant.value_type();
-        assert_eq!(value_type, Some(ValueType::UInt32));
+        assert_eq!(value_type.unwrap().unwrap(), ValueType::UInt32);
 
         // Int64
         let ua_int64 = ua::Int64::new(-7_077_926_753_204_279_296);
@@ -239,7 +245,7 @@ mod tests {
         let type_id = ua_variant.type_id();
         assert_eq!(type_id, Some(&ua::NodeId::ns0(UA_NS0ID_INT64)));
         let value_type = ua_variant.value_type();
-        assert_eq!(value_type, Some(ValueType::Int64));
+        assert_eq!(value_type.unwrap().unwrap(), ValueType::Int64);
     }
 
     #[cfg(feature = "serde")]

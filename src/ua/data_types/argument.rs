@@ -1,4 +1,4 @@
-use crate::{ua, DataType, ValueType};
+use crate::{ua, value::UnsupportedValueType, DataType, ValueType};
 
 crate::data_type!(Argument);
 
@@ -29,8 +29,12 @@ impl Argument {
         ua::LocalizedText::raw_ref(&self.0.description)
     }
 
-    #[must_use]
-    pub fn value_type(&self) -> ValueType {
+    /// Gets value type of the argument.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the data type is not supported (yet).
+    pub fn value_type(&self) -> Result<ValueType, UnsupportedValueType> {
         ValueType::from_data_type(self.data_type())
     }
 }

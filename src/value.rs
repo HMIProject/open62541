@@ -4,17 +4,19 @@ use open62541_sys::UA_EMPTY_ARRAY_SENTINEL;
 
 use crate::ua;
 
+/// Unsupported data type.
+///
+/// This is an error result for types that we do not support (yet). Depending on
+/// the circumstances, you might be able to use [`Variant::as_scalar()`] et al. instead.
+///
+/// [`Variant::as_scalar()`]: ua::Variant::as_scalar
+#[derive(Debug)]
+pub struct UnsupportedValueType;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 #[allow(clippy::module_name_repetitions)]
 pub enum ValueType {
-    /// Unsupported data type.
-    ///
-    /// This is a sentinel for an existing and set value that we do not support (yet). Depending on
-    /// the circumstances, you might be able to use [`Variant::as_scalar()`] et al. instead.
-    ///
-    /// [`Variant::as_scalar()`]: ua::Variant::as_scalar
-    Unsupported,
     Boolean,        // Data type ns=0;i=1
     SByte,          // Data type ns=0;i=2
     Byte,           // Data type ns=0;i=3
@@ -40,10 +42,12 @@ pub enum ValueType {
 impl ValueType {
     /// Gets value type from data type's node ID.
     ///
-    /// This gets the [`ValueType`] corresponding to the given data type's node ID. If the node ID
-    /// is not a known data type, [`ValueType::Unsupported`] is returned.
-    #[must_use]
-    pub fn from_data_type(node_id: &ua::NodeId) -> Self {
+    /// This gets the [`ValueType`] corresponding to the given data type's node ID.
+    ///
+    /// # Errors
+    ///
+    /// If the node ID is not a known data type, [`UnsupportedValueType`] is returned.
+    pub fn from_data_type(node_id: &ua::NodeId) -> Result<Self, UnsupportedValueType> {
         macro_rules! check {
             ($numeric:ident, [$( $name:ident ),* $(,)?] $(,)?) => {
                 if false {
@@ -51,18 +55,18 @@ impl ValueType {
                 }
                 $(
                     else if $numeric == paste::paste!{ open62541_sys::[<UA_NS0ID_ $name:upper>] } {
-                        ValueType::$name
+                        Ok(ValueType::$name)
                     }
                 )*
                 else {
-                    ValueType::Unsupported
+                    Err(UnsupportedValueType)
                 }
             };
         }
 
         // We only support known data types in namespace 0.
         let Some(numeric) = node_id.as_ns0() else {
-            return ValueType::Unsupported;
+            return Err(UnsupportedValueType);
         };
 
         check!(
@@ -109,13 +113,6 @@ pub enum VariantValue {
 #[non_exhaustive]
 #[allow(clippy::module_name_repetitions)]
 pub enum ScalarValue {
-    /// Unsupported data type.
-    ///
-    /// This is a sentinel for an existing and set value that we do not support (yet). Depending on
-    /// the circumstances, you might be able to use [`Variant::to_scalar()`] et al. instead.
-    ///
-    /// [`Variant::to_scalar()`]: ua::Variant::to_scalar
-    Unsupported,
     Boolean(ua::Boolean),               // Data type ns=0;i=1
     SByte(ua::SByte),                   // Data type ns=0;i=2
     Byte(ua::Byte),                     // Data type ns=0;i=3

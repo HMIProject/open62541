@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context as _};
-use open62541::{ua, AsyncClient, DataType as _, ValueType};
+use open62541::{ua, AsyncClient, DataType as _, UnsupportedValueType, ValueType};
 use open62541_sys::{UA_NS0ID_HASPROPERTY, UA_NS0ID_PROPERTYTYPE};
 
 const CYCLE_TIME: tokio::time::Duration = tokio::time::Duration::from_millis(100);
@@ -77,8 +77,8 @@ async fn call_method(
 
 #[derive(Debug)]
 struct MethodDefinition {
-    input_arguments: Option<Vec<(ua::String, ValueType)>>,
-    output_arguments: Option<Vec<(ua::String, ValueType)>>,
+    input_arguments: Option<Vec<(ua::String, Result<ValueType, UnsupportedValueType>)>>,
+    output_arguments: Option<Vec<(ua::String, Result<ValueType, UnsupportedValueType>)>>,
 }
 
 const INPUT_ARGUMENTS_PROPERTY_NAME: &str = "InputArguments";
@@ -168,7 +168,9 @@ async fn read_sparse_node_values(
 ///
 /// This looks into the value returned from reading `InputArguments` and `OutputArguments` property
 /// and returns the list of argument names and their value types.
-fn get_arguments(value: &ua::DataValue) -> anyhow::Result<Vec<(ua::String, ValueType)>> {
+fn get_arguments(
+    value: &ua::DataValue,
+) -> anyhow::Result<Vec<(ua::String, Result<ValueType, UnsupportedValueType>)>> {
     // `InputArguments` and `OutputArguments` nodes are expected to hold an array of objects of the
     // `Argument` type.
 
