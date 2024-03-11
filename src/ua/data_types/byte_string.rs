@@ -1,6 +1,6 @@
 use std::slice;
 
-use crate::ua;
+use crate::ArrayValue;
 
 // Technically, `open62541_sys::ByteString` is an alias for `open62541_sys::String`. But we treat it
 // as a distinct type to improve type safety. The difference is that `String` contains valid Unicode
@@ -17,13 +17,13 @@ impl ByteString {
     /// regular (non-empty) byte strings.
     #[must_use]
     pub fn is_invalid(&self) -> bool {
-        matches!(self.array_value(), ua::ArrayValue::Invalid)
+        matches!(self.array_value(), ArrayValue::Invalid)
     }
 
     /// Checks if byte string is empty.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        matches!(self.array_value(), ua::ArrayValue::Empty)
+        matches!(self.array_value(), ArrayValue::Empty)
     }
 
     /// Returns byte string contents as slice.
@@ -34,19 +34,19 @@ impl ByteString {
         // Internally, `open62541` represents strings as `Byte` array and has the same special cases
         // as regular arrays, i.e. empty and invalid states.
         match self.array_value() {
-            ua::ArrayValue::Invalid => None,
-            ua::ArrayValue::Empty => Some(&[]),
-            ua::ArrayValue::Valid(data) => {
+            ArrayValue::Invalid => None,
+            ArrayValue::Empty => Some(&[]),
+            ArrayValue::Valid(data) => {
                 // `self.0.data` is valid, so we may use `self.0.length` now.
                 Some(unsafe { slice::from_raw_parts(data.as_ptr(), self.0.length) })
             }
         }
     }
 
-    fn array_value(&self) -> ua::ArrayValue<u8> {
+    fn array_value(&self) -> ArrayValue<u8> {
         // Internally, `open62541` represents strings as `Byte` array and has the same special cases
         // as regular arrays, i.e. empty and invalid states.
-        ua::ArrayValue::from_ptr(self.0.data)
+        ArrayValue::from_ptr(self.0.data)
     }
 }
 

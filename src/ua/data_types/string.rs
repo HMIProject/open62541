@@ -2,7 +2,7 @@ use std::{ffi::CString, fmt, slice, str};
 
 use open62541_sys::UA_String_fromChars;
 
-use crate::{ua, Error};
+use crate::{ArrayValue, Error};
 
 crate::data_type!(String);
 
@@ -16,13 +16,13 @@ impl String {
     /// regular (non-empty) strings.
     #[must_use]
     pub fn is_invalid(&self) -> bool {
-        matches!(self.array_value(), ua::ArrayValue::Invalid)
+        matches!(self.array_value(), ArrayValue::Invalid)
     }
 
     /// Checks if string is empty.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        matches!(self.array_value(), ua::ArrayValue::Empty)
+        matches!(self.array_value(), ArrayValue::Empty)
     }
 
     #[deprecated(note = "use `Self::as_bytes()` instead")]
@@ -39,9 +39,9 @@ impl String {
         // Internally, `open62541` represents strings as `Byte` array and has the same special cases
         // as regular arrays, i.e. empty and invalid states.
         match self.array_value() {
-            ua::ArrayValue::Invalid => None,
-            ua::ArrayValue::Empty => Some(&[]),
-            ua::ArrayValue::Valid(data) => {
+            ArrayValue::Invalid => None,
+            ArrayValue::Empty => Some(&[]),
+            ArrayValue::Valid(data) => {
                 // `self.0.data` is valid, so we may use `self.0.length` now.
                 Some(unsafe { slice::from_raw_parts(data.as_ptr(), self.0.length) })
             }
@@ -57,10 +57,10 @@ impl String {
         self.as_bytes().and_then(|slice| str::from_utf8(slice).ok())
     }
 
-    fn array_value(&self) -> ua::ArrayValue<u8> {
+    fn array_value(&self) -> ArrayValue<u8> {
         // Internally, `open62541` represents strings as `Byte` array and has the same special cases
         // as regular arrays, i.e. empty and invalid states.
-        ua::ArrayValue::from_ptr(self.0.data)
+        ArrayValue::from_ptr(self.0.data)
     }
 }
 

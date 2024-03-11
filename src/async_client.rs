@@ -75,7 +75,8 @@ impl AsyncClient {
 
     /// Reads node value.
     ///
-    /// To read other attributes, see [`read_attribute()`] and [`read_attributes()`].
+    /// To read other attributes, see [`read_attribute()`], [`read_attributes()`], and
+    /// [`read_many_attributes()`].
     ///
     /// # Errors
     ///
@@ -83,6 +84,7 @@ impl AsyncClient {
     ///
     /// [`read_attribute()`]: Self::read_attribute
     /// [`read_attributes()`]: Self::read_attributes
+    /// [`read_many_attributes()`]: Self::read_many_attributes
     pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<ua::DataValue> {
         self.read_attribute(node_id, &ua::AttributeId::VALUE).await
     }
@@ -96,6 +98,7 @@ impl AsyncClient {
     /// This fails when the node does not exist or the attribute cannot be read.
     ///
     /// [`read_value()`]: Self::read_value
+    // TODO: Return inner `ua::Variant` instead of `ua::DataValue`.
     #[allow(clippy::missing_panics_doc)]
     pub async fn read_attribute(
         &self,
@@ -117,21 +120,51 @@ impl AsyncClient {
     /// The size and order of the result list matches the size and order of the given attribute ID
     /// list.
     ///
-    /// To read only a single attribute, you can also use [`read_attributes()`].
+    /// To read only a single attribute, you can also use [`read_attribute()`].
     ///
     /// # Errors
     ///
-    /// This fails when the node does not exist or one of the attributes cannot be read.
+    /// This fails only when the entire request fails. When the node does not exist or one of the
+    /// attributes cannot be read, an inner `Err` is returned.
     ///
-    /// [`read_attributes()`]: Self::read_attributes
+    /// [`read_attribute()`]: Self::read_attribute
+    // TODO: Return inner `ua::Variant` instead of `ua::DataValue`.
     pub async fn read_attributes(
         &self,
         node_id: &ua::NodeId,
         attribute_ids: &[ua::AttributeId],
     ) -> Result<Vec<Result<ua::DataValue>>> {
-        let nodes_to_read: Vec<_> = attribute_ids
+        // TODO: Avoid cloning, use `AsRef` in `read_many_attributes()`?
+        self.read_many_attributes(
+            &attribute_ids
+                .iter()
+                .map(|attribute_id| (node_id.clone(), attribute_id.clone()))
+                .collect::<Vec<_>>(),
+        )
+        .await
+    }
+
+    /// Reads a combination of node attributes.
+    ///
+    /// The size and order of the result list matches the size and order of the given node ID and
+    /// attribute ID list.
+    ///
+    /// To read attributes of a single node, you can also use [`read_attributes()`].
+    ///
+    /// # Errors
+    ///
+    /// This fails only when the entire request fails. When a node does not exist or one of the
+    /// attributes cannot be read, an inner `Err` is returned.
+    ///
+    /// [`read_attributes()`]: Self::read_attributes
+    // TODO: Return inner `ua::Variant` instead of `ua::DataValue`.
+    pub async fn read_many_attributes(
+        &self,
+        node_attributes: &[(ua::NodeId, ua::AttributeId)],
+    ) -> Result<Vec<Result<ua::DataValue>>> {
+        let nodes_to_read: Vec<_> = node_attributes
             .iter()
-            .map(|attribute_id| {
+            .map(|(node_id, attribute_id)| {
                 ua::ReadValueId::init()
                     .with_node_id(node_id)
                     .with_attribute_id(attribute_id)
@@ -159,7 +192,7 @@ impl AsyncClient {
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
-        debug_assert_eq!(results.len(), attribute_ids.len());
+        debug_assert_eq!(results.len(), node_attributes.len());
 
         Ok(results)
     }
@@ -260,7 +293,8 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails when any of the given nodes does not exist or cannot be browsed.
+    /// This fails only when the entire request fails. When a node does not exist or cannot be
+    /// browsed, an inner `Err` is returned.
     ///
     /// [`browse()`]: Self::browse
     pub async fn browse_many(&self, node_ids: &[ua::NodeId]) -> Result<Vec<BrowseResult>> {
@@ -296,7 +330,8 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails when any of the given continuation points is invalid.
+    /// This fails only when the entire request fails. When a continuation point is invalid, an
+    /// inner `Err` is returned.
     ///
     /// [`browse()`]: Self::browse
     /// [`browse_many()`]: Self::browse_many

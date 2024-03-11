@@ -9,7 +9,6 @@ mod node_class_mask;
 mod secure_channel_state;
 mod session_state;
 mod subscription_id;
-mod values;
 
 pub use self::{
     array::Array,
@@ -21,5 +20,4 @@ pub use self::{
     secure_channel_state::SecureChannelState,
     session_state::SessionState,
     subscription_id::SubscriptionId,
-    values::{ArrayValue, ScalarValue, VariantValue},
 };

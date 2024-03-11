@@ -75,9 +75,7 @@ pub use self::{
 macro_rules! primitive {
     ($( ($name:ident, $type:ty) ),* $(,)?) => {
         $(
-            paste::paste! {
-                crate::data_type!($name);
-            }
+            crate::data_type!($name);
 
             impl $name {
                 #[must_use]

@@ -5,7 +5,7 @@ use open62541_sys::{
     UA_NODEID_STRING_ALLOC,
 };
 
-use crate::{data_type::DataType, ua, Error};
+use crate::{ua, DataType, Error};
 
 crate::data_type!(NodeId);
 
