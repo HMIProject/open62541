@@ -6,7 +6,7 @@ use open62541_sys::{
 };
 
 use crate::{
-    ua, value::UnsupportedValueType, DataType, NonScalarValue, ScalarValue, ValueType, VariantValue,
+    ua, DataType, NonScalarValue, ScalarValue, UnsupportedValueType, ValueType, VariantValue,
 };
 
 crate::data_type!(Variant);

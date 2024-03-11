@@ -1,4 +1,4 @@
-use crate::{ua, value::UnsupportedValueType, DataType, ValueType};
+use crate::{ua, DataType, UnsupportedValueType, ValueType};
 
 crate::data_type!(Argument);
 
