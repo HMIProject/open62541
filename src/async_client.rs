@@ -281,7 +281,7 @@ impl AsyncClient {
             return Err(Error::internal("browse should return a result"));
         };
 
-        to_browse_result(result)
+        to_browse_result(result, Some(node_id))
     }
 
     /// Browses several nodes at once.
@@ -311,7 +311,11 @@ impl AsyncClient {
             return Err(Error::internal("browse should return results"));
         };
 
-        let results: Vec<_> = results.iter().map(to_browse_result).collect();
+        let results: Vec<_> = results
+            .iter()
+            .zip(node_ids)
+            .map(|(result, node_id)| to_browse_result(result, Some(node_id)))
+            .collect();
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
@@ -347,7 +351,10 @@ impl AsyncClient {
             return Err(Error::internal("browse should return results"));
         };
 
-        let results: Vec<_> = results.iter().map(to_browse_result).collect();
+        let results: Vec<_> = results
+            .iter()
+            .map(|result| to_browse_result(result, None))
+            .collect();
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
@@ -506,14 +513,26 @@ async fn service_request<R: ServiceRequest>(
 pub type BrowseResult = Result<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>;
 
 /// Converts [`ua::BrowseResult`] to our public result type.
-fn to_browse_result(result: &ua::BrowseResult) -> BrowseResult {
-    // Make sure to verify the inner status code inside `BrowseResult`. The service request itself
-    // finishes without error, even when browsing the node has failed.
+fn to_browse_result(result: &ua::BrowseResult, node_id: Option<&ua::NodeId>) -> BrowseResult {
+    // Make sure to verify the inner status code inside `BrowseResult`. The service request finishes
+    // without error, even when browsing the node has failed.
     Error::verify_good(&result.status_code())?;
 
-    let Some(references) = result.references() else {
-        return Err(Error::internal("browse should return references"));
+    let references = if let Some(references) = result.references() {
+        references.into_vec()
+    } else {
+        // When no references exist, some OPC UA servers do not return an empty references array but
+        // an invalid (unset) one instead, e.g. Siemens SIMOTION. We treat it as an empty array, and
+        // continue without error.
+        if let Some(node_id) = node_id {
+            log::debug!("Browsing {node_id} returned unset references, assuming none exist");
+        } else {
+            log::debug!(
+                "Browsing continuation point returned unset references, assuming none exist"
+            );
+        }
+        Vec::new()
     };
 
-    Ok((references.into_vec(), result.continuation_point()))
+    Ok((references, result.continuation_point()))
 }
