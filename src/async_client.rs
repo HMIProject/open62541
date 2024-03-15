@@ -311,15 +311,15 @@ impl AsyncClient {
             return Err(Error::internal("browse should return results"));
         };
 
+        // The OPC UA specification state that the resulting list has the same number of elements as
+        // the request list. If not, we would not be able to match elements in the two lists anyway.
+        debug_assert_eq!(results.len(), node_ids.len());
+
         let results: Vec<_> = results
             .iter()
             .zip(node_ids)
             .map(|(result, node_id)| to_browse_result(result, Some(node_id)))
             .collect();
-
-        // The OPC UA specification state that the resulting list has the same number of elements as
-        // the request list. If not, we would not be able to match elements in the two lists anyway.
-        debug_assert_eq!(results.len(), node_ids.len());
 
         Ok(results)
     }
@@ -351,14 +351,14 @@ impl AsyncClient {
             return Err(Error::internal("browse should return results"));
         };
 
+        // The OPC UA specification state that the resulting list has the same number of elements as
+        // the request list. If not, we would not be able to match elements in the two lists anyway.
+        debug_assert_eq!(results.len(), continuation_points.len());
+
         let results: Vec<_> = results
             .iter()
             .map(|result| to_browse_result(result, None))
             .collect();
-
-        // The OPC UA specification state that the resulting list has the same number of elements as
-        // the request list. If not, we would not be able to match elements in the two lists anyway.
-        debug_assert_eq!(results.len(), continuation_points.len());
 
         Ok(results)
     }
@@ -528,7 +528,7 @@ fn to_browse_result(result: &ua::BrowseResult, node_id: Option<&ua::NodeId>) -> 
             log::debug!("Browsing {node_id} returned unset references, assuming none exist");
         } else {
             log::debug!(
-                "Browsing continuation point returned unset references, assuming none exist"
+                "Browsing continuation point returned unset references, assuming none exist",
             );
         }
         Vec::new()
