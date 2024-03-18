@@ -30,6 +30,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Check only severity in `ua::StatusCode::is_good()`. Previously this would be an exact comparison
   to `ua::StatusCode::GOOD`.
 - No longer panic when unwrapping `ua::Variant` with array value.
+- Allow invalid references array in `ua::BrowseResult` when request was otherwise successful.
 
 ## [0.5.0] - 2024-03-01
 
