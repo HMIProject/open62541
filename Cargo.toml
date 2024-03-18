@@ -14,6 +14,7 @@ repository = "https://github.com/HMIProject/open62541.git"
 license = "MPL-2.0"
 keywords = ["opcua", "plc", "automation", "hardware", "protocol"]
 categories = ["network-programming", "embedded", "api-bindings"]
+include = ["src/", "README.md", "CHANGELOG.md"]
 
 [dependencies]
 futures-channel = "0.3.30"
@@ -70,24 +71,30 @@ pedantic = "warn"
 
 [[example]]
 name = "async_browse"
+path = "examples/async_browse.rs"
 required-features = ["tokio"]
 
 [[example]]
 name = "async_call"
+path = "examples/async_call.rs"
 required-features = ["tokio"]
 
 [[example]]
 name = "async_client"
+path = "examples/async_client.rs"
 required-features = ["tokio"]
 
 [[example]]
 name = "async_monitor"
+path = "examples/async_monitor.rs"
 required-features = ["tokio"]
 
 [[example]]
 name = "async_read_write"
+path = "examples/async_read_write.rs"
 required-features = ["tokio"]
 
 [[example]]
 name = "async_send_sync"
+path = "examples/async_send_sync.rs"
 required-features = ["time", "tokio"]
