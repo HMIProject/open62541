@@ -1,4 +1,9 @@
-use std::{ffi::c_void, fmt::Debug, mem::MaybeUninit, ptr};
+use std::{
+    ffi::{c_void, CStr},
+    fmt::Debug,
+    mem::MaybeUninit,
+    ptr,
+};
 
 use open62541_sys::{
     UA_DataType, UA_Order, UA_clear, UA_copy, UA_init, UA_order, UA_print, UA_STATUSCODE_GOOD,
@@ -29,6 +34,17 @@ pub unsafe trait DataType: Debug + Clone {
     /// The result can be passed to functions in `open62541` that deal with arbitrary data types.
     #[must_use]
     fn data_type() -> *const UA_DataType;
+
+    /// Gets data type name.
+    #[must_use]
+    fn type_name() -> &'static str {
+        let data_type = Self::data_type();
+        // SAFETY: `data_type` is a valid pointer.
+        unsafe { CStr::from_ptr((*data_type).typeName) }
+            .to_str()
+            // PANIC: `typeName` is an ASCII string.
+            .expect("string should be valid")
+    }
 
     /// Creates wrapper by taking ownership of value.
     ///

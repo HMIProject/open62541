@@ -448,10 +448,13 @@ async fn service_request<R: ServiceRequest>(
     unsafe extern "C" fn callback_c<R: ServiceRequest>(
         _client: *mut UA_Client,
         userdata: *mut c_void,
-        _request_id: UA_UInt32,
+        request_id: UA_UInt32,
         response: *mut c_void,
     ) {
-        log::debug!("Request completed");
+        log::trace!(
+            "Request ID {request_id} finished, received {}",
+            R::Response::type_name(),
+        );
 
         // SAFETY: Incoming pointer is valid for access.
         // PANIC: We expect pointer to be valid when good.
@@ -481,12 +484,13 @@ async fn service_request<R: ServiceRequest>(
         let _unused = tx.send(result.map_err(Error::new));
     };
 
+    log::debug!("Running {}", R::type_name());
+
+    let mut request_id: UA_UInt32 = 0;
     let status_code = ua::StatusCode::new({
         let Ok(mut client) = client.lock() else {
             return Err(Error::internal("should be able to lock client"));
         };
-
-        log::debug!("Calling request");
 
         unsafe {
             UA_Client_sendAsyncRequest(
@@ -496,11 +500,18 @@ async fn service_request<R: ServiceRequest>(
                 Some(callback_c::<R>),
                 R::Response::data_type(),
                 Cb::<R>::prepare(callback),
-                ptr::null_mut(),
+                ptr::addr_of_mut!(request_id),
             )
         }
     });
-    Error::verify_good(&status_code)?;
+    // The request itself fails when the client is not connected (or the secure session has not been
+    // established). In all other cases, `open62541` processes the request first and then may reject
+    // it only through the response when executing our callback above.
+    Error::verify_good(&status_code).inspect_err(|_| {
+        log::warn!("{} failed: {status_code:?}", R::type_name());
+    })?;
+
+    log::trace!("Assigned ID {request_id} to {}", R::type_name());
 
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
