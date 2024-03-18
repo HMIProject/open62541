@@ -236,7 +236,7 @@ impl AsyncClient {
         object_id: &ua::NodeId,
         method_id: &ua::NodeId,
         input_arguments: &[ua::Variant],
-    ) -> Result<Option<Vec<ua::Variant>>> {
+    ) -> Result<Vec<ua::Variant>> {
         let request =
             ua::CallRequest::init().with_methods_to_call(&[ua::CallMethodRequest::init()
                 .with_object_id(object_id)
@@ -255,11 +255,14 @@ impl AsyncClient {
 
         Error::verify_good(&result.status_code())?;
 
-        let Some(output_arguments) = result.output_arguments() else {
-            return Ok(None);
+        let output_arguments = if let Some(output_arguments) = result.output_arguments() {
+            output_arguments.into_vec()
+        } else {
+            log::debug!("Calling {method_id} returned unset output arguments, assuming none exist");
+            Vec::new()
         };
 
-        Ok(Some(output_arguments.into_vec()))
+        Ok(output_arguments)
     }
 
     /// Browses specific node.
