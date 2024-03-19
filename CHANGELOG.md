@@ -22,6 +22,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Return `Result` instead of raw `ua::DataValue` from `AsyncClient::read_attributes()`.
 - Breaking: Move `ua::VariantValue` and `ua::ScalarValue` to top-level export outside `ua`
 - Breaking: Remove `ua::ArrayValue` for now (until we have a better interface).
+- Breaking: Return output arguments directly from `AsyncClient::call_method()`, without `Option`.
 
 ### Fixed
 

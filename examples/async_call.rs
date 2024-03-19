@@ -32,7 +32,6 @@ async fn main() -> anyhow::Result<()> {
     .await?;
 
     let value: i32 = output_arguments
-        .ok_or(anyhow!("output arguments"))?
         .first()
         .ok_or(anyhow!("output argument"))?
         .to_scalar::<ua::Int32>()
@@ -49,7 +48,7 @@ async fn call_method(
     object_node_id: &ua::NodeId,
     method_node_id: &ua::NodeId,
     input_arguments: &[ua::Variant],
-) -> anyhow::Result<Option<Vec<ua::Variant>>> {
+) -> anyhow::Result<Vec<ua::Variant>> {
     println!("Getting method definition of node {method_node_id}");
 
     let definition = get_definition(client, method_node_id).await?;
