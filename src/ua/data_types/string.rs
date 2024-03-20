@@ -1,4 +1,4 @@
-use std::{ffi::CString, fmt, slice, str};
+use std::{ffi::CString, fmt, ptr, slice, str};
 
 use open62541_sys::UA_String_fromChars;
 
@@ -10,6 +10,34 @@ crate::data_type!(String);
 // strings of `length` 0. It may also be `ptr::null()` for "invalid" strings. This is similar to how
 // OPC UA treats arrays (which also distinguishes between empty and invalid instances).
 impl String {
+    /// Creates string from string slice.
+    ///
+    /// # Errors
+    ///
+    /// The string must not contain any NUL bytes.
+    pub fn new(s: &str) -> Result<Self, Error> {
+        // We do not know for sure if `open62541` handles strings with contained NUL bytes correctly
+        // in all situations. We avoid this entirely (at least for now). We may revisit this later.
+        let src =
+            CString::new(s).map_err(|_| Error::internal("string should not contain NUL bytes"))?;
+        let str = unsafe { UA_String_fromChars(src.as_ptr()) };
+        Ok(Self(str))
+    }
+
+    /// Creates invalid string (as defined by OPC UA).
+    // TODO: The OPC UA specification calls invalid strings "null". Consider changing this to match.
+    #[allow(dead_code)] // This is unused for now.
+    pub(crate) fn invalid() -> Self {
+        let str = unsafe { UA_String_fromChars(ptr::null()) };
+        Self(str)
+    }
+
+    /// Creates empty string.
+    #[allow(dead_code)] // This is unused for now.
+    pub(crate) fn empty() -> Self {
+        Self::new("").unwrap()
+    }
+
     /// Checks if string is invalid.
     ///
     /// The invalid state is defined by OPC UA. It is a third state which is distinct from empty and
@@ -83,32 +111,6 @@ impl fmt::Display for String {
     }
 }
 
-impl str::FromStr for String {
-    type Err = Error;
-
-    /// Creates [`String`] from string slice.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use open62541::ua;
-    ///
-    /// let node_id: ua::String = "Lorem Ipsum".parse().unwrap();
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// The string slice must not contain any NUL bytes.
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // We do not know for sure if `open62541` handles strings with contained NUL bytes correctly
-        // in all situations. We avoid this entirely (at least for now). We may revisit this later.
-        let src =
-            CString::new(s).map_err(|_| Error::internal("string should not contain NUL bytes"))?;
-        let str = unsafe { UA_String_fromChars(src.as_ptr()) };
-        Ok(Self(str))
-    }
-}
-
 #[cfg(feature = "serde")]
 impl serde::Serialize for String {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -127,7 +129,7 @@ mod tests {
 
     #[test]
     fn valid_string() {
-        let str: ua::String = "lorem ipsum".parse().expect("should parse string");
+        let str = ua::String::new("lorem ipsum").expect("should parse string");
         assert_eq!(str.as_str().expect("should display string"), "lorem ipsum");
         assert_eq!(str.to_string(), "lorem ipsum");
     }
@@ -136,7 +138,7 @@ mod tests {
     fn empty_string() {
         // Empty strings may have an internal representation in `UA_String` that contains invalid or
         // null pointers. This must not cause any problems.
-        let str: ua::String = "".parse().expect("should parse empty string");
+        let str = ua::String::new("").expect("should parse empty string");
         assert_eq!(str.as_str().expect("should display empty string"), "");
         assert_eq!(str.to_string(), "");
     }

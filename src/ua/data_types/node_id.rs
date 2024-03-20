@@ -123,7 +123,7 @@ impl str::FromStr for NodeId {
         let mut node_id = NodeId::init();
 
         let status_code = ua::StatusCode::new({
-            let str: ua::String = s.parse()?;
+            let str = ua::String::new(s)?;
             // SAFETY: `UA_NodeId_parse()` expects the string passed by value but does not take
             // ownership.
             let str = unsafe { ua::String::to_raw_copy(&str) };
@@ -216,7 +216,8 @@ mod tests {
 
     #[test]
     fn string_representation() {
-        // We explicitly derive `FromStr` and `ToString`. This is part of the public interface.
+        // We explicitly derive `FromStr` and `ToString`. This is part of the public interface. This
+        // is the reason why the explicit turbofish syntax is used below.
         //
         let node_id =
             <ua::NodeId as str::FromStr>::from_str("ns=0;i=2258").expect("should be valid node ID");
