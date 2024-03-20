@@ -160,6 +160,21 @@ pub unsafe trait DataType: Debug + Clone {
         assert_eq!(result, UA_STATUSCODE_GOOD, "should have copied value");
     }
 
+    /// Moves value into `dst`.
+    ///
+    /// Existing data in `dst` is cleared with [`UA_clear()`] before moving the value; it is safe
+    /// to use this operation on already initialized target values.
+    fn move_into_raw(self, dst: &mut Self::Inner) {
+        let dst: *mut Self::Inner = dst;
+        // Use `UA_clear()` first to free dynamically allocated memory held by the current value.
+        unsafe {
+            UA_clear(dst.cast::<c_void>(), Self::data_type());
+        }
+        // Move ourselves into the target. This keeps existing memory allocations but we do not
+        // reference them anymore because `into_raw()` gives up ownership.
+        unsafe { *dst = self.into_raw() };
+    }
+
     /// Creates copy without giving up ownership.
     ///
     /// # Safety
