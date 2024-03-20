@@ -9,7 +9,7 @@ use open62541_sys::{
     UA_Client_connect, UA_Client_getConfig, UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
 };
 
-use crate::{ua, Error, Result};
+use crate::{ua, DataType as _, Error, Result};
 
 /// Builder for [`Client`].
 ///
@@ -35,7 +35,32 @@ use crate::{ua, Error, Result};
 pub struct ClientBuilder(ua::Client);
 
 impl ClientBuilder {
+    /// Sets (response) timeout.
+    ///
+    /// # Panics
+    ///
+    /// The given duration must be non-negative and less than 4,294,967,295 milliseconds (less than
+    /// 49.7 days).
+    #[must_use]
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.config_mut().timeout = u32::try_from(timeout.as_millis())
+            .expect("timeout (in milliseconds) should be in range of u32");
+        self
+    }
+
+    /// Sets client description.
+    ///
+    /// The description must be internally consistent. The application URI set in the application
+    /// description must match the URI set in the certificate.
+    #[must_use]
+    pub fn client_description(mut self, client_description: ua::ApplicationDescription) -> Self {
+        client_description.move_into_raw(&mut self.config_mut().clientDescription);
+        self
+    }
+
     /// Sets secure channel life time.
+    ///
+    /// After this life time, the channel needs to be renewed.
     ///
     /// # Panics
     ///
@@ -60,6 +85,25 @@ impl ClientBuilder {
         self.config_mut().requestedSessionTimeout =
             u32::try_from(requested_session_timeout.as_millis())
                 .expect("secure channel life time (in milliseconds) should be in range of u32");
+        self
+    }
+
+    /// Sets connectivity check interval.
+    ///
+    /// Use `None` to disable background task.
+    ///
+    /// # Panics
+    ///
+    /// The given duration must be non-negative and less than 4,294,967,295 milliseconds (less than
+    /// 49.7 days).
+    #[must_use]
+    pub fn connectivity_check_interval(
+        mut self,
+        connectivity_check_interval: Option<Duration>,
+    ) -> Self {
+        self.config_mut().connectivityCheckInterval =
+            u32::try_from(connectivity_check_interval.map_or(0, |interval| interval.as_millis()))
+                .expect("connectivity check interval (in milliseconds) should be in range of u32");
         self
     }
 
