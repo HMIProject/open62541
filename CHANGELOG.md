@@ -14,6 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add `Debug` implementation for `ua::Array<T>` data types.
 - Add `ValueType` enum to check `ua::Variant` without unwrapping (also `ua::Argument`).
 - Add tracing log messages when processing service requests and responses.
+- Add methods to `ClientBuilder` to set response timeout and client description.
 
 ### Changed
 
@@ -33,6 +34,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   to `ua::StatusCode::GOOD`.
 - No longer panic when unwrapping `ua::Variant` with array value.
 - Allow invalid references array in `ua::BrowseResult` when request was otherwise successful.
+- Handle graceful disconnection when dropping synchronous `Client`.
 
 ## [0.5.0] - 2024-03-01
 
