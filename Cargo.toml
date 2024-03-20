@@ -98,3 +98,7 @@ required-features = ["tokio"]
 name = "async_send_sync"
 path = "examples/async_send_sync.rs"
 required-features = ["time", "tokio"]
+
+[[example]]
+name = "client_builder"
+path = "examples/client_builder.rs"
