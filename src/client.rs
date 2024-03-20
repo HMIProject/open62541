@@ -6,7 +6,8 @@ use std::{
 
 use open62541_sys::{
     vsnprintf_va_copy, vsnprintf_va_end, UA_ClientConfig, UA_ClientConfig_setDefault,
-    UA_Client_connect, UA_Client_getConfig, UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
+    UA_Client_connect, UA_Client_disconnect, UA_Client_getConfig, UA_LogCategory, UA_LogLevel,
+    UA_STATUSCODE_GOOD,
 };
 
 use crate::{ua, DataType as _, Error, Result};
@@ -188,6 +189,18 @@ impl Client {
     /// See [`ClientBuilder::connect()`].
     pub fn new(endpoint_url: &str) -> Result<Self> {
         ClientBuilder::default().connect(endpoint_url)
+    }
+
+    /// Disconnects client.
+    ///
+    /// This gracefully disconnects the client and should be preferred over simply dropping it.
+    pub fn disconnect(mut self) -> Result<()> {
+        log::info!("Disconnecting from endpoint");
+
+        let status_code = ua::StatusCode::new(unsafe { UA_Client_disconnect(self.0.as_mut_ptr()) });
+        Error::verify_good(&status_code)?;
+
+        Ok(())
     }
 
     /// Turns client into [`AsyncClient`].

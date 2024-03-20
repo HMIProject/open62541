@@ -28,12 +28,24 @@ pub struct Client(NonNull<UA_Client>);
 unsafe impl Send for Client {}
 
 impl Client {
+    /// Returns const pointer to value.
+    ///
+    /// # Safety
+    ///
+    /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
+    /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[allow(dead_code)]
     #[must_use]
     pub(crate) const fn as_ptr(&self) -> *const UA_Client {
         self.0.as_ptr()
     }
 
+    /// Returns mutable pointer to value.
+    ///
+    /// # Safety
+    ///
+    /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
+    /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
     pub(crate) fn as_mut_ptr(&mut self) -> *mut UA_Client {
         self.0.as_ptr()
@@ -67,6 +79,8 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
+        log::info!("Deleting client");
+
         // `UA_Client_delete()` matches `UA_Client_new()`.
         unsafe { UA_Client_delete(self.as_mut_ptr()) }
     }
