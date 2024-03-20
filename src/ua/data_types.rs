@@ -1,5 +1,7 @@
 //! Thin wrappers for OPC UA data types from [`open62541_sys`].
 
+mod application_description;
+mod application_type;
 mod argument;
 mod attribute_id;
 mod browse_description;
@@ -47,6 +49,7 @@ mod write_response;
 mod write_value;
 
 pub use self::{
+    application_description::ApplicationDescription, application_type::ApplicationType,
     argument::Argument, attribute_id::AttributeId, browse_description::BrowseDescription,
     browse_direction::BrowseDirection, browse_next_request::BrowseNextRequest,
     browse_next_response::BrowseNextResponse, browse_request::BrowseRequest,
