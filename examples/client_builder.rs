@@ -19,9 +19,9 @@ fn main() -> anyhow::Result<()> {
 
     println!("Connected successfully");
 
-    println!("Disconnecting client");
+    println!("Dropping client");
 
-    client.disconnect().context("disconnect")?;
+    drop(client);
 
     Ok(())
 }

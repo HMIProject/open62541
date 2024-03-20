@@ -6,7 +6,7 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_Client, UA_Client_disconnect, UA_Client_run_iterate, UA_Client_sendAsyncRequest, UA_UInt32,
+    UA_Client, UA_Client_run_iterate, UA_Client_sendAsyncRequest, UA_UInt32,
     UA_STATUSCODE_BADDISCONNECT,
 };
 use tokio::{
@@ -21,6 +21,8 @@ use crate::{
 };
 
 /// Connected OPC UA client (with asynchronous API).
+///
+/// See [Client](crate::Client) for more details.
 pub struct AsyncClient {
     client: Arc<Mutex<ua::Client>>,
     background_handle: JoinHandle<()>,
@@ -378,11 +380,8 @@ impl AsyncClient {
 
 impl Drop for AsyncClient {
     fn drop(&mut self) {
+        // Abort background task (at the interval await point).
         self.background_handle.abort();
-
-        if let Ok(mut client) = self.client.lock() {
-            let _unused = unsafe { UA_Client_disconnect(client.as_mut_ptr()) };
-        }
     }
 }
 

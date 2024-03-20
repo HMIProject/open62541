@@ -1,8 +1,10 @@
 use std::ptr::NonNull;
 
-use open62541_sys::{UA_Client, UA_Client_delete, UA_Client_getState, UA_Client_new};
+use open62541_sys::{
+    UA_Client, UA_Client_delete, UA_Client_disconnect, UA_Client_getState, UA_Client_new,
+};
 
-use crate::{ua, DataType as _};
+use crate::{ua, DataType as _, Error};
 
 /// Combined state for [`Client`] and [`AsyncClient`].
 ///
@@ -79,6 +81,13 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
+        log::info!("Disconnecting from endpoint");
+
+        let status_code = ua::StatusCode::new(unsafe { UA_Client_disconnect(self.as_mut_ptr()) });
+        if let Err(error) = Error::verify_good(&status_code) {
+            log::warn!("Error while disconnecting client: {error}");
+        }
+
         log::info!("Deleting client");
 
         // `UA_Client_delete()` matches `UA_Client_new()`.
