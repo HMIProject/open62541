@@ -43,11 +43,9 @@ impl ClientBuilder {
     /// 49.7 days).
     #[must_use]
     pub fn secure_channel_lifetime(mut self, secure_channel_lifetime: Duration) -> Self {
-        let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() };
-
-        config.unwrap().secureChannelLifeTime = u32::try_from(secure_channel_lifetime.as_millis())
-            .expect("secure channel life time should be in range of u32");
-
+        self.config_mut().secureChannelLifeTime =
+            u32::try_from(secure_channel_lifetime.as_millis())
+                .expect("secure channel life time (in milliseconds) should be in range of u32");
         self
     }
 
@@ -59,12 +57,9 @@ impl ClientBuilder {
     /// 49.7 days).
     #[must_use]
     pub fn requested_session_timeout(mut self, requested_session_timeout: Duration) -> Self {
-        let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() };
-
-        config.unwrap().requestedSessionTimeout =
+        self.config_mut().requestedSessionTimeout =
             u32::try_from(requested_session_timeout.as_millis())
-                .expect("secure channel life time should be in range of u32");
-
+                .expect("secure channel life time (in milliseconds) should be in range of u32");
         self
     }
 
@@ -89,6 +84,13 @@ impl ClientBuilder {
         Error::verify_good(&status_code)?;
 
         Ok(Client(self.0))
+    }
+
+    /// Access client configuration.
+    fn config_mut(&mut self) -> &mut UA_ClientConfig {
+        // PANIC: `UA_Client_getConfig()` returns non-null pointer for non-null client argument.
+        unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() }
+            .expect("client config should be set")
     }
 }
 
