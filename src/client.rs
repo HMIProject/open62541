@@ -174,7 +174,10 @@ impl Default for ClientBuilder {
 ///
 /// To disconnect, drop the client. Disconnection is always performed synchronously (with blocking),
 /// for the server to handle the underlying `CloseSession` request.
-pub struct Client(ua::Client);
+pub struct Client(
+    #[allow(dead_code)] // --no-default-features
+    ua::Client,
+);
 
 impl Client {
     /// Creates client connected to endpoint.
