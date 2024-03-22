@@ -6,10 +6,11 @@ use std::{
 
 use open62541_sys::{
     vsnprintf_va_copy, vsnprintf_va_end, UA_ClientConfig, UA_ClientConfig_setDefault,
-    UA_Client_connect, UA_Client_getConfig, UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
+    UA_Client_connect, UA_Client_getConfig, UA_LogCategory, UA_LogLevel, UA_Logger,
+    UA_STATUSCODE_GOOD,
 };
 
-use crate::{ua, DataType as _, Error, Result};
+use crate::{ua, DataType as _, Error, Result, Userdata};
 
 /// Builder for [`Client`].
 ///
@@ -220,6 +221,8 @@ impl Client {
 /// We can use this to prevent `open62541` from installing its own default logger (which outputs any
 /// logs to stdout/stderr directly).
 fn set_default_logger(config: &mut UA_ClientConfig) {
+    type Ud = Userdata<UA_Logger>;
+
     unsafe extern "C" fn log_c(
         _log_context: *mut c_void,
         level: UA_LogLevel,
@@ -255,15 +258,36 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
         }
     }
 
-    // Reset existing logger configuration.
-    if let Some(clear) = config.logger.clear {
-        unsafe { clear(config.logger.context) };
+    unsafe extern "C" fn clear_c(context: *mut c_void) {
+        // This consumes the `UA_Logger` structure itself, invalidating the pointer `config.logging`
+        // and thereby releasing all allocated resources.
+        //
+        // This is in line with the contract that `config.logging` may not be used anymore after its
+        // `clear()` method has been called.
+        let _unused = unsafe { Ud::consume(context) };
     }
 
-    // Set logger configuration to our own.
-    config.logger.clear = None;
-    config.logger.log = Some(log_c);
-    config.logger.context = ptr::null_mut();
+    // Reset existing logger configuration.
+    if let Some(logging) = unsafe { config.logging.as_ref() } {
+        if let Some(clear) = logging.clear {
+            unsafe { clear(logging.context) };
+        }
+    }
+
+    // Create logger configuration in `Userdata` to be able to clean up when `clear()` is called (in
+    // turn calling `clear_c()` above).
+    let logger = Ud::prepare(UA_Logger {
+        log: Some(log_c),
+        // Context will be set below.
+        context: ptr::null_mut(),
+        clear: Some(clear_c),
+    });
+
+    // Set logger configuration to our own. We also install the wrapped `Userdata` as local context,
+    // to use inside `log_c` and to be able to clean up after ourselves in `clear_c()`.
+    let logger_mut = unsafe { Ud::peek_at(logger) };
+    logger_mut.context = logger;
+    config.logging = ptr::from_mut(logger_mut);
 }
 
 /// Initial buffer size when formatting messages.

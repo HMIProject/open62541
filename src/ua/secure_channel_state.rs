@@ -8,7 +8,7 @@ impl SecureChannelState {
     #[must_use]
     #[allow(dead_code)] // --no-default-features
     pub(crate) const fn init() -> Self {
-        Self(UA_SecureChannelState::UA_SECURECHANNELSTATE_FRESH)
+        Self(UA_SecureChannelState::UA_SECURECHANNELSTATE_CLOSED)
     }
 
     /// Returns mutable pointer to value.

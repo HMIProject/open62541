@@ -353,12 +353,11 @@ macro_rules! data_type {
             type Inner = open62541_sys::$inner;
 
             fn data_type() -> *const open62541_sys::UA_DataType {
-                // SAFETY: We use this static variable only read-only.
-                let types = unsafe { &open62541_sys::UA_TYPES };
                 // PANIC: Value must fit into `usize` to allow indexing.
                 let index = usize::try_from(open62541_sys::$index).unwrap();
-                // PANIC: The given index must be valid within `UA_TYPES`.
-                types.get(index).unwrap()
+                // SAFETY: We use this static variable only read-only.
+                // PANIC: The given index is valid within `UA_TYPES`.
+                unsafe { open62541_sys::UA_TYPES.get(index) }.unwrap()
             }
 
             #[must_use]

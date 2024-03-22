@@ -6,7 +6,7 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_Client, UA_Client_run_iterate, UA_Client_sendAsyncRequest, UA_UInt32,
+    UA_Client, UA_Client_run_iterate, UA_UInt32, __UA_Client_AsyncService,
     UA_STATUSCODE_BADDISCONNECT,
 };
 use tokio::{
@@ -495,7 +495,7 @@ async fn service_request<R: ServiceRequest>(
         };
 
         unsafe {
-            UA_Client_sendAsyncRequest(
+            __UA_Client_AsyncService(
                 client.as_mut_ptr(),
                 request.as_ptr().cast::<c_void>(),
                 R::data_type(),
