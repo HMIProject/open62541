@@ -1,7 +1,10 @@
 use anyhow::Context as _;
 use open62541::{ua, ClientBuilder, DataType as _};
 
-fn main() -> anyhow::Result<()> {
+const CYCLE_TIME: tokio::time::Duration = tokio::time::Duration::from_millis(100);
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let client_description = ua::ApplicationDescription::init()
@@ -15,13 +18,14 @@ fn main() -> anyhow::Result<()> {
     let client = ClientBuilder::default()
         .client_description(client_description)
         .connect("opc.tcp://opcuademo.sterfive.com:26543")
-        .context("connect")?;
+        .context("connect")?
+        .into_async(CYCLE_TIME);
 
     println!("Connected successfully");
 
     println!("Disconnecting client");
 
-    client.disconnect();
+    client.disconnect().await;
 
     println!("Exiting");
 

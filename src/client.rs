@@ -173,8 +173,8 @@ impl Default for ClientBuilder {
 /// If the connection fails unrecoverably, the client is no longer usable. In this case create a new
 /// client if required.
 ///
-/// To disconnect, drop the client. Disconnection is always performed synchronously (with blocking),
-/// for the server to handle the underlying `CloseSession` request.
+/// To disconnect, prefer method [`disconnect()`](Self::disconnect) over simply dropping the client:
+/// disconnection involves server communication and might take a short amount of time.
 pub struct Client(
     #[allow(dead_code)] // --no-default-features
     ua::Client,
@@ -209,6 +209,16 @@ impl Client {
     #[must_use]
     pub fn into_async(self, cycle_time: tokio::time::Duration) -> crate::AsyncClient {
         crate::AsyncClient::from_sync(self.0, cycle_time)
+    }
+
+    /// Disconnects from endpoint.
+    ///
+    /// This consumes the client and handles the graceful shutdown of the connection. This should be
+    /// preferred over simply dropping the instance to give the server a chance to clean up and also
+    /// to avoid blocking unexpectedly when the client is being dropped without calling this method.
+    #[allow(clippy::semicolon_if_nothing_returned)] // Forward future result as-is.
+    pub fn disconnect(self) {
+        self.0.disconnect()
     }
 }
 

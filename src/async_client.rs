@@ -6,8 +6,8 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_Client, UA_Client_run_iterate, UA_UInt32, __UA_Client_AsyncService,
-    UA_STATUSCODE_BADDISCONNECT,
+    UA_Client, UA_Client_disconnectAsync, UA_Client_run_iterate, UA_UInt32,
+    __UA_Client_AsyncService, UA_STATUSCODE_BADCONNECTIONCLOSED, UA_STATUSCODE_BADDISCONNECT,
 };
 use tokio::{
     sync::oneshot,
@@ -22,10 +22,15 @@ use crate::{
 
 /// Connected OPC UA client (with asynchronous API).
 ///
+/// To disconnect, prefer method [`disconnect()`](Self::disconnect) over simply dropping the client:
+/// disconnection involves server communication and might take a short amount of time. If the client
+/// is dropped when still connected, it will _synchronously_ clean up after itself, thereby blocking
+/// while being dropped. In most cases, this is not the desired behavior.
+///
 /// See [Client](crate::Client) for more details.
 pub struct AsyncClient {
     client: Arc<Mutex<ua::Client>>,
-    background_handle: JoinHandle<()>,
+    background_handle: Option<JoinHandle<()>>,
 }
 
 impl AsyncClient {
@@ -58,7 +63,7 @@ impl AsyncClient {
 
         Self {
             client,
-            background_handle,
+            background_handle: Some(background_handle),
         }
     }
 
@@ -73,6 +78,33 @@ impl AsyncClient {
         };
 
         Ok(client.state())
+    }
+
+    /// Disconnects from endpoint.
+    ///
+    /// This consumes the client and handles the graceful shutdown of the connection. This should be
+    /// preferred over simply dropping the instance to give the server a chance to clean up and also
+    /// to avoid blocking unexpectedly when the client is being dropped without calling this method.
+    pub async fn disconnect(mut self) {
+        log::info!("Disconnecting from endpoint");
+
+        let status_code = ua::StatusCode::new({
+            let Ok(mut client) = self.client.lock() else {
+                log::warn!("Error while disconnecting client");
+                return;
+            };
+
+            unsafe { UA_Client_disconnectAsync(client.as_mut_ptr()) }
+        });
+        if let Err(error) = Error::verify_good(&status_code) {
+            log::warn!("Error while disconnecting client: {error}");
+        }
+
+        // Wait until background task has finished. The `take()` should always succeed because there
+        // is no other location where the handle is being consumed.
+        if let Some(background_handle) = self.background_handle.take() {
+            let _unused = background_handle.await;
+        }
     }
 
     /// Reads node value.
@@ -380,8 +412,13 @@ impl AsyncClient {
 
 impl Drop for AsyncClient {
     fn drop(&mut self) {
-        // Abort background task (at the interval await point).
-        self.background_handle.abort();
+        // The background task handle may already have been consumed in `disconnect()`. If so, there
+        // is nothing we need to do here, the task is already being run to completion (even when the
+        // method call might have been canceled).
+        if let Some(background_handle) = self.background_handle.take() {
+            // Abort background task (at the interval await point).
+            background_handle.abort();
+        }
     }
 }
 
@@ -420,6 +457,10 @@ async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: Duration) {
                 UA_STATUSCODE_BADDISCONNECT => {
                     // Not an error.
                     log::info!("Terminating background task after disconnect");
+                }
+                UA_STATUSCODE_BADCONNECTIONCLOSED => {
+                    // Not an error.
+                    log::info!("Terminating background task after connection closed");
                 }
                 _ => {
                     // Unexpected error.

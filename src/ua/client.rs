@@ -77,25 +77,25 @@ impl Client {
             connect_status,
         }
     }
-}
 
-impl Drop for Client {
-    fn drop(&mut self) {
+    /// Disconnects from endpoint.
+    pub(crate) fn disconnect(mut self) {
         log::info!("Disconnecting from endpoint");
 
-        // Disconnection is always performed synchronously (with blocking), for the server to handle
-        // the CloseSession request. Looking at the implementation of `UA_Client_disconnect()`, this
-        // seems to be done with a timeout of 10 seconds.
-        //
-        // TODO: Refactor this to avoid blocking in `drop()` for a potentially long time.
         let status_code = ua::StatusCode::new(unsafe { UA_Client_disconnect(self.as_mut_ptr()) });
         if let Err(error) = Error::verify_good(&status_code) {
             log::warn!("Error while disconnecting client: {error}");
         }
+    }
+}
 
+impl Drop for Client {
+    fn drop(&mut self) {
         log::debug!("Deleting client");
 
-        // `UA_Client_delete()` matches `UA_Client_new()`.
+        // `UA_Client_delete()` matches `UA_Client_new()`. This may block (!) whenever the client is
+        // still connected, for as long as it takes to take down the connection. This can be avoided
+        // by calling `disconnect()` instead of simply dropping the client.
         unsafe { UA_Client_delete(self.as_mut_ptr()) }
     }
 }
