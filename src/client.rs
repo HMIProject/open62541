@@ -67,9 +67,9 @@ impl ClientBuilder {
     /// The given duration must be non-negative and less than 4,294,967,295 milliseconds (less than
     /// 49.7 days).
     #[must_use]
-    pub fn secure_channel_lifetime(mut self, secure_channel_lifetime: Duration) -> Self {
+    pub fn secure_channel_life_time(mut self, secure_channel_life_time: Duration) -> Self {
         self.config_mut().secureChannelLifeTime =
-            u32::try_from(secure_channel_lifetime.as_millis())
+            u32::try_from(secure_channel_life_time.as_millis())
                 .expect("secure channel life time (in milliseconds) should be in range of u32");
         self
     }
