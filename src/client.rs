@@ -173,7 +173,7 @@ impl Default for ClientBuilder {
 /// client if required.
 ///
 /// To disconnect, drop the client. Disconnection is always performed synchronously (with blocking),
-/// for the server to handle the CloseSession request.
+/// for the server to handle the underlying `CloseSession` request.
 pub struct Client(ua::Client);
 
 impl Client {
