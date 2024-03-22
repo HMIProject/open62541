@@ -172,7 +172,8 @@ impl Default for ClientBuilder {
 /// If the connection fails unrecoverably, the client is no longer usable. In this case create a new
 /// client if required.
 ///
-/// To disconnect, drop the client. Disconnection is always performed async (without blocking).
+/// To disconnect, drop the client. Disconnection is always performed synchronously (with blocking),
+/// for the server to handle the CloseSession request.
 pub struct Client(ua::Client);
 
 impl Client {
