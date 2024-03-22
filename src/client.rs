@@ -25,7 +25,7 @@ use crate::{ua, DataType as _, Error, Result};
 /// # async fn main() -> anyhow::Result<()> {
 /// #
 /// let client = ClientBuilder::default()
-///     .secure_channel_lifetime(Duration::from_secs(60))
+///     .secure_channel_life_time(Duration::from_secs(60))
 ///     .connect("opc.tcp://opcuademo.sterfive.com:26543")?;
 /// #
 /// # Ok(())
