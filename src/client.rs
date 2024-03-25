@@ -9,7 +9,7 @@ use open62541_sys::{
     UA_Client_connect, UA_Client_getConfig, UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
 };
 
-use crate::{ua, Error, Result};
+use crate::{ua, DataType as _, Error, Result};
 
 /// Builder for [`Client`].
 ///
@@ -25,7 +25,7 @@ use crate::{ua, Error, Result};
 /// # async fn main() -> anyhow::Result<()> {
 /// #
 /// let client = ClientBuilder::default()
-///     .secure_channel_lifetime(Duration::from_secs(60))
+///     .secure_channel_life_time(Duration::from_secs(60))
 ///     .connect("opc.tcp://opcuademo.sterfive.com:26543")?;
 /// #
 /// # Ok(())
@@ -35,19 +35,42 @@ use crate::{ua, Error, Result};
 pub struct ClientBuilder(ua::Client);
 
 impl ClientBuilder {
-    /// Sets secure channel life time.
+    /// Sets (response) timeout.
     ///
     /// # Panics
     ///
     /// The given duration must be non-negative and less than 4,294,967,295 milliseconds (less than
     /// 49.7 days).
     #[must_use]
-    pub fn secure_channel_lifetime(mut self, secure_channel_lifetime: Duration) -> Self {
-        let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() };
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.config_mut().timeout = u32::try_from(timeout.as_millis())
+            .expect("timeout (in milliseconds) should be in range of u32");
+        self
+    }
 
-        config.unwrap().secureChannelLifeTime = u32::try_from(secure_channel_lifetime.as_millis())
-            .expect("secure channel life time should be in range of u32");
+    /// Sets client description.
+    ///
+    /// The description must be internally consistent. The application URI set in the application
+    /// description must match the URI set in the certificate.
+    #[must_use]
+    pub fn client_description(mut self, client_description: ua::ApplicationDescription) -> Self {
+        client_description.move_into_raw(&mut self.config_mut().clientDescription);
+        self
+    }
 
+    /// Sets secure channel life time.
+    ///
+    /// After this life time, the channel needs to be renewed.
+    ///
+    /// # Panics
+    ///
+    /// The given duration must be non-negative and less than 4,294,967,295 milliseconds (less than
+    /// 49.7 days).
+    #[must_use]
+    pub fn secure_channel_life_time(mut self, secure_channel_life_time: Duration) -> Self {
+        self.config_mut().secureChannelLifeTime =
+            u32::try_from(secure_channel_life_time.as_millis())
+                .expect("secure channel life time (in milliseconds) should be in range of u32");
         self
     }
 
@@ -59,12 +82,28 @@ impl ClientBuilder {
     /// 49.7 days).
     #[must_use]
     pub fn requested_session_timeout(mut self, requested_session_timeout: Duration) -> Self {
-        let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() };
-
-        config.unwrap().requestedSessionTimeout =
+        self.config_mut().requestedSessionTimeout =
             u32::try_from(requested_session_timeout.as_millis())
-                .expect("secure channel life time should be in range of u32");
+                .expect("secure channel life time (in milliseconds) should be in range of u32");
+        self
+    }
 
+    /// Sets connectivity check interval.
+    ///
+    /// Use `None` to disable background task.
+    ///
+    /// # Panics
+    ///
+    /// The given duration must be non-negative and less than 4,294,967,295 milliseconds (less than
+    /// 49.7 days).
+    #[must_use]
+    pub fn connectivity_check_interval(
+        mut self,
+        connectivity_check_interval: Option<Duration>,
+    ) -> Self {
+        self.config_mut().connectivityCheckInterval =
+            u32::try_from(connectivity_check_interval.map_or(0, |interval| interval.as_millis()))
+                .expect("connectivity check interval (in milliseconds) should be in range of u32");
         self
     }
 
@@ -89,6 +128,13 @@ impl ClientBuilder {
         Error::verify_good(&status_code)?;
 
         Ok(Client(self.0))
+    }
+
+    /// Access client configuration.
+    fn config_mut(&mut self) -> &mut UA_ClientConfig {
+        // PANIC: `UA_Client_getConfig()` returns non-null pointer for non-null client argument.
+        unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() }
+            .expect("client config should be set")
     }
 }
 
@@ -125,7 +171,13 @@ impl Default for ClientBuilder {
 ///
 /// If the connection fails unrecoverably, the client is no longer usable. In this case create a new
 /// client if required.
-pub struct Client(ua::Client);
+///
+/// To disconnect, drop the client. Disconnection is always performed synchronously (with blocking),
+/// for the server to handle the underlying `CloseSession` request.
+pub struct Client(
+    #[allow(dead_code)] // --no-default-features
+    ua::Client,
+);
 
 impl Client {
     /// Creates client connected to endpoint.

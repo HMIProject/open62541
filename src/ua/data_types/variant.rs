@@ -244,8 +244,6 @@ mod tests {
 
     #[cfg(feature = "serde")]
     mod serde {
-        use std::str::FromStr as _;
-
         use crate::{ua, DataType as _};
 
         #[test]
@@ -308,19 +306,19 @@ mod tests {
         #[test]
         fn serialize_string() {
             // Empty string
-            let ua_string = ua::String::from_str("").unwrap();
+            let ua_string = ua::String::new("").unwrap();
             let ua_variant = ua::Variant::init().with_scalar(&ua_string);
             let json = serde_json::to_string(&ua_variant).unwrap();
             assert_eq!(r#""""#, json);
 
             // Short string
-            let ua_string = ua::String::from_str("lorem ipsum").unwrap();
+            let ua_string = ua::String::new("lorem ipsum").unwrap();
             let ua_variant = ua::Variant::init().with_scalar(&ua_string);
             let json = serde_json::to_string(&ua_variant).unwrap();
             assert_eq!(r#""lorem ipsum""#, json);
 
             // Special characters
-            let ua_string = ua::String::from_str(r#"a'b"c{dẞe"#).unwrap();
+            let ua_string = ua::String::new(r#"a'b"c{dẞe"#).unwrap();
             let ua_variant = ua::Variant::init().with_scalar(&ua_string);
             let json = serde_json::to_string(&ua_variant).unwrap();
             assert_eq!(r#""a'b\"c{dẞe""#, json);

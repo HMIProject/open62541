@@ -237,11 +237,10 @@ impl<T: DataType> Array<T> {
 
     /// Consumes the array elements as an iterator.
     ///
-    /// Replaces the elements of the array by zero-initialized memory.
-    /// Ownership of the original elements is transferred to the resulting
-    /// iterator items.
+    /// Replaces the elements of the array by default-initialized instances ([`DataType::init()`]).
+    /// Ownership of the original elements is transferred to the resulting iterator items.
     ///
-    /// Other than [`Vec::drain()`], this method does not shrink the array.
+    /// Note: Other than [`Vec::drain()`], this method does _not_ shrink the array.
     // TODO: How to implement `IntoIterator` on `self` instead of `&mut self`?
     #[must_use]
     pub(crate) fn drain_all(&mut self) -> impl ExactSizeIterator<Item = T> + '_ {
@@ -289,6 +288,12 @@ impl<T: DataType> Array<T> {
         (size, ptr)
     }
 
+    /// Moves array into `dst`, giving up ownership.
+    ///
+    /// Existing data in `dst` is cleared with [`UA_Array_delete()`] before moving the value; it is
+    /// safe to use this operation on already initialized target values.
+    ///
+    /// After this, it is the responsibility of `dst` to eventually clean up the data.
     pub(crate) fn move_into_raw(self, dst_size: &mut usize, dst: &mut *mut T::Inner) {
         // Make sure to clean up any previous value in target.
         let _unused = Self::from_raw_parts(*dst, *dst_size);

@@ -1,8 +1,10 @@
 use std::ptr::NonNull;
 
-use open62541_sys::{UA_Client, UA_Client_delete, UA_Client_getState, UA_Client_new};
+use open62541_sys::{
+    UA_Client, UA_Client_delete, UA_Client_disconnect, UA_Client_getState, UA_Client_new,
+};
 
-use crate::{ua, DataType as _};
+use crate::{ua, DataType as _, Error};
 
 /// Combined state for [`Client`] and [`AsyncClient`].
 ///
@@ -28,14 +30,26 @@ pub struct Client(NonNull<UA_Client>);
 unsafe impl Send for Client {}
 
 impl Client {
+    /// Returns const pointer to value.
+    ///
+    /// # Safety
+    ///
+    /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
+    /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[allow(dead_code)]
     #[must_use]
-    pub(crate) const fn as_ptr(&self) -> *const UA_Client {
+    pub(crate) const unsafe fn as_ptr(&self) -> *const UA_Client {
         self.0.as_ptr()
     }
 
+    /// Returns mutable pointer to value.
+    ///
+    /// # Safety
+    ///
+    /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
+    /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
-    pub(crate) fn as_mut_ptr(&mut self) -> *mut UA_Client {
+    pub(crate) unsafe fn as_mut_ptr(&mut self) -> *mut UA_Client {
         self.0.as_ptr()
     }
 
@@ -67,6 +81,20 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
+        log::info!("Disconnecting from endpoint");
+
+        // Disconnection is always performed synchronously (with blocking), for the server to handle
+        // the CloseSession request. Looking at the implementation of `UA_Client_disconnect()`, this
+        // seems to be done with a timeout of 10 seconds.
+        //
+        // TODO: Refactor this to avoid blocking in `drop()` for a potentially long time.
+        let status_code = ua::StatusCode::new(unsafe { UA_Client_disconnect(self.as_mut_ptr()) });
+        if let Err(error) = Error::verify_good(&status_code) {
+            log::warn!("Error while disconnecting client: {error}");
+        }
+
+        log::debug!("Deleting client");
+
         // `UA_Client_delete()` matches `UA_Client_new()`.
         unsafe { UA_Client_delete(self.as_mut_ptr()) }
     }

@@ -36,7 +36,7 @@ impl Error {
         }
     }
 
-    #[allow(dead_code)] // Temporarily lift linter warning for `--no-default-features`.
+    #[allow(dead_code)] // --no-default-features
     #[must_use]
     pub(crate) const fn internal(message: &'static str) -> Self {
         Self::Internal(message)
