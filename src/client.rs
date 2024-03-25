@@ -10,7 +10,7 @@ use open62541_sys::{
     UA_STATUSCODE_GOOD,
 };
 
-use crate::{ua, DataType as _, Error, Result, Userdata};
+use crate::{ua, DataType as _, Error, Result};
 
 /// Builder for [`Client`].
 ///
@@ -221,8 +221,6 @@ impl Client {
 /// We can use this to prevent `open62541` from installing its own default logger (which outputs any
 /// logs to stdout/stderr directly).
 fn set_default_logger(config: &mut UA_ClientConfig) {
-    type Ud = Userdata<UA_Logger>;
-
     unsafe extern "C" fn log_c(
         _log_context: *mut c_void,
         level: UA_LogLevel,
@@ -258,36 +256,31 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
         }
     }
 
-    unsafe extern "C" fn clear_c(context: *mut c_void) {
+    unsafe extern "C" fn clear_c(logger: *mut UA_Logger) {
         // This consumes the `UA_Logger` structure itself, invalidating the pointer `config.logging`
         // and thereby releasing all allocated resources.
         //
         // This is in line with the contract that `config.logging` may not be used anymore after its
         // `clear()` method has been called.
-        let _unused = unsafe { Ud::consume(context) };
+        let _unused = unsafe { Box::from_raw(logger) };
     }
 
     // Reset existing logger configuration.
-    if let Some(logging) = unsafe { config.logging.as_ref() } {
-        if let Some(clear) = logging.clear {
-            unsafe { clear(logging.context) };
+    if let Some(logger) = unsafe { config.logging.as_ref() } {
+        if let Some(clear) = logger.clear {
+            unsafe { clear(config.logging) };
         }
+        // Mark logger as removed: the data structure has been deallocated by the call to `clear()`.
+        config.logging = ptr::null_mut();
     }
 
-    // Create logger configuration in `Userdata` to be able to clean up when `clear()` is called (in
-    // turn calling `clear_c()` above).
-    let logger = Ud::prepare(UA_Logger {
+    // Create logger configuration. We leak the memory which is cleaned up eventually when `clear()`
+    // is called (which is `clear_c()` above).
+    config.logging = Box::leak(Box::new(UA_Logger {
         log: Some(log_c),
-        // Context will be set below.
         context: ptr::null_mut(),
         clear: Some(clear_c),
-    });
-
-    // Set logger configuration to our own. We also install the wrapped `Userdata` as local context,
-    // to use inside `log_c` and to be able to clean up after ourselves in `clear_c()`.
-    let logger_mut = unsafe { Ud::peek_at(logger) };
-    logger_mut.context = logger;
-    config.logging = ptr::from_mut(logger_mut);
+    }));
 }
 
 /// Initial buffer size when formatting messages.
