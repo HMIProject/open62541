@@ -44,18 +44,20 @@ jobs:
             runner_os: macos-latest
             default_target: true
             runnable: true
-          - target: x86_64-unknown-linux-gnu
-            runner_os: ubuntu-latest
-            default_target: true
-            runnable: true
-          - target: x86_64-unknown-linux-musl
-            runner_os: ubuntu-latest
-            default_target: false
-            runnable: true
           - target: x86_64-pc-windows-msvc
             runner_os: windows-latest
             default_target: true
             runnable: true
+          - target: x86_64-unknown-linux-gnu
+            runner_os: ubuntu-latest
+            default_target: true
+            runnable: true
+          # TODO: Enable Linux musl build again when upstream issue has been
+          # resolved: https://github.com/open62541/open62541/issues/6360
+          # - target: x86_64-unknown-linux-musl
+          #   runner_os: ubuntu-latest
+          #   default_target: false
+          #   runnable: true
 
     runs-on: ${{ matrix.runner_os }}
 
