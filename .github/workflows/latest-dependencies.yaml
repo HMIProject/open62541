@@ -63,18 +63,25 @@ jobs:
 
     steps:
       - name: Install build tools for musl libc
-        if: matrix.target == 'x86_64-unknown-linux-musl'
+        if: endsWith(matrix.target, '-musl')
         # To avoid HTTP 404 when package index has been updated, we run `update` first.
         run: >-
           sudo apt -y update &&
           sudo apt -y install musl-tools
 
       - name: Install build tools for ARMv7
-        if: matrix.target == 'armv7-unknown-linux-gnueabihf'
+        if: startsWith(matrix.target, 'armv7-')
         # To avoid HTTP 404 when package index has been updated, we run `update` first.
         run: >-
           sudo apt -y update &&
           sudo apt -y install gcc-arm-linux-gnueabihf
+
+      - name: Adjust build settings for Windows
+        if: contains(matrix.target, '-windows-')
+        # Required for Windows builds: for version numbers with pre-release part
+        # as suffix, the resulting paths would get too long to build otherwise.
+        run: >-
+          echo "CARGO_TARGET_DIR=D:\t" >> $env:GITHUB_ENV
 
       - name: Install Rust toolchain
         # Use latest stable Rust version.
