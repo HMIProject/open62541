@@ -25,9 +25,13 @@ pub struct ClientState {
 /// [`UA_Client_delete()`].
 pub struct Client(NonNull<UA_Client>);
 
-// SAFETY: We know that the underlying `UA_Client` allows access from different threads (at least as
-// long as we do not call functions concurrently).
+// SAFETY: We know that the underlying `UA_Client` allows access from different threads, i.e. it may
+// be dropped in a different thread from where it was created.
 unsafe impl Send for Client {}
+
+// SAFETY: The underlying `UA_Client` can be used from different threads concurrently, at least with
+// _most_ methods (those marked `UA_THREADSAFE` and/or with explicit mutex locks inside).
+unsafe impl Sync for Client {}
 
 impl Client {
     /// Returns const pointer to value.
@@ -55,7 +59,7 @@ impl Client {
 
     /// Gets current channel and session state, and connect status.
     #[allow(dead_code)] // --no-default-features
-    pub(crate) fn state(&mut self) -> ClientState {
+    pub(crate) fn state(&self) -> ClientState {
         log::debug!("Getting state");
 
         let mut channel_state = ua::SecureChannelState::init();
@@ -64,7 +68,8 @@ impl Client {
 
         unsafe {
             UA_Client_getState(
-                self.as_mut_ptr(),
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.as_ptr().cast_mut(),
                 channel_state.as_mut_ptr(),
                 session_state.as_mut_ptr(),
                 connect_status.as_mut_ptr(),

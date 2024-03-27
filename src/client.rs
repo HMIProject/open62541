@@ -211,6 +211,12 @@ impl Client {
         crate::AsyncClient::from_sync(self.0, cycle_time)
     }
 
+    /// Gets current channel and session state, and connect status.
+    #[must_use]
+    pub fn state(&self) -> ua::ClientState {
+        self.0.state()
+    }
+
     /// Disconnects from endpoint.
     ///
     /// This consumes the client and handles the graceful shutdown of the connection. This should be

@@ -2,7 +2,7 @@ use std::{
     ffi::c_void,
     pin::Pin,
     ptr,
-    sync::{Arc, Mutex, Weak},
+    sync::{Arc, Weak},
     task::{self, Poll},
 };
 
@@ -20,14 +20,14 @@ use crate::{ua, CallbackOnce, CallbackStream, DataType as _, Error, Result};
 
 /// Monitored item (with asynchronous API).
 pub struct AsyncMonitoredItem {
-    client: Weak<Mutex<ua::Client>>,
+    client: Weak<ua::Client>,
     monitored_item_id: ua::MonitoredItemId,
     rx: mpsc::Receiver<ua::DataValue>,
 }
 
 impl AsyncMonitoredItem {
     pub(crate) async fn new(
-        client: &Arc<Mutex<ua::Client>>,
+        client: &Arc<ua::Client>,
         subscription_id: &ua::SubscriptionId,
         node_id: &ua::NodeId,
     ) -> Result<Self> {
@@ -95,7 +95,7 @@ impl Stream for AsyncMonitoredItem {
 const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
 
 async fn create_monitored_items(
-    client: &Mutex<ua::Client>,
+    client: &ua::Client,
     request: &ua::CreateMonitoredItemsRequest,
 ) -> Result<(
     ua::CreateMonitoredItemsResponse,
@@ -191,10 +191,6 @@ async fn create_monitored_items(
     let mut contexts = vec![Context(St::prepare(st_tx))];
 
     let status_code = ua::StatusCode::new({
-        let Ok(mut client) = client.lock() else {
-            return Err(Error::internal("should be able to lock client"));
-        };
-
         log::debug!(
             "Calling MonitoredItems_createDataChanges(), count={}",
             contexts.len()
@@ -206,7 +202,8 @@ async fn create_monitored_items(
 
         unsafe {
             UA_Client_MonitoredItems_createDataChanges_async(
-                client.as_mut_ptr(),
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                client.as_ptr().cast_mut(),
                 request,
                 contexts.as_mut_ptr().cast::<*mut c_void>(),
                 notification_callbacks.as_mut_ptr(),
@@ -227,7 +224,7 @@ async fn create_monitored_items(
         .map(|response| (response, st_rx))
 }
 
-fn delete_monitored_items(client: &Mutex<ua::Client>, request: &ua::DeleteMonitoredItemsRequest) {
+fn delete_monitored_items(client: &ua::Client, request: &ua::DeleteMonitoredItemsRequest) {
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
         _userdata: *mut c_void,
@@ -240,10 +237,6 @@ fn delete_monitored_items(client: &Mutex<ua::Client>, request: &ua::DeleteMonito
     }
 
     let _unused = {
-        let Ok(mut client) = client.lock() else {
-            return;
-        };
-
         log::debug!("Calling MonitoredItems_delete()");
 
         // SAFETY: `UA_Client_MonitoredItems_delete_async()` expects the request passed by value but
@@ -252,7 +245,8 @@ fn delete_monitored_items(client: &Mutex<ua::Client>, request: &ua::DeleteMonito
 
         unsafe {
             UA_Client_MonitoredItems_delete_async(
-                client.as_mut_ptr(),
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                client.as_ptr().cast_mut(),
                 request,
                 // This must be set despite the `Option` type. The internal handler in `open62541`
                 // calls our callback unconditionally (in contrast to other service functions where
