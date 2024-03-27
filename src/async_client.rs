@@ -63,12 +63,9 @@ impl AsyncClient {
     }
 
     /// Gets current channel and session state, and connect status.
-    ///
-    /// # Errors
-    ///
-    /// This only fails when the client has an internal error.
-    pub fn state(&self) -> Result<ua::ClientState> {
-        Ok(self.client.state())
+    #[must_use]
+    pub fn state(&self) -> ua::ClientState {
+        self.client.state()
     }
 
     /// Disconnects from endpoint.
