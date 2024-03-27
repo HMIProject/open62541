@@ -6,7 +6,8 @@ use std::{
 
 use open62541_sys::{
     vsnprintf_va_copy, vsnprintf_va_end, UA_ClientConfig, UA_ClientConfig_setDefault,
-    UA_Client_connect, UA_Client_getConfig, UA_LogCategory, UA_LogLevel, UA_STATUSCODE_GOOD,
+    UA_Client_connect, UA_Client_getConfig, UA_LogCategory, UA_LogLevel, UA_Logger,
+    UA_STATUSCODE_GOOD,
 };
 
 use crate::{ua, DataType as _, Error, Result};
@@ -255,15 +256,31 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
         }
     }
 
-    // Reset existing logger configuration.
-    if let Some(clear) = config.logger.clear {
-        unsafe { clear(config.logger.context) };
+    unsafe extern "C" fn clear_c(logger: *mut UA_Logger) {
+        // This consumes the `UA_Logger` structure itself, invalidating the pointer `config.logging`
+        // and thereby releasing all allocated resources.
+        //
+        // This is in line with the contract that `config.logging` may not be used anymore after its
+        // `clear()` method has been called.
+        let _unused = unsafe { Box::from_raw(logger) };
     }
 
-    // Set logger configuration to our own.
-    config.logger.clear = None;
-    config.logger.log = Some(log_c);
-    config.logger.context = ptr::null_mut();
+    // Reset existing logger configuration.
+    if let Some(logger) = unsafe { config.logging.as_ref() } {
+        if let Some(clear) = logger.clear {
+            unsafe { clear(config.logging) };
+        }
+        // Mark logger as removed: the data structure has been deallocated by the call to `clear()`.
+        config.logging = ptr::null_mut();
+    }
+
+    // Create logger configuration. We leak the memory which is cleaned up eventually when `clear()`
+    // is called (which is `clear_c()` above).
+    config.logging = Box::leak(Box::new(UA_Logger {
+        log: Some(log_c),
+        context: ptr::null_mut(),
+        clear: Some(clear_c),
+    }));
 }
 
 /// Initial buffer size when formatting messages.

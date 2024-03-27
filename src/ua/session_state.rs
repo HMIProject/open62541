@@ -7,6 +7,7 @@ impl SessionState {
     /// Creates wrapper initialized with defaults.
     #[must_use]
     pub(crate) const fn init() -> Self {
+        // Use default variant that corresponds to numeric value `0` to match other `init()` calls.
         Self(UA_SessionState::UA_SESSIONSTATE_CLOSED)
     }
 

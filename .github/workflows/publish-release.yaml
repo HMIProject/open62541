@@ -8,8 +8,7 @@ permissions:
 on:
   push:
     tags:
-      # Only match release version tags
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - v*
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
