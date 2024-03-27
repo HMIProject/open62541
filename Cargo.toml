@@ -80,6 +80,11 @@ path = "examples/async_call.rs"
 required-features = ["tokio"]
 
 [[example]]
+name = "async_client_builder"
+path = "examples/async_client_builder.rs"
+required-features = ["tokio"]
+
+[[example]]
 name = "async_client"
 path = "examples/async_client.rs"
 required-features = ["tokio"]

@@ -84,9 +84,9 @@ async fn main() -> anyhow::Result<()> {
 
     time::sleep(Duration::from_millis(500)).await;
 
-    println!("Dropping client");
+    println!("Disconnecting client");
 
-    drop(client);
+    client.disconnect().await;
 
     time::sleep(Duration::from_millis(500)).await;
 
