@@ -39,7 +39,7 @@ impl Client {
         let config = config.into_raw();
         let inner = unsafe { UA_Client_newWithConfig(&config) };
         // PANIC: The only possible errors here are out-of-memory.
-        let inner = NonNull::new(inner).expect("create new UA_Client");
+        let inner = NonNull::new(inner).expect("create UA_Client");
         Self(inner)
     }
 
@@ -117,7 +117,7 @@ impl Default for Client {
     /// Creates wrapper initialized with defaults.
     fn default() -> Self {
         // `UA_Client_new()` matches `UA_Client_delete()`.
-        let inner = NonNull::new(unsafe { UA_Client_new() }).expect("create new UA_Client");
+        let inner = NonNull::new(unsafe { UA_Client_new() }).expect("create UA_Client");
         Self(inner)
     }
 }
