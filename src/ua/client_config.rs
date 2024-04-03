@@ -96,10 +96,19 @@ impl Default for ClientConfig {
 
         // First set custom logger. This is necessary because the same logger instance is used as-is
         // inside derived attributes such as `eventLoop`, `certificateVerification`, etc.
-        set_default_logger(unsafe { config.as_mut() });
+        {
+            let config = unsafe { config.as_mut() };
+            // We set the logging only on default-initialized config objects: we cannot know whether
+            // an existing configuration is still referenced in another attribute or structure, thus
+            // we would not be allowed to free it.
+            debug_assert!(config.logging.is_null());
+            // Create logger configuration. Ownership of the `UA_Logger` instance passes to `config`
+            // at this point.
+            config.logging = client_logger();
+        }
 
         // Set remaining attributes to their default values. This also copies the logger as laid out
-        // above.
+        // above to other attributes inside `config` (cleaned up by `UA_ClientConfig_clear()`).
         let status_code =
             ua::StatusCode::new(unsafe { UA_ClientConfig_setDefault(config.as_mut_ptr()) });
         // PANIC: The only possible errors here are out-of-memory.
@@ -109,15 +118,14 @@ impl Default for ClientConfig {
     }
 }
 
-/// Installs logger that forwards to the `log` crate.
-///
-/// This remove an existing logger from the given configuration (by calling its `clear()` callback),
-/// then installs a custom logger that forwards all messages to the corresponding calls in the `log`
-/// crate.
+/// Creates logger that forwards to the `log` crate.
 ///
 /// We can use this to prevent `open62541` from installing its own default logger (which outputs any
 /// logs to stdout/stderr directly).
-fn set_default_logger(config: &mut UA_ClientConfig) {
+///
+/// Note that this leaks memory unless the returned pointer is assigned to `UA_ClientConfig` (and/or
+/// `UA_Client` in turn), eventually calling `UA_Logger::clear()` with the `UA_Logger` instance.
+fn client_logger() -> *mut UA_Logger {
     unsafe extern "C" fn log_c(
         _log_context: *mut c_void,
         level: UA_LogLevel,
@@ -172,17 +180,11 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
         drop(logger);
     }
 
-    // This function should only be called on default-initialized config objects. The reason is that
-    // we do not know whether the `logging` configuration is still referenced somewhere else.
-    assert!(config.logging.is_null());
-
-    // Create logger configuration. We leak the memory which is cleaned up eventually when `clear()`
-    // is called (which is `clear_c()` above).
-    config.logging = Box::leak(Box::new(UA_Logger {
+    Box::leak(Box::new(UA_Logger {
         log: Some(log_c),
         context: ptr::null_mut(),
         clear: Some(clear_c),
-    }));
+    }))
 }
 
 /// Initial buffer size when formatting messages.
