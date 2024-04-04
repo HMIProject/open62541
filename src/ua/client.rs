@@ -100,7 +100,10 @@ impl Client {
     pub(crate) fn disconnect(mut self) {
         log::info!("Disconnecting from endpoint");
 
-        let status_code = ua::StatusCode::new(unsafe { UA_Client_disconnect(self.as_mut_ptr()) });
+        let status_code = ua::StatusCode::new(unsafe {
+            // SAFETY: We retain ownership of `self`.
+            UA_Client_disconnect(self.as_mut_ptr())
+        });
         if let Err(error) = Error::verify_good(&status_code) {
             log::warn!("Error while disconnecting client: {error}");
         }

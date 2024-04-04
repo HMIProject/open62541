@@ -126,6 +126,7 @@ impl ClientBuilder {
         let mut client = ua::Client::new_with_config(self.0);
 
         let status_code = ua::StatusCode::new(unsafe {
+            // SAFETY: The method does not take ownership of `client`.
             UA_Client_connect(client.as_mut_ptr(), endpoint_url.as_ptr())
         });
         Error::verify_good(&status_code)?;
