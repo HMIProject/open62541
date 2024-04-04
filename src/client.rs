@@ -126,6 +126,7 @@ impl ClientBuilder {
         let mut client = ua::Client::new_with_config(self.0);
 
         let status_code = ua::StatusCode::new(unsafe {
+            // SAFETY: The method does not take ownership of `client`.
             UA_Client_connect(client.as_mut_ptr(), endpoint_url.as_ptr())
         });
         Error::verify_good(&status_code)?;
@@ -187,6 +188,12 @@ impl Client {
     #[must_use]
     pub fn into_async(self, cycle_time: tokio::time::Duration) -> crate::AsyncClient {
         crate::AsyncClient::from_sync(self.0, cycle_time)
+    }
+
+    /// Gets current channel and session state, and connect status.
+    #[must_use]
+    pub fn state(&self) -> ua::ClientState {
+        self.0.state()
     }
 
     /// Disconnects from endpoint.

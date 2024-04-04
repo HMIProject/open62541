@@ -1,7 +1,7 @@
 use std::{
     ffi::c_void,
     ptr,
-    sync::{Arc, Mutex, Weak},
+    sync::{Arc, Weak},
 };
 
 use futures_channel::oneshot;
@@ -14,12 +14,12 @@ use crate::{ua, AsyncMonitoredItem, CallbackOnce, DataType as _, Error, Result};
 
 /// Subscription (with asynchronous API).
 pub struct AsyncSubscription {
-    client: Weak<Mutex<ua::Client>>,
+    client: Weak<ua::Client>,
     subscription_id: ua::SubscriptionId,
 }
 
 impl AsyncSubscription {
-    pub(crate) async fn new(client: &Arc<Mutex<ua::Client>>) -> Result<Self> {
+    pub(crate) async fn new(client: &Arc<ua::Client>) -> Result<Self> {
         let request = ua::CreateSubscriptionRequest::default();
 
         let response = create_subscription(client, &request).await?;
@@ -60,7 +60,7 @@ impl Drop for AsyncSubscription {
 }
 
 async fn create_subscription(
-    client: &Mutex<ua::Client>,
+    client: &ua::Client,
     request: &ua::CreateSubscriptionRequest,
 ) -> Result<ua::CreateSubscriptionResponse> {
     type Cb = CallbackOnce<std::result::Result<ua::CreateSubscriptionResponse, ua::StatusCode>>;
@@ -101,10 +101,6 @@ async fn create_subscription(
     };
 
     let status_code = ua::StatusCode::new({
-        let Ok(mut client) = client.lock() else {
-            return Err(Error::internal("should be able to lock client"));
-        };
-
         log::debug!("Calling Subscriptions_create()");
 
         // SAFETY: `UA_Client_Subscriptions_create_async()` expects the request passed by value but
@@ -113,7 +109,8 @@ async fn create_subscription(
 
         unsafe {
             UA_Client_Subscriptions_create_async(
-                client.as_mut_ptr(),
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                client.as_ptr().cast_mut(),
                 request,
                 ptr::null_mut(),
                 None,
@@ -133,7 +130,7 @@ async fn create_subscription(
         .unwrap_or(Err(Error::internal("callback should send result")))
 }
 
-fn delete_subscription(client: &Mutex<ua::Client>, request: &ua::DeleteSubscriptionsRequest) {
+fn delete_subscription(client: &ua::Client, request: &ua::DeleteSubscriptionsRequest) {
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
         _userdata: *mut c_void,
@@ -146,10 +143,6 @@ fn delete_subscription(client: &Mutex<ua::Client>, request: &ua::DeleteSubscript
     }
 
     let _unused = {
-        let Ok(mut client) = client.lock() else {
-            return;
-        };
-
         log::debug!("Calling Subscriptions_delete()");
 
         // SAFETY: `UA_Client_Subscriptions_delete_async()` expects the request passed by value but
@@ -158,7 +151,8 @@ fn delete_subscription(client: &Mutex<ua::Client>, request: &ua::DeleteSubscript
 
         unsafe {
             UA_Client_Subscriptions_delete_async(
-                client.as_mut_ptr(),
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                client.as_ptr().cast_mut(),
                 request,
                 // This must be set (despite the `Option` type). The internal handler in `open62541`
                 // calls our callback unconditionally (as opposed to other service functions where a

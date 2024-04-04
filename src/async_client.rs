@@ -1,9 +1,4 @@
-use std::{
-    ffi::c_void,
-    ptr, slice,
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{ffi::c_void, ptr, slice, sync::Arc, time::Duration};
 
 use open62541_sys::{
     UA_Client, UA_Client_disconnectAsync, UA_Client_run_iterate, UA_UInt32,
@@ -29,7 +24,7 @@ use crate::{
 ///
 /// See [Client](crate::Client) for more details.
 pub struct AsyncClient {
-    client: Arc<Mutex<ua::Client>>,
+    client: Arc<ua::Client>,
     background_handle: Option<JoinHandle<()>>,
 }
 
@@ -54,7 +49,7 @@ impl AsyncClient {
     }
 
     pub(crate) fn from_sync(client: ua::Client, cycle_time: Duration) -> Self {
-        let client = Arc::new(Mutex::new(client));
+        let client = Arc::new(client);
 
         let background_task = background_task(Arc::clone(&client), cycle_time);
         // Run the event loop concurrently. This may be a different thread when using tokio with
@@ -68,16 +63,9 @@ impl AsyncClient {
     }
 
     /// Gets current channel and session state, and connect status.
-    ///
-    /// # Errors
-    ///
-    /// This only fails when the client has an internal error.
-    pub fn state(&self) -> Result<ua::ClientState> {
-        let Ok(mut client) = self.client.lock() else {
-            return Err(Error::internal("should be able to lock client"));
-        };
-
-        Ok(client.state())
+    #[must_use]
+    pub fn state(&self) -> ua::ClientState {
+        self.client.state()
     }
 
     /// Disconnects from endpoint.
@@ -88,13 +76,11 @@ impl AsyncClient {
     pub async fn disconnect(mut self) {
         log::info!("Disconnecting from endpoint");
 
-        let status_code = ua::StatusCode::new({
-            let Ok(mut client) = self.client.lock() else {
-                log::warn!("Error while disconnecting client");
-                return;
-            };
-
-            unsafe { UA_Client_disconnectAsync(client.as_mut_ptr()) }
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Client_disconnectAsync(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.client.as_ptr().cast_mut(),
+            )
         });
         if let Err(error) = Error::verify_good(&status_code) {
             log::warn!("Error while disconnecting client: {error}");
@@ -422,7 +408,7 @@ impl Drop for AsyncClient {
     }
 }
 
-async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: Duration) {
+async fn background_task(client: Arc<ua::Client>, cycle_time: Duration) {
     log::debug!("Starting background task");
 
     let mut interval = time::interval(cycle_time);
@@ -441,15 +427,21 @@ async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: Duration) {
         let start_of_cycle = Instant::now();
 
         let status_code = ua::StatusCode::new({
-            let Ok(mut client) = client.lock() else {
-                log::error!("Terminating background task: Client could not be locked");
-                return;
-            };
+            log::trace!("Running iterate");
 
             // Timeout of 0 means we do not block here at all. We don't want to hold the mutex
             // longer than necessary (because that would block requests from being sent out).
-            log::trace!("Running iterate");
-            unsafe { UA_Client_run_iterate(client.as_mut_ptr(), 0) }
+            //
+            // TODO: Re-evaluate this. We should be able to use `cycle_duration` directly here
+            // because `UA_Client_run_iterate()` internally uses it as polling timeout without
+            // blocking the internal mutex the entire time.
+            unsafe {
+                UA_Client_run_iterate(
+                    // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                    client.as_ptr().cast_mut(),
+                    0,
+                )
+            }
         });
         if let Err(error) = Error::verify_good(&status_code) {
             // Context-sensitive handling of bad status codes.
@@ -483,7 +475,7 @@ async fn background_task(client: Arc<Mutex<ua::Client>>, cycle_time: Duration) {
 }
 
 async fn service_request<R: ServiceRequest>(
-    client: &Mutex<ua::Client>,
+    client: &ua::Client,
     request: R,
 ) -> Result<R::Response> {
     type Cb<R> = CallbackOnce<std::result::Result<<R as ServiceRequest>::Response, ua::StatusCode>>;
@@ -530,22 +522,17 @@ async fn service_request<R: ServiceRequest>(
     log::debug!("Running {}", R::type_name());
 
     let mut request_id: UA_UInt32 = 0;
-    let status_code = ua::StatusCode::new({
-        let Ok(mut client) = client.lock() else {
-            return Err(Error::internal("should be able to lock client"));
-        };
-
-        unsafe {
-            __UA_Client_AsyncService(
-                client.as_mut_ptr(),
-                request.as_ptr().cast::<c_void>(),
-                R::data_type(),
-                Some(callback_c::<R>),
-                R::Response::data_type(),
-                Cb::<R>::prepare(callback),
-                ptr::addr_of_mut!(request_id),
-            )
-        }
+    let status_code = ua::StatusCode::new(unsafe {
+        __UA_Client_AsyncService(
+            // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+            client.as_ptr().cast_mut(),
+            request.as_ptr().cast::<c_void>(),
+            R::data_type(),
+            Some(callback_c::<R>),
+            R::Response::data_type(),
+            Cb::<R>::prepare(callback),
+            ptr::addr_of_mut!(request_id),
+        )
     });
     // The request itself fails when the client is not connected (or the secure session has not been
     // established). In all other cases, `open62541` processes the request first and then may reject
