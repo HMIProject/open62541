@@ -2,6 +2,7 @@
 
 mod array;
 mod client;
+mod client_config;
 mod continuation_point;
 mod data_types;
 mod monitored_item_id;
@@ -10,6 +11,7 @@ mod secure_channel_state;
 mod session_state;
 mod subscription_id;
 
+pub(crate) use self::client_config::ClientConfig;
 pub use self::{
     array::Array,
     client::{Client, ClientState},

@@ -5,9 +5,8 @@ use std::{
 };
 
 use open62541_sys::{
-    vsnprintf_va_copy, vsnprintf_va_end, UA_ClientConfig, UA_ClientConfig_setDefault,
-    UA_Client_connect, UA_Client_getConfig, UA_LogCategory, UA_LogLevel, UA_Logger,
-    UA_STATUSCODE_GOOD,
+    vsnprintf_va_copy, vsnprintf_va_end, UA_ClientConfig, UA_Client_connect, UA_LogCategory,
+    UA_LogLevel, UA_Logger,
 };
 
 use crate::{ua, DataType as _, Error, Result};
@@ -32,8 +31,9 @@ use crate::{ua, DataType as _, Error, Result};
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Default)]
 #[allow(clippy::module_name_repetitions)]
-pub struct ClientBuilder(ua::Client);
+pub struct ClientBuilder(ua::ClientConfig);
 
 impl ClientBuilder {
     /// Sets (response) timeout.
@@ -117,48 +117,26 @@ impl ClientBuilder {
     /// # Panics
     ///
     /// The endpoint URL must not contain any NUL bytes.
-    pub fn connect(mut self, endpoint_url: &str) -> Result<Client> {
+    pub fn connect(self, endpoint_url: &str) -> Result<Client> {
         log::info!("Connecting to endpoint {endpoint_url}");
 
         let endpoint_url =
             CString::new(endpoint_url).expect("endpoint URL does not contain NUL bytes");
 
+        let mut client = ua::Client::new_with_config(self.0);
+
         let status_code = ua::StatusCode::new(unsafe {
-            UA_Client_connect(self.0.as_mut_ptr(), endpoint_url.as_ptr())
+            UA_Client_connect(client.as_mut_ptr(), endpoint_url.as_ptr())
         });
         Error::verify_good(&status_code)?;
 
-        Ok(Client(self.0))
+        Ok(Client(client))
     }
 
     /// Access client configuration.
     fn config_mut(&mut self) -> &mut UA_ClientConfig {
-        // PANIC: `UA_Client_getConfig()` returns non-null pointer for non-null client argument.
-        unsafe { UA_Client_getConfig(self.0.as_mut_ptr()).as_mut() }
-            .expect("client config should be set")
-    }
-}
-
-impl Default for ClientBuilder {
-    fn default() -> Self {
-        let mut inner = ua::Client::default();
-
-        // We require some initial configuration for `UA_Client_connect()` to work.
-        //
-        let result = unsafe {
-            let config = UA_Client_getConfig(inner.as_mut_ptr());
-
-            // Install custom logger that uses the `log` crate.
-            set_default_logger(config.as_mut().expect("client config should be set"));
-
-            // Initialize remainder of configuration with defaults. This keeps our custom logger. We
-            // do this after `set_default_logger()`: `UA_ClientConfig_setDefault()` would needlessly
-            // install a default logger that we would throw away in `set_default_logger()` anyway.
-            UA_ClientConfig_setDefault(config)
-        };
-        assert!(result == UA_STATUSCODE_GOOD);
-
-        Self(inner)
+        // SAFETY: Ownership is not given away.
+        unsafe { self.0.as_mut() }
     }
 }
 
@@ -230,15 +208,14 @@ impl Client {
     }
 }
 
-/// Installs logger that forwards to the `log` crate.
-///
-/// This remove an existing logger from the given configuration (by calling its `clear()` callback),
-/// then installs a custom logger that forwards all messages to the corresponding calls in the `log`
-/// crate.
+/// Creates logger that forwards to the `log` crate.
 ///
 /// We can use this to prevent `open62541` from installing its own default logger (which outputs any
 /// logs to stdout/stderr directly).
-fn set_default_logger(config: &mut UA_ClientConfig) {
+///
+/// Note that this leaks memory unless the returned pointer is assigned to `UA_ClientConfig` (and/or
+/// `UA_Client` in turn), eventually calling `UA_Logger::clear()` with this `UA_Logger` instance.
+pub(crate) fn client_logger() -> *mut UA_Logger {
     unsafe extern "C" fn log_c(
         _log_context: *mut c_void,
         level: UA_LogLevel,
@@ -275,30 +252,35 @@ fn set_default_logger(config: &mut UA_ClientConfig) {
     }
 
     unsafe extern "C" fn clear_c(logger: *mut UA_Logger) {
+        log::debug!("Clearing `log` logger");
+
         // This consumes the `UA_Logger` structure itself, invalidating the pointer `config.logging`
         // and thereby releasing all allocated resources.
         //
         // This is in line with the contract that `config.logging` may not be used anymore after its
         // `clear()` method has been called.
-        let _unused = unsafe { Box::from_raw(logger) };
+        let logger = unsafe { Box::from_raw(logger) };
+
+        // Run some sanity checks. We should only ever be called on our own data structure.
+        debug_assert!(logger.log == Some(log_c));
+        debug_assert!(logger.clear == Some(clear_c));
+
+        // As long as we do not carry data, there is nothing to clean up here.
+        debug_assert!(logger.context.is_null());
+
+        // Dropping the boxed logger cleans up allocated memory.
+        drop(logger);
     }
 
-    // Reset existing logger configuration.
-    if let Some(logger) = unsafe { config.logging.as_ref() } {
-        if let Some(clear) = logger.clear {
-            unsafe { clear(config.logging) };
-        }
-        // Mark logger as removed: the data structure has been deallocated by the call to `clear()`.
-        config.logging = ptr::null_mut();
-    }
+    log::debug!("Creating `log` logger");
 
     // Create logger configuration. We leak the memory which is cleaned up eventually when `clear()`
     // is called (which is `clear_c()` above).
-    config.logging = Box::leak(Box::new(UA_Logger {
+    Box::leak(Box::new(UA_Logger {
         log: Some(log_c),
         context: ptr::null_mut(),
         clear: Some(clear_c),
-    }));
+    }))
 }
 
 /// Initial buffer size when formatting messages.
