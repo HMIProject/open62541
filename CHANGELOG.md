@@ -26,7 +26,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Remove `ua::ArrayValue` for now (until we have a better interface).
 - Breaking: Return output arguments directly from `AsyncClient::call_method()`, without `Option`.
 - Breaking: Remove misleading `FromStr` trait implementation and offer `ua::String::new()` instead.
-- Upgrade to open62541 version 1.4. By itself, this should not affect the public API of this crate.
+- Breaking: Upgrade to open62541 version 1.4. This affects the public API of this crate as follows:
+  - Automatically unwrap `ua::ExtensionObject` arrays inside `ua::Variant`.
 
 ### Fixed
 
