@@ -2,6 +2,7 @@ use std::ptr::NonNull;
 
 use open62541_sys::{
     UA_Client, UA_Client_delete, UA_Client_disconnect, UA_Client_getState, UA_Client_new,
+    UA_Client_newWithConfig,
 };
 
 use crate::{ua, DataType as _, Error};
@@ -30,6 +31,18 @@ pub struct Client(NonNull<UA_Client>);
 unsafe impl Send for Client {}
 
 impl Client {
+    /// Creates client from client config.
+    ///
+    /// This consumes the config object and makes the client the owner of all contained data therein
+    /// (e.g. logging configuration and logger instance).
+    pub(crate) fn new_with_config(config: ua::ClientConfig) -> Self {
+        let config = config.into_raw();
+        let inner = unsafe { UA_Client_newWithConfig(&config) };
+        // PANIC: The only possible errors here are out-of-memory.
+        let inner = NonNull::new(inner).expect("create UA_Client");
+        Self(inner)
+    }
+
     /// Returns const pointer to value.
     ///
     /// # Safety
@@ -104,7 +117,7 @@ impl Default for Client {
     /// Creates wrapper initialized with defaults.
     fn default() -> Self {
         // `UA_Client_new()` matches `UA_Client_delete()`.
-        let inner = NonNull::new(unsafe { UA_Client_new() }).expect("create new UA_Client");
+        let inner = NonNull::new(unsafe { UA_Client_new() }).expect("create UA_Client");
         Self(inner)
     }
 }
