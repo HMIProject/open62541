@@ -174,18 +174,13 @@ fn get_arguments(value: &ua::DataValue) -> anyhow::Result<Vec<(ua::String, Value
     let arguments = value
         .value()
         .ok_or(anyhow::anyhow!("should have value"))?
-        .to_array::<ua::ExtensionObject>()
+        .to_array::<ua::Argument>()
         .ok_or(anyhow::anyhow!("should have array"))?;
 
-    arguments
+    Ok(arguments
         .iter()
-        .map(|object| {
-            let argument = object
-                .decoded_content::<ua::Argument>()
-                .ok_or(anyhow::anyhow!("should have argument"))?;
-            Ok((argument.name().clone(), argument.value_type()))
-        })
-        .collect()
+        .map(|argument| (argument.name().clone(), argument.value_type()))
+        .collect())
 }
 
 /// Gets name of referenced property.
