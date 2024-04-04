@@ -431,7 +431,10 @@ async fn background_task(client: Arc<ua::Client>, cycle_time: Duration) {
 
             // Timeout of 0 means we do not block here at all. We don't want to hold the mutex
             // longer than necessary (because that would block requests from being sent out).
-            // TODO: Re-evaluate this.
+            //
+            // TODO: Re-evaluate this. We should be able to use `cycle_duration` directly here
+            // because `UA_Client_run_iterate()` internally uses it as polling timeout without
+            // blocking the internal mutex the entire time.
             unsafe {
                 UA_Client_run_iterate(
                     // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
