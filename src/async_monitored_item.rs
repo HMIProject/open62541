@@ -12,7 +12,7 @@ use futures_util::stream;
 use open62541_sys::{
     UA_Client, UA_Client_DataChangeNotificationCallback, UA_Client_DeleteMonitoredItemCallback,
     UA_Client_MonitoredItems_createDataChanges_async, UA_Client_MonitoredItems_delete_async,
-    UA_CreateMonitoredItemsResponse, UA_DataValue, UA_UInt32,
+    UA_CreateMonitoredItemsResponse, UA_DataValue, UA_DeleteMonitoredItemsResponse, UA_UInt32,
 };
 use tokio::sync::mpsc;
 
@@ -229,14 +229,22 @@ fn delete_monitored_items(client: &ua::Client, request: &ua::DeleteMonitoredItem
         _client: *mut UA_Client,
         _userdata: *mut c_void,
         _request_id: UA_UInt32,
-        _response: *mut c_void,
+        response: *mut c_void,
     ) {
         log::debug!("MonitoredItems_delete() completed");
 
-        // Nothing to do here.
+        let response = response.cast::<UA_DeleteMonitoredItemsResponse>();
+        // SAFETY: Incoming pointer is valid for access.
+        // PANIC: We expect pointer to be valid when good.
+        let response = unsafe { response.as_ref() }.expect("response should be set");
+        let status_code = ua::StatusCode::new(response.responseHeader.serviceResult);
+
+        if let Err(error) = Error::verify_good(&status_code) {
+            log::warn!("Error in response when deleting monitored items: {error}");
+        }
     }
 
-    let _unused = {
+    let status_code = ua::StatusCode::new({
         log::debug!("Calling MonitoredItems_delete()");
 
         // SAFETY: `UA_Client_MonitoredItems_delete_async()` expects the request passed by value but
@@ -248,13 +256,13 @@ fn delete_monitored_items(client: &ua::Client, request: &ua::DeleteMonitoredItem
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 client.as_ptr().cast_mut(),
                 request,
-                // This must be set despite the `Option` type. The internal handler in `open62541`
-                // calls our callback unconditionally (in contrast to other service functions where
-                // a handler may be left unset when it is not required).
                 Some(callback_c),
                 ptr::null_mut(),
                 ptr::null_mut(),
             )
         }
-    };
+    });
+    if let Err(error) = Error::verify_good(&status_code) {
+        log::warn!("Error in request when deleting monitored items: {error}");
+    }
 }
