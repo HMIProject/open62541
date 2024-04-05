@@ -1,14 +1,19 @@
-use std::{ffi::c_void, ptr, slice, sync::Arc, time::Duration};
+use std::{
+    ffi::c_void,
+    ptr, slice,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    thread::{self, JoinHandle},
+    time::Duration,
+};
 
 use open62541_sys::{
     UA_Client, UA_Client_disconnectAsync, UA_Client_run_iterate, UA_UInt32,
     __UA_Client_AsyncService, UA_STATUSCODE_BADCONNECTIONCLOSED, UA_STATUSCODE_BADDISCONNECT,
 };
-use tokio::{
-    sync::oneshot,
-    task::JoinHandle,
-    time::{self, Instant, MissedTickBehavior},
-};
+use tokio::{sync::oneshot, task, time::Instant};
 
 use crate::{
     ua, AsyncSubscription, CallbackOnce, ClientBuilder, DataType, Error, Result, ServiceRequest,
@@ -25,6 +30,7 @@ use crate::{
 /// See [Client](crate::Client) for more details.
 pub struct AsyncClient {
     client: Arc<ua::Client>,
+    background_canceled: Arc<AtomicBool>,
     background_handle: Option<JoinHandle<()>>,
 }
 
@@ -51,15 +57,52 @@ impl AsyncClient {
     pub(crate) fn from_sync(client: ua::Client, cycle_time: Duration) -> Self {
         let client = Arc::new(client);
 
-        let background_task = background_task(Arc::clone(&client), cycle_time);
-        // Run the event loop concurrently. This may be a different thread when using tokio with
-        // `rt-multi-thread`.
-        let background_handle = tokio::spawn(background_task);
+        let background_canceled = Arc::new(AtomicBool::new(false));
+
+        // Run the event loop concurrently. We do so on a thread where we may block: we need to call
+        // `UA_Client_run_iterate()` and this method blocks for up to `cycle_time` each time.
+        //
+        // We use an OS thread here instead of tokio's blocking tasks because we may need to join on
+        // the task blockingly in `drop()` and this requires proper concurrency (otherwise, we would
+        // risk deadlocking on single-threaded tokio runners).
+        let background_handle = {
+            let client = Arc::clone(&client);
+            let canceled = Arc::clone(&background_canceled);
+            thread::spawn(move || background_task(&client, cycle_time, &canceled))
+        };
 
         Self {
             client,
+            background_canceled,
             background_handle: Some(background_handle),
         }
+    }
+
+    /// Waits for background task to finish.
+    ///
+    /// Note: This _blocks_ the current thread while waiting for the thread that runs the background
+    /// task to finish. Either use `cancel` to set the cancellation token or make sure to disconnect
+    /// client first so that the task eventually finishes on its own.
+    fn join_background_task(&mut self, cancel: bool) {
+        // We only take the handle when we join. So if handle has already been taken, the background
+        // task is not running anymore. This usually happens in `drop()` after `disconnect()`.
+        let Some(background_handle) = self.background_handle.take() else {
+            return;
+        };
+
+        if cancel {
+            log::info!("Canceling background task");
+            self.background_canceled.store(true, Ordering::Relaxed);
+        }
+
+        // TODO: Use `tracing` and span to group log messages.
+        log::info!("Waiting for background task to finish");
+
+        // This call blocks. We ignore the result because we do not care if the thread panicked (and
+        // there is nothing that we could do anyway in that case).
+        let _unused = background_handle.join();
+
+        log::info!("Background task finished");
     }
 
     /// Gets current channel and session state, and connect status.
@@ -86,11 +129,14 @@ impl AsyncClient {
             log::warn!("Error while disconnecting client: {error}");
         }
 
-        // Wait until background task has finished. The `take()` should always succeed because there
-        // is no other location where the handle is being consumed.
-        if let Some(background_handle) = self.background_handle.take() {
-            let _unused = background_handle.await;
-        }
+        // Wait for background task to complete. Since `join_background_task()` blocks, we must wait
+        // in a separate tokio task. We ignore the result (since we do not care if the task panicked
+        // and there is nothing else it returns).
+        //
+        // Note: We do _not_ cancel the background task before blocking: we require the asynchronous
+        // handling to keep on running until the connection has been taken down which then makes the
+        // task finish by itself.
+        let _unused = task::spawn_blocking(move || self.join_background_task(false)).await;
     }
 
     /// Reads node value.
@@ -398,48 +444,44 @@ impl AsyncClient {
 
 impl Drop for AsyncClient {
     fn drop(&mut self) {
-        // The background task handle may already have been consumed in `disconnect()`. If so, there
-        // is nothing we need to do here, the task is already being run to completion (even when the
-        // method call might have been canceled).
-        if let Some(background_handle) = self.background_handle.take() {
-            // Abort background task (at the interval await point).
-            background_handle.abort();
-        }
+        // We need to wait for the task to finish and must do so blockingly. `UA_Client_delete()` is
+        // not safe run concurrently while `UA_Client_run_iterate()` is still running.
+        //
+        // Notify background task to cancel itself, even when [`UA_Client_run_iterate()`] would want
+        // to keep on running. This is okay: we are not issuing asynchronous requests anymore anyway
+        // (the only other call will be `UA_Client_delete()` when inner client drops).
+        self.join_background_task(true);
     }
 }
 
-async fn background_task(client: Arc<ua::Client>, cycle_time: Duration) {
-    log::debug!("Starting background task");
+/// Background task for [`ua::Client`].
+///
+/// This runs [`UA_Client_run_iterate()`] repeatedly, and may block for up to `cycle_time`. When the
+/// loop does not finish by itself (which happens for disconnect, and for final connection failure),
+/// the cancellation token `cancel` can be used to stop the task before the next loop iteration.
+fn background_task(client: &Arc<ua::Client>, cycle_time: Duration, canceled: &Arc<AtomicBool>) {
+    log::info!("Starting background task");
 
-    let mut interval = time::interval(cycle_time);
-    // TODO: Offer customized `MissedTickBehavior`? Only `Skip` and `Delay` are suitable here as we
-    // don't want `Burst` to repeatedly and unnecessarily call `UA_Client_run_iterate()` many times
-    // in a row.
-    interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+    // `UA_Client_run_iterate()` expects the timeout to be given in milliseconds.
+    let timeout_millis = u32::try_from(cycle_time.as_millis()).unwrap_or(u32::MAX);
 
-    // `UA_Client_run_iterate()` must be run periodically and makes sure to maintain the connection
-    // (e.g. renew session) and run callback handlers.
-    loop {
-        // This await point is where the background task could be aborted. (The first tick finishes
-        // immediately, so there is no additional delay on the first iteration.)
-        interval.tick().await;
-        // Track time of cycle start to report missed cycles below.
+    // Run until canceled. The only other way to exit is when `UA_Client_run_iterate()` itself fails
+    // (which happens when the connection is broken and the client instance cannot be used anymore).
+    while !canceled.load(Ordering::Relaxed) {
+        // Track time of cycle start to report cycle times below.
         let start_of_cycle = Instant::now();
 
         let status_code = ua::StatusCode::new({
             log::trace!("Running iterate");
 
-            // Timeout of 0 means we do not block here at all. We don't want to hold the mutex
-            // longer than necessary (because that would block requests from being sent out).
-            //
-            // TODO: Re-evaluate this. We should be able to use `cycle_duration` directly here
-            // because `UA_Client_run_iterate()` internally uses it as polling timeout without
-            // blocking the internal mutex the entire time.
+            // This returns after the timeout even when nothing was processed. The internal mutex is
+            // _not_ held for the entire time though, so we can send out requests concurrently while
+            // the client is running the iteration.
             unsafe {
                 UA_Client_run_iterate(
                     // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                     client.as_ptr().cast_mut(),
-                    0,
+                    timeout_millis,
                 )
             }
         });
@@ -456,22 +498,17 @@ async fn background_task(client: Arc<ua::Client>, cycle_time: Duration) {
                 }
                 _ => {
                     // Unexpected error.
-                    log::error!("Terminating background task: Run iterate failed with {error}");
+                    log::error!("Terminating background task: run failed with {error}");
                 }
             }
             return;
         }
 
         let time_taken = start_of_cycle.elapsed();
-
-        // Detect and log missed cycles.
-        if !cycle_time.is_zero() && time_taken > cycle_time {
-            let missed_cycles = time_taken.as_nanos() / cycle_time.as_nanos();
-            log::warn!("Iterate run took {time_taken:?}, missed {missed_cycles} cycle(s)");
-        } else {
-            log::trace!("Iterate run took {time_taken:?}");
-        }
+        log::trace!("Iterate run took {time_taken:?}");
     }
+
+    log::info!("Terminating canceled background task");
 }
 
 async fn service_request<R: ServiceRequest>(
