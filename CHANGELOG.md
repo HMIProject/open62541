@@ -5,42 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.6.0-pre.1] - 2024-04-05
+
+[0.6.0-pre.1]: https://github.com/HMIProject/open62541/compare/v0.5.0...v0.6.0-pre.1
 
 ### Added
 
-- Add `ua::StatusCode::is_uncertain()`, `is_bad()` for checking status code severity.
-- Add `ua::StatusCode::name()` to get human-readable representation of status code.
-- Add support for `ua::Argument` data type and basic support for `ua::ExtensionObject`.
+- Add `ua::StatusCode::is_uncertain()`, `is_bad()` for checking status code severity (#63).
+- Add `ua::StatusCode::name()` to get human-readable representation of status code (#93).
+- Add support for `ua::Argument` data type and basic support for `ua::ExtensionObject` (#71).
 - Add `Debug` implementation for `ua::Array<T>` data types.
 - Add `ValueType` enum to check `ua::Variant` without unwrapping (also `ua::Argument`).
-- Add tracing log messages when processing service requests and responses.
+- Add tracing log messages when processing service requests and responses (#80).
 - Add methods to `ClientBuilder` to set response timeout, client description, and connectivity check
-  interval.
+  interval (#81).
 
 ### Changed
 
 - Breaking: Return `Result` instead of `Option` for references in `AsyncClient::browse_many()` and
-  `browse_next()` (#59).
-- Breaking: Return `Result` instead of raw `ua::DataValue` from `AsyncClient::read_attributes()`.
-- Breaking: Move `ua::VariantValue` and `ua::ScalarValue` to top-level export outside `ua`
+  `browse_next()` (#59, #60).
+- Breaking: Return `Result` wrapping `ua::DataValue` from `AsyncClient::read_attributes()` (#61).
+- Breaking: Move `ua::VariantValue` and `ua::ScalarValue` to top-level export outside `ua`.
 - Breaking: Remove `ua::ArrayValue` for now (until we have a better interface).
-- Breaking: Return output arguments directly from `AsyncClient::call_method()`, without `Option`.
+- Breaking: Return output arguments without `Option` from `AsyncClient::call_method()` (#79).
 - Breaking: Remove misleading `FromStr` trait implementation and offer `ua::String::new()` instead.
-- Breaking: Upgrade to open62541 version 1.4. This affects the public API of this crate as follows:
+- Breaking: Upgrade to open62541 version 1.4 (#82). This affects the API of this crate as follows:
   - Automatically unwrap `ua::ExtensionObject` arrays inside `ua::Variant`.
+- Breaking: Remove `cycle_time` parameter from `AsyncClient`'s interface (#91). The relevance of
+  this parameter has been reduced by the upgrade to open62541 version 1.4.
 
 ### Fixed
 
-- Return browsing error instead of empty references list from `AsyncClient::browse()`.
+- Return browsing error instead of empty references list from `AsyncClient::browse()` (#60).
 - Return reading error instead of unset `ua::DataValue` from `AsyncClient::read_value()` and
-  `read_attribute()`.
-- Check only severity in `ua::StatusCode::is_good()`. Previously this would be an exact comparison
-  to `ua::StatusCode::GOOD`.
+  `read_attribute()` (#61).
+- Check only severity in `ua::StatusCode::is_good()` (#63). Previously this would be an exact
+  comparison to `ua::StatusCode::GOOD`.
 - No longer panic when unwrapping `ua::Variant` with array value.
-- Allow invalid references array in `ua::BrowseResult` when request was otherwise successful.
+- Treat invalid references array as empty in `ua::BrowseResult` on successful request (#77).
 - Handle graceful disconnection when dropping synchronous `Client`.
-- Include subscription ID in request when deleting monitored items.
+- Include subscription ID in request when deleting monitored items (#93).
 
 ## [0.5.0] - 2024-03-01
 
