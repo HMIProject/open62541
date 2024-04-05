@@ -2,14 +2,11 @@ use anyhow::{anyhow, Context as _};
 use open62541::{ua, AsyncClient, DataType as _, ValueType};
 use open62541_sys::{UA_NS0ID_HASPROPERTY, UA_NS0ID_PROPERTYTYPE};
 
-const CYCLE_TIME: tokio::time::Duration = tokio::time::Duration::from_millis(100);
-
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", CYCLE_TIME)
-        .context("connect")?;
+    let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543").context("connect")?;
 
     // `/Root/Objects/10:Simulation/10:ObjectWithMethods`
     let object_node_id = ua::NodeId::string(10, "ObjectWithMethods");
