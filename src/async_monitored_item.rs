@@ -21,6 +21,7 @@ use crate::{ua, CallbackOnce, CallbackStream, DataType as _, Error, Result};
 /// Monitored item (with asynchronous API).
 pub struct AsyncMonitoredItem {
     client: Weak<ua::Client>,
+    subscription_id: ua::SubscriptionId,
     monitored_item_id: ua::MonitoredItemId,
     rx: mpsc::Receiver<ua::DataValue>,
 }
@@ -44,6 +45,7 @@ impl AsyncMonitoredItem {
 
         Ok(AsyncMonitoredItem {
             client: Arc::downgrade(client),
+            subscription_id: subscription_id.clone(),
             monitored_item_id,
             rx,
         })
@@ -76,6 +78,7 @@ impl Drop for AsyncMonitoredItem {
         };
 
         let request = ua::DeleteMonitoredItemsRequest::init()
+            .with_subscription_id(&self.subscription_id)
             .with_monitored_item_ids(&[self.monitored_item_id]);
 
         delete_monitored_items(&client, &request);

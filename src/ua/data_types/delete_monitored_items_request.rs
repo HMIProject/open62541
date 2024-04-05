@@ -4,6 +4,12 @@ crate::data_type!(DeleteMonitoredItemsRequest);
 
 impl DeleteMonitoredItemsRequest {
     #[must_use]
+    pub fn with_subscription_id(mut self, subscription_id: &ua::SubscriptionId) -> Self {
+        self.0.subscriptionId = subscription_id.as_u32();
+        self
+    }
+
+    #[must_use]
     pub fn with_monitored_item_ids(mut self, monitored_item_ids: &[ua::MonitoredItemId]) -> Self {
         let array = ua::Array::from_iter(
             monitored_item_ids
