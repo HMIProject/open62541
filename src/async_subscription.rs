@@ -7,7 +7,7 @@ use std::{
 use futures_channel::oneshot;
 use open62541_sys::{
     UA_Client, UA_Client_Subscriptions_create_async, UA_Client_Subscriptions_delete_async,
-    UA_CreateSubscriptionResponse, UA_UInt32,
+    UA_CreateSubscriptionResponse, UA_DeleteSubscriptionsResponse, UA_UInt32,
 };
 
 use crate::{ua, AsyncMonitoredItem, CallbackOnce, DataType as _, Error, Result};
@@ -42,7 +42,7 @@ impl AsyncSubscription {
             return Err(Error::internal("client should not be dropped"));
         };
 
-        AsyncMonitoredItem::new(&client, &self.subscription_id, node_id).await
+        AsyncMonitoredItem::new(&client, self.subscription_id, node_id).await
     }
 }
 
@@ -55,7 +55,7 @@ impl Drop for AsyncSubscription {
         let request =
             ua::DeleteSubscriptionsRequest::init().with_subscription_ids(&[self.subscription_id]);
 
-        delete_subscription(&client, &request);
+        delete_subscriptions(&client, &request);
     }
 }
 
@@ -130,19 +130,27 @@ async fn create_subscription(
         .unwrap_or(Err(Error::internal("callback should send result")))
 }
 
-fn delete_subscription(client: &ua::Client, request: &ua::DeleteSubscriptionsRequest) {
+fn delete_subscriptions(client: &ua::Client, request: &ua::DeleteSubscriptionsRequest) {
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
         _userdata: *mut c_void,
         _request_id: UA_UInt32,
-        _response: *mut c_void,
+        response: *mut c_void,
     ) {
         log::debug!("Subscriptions_delete() completed");
 
-        // Nothing to do here.
+        let response = response.cast::<UA_DeleteSubscriptionsResponse>();
+        // SAFETY: Incoming pointer is valid for access.
+        // PANIC: We expect pointer to be valid when good.
+        let response = unsafe { response.as_ref() }.expect("response should be set");
+        let status_code = ua::StatusCode::new(response.responseHeader.serviceResult);
+
+        if let Err(error) = Error::verify_good(&status_code) {
+            log::warn!("Error in response when deleting subscriptions: {error}");
+        }
     }
 
-    let _unused = {
+    let status_code = ua::StatusCode::new({
         log::debug!("Calling Subscriptions_delete()");
 
         // SAFETY: `UA_Client_Subscriptions_delete_async()` expects the request passed by value but
@@ -154,13 +162,13 @@ fn delete_subscription(client: &ua::Client, request: &ua::DeleteSubscriptionsReq
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 client.as_ptr().cast_mut(),
                 request,
-                // This must be set (despite the `Option` type). The internal handler in `open62541`
-                // calls our callback unconditionally (as opposed to other service functions where a
-                // handler may be left unset if not required).
                 Some(callback_c),
                 ptr::null_mut(),
                 ptr::null_mut(),
             )
         }
-    };
+    });
+    if let Err(error) = Error::verify_good(&status_code) {
+        log::warn!("Error in request when deleting subscriptions: {error}");
+    }
 }
