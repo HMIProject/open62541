@@ -29,7 +29,7 @@ use crate::{
 /// Since this is also the timeout we must block for when dropping the client without `disconnect()`
 /// first, the value should not be too large. On the other hand, it should not be too small to avoid
 /// repeatedly calling `poll()`/`select()` inside open62541's event loop implementation.
-const ITERATION_TIMEOUT: Duration = Duration::from_millis(500);
+const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 
 /// Connected OPC UA client (with asynchronous API).
 ///
@@ -69,7 +69,7 @@ impl AsyncClient {
         let background_canceled = Arc::new(AtomicBool::new(false));
 
         // Run the event loop concurrently. We do so on a thread where we may block: we need to call
-        // `UA_Client_run_iterate()` and this method blocks for up to `ITERATION_TIMEOUT` each time.
+        // `UA_Client_run_iterate()` and this method blocks for up to `RUN_ITERATE_TIMEOUT`.
         //
         // We use an OS thread here instead of tokio's blocking tasks because we may need to join on
         // the task blockingly in `drop()` and this requires proper concurrency (otherwise, we would
@@ -465,15 +465,15 @@ impl Drop for AsyncClient {
 
 /// Background task for [`ua::Client`].
 ///
-/// This runs [`UA_Client_run_iterate()`] in a loop (and blocks for up to `ITERATION_TIMEOUT` during
-/// each iteration). In case the loop does not finish by itself (which happens in case of disconnect
+/// This runs [`UA_Client_run_iterate()`] in a loop, blocking for up to `RUN_ITERATE_TIMEOUT` during
+/// each iteration. In case the loop does not finish by itself (which happens in case of disconnects
 /// and for final connection failures), the cancellation token `cancel` can be used to stop the task
 /// from the outside before the next loop iteration.
 fn background_task(client: &ua::Client, canceled: &AtomicBool) {
     log::info!("Starting background task");
 
     // `UA_Client_run_iterate()` expects the timeout to be given in milliseconds.
-    let timeout_millis = u32::try_from(ITERATION_TIMEOUT.as_millis()).unwrap_or(u32::MAX);
+    let timeout_millis = u32::try_from(RUN_ITERATE_TIMEOUT.as_millis()).unwrap_or(u32::MAX);
 
     // Run until canceled. The only other way to exit is when `UA_Client_run_iterate()` itself fails
     // (which happens when the connection is broken and the client instance cannot be used anymore).
