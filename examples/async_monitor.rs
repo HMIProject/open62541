@@ -103,7 +103,7 @@ async fn write_background(client: Arc<AsyncClient>, node_id: ua::NodeId) -> anyh
     println!("Writing {value} to node {node_id}");
 
     let value =
-        ua::DataValue::init().with_value(&ua::Variant::init().with_scalar(&ua::Double::new(value)));
+        ua::DataValue::init().with_value(&ua::Variant::init().with_scalar(&ua::Float::new(value)));
 
     client
         .write_value(&node_id, &value)
