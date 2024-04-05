@@ -35,6 +35,7 @@ mod monitored_item_create_result;
 mod node_class;
 mod node_id;
 mod node_id_type;
+mod object_attributes;
 mod qualified_name;
 mod read_request;
 mod read_response;
@@ -43,6 +44,7 @@ mod reference_description;
 mod status_code;
 mod string;
 mod timestamps_to_return;
+mod variable_attributes;
 mod variant;
 mod write_request;
 mod write_response;
@@ -68,10 +70,11 @@ pub use self::{
     extension_object::ExtensionObject, localized_text::LocalizedText,
     monitored_item_create_request::MonitoredItemCreateRequest,
     monitored_item_create_result::MonitoredItemCreateResult, node_class::NodeClass,
-    node_id::NodeId, node_id_type::NodeIdType, qualified_name::QualifiedName,
-    read_request::ReadRequest, read_response::ReadResponse, read_value_id::ReadValueId,
-    reference_description::ReferenceDescription, status_code::StatusCode, string::String,
-    timestamps_to_return::TimestampsToReturn, variant::Variant, write_request::WriteRequest,
+    node_id::NodeId, node_id_type::NodeIdType, object_attributes::ObjectAttributes,
+    qualified_name::QualifiedName, read_request::ReadRequest, read_response::ReadResponse,
+    read_value_id::ReadValueId, reference_description::ReferenceDescription,
+    status_code::StatusCode, string::String, timestamps_to_return::TimestampsToReturn,
+    variable_attributes::VariableAttributes, variant::Variant, write_request::WriteRequest,
     write_response::WriteResponse, write_value::WriteValue,
 };
 

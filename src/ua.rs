@@ -8,6 +8,7 @@ mod data_types;
 mod monitored_item_id;
 mod node_class_mask;
 mod secure_channel_state;
+mod server;
 mod session_state;
 mod subscription_id;
 
@@ -20,6 +21,7 @@ pub use self::{
     monitored_item_id::MonitoredItemId,
     node_class_mask::NodeClassMask,
     secure_channel_state::SecureChannelState,
+    server::Server,
     session_state::SessionState,
     subscription_id::SubscriptionId,
 };

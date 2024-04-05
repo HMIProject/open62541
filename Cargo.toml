@@ -107,3 +107,7 @@ required-features = ["time", "tokio"]
 [[example]]
 name = "client_builder"
 path = "examples/client_builder.rs"
+
+[[example]]
+name = "server"
+path = "examples/server.rs"

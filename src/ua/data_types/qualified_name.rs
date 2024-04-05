@@ -1,10 +1,28 @@
 use std::fmt;
 
-use crate::{ua, DataType as _};
+use open62541_sys::UA_QualifiedName;
+
+use crate::{ua, DataType as _, Error};
 
 crate::data_type!(QualifiedName);
 
 impl QualifiedName {
+    /// Creates a new qualified name from a rust string.
+    ///
+    /// # Errors
+    ///
+    /// The string must not contain any NUL bytes.
+    pub fn new(namespace_index: u16, name: &str) -> Result<Self, Error> {
+        let name = ua::String::new(name)?.into_raw();
+
+        let qualified_name = UA_QualifiedName {
+            namespaceIndex: namespace_index,
+            name,
+        };
+
+        Ok(Self(qualified_name))
+    }
+
     /// Gets namespace index.
     #[must_use]
     pub const fn namespace_index(&self) -> u16 {
