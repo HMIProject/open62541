@@ -25,7 +25,11 @@ use crate::{
 /// This is the maximum amount of time that `UA_Client_run_iterate()` will block for. It is relevant
 /// primarily when canceling the background task, i.e. when we need to interrupt the loop and cancel
 /// before the next invocation of `UA_Client_run_iterate()`.
-const CYCLE_TIME: Duration = Duration::from_millis(100);
+///
+/// Since this is also the timeout we must block for when dropping the client without `disconnect()`
+/// first, the value should not be too large. On the other hand, it should not be too small to avoid
+/// repeatedly calling `poll()`/`select()` inside open62541's event loop implementation.
+const ITERATION_TIMEOUT: Duration = Duration::from_millis(100);
 
 /// Connected OPC UA client (with asynchronous API).
 ///
@@ -65,7 +69,7 @@ impl AsyncClient {
         let background_canceled = Arc::new(AtomicBool::new(false));
 
         // Run the event loop concurrently. We do so on a thread where we may block: we need to call
-        // `UA_Client_run_iterate()` and this method blocks for up to `CYCLE_TIME` each time.
+        // `UA_Client_run_iterate()` and this method blocks for up to `ITERATION_TIMEOUT` each time.
         //
         // We use an OS thread here instead of tokio's blocking tasks because we may need to join on
         // the task blockingly in `drop()` and this requires proper concurrency (otherwise, we would
@@ -461,20 +465,21 @@ impl Drop for AsyncClient {
 
 /// Background task for [`ua::Client`].
 ///
-/// This runs [`UA_Client_run_iterate()`] repeatedly, and may block for up to `CYCLE_TIME`. When the
-/// loop does not finish by itself (which happens for disconnect, and for final connection failure),
-/// the cancellation token `cancel` can be used to stop the task before the next loop iteration.
+/// This runs [`UA_Client_run_iterate()`] in a loop (and blocks for up to `ITERATION_TIMEOUT` during
+/// each iteration). In case the loop does not finish by itself (which happens in case of disconnect
+/// and for final connection failures), the cancellation token `cancel` can be used to stop the task
+/// from the outside before the next loop iteration.
 fn background_task(client: &ua::Client, canceled: &AtomicBool) {
     log::info!("Starting background task");
 
     // `UA_Client_run_iterate()` expects the timeout to be given in milliseconds.
-    let timeout_millis = u32::try_from(CYCLE_TIME.as_millis()).unwrap_or(u32::MAX);
+    let timeout_millis = u32::try_from(ITERATION_TIMEOUT.as_millis()).unwrap_or(u32::MAX);
 
     // Run until canceled. The only other way to exit is when `UA_Client_run_iterate()` itself fails
     // (which happens when the connection is broken and the client instance cannot be used anymore).
     while !canceled.load(Ordering::Relaxed) {
-        // Track time of cycle start to report cycle times below.
-        let start_of_cycle = Instant::now();
+        // Track time of iteration start to report iteration times below.
+        let start_of_iteration = Instant::now();
 
         let status_code = ua::StatusCode::new({
             log::trace!("Running iterate");
@@ -509,7 +514,7 @@ fn background_task(client: &ua::Client, canceled: &AtomicBool) {
             return;
         }
 
-        let time_taken = start_of_cycle.elapsed();
+        let time_taken = start_of_iteration.elapsed();
         log::trace!("Iterate run took {time_taken:?}");
     }
 
