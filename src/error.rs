@@ -14,7 +14,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, Error)]
 pub enum Error {
     /// Error from server.
-    #[error("{0:?}")]
+    #[error("{0}")]
     Server(ua::StatusCode),
     /// Internal error.
     #[error("{0}")]
