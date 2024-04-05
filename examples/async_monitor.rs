@@ -27,29 +27,26 @@ async fn main() -> anyhow::Result<()> {
     );
 
     // `/Root/Objects/2:DeviceSet/1:CoffeeMachine/1:Espresso/7:BeverageSize`
-    let input_node_id = ua::NodeId::numeric(1, 1074);
-
+    let float_node_id = ua::NodeId::numeric(1, 1074);
     // `/Root/Objects/Server/ServerStatus/CurrentTime`
-    let current_time_node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
-
+    let date_time_node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
     // `/Root/Objects/Server/ServerStatus/BuildInfo/ProductName`
-    let product_name_node_id =
-        ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME);
+    let string_node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME);
 
     let tasks = vec![
         tokio::spawn(monitor_background(
             Arc::clone(&subscription),
-            input_node_id.clone(),
+            float_node_id.clone(),
         )),
         tokio::spawn(monitor_background(
             Arc::clone(&subscription),
-            current_time_node_id,
+            date_time_node_id,
         )),
         tokio::spawn(monitor_background(
             Arc::clone(&subscription),
-            product_name_node_id,
+            string_node_id,
         )),
-        tokio::spawn(write_background(Arc::clone(&client), input_node_id)),
+        tokio::spawn(write_background(Arc::clone(&client), float_node_id)),
     ];
 
     for task in tasks {
@@ -99,7 +96,7 @@ async fn write_background(client: Arc<AsyncClient>, node_id: ua::NodeId) -> anyh
     println!("Writing {value} to node {node_id}");
 
     let value =
-        ua::DataValue::init().with_value(&ua::Variant::init().with_scalar(&ua::Double::new(value)));
+        ua::DataValue::init().with_value(&ua::Variant::init().with_scalar(&ua::Float::new(value)));
 
     client
         .write_value(&node_id, &value)
