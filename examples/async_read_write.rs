@@ -4,8 +4,6 @@ use anyhow::Context as _;
 use open62541::{ua, AsyncClient, DataType};
 use rand::Rng as _;
 
-const CYCLE_TIME: tokio::time::Duration = tokio::time::Duration::from_millis(100);
-
 const ATTRIBUTE_IDS: [ua::AttributeId; 11] = [
     ua::AttributeId::NODEID,
     ua::AttributeId::NODECLASS,
@@ -24,8 +22,7 @@ const ATTRIBUTE_IDS: [ua::AttributeId; 11] = [
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", CYCLE_TIME)
-        .context("connect")?;
+    let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543").context("connect")?;
 
     // `/Root/Objects/2:DeviceSet/1:CoffeeMachine/1:Espresso/7:BeverageSize`
     let float_node_id = ua::NodeId::numeric(1, 1074);

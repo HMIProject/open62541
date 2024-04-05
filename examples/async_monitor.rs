@@ -8,18 +8,14 @@ use open62541_sys::{
 use rand::Rng as _;
 use tokio::time::error::Elapsed;
 
-const CYCLE_TIME: tokio::time::Duration = tokio::time::Duration::from_millis(100);
-
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     println!("Connecting client");
 
-    let client = Arc::new(
-        AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543", CYCLE_TIME)
-            .context("connect")?,
-    );
+    let client =
+        Arc::new(AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543").context("connect")?);
 
     println!("Creating subscription");
 

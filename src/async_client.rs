@@ -20,6 +20,17 @@ use crate::{
     ServiceResponse,
 };
 
+/// Timeout for `UA_Client_run_iterate()`.
+///
+/// This is the maximum amount of time that `UA_Client_run_iterate()` will block for. It is relevant
+/// primarily when canceling the background task, i.e. when we need to interrupt the loop and cancel
+/// before the next invocation of `UA_Client_run_iterate()`.
+///
+/// Since this is also the timeout we must block for when dropping the client without `disconnect()`
+/// first, the value should not be too large. On the other hand, it should not be too small to avoid
+/// repeatedly calling `poll()`/`select()` inside open62541's event loop implementation.
+const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
+
 /// Connected OPC UA client (with asynchronous API).
 ///
 /// To disconnect, prefer method [`disconnect()`](Self::disconnect) over simply dropping the client:
@@ -48,19 +59,17 @@ impl AsyncClient {
     /// # Panics
     ///
     /// See [`ClientBuilder::connect()`].
-    pub fn new(endpoint_url: &str, cycle_time: Duration) -> Result<Self> {
-        Ok(ClientBuilder::default()
-            .connect(endpoint_url)?
-            .into_async(cycle_time))
+    pub fn new(endpoint_url: &str) -> Result<Self> {
+        Ok(ClientBuilder::default().connect(endpoint_url)?.into_async())
     }
 
-    pub(crate) fn from_sync(client: ua::Client, cycle_time: Duration) -> Self {
+    pub(crate) fn from_sync(client: ua::Client) -> Self {
         let client = Arc::new(client);
 
         let background_canceled = Arc::new(AtomicBool::new(false));
 
         // Run the event loop concurrently. We do so on a thread where we may block: we need to call
-        // `UA_Client_run_iterate()` and this method blocks for up to `cycle_time` each time.
+        // `UA_Client_run_iterate()` and this method blocks for up to `RUN_ITERATE_TIMEOUT`.
         //
         // We use an OS thread here instead of tokio's blocking tasks because we may need to join on
         // the task blockingly in `drop()` and this requires proper concurrency (otherwise, we would
@@ -68,7 +77,7 @@ impl AsyncClient {
         let background_handle = {
             let client = Arc::clone(&client);
             let canceled = Arc::clone(&background_canceled);
-            thread::spawn(move || background_task(&client, cycle_time, &canceled))
+            thread::spawn(move || background_task(&client, &canceled))
         };
 
         Self {
@@ -456,20 +465,21 @@ impl Drop for AsyncClient {
 
 /// Background task for [`ua::Client`].
 ///
-/// This runs [`UA_Client_run_iterate()`] repeatedly, and may block for up to `cycle_time`. When the
-/// loop does not finish by itself (which happens for disconnect, and for final connection failure),
-/// the cancellation token `cancel` can be used to stop the task before the next loop iteration.
-fn background_task(client: &Arc<ua::Client>, cycle_time: Duration, canceled: &Arc<AtomicBool>) {
+/// This runs [`UA_Client_run_iterate()`] in a loop, blocking for up to `RUN_ITERATE_TIMEOUT` during
+/// each iteration. In case the loop does not finish by itself (which happens in case of disconnects
+/// and for final connection failures), the cancellation token `cancel` can be used to stop the task
+/// from the outside before the next loop iteration.
+fn background_task(client: &ua::Client, canceled: &AtomicBool) {
     log::info!("Starting background task");
 
     // `UA_Client_run_iterate()` expects the timeout to be given in milliseconds.
-    let timeout_millis = u32::try_from(cycle_time.as_millis()).unwrap_or(u32::MAX);
+    let timeout_millis = u32::try_from(RUN_ITERATE_TIMEOUT.as_millis()).unwrap_or(u32::MAX);
 
     // Run until canceled. The only other way to exit is when `UA_Client_run_iterate()` itself fails
     // (which happens when the connection is broken and the client instance cannot be used anymore).
     while !canceled.load(Ordering::Relaxed) {
-        // Track time of cycle start to report cycle times below.
-        let start_of_cycle = Instant::now();
+        // Track time of iteration start to report iteration times below.
+        let start_of_iteration = Instant::now();
 
         let status_code = ua::StatusCode::new({
             log::trace!("Running iterate");
@@ -504,7 +514,7 @@ fn background_task(client: &Arc<ua::Client>, cycle_time: Duration, canceled: &Ar
             return;
         }
 
-        let time_taken = start_of_cycle.elapsed();
+        let time_taken = start_of_iteration.elapsed();
         log::trace!("Iterate run took {time_taken:?}");
     }
 
