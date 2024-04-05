@@ -180,14 +180,11 @@ impl Client {
     ///
     /// The [`AsyncClient`] can be used to access methods in an asynchronous way.
     ///
-    /// `cycle_time` controls the frequency at which the client will poll the server for responses
-    /// in the background.
-    ///
     /// [`AsyncClient`]: crate::AsyncClient
     #[cfg(feature = "tokio")]
     #[must_use]
-    pub fn into_async(self, cycle_time: tokio::time::Duration) -> crate::AsyncClient {
-        crate::AsyncClient::from_sync(self.0, cycle_time)
+    pub fn into_async(self) -> crate::AsyncClient {
+        crate::AsyncClient::from_sync(self.0)
     }
 
     /// Gets current channel and session state, and connect status.
