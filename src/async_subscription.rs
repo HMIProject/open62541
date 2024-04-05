@@ -42,7 +42,7 @@ impl AsyncSubscription {
             return Err(Error::internal("client should not be dropped"));
         };
 
-        AsyncMonitoredItem::new(&client, &self.subscription_id, node_id).await
+        AsyncMonitoredItem::new(&client, self.subscription_id, node_id).await
     }
 }
 

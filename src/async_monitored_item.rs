@@ -29,7 +29,7 @@ pub struct AsyncMonitoredItem {
 impl AsyncMonitoredItem {
     pub(crate) async fn new(
         client: &Arc<ua::Client>,
-        subscription_id: &ua::SubscriptionId,
+        subscription_id: ua::SubscriptionId,
         node_id: &ua::NodeId,
     ) -> Result<Self> {
         let create_request = ua::MonitoredItemCreateRequest::default().with_node_id(node_id);
@@ -45,7 +45,7 @@ impl AsyncMonitoredItem {
 
         Ok(AsyncMonitoredItem {
             client: Arc::downgrade(client),
-            subscription_id: subscription_id.clone(),
+            subscription_id,
             monitored_item_id,
             rx,
         })
@@ -78,7 +78,7 @@ impl Drop for AsyncMonitoredItem {
         };
 
         let request = ua::DeleteMonitoredItemsRequest::init()
-            .with_subscription_id(&self.subscription_id)
+            .with_subscription_id(self.subscription_id)
             .with_monitored_item_ids(&[self.monitored_item_id]);
 
         delete_monitored_items(&client, &request);
