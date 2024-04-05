@@ -459,7 +459,7 @@ impl Drop for AsyncClient {
 /// This runs [`UA_Client_run_iterate()`] repeatedly, and may block for up to `cycle_time`. When the
 /// loop does not finish by itself (which happens for disconnect, and for final connection failure),
 /// the cancellation token `cancel` can be used to stop the task before the next loop iteration.
-fn background_task(client: &Arc<ua::Client>, cycle_time: Duration, canceled: &Arc<AtomicBool>) {
+fn background_task(client: &ua::Client, cycle_time: Duration, canceled: &AtomicBool) {
     log::info!("Starting background task");
 
     // `UA_Client_run_iterate()` expects the timeout to be given in milliseconds.
