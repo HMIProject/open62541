@@ -10,6 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Add `ua::StatusCode::is_uncertain()`, `is_bad()` for checking status code severity.
+- Add `ua::StatusCode::name()` to get human-readable representation of status code.
 - Add support for `ua::Argument` data type and basic support for `ua::ExtensionObject`.
 - Add `Debug` implementation for `ua::Array<T>` data types.
 - Add `ValueType` enum to check `ua::Variant` without unwrapping (also `ua::Argument`).
@@ -39,6 +40,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - No longer panic when unwrapping `ua::Variant` with array value.
 - Allow invalid references array in `ua::BrowseResult` when request was otherwise successful.
 - Handle graceful disconnection when dropping synchronous `Client`.
+- Include subscription ID in request when deleting monitored items.
 
 ## [0.5.0] - 2024-03-01
 
