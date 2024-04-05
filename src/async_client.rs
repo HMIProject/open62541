@@ -78,6 +78,33 @@ impl AsyncClient {
         }
     }
 
+    /// Waits for background task to finish.
+    ///
+    /// Note: This _blocks_ the current thread while waiting for the thread that runs the background
+    /// task to finish. Either use `cancel` to set the cancellation token or make sure to disconnect
+    /// client first so that the task eventually finishes on its own.
+    fn join_background_task(&mut self, cancel: bool) {
+        // We only take the handle when we join. So if handle has already been taken, the background
+        // task is not running anymore. This usually happens in `drop()` after `disconnect()`.
+        let Some(background_handle) = self.background_handle.take() else {
+            return;
+        };
+
+        if cancel {
+            log::info!("Canceling background task");
+            self.background_canceled.store(true, Ordering::Relaxed);
+        }
+
+        // TODO: Use `tracing` and span to group log messages.
+        log::info!("Waiting for background task to finish");
+
+        // This call blocks. We ignore the result because we do not care if the thread panicked (and
+        // there is nothing that we could do anyway in that case).
+        let _unused = background_handle.join();
+
+        log::info!("Background task finished");
+    }
+
     /// Gets current channel and session state, and connect status.
     #[must_use]
     pub fn state(&self) -> ua::ClientState {
@@ -102,17 +129,14 @@ impl AsyncClient {
             log::warn!("Error while disconnecting client: {error}");
         }
 
-        // Wait until background task has finished. The `take()` should always succeed because there
-        // is no other location where the task handle is being consumed (other than `drop()` below).
+        // Wait for background task to complete. Since `join_background_task()` blocks, we must wait
+        // in a separate tokio task. We ignore the result (since we do not care if the task panicked
+        // and there is nothing else it returns).
         //
-        // We do _not_ cancel the background task here: we require the asynchronous handling to keep
-        // on running until the connection has been taken down (and the task finishes by itself).
-        if let Some(background_handle) = self.background_handle.take() {
-            // Wait for background task to complete. Since this is an OS thread and `join()` blocks,
-            // we must do so in a separate tokio task. We ignore the result (since we do not care if
-            // task panicked and there is nothing else it returns).
-            let _unused = task::spawn_blocking(|| background_handle.join()).await;
-        }
+        // Note: We do _not_ cancel the background task before blocking: we require the asynchronous
+        // handling to keep on running until the connection has been taken down which then makes the
+        // task finish by itself.
+        let _unused = task::spawn_blocking(move || self.join_background_task(false)).await;
     }
 
     /// Reads node value.
@@ -420,17 +444,13 @@ impl AsyncClient {
 
 impl Drop for AsyncClient {
     fn drop(&mut self) {
+        // We need to wait for the task to finish and must do so blockingly. `UA_Client_delete()` is
+        // not safe run concurrently while `UA_Client_run_iterate()` is still running.
+        //
         // Notify background task to cancel itself, even when [`UA_Client_run_iterate()`] would want
         // to keep on running. This is okay: we are not issuing asynchronous requests anymore anyway
-        // (the only other call will be `UA_Client_delete()` when dropping the inner client).
-        self.background_canceled.store(true, Ordering::Relaxed);
-
-        // We need to wait for the task to finish and must do so blockingly. `UA_Client_delete()` is
-        // not safe run concurrently while `UA_Client_run_iterate()` is blocking.
-        if let Some(background_handle) = self.background_handle.take() {
-            log::info!("Waiting for background task to finish");
-            let _unused = background_handle.join();
-        }
+        // (the only other call will be `UA_Client_delete()` when inner client drops).
+        self.join_background_task(true);
     }
 }
 
