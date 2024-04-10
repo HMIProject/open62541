@@ -1,5 +1,8 @@
 use open62541::{ua, ObjectNode, Server, VariableNode};
-use open62541_sys::{UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES};
+use open62541_sys::{
+    UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,
+    UA_NS0ID_STRING,
+};
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -13,7 +16,7 @@ fn main() -> anyhow::Result<()> {
         parent_node_id: ua::NodeId::numeric(0, UA_NS0ID_OBJECTSFOLDER),
         reference_type_id: ua::NodeId::numeric(0, UA_NS0ID_ORGANIZES),
         browse_name: ua::QualifiedName::new(1, "the folder"),
-        type_definition: ua::NodeId::numeric(0, 0),
+        type_definition: ua::NodeId::ns0(UA_NS0ID_FOLDERTYPE),
         attributes: ua::ObjectAttributes::default(),
     };
 
@@ -23,8 +26,9 @@ fn main() -> anyhow::Result<()> {
         parent_node_id: object_node.requested_new_node_id.clone(),
         reference_type_id: ua::NodeId::numeric(0, UA_NS0ID_ORGANIZES),
         browse_name: ua::QualifiedName::new(1, "the answer"),
-        type_definition: ua::NodeId::numeric(0, 0),
-        attributes: ua::VariableAttributes::default(),
+        type_definition: ua::NodeId::ns0(UA_NS0ID_BASEDATAVARIABLETYPE),
+        attributes: ua::VariableAttributes::default()
+            .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING)),
     };
 
     server.add_object_node(object_node)?;
