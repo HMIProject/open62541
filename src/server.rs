@@ -3,14 +3,10 @@ use crate::{ua, DataType, Error, ObjectNode, Result, VariableNode};
 pub struct Server(ua::Server);
 
 impl Server {
-    /// Creates a new OPC UA server.
-    ///
-    /// # Errors
-    ///
-    /// When the OPC-UA server fails to initialize.
-    ///
-    pub fn new() -> Result<Self> {
-        Ok(Self(ua::Server::new()))
+    /// Creates server.
+    #[must_use]
+    pub fn new() -> Self {
+        Self(ua::Server::new())
     }
 
     ///
@@ -85,5 +81,11 @@ impl Server {
     pub fn run(self) -> Result<()> {
         let status_code = self.0.run_until_interrupt();
         Error::verify_good(&status_code)
+    }
+}
+
+impl Default for Server {
+    fn default() -> Self {
+        Self::new()
     }
 }

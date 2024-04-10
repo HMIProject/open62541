@@ -4,7 +4,7 @@ use open62541_sys::{UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES};
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let mut server = Server::new()?;
+    let mut server = Server::new();
 
     let object_node = ObjectNode {
         requested_new_node_id: ua::NodeId::string(1, "the.folder"),
