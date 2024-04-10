@@ -1,8 +1,6 @@
-use std::ptr;
+use std::{ffi::c_void, ptr};
 
-use open62541_sys::{
-    UA_Server_addObjectNode, UA_Server_addVariableNode, UA_Server_runUntilInterrupt,
-};
+use open62541_sys::{UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write};
 
 use crate::{ua, DataType, Error, ObjectNode, Result, VariableNode};
 
@@ -26,14 +24,18 @@ impl Server {
     /// This fails when the node cannot be added.
     pub fn add_object_node(&mut self, node: ObjectNode) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_addObjectNode(
+            __UA_Server_addNode(
                 self.0.as_mut_ptr(),
-                node.requested_new_node_id.into_raw(),
-                node.parent_node_id.into_raw(),
-                node.reference_type_id.into_raw(),
+                // Passing ownership is trivial with primitive value (`u32`).
+                ua::NodeClass::OBJECT.into_raw(),
+                node.requested_new_node_id.as_ptr(),
+                node.parent_node_id.as_ptr(),
+                node.reference_type_id.as_ptr(),
+                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
                 node.browse_name.into_raw(),
-                node.type_definition.into_raw(),
-                node.attributes.into_raw(),
+                node.type_definition.as_ptr(),
+                node.attributes.as_node_attributes().as_ptr(),
+                ua::ObjectAttributes::data_type(),
                 ptr::null_mut(),
                 ptr::null_mut(),
             )
@@ -48,14 +50,18 @@ impl Server {
     /// This fails when the node cannot be added.
     pub fn add_variable_node(&mut self, node: VariableNode) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_addVariableNode(
+            __UA_Server_addNode(
                 self.0.as_mut_ptr(),
-                node.requested_new_node_id.into_raw(),
-                node.parent_node_id.into_raw(),
-                node.reference_type_id.into_raw(),
+                // Passing ownership is trivial with primitive value (`u32`).
+                ua::NodeClass::VARIABLE.into_raw(),
+                node.requested_new_node_id.as_ptr(),
+                node.parent_node_id.as_ptr(),
+                node.reference_type_id.as_ptr(),
+                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
                 node.browse_name.into_raw(),
-                node.type_definition.into_raw(),
-                node.attributes.into_raw(),
+                node.type_definition.as_ptr(),
+                node.attributes.as_node_attributes().as_ptr(),
+                ua::VariableAttributes::data_type(),
                 ptr::null_mut(),
                 ptr::null_mut(),
             )
@@ -70,10 +76,13 @@ impl Server {
     /// This fails when the variable node cannot be written.
     pub fn write_variable(&mut self, node_id: ua::NodeId, value: ua::Variant) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
-            open62541_sys::UA_Server_writeValue(
+            __UA_Server_write(
                 self.0.as_mut_ptr(),
-                node_id.into_raw(),
-                value.into_raw(),
+                node_id.as_ptr(),
+                // Passing ownership is trivial with primitive value (`u32`).
+                ua::AttributeId::VALUE.into_raw(),
+                ua::Variant::data_type(),
+                value.as_ptr().cast::<c_void>(),
             )
         });
         Error::verify_good(&status_code)
