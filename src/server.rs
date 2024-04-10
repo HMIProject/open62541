@@ -90,7 +90,7 @@ impl Server {
     /// See [`ServerBuilder::build()`].
     #[must_use]
     pub fn new() -> Self {
-        Self(ua::Server::new())
+        ServerBuilder::default().build()
     }
 
     /// Adds object node to address space.

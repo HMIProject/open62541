@@ -78,15 +78,10 @@ mod async_monitored_item;
 mod async_subscription;
 #[cfg(feature = "tokio")]
 mod callback;
+mod logger;
 mod userdata;
 mod value;
 
-pub(crate) use self::{
-    client::client_logger,
-    data_type::{data_type, enum_variants},
-    service::{ServiceRequest, ServiceResponse},
-    value::{ArrayValue, NonScalarValue},
-};
 pub use self::{
     client::{Client, ClientBuilder},
     data_type::DataType,
@@ -95,6 +90,12 @@ pub use self::{
     server_nodes::{ObjectNode, VariableNode},
     userdata::Userdata,
     value::{ScalarValue, ValueType, VariantValue},
+};
+pub(crate) use self::{
+    data_type::{data_type, enum_variants},
+    logger::logger,
+    service::{ServiceRequest, ServiceResponse},
+    value::{ArrayValue, NonScalarValue},
 };
 
 #[cfg(feature = "tokio")]

@@ -1,6 +1,6 @@
 use std::ptr::{self, NonNull};
 
-use open62541_sys::{UA_Server, UA_Server_delete, UA_Server_new, UA_Server_newWithConfig};
+use open62541_sys::{UA_Server, UA_Server_delete, UA_Server_newWithConfig};
 
 use crate::{ua, Error};
 
@@ -11,18 +11,6 @@ use crate::{ua, Error};
 pub struct Server(NonNull<UA_Server>);
 
 impl Server {
-    /// Creates server.
-    ///
-    /// This uses an implicit default config. Check out [`new_with_config()`](Self::new_with_config)
-    /// for an alternative.
-    #[must_use]
-    pub(crate) fn new() -> Self {
-        let inner = unsafe { UA_Server_new() };
-        // PANIC: The only possible errors here are out-of-memory.
-        let inner = NonNull::new(inner).expect("create UA_Server");
-        Self(inner)
-    }
-
     /// Creates server from server config.
     ///
     /// This consumes the config object and makes the server the owner of all contained data therein

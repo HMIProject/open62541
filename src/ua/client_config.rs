@@ -93,7 +93,7 @@ impl Default for ClientConfig {
             debug_assert!(config.logging.is_null());
             // Create logger configuration. Ownership of the `UA_Logger` instance passes to `config`
             // at this point.
-            config.logging = crate::client_logger();
+            config.logging = crate::logger();
         }
 
         // Set remaining attributes to their default values. This also copies the logger as laid out

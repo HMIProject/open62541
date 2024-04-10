@@ -35,18 +35,6 @@ unsafe impl Send for Client {}
 unsafe impl Sync for Client {}
 
 impl Client {
-    /// Creates client.
-    ///
-    /// This uses an implicit default config. Check out [`new_with_config()`](Self::new_with_config)
-    /// for an alternative.
-    #[must_use]
-    pub(crate) fn new() -> Self {
-        let inner = unsafe { UA_Client_new() };
-        // PANIC: The only possible errors here are out-of-memory.
-        let inner = NonNull::new(inner).expect("create UA_Client");
-        Self(inner)
-    }
-
     /// Creates client from client config.
     ///
     /// This consumes the config object and makes the client the owner of all contained data therein

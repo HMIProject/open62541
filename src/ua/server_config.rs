@@ -84,19 +84,18 @@ impl Default for ServerConfig {
     fn default() -> Self {
         let mut config = Self::init();
 
-        // TODO: Set server logger.
-        // // Set custom logger first. This is necessary because the same logger instance is used as-is
-        // // inside derived attributes such as `eventLoop`, `certificateVerification`, etc.
-        // {
-        //     let config = unsafe { config.as_mut() };
-        //     // We assign a logger only on default-initialized config objects: we cannot know whether
-        //     // an existing configuration is still referenced in another attribute or structure, thus
-        //     // we could not (safely) free it anyway.
-        //     debug_assert!(config.logging.is_null());
-        //     // Create logger configuration. Ownership of the `UA_Logger` instance passes to `config`
-        //     // at this point.
-        //     config.logging = crate::server_logger();
-        // }
+        // Set custom logger first. This is necessary because the same logger instance is used as-is
+        // inside derived attributes such as `eventLoop`, `certificateVerification`, etc.
+        {
+            let config = unsafe { config.as_mut() };
+            // We assign a logger only on default-initialized config objects: we cannot know whether
+            // an existing configuration is still referenced in another attribute or structure, thus
+            // we could not (safely) free it anyway.
+            debug_assert!(config.logging.is_null());
+            // Create logger configuration. Ownership of the `UA_Logger` instance passes to `config`
+            // at this point.
+            config.logging = crate::logger();
+        }
 
         // Set remaining attributes to their default values. This also copies the logger as laid out
         // above to other attributes inside `config` (cleaned up by `UA_ServerConfig_clear()`).
