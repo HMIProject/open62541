@@ -19,14 +19,14 @@ impl Server {
         Self(ua::Server::new())
     }
 
-    /// Adds variable node to address space.
+    /// Adds object node to address space.
     ///
     /// # Errors
     ///
     /// This fails when the node cannot be added.
-    pub fn add_variable_node(&mut self, node: VariableNode) -> Result<()> {
+    pub fn add_object_node(&mut self, node: ObjectNode) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_addVariableNode(
+            UA_Server_addObjectNode(
                 self.0.as_mut_ptr(),
                 node.requested_new_node_id.into_raw(),
                 node.parent_node_id.into_raw(),
@@ -41,14 +41,14 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Adds object node to address space.
+    /// Adds variable node to address space.
     ///
     /// # Errors
     ///
     /// This fails when the node cannot be added.
-    pub fn add_object_node(&mut self, node: ObjectNode) -> Result<()> {
+    pub fn add_variable_node(&mut self, node: VariableNode) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_addObjectNode(
+            UA_Server_addVariableNode(
                 self.0.as_mut_ptr(),
                 node.requested_new_node_id.into_raw(),
                 node.parent_node_id.into_raw(),
