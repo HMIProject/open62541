@@ -13,7 +13,7 @@ use crate::{ua, DataType as _, Error, Result};
 
 /// Builder for [`Client`].
 ///
-/// Use this to specify additional options before connecting to an OPC UA endpoint.
+/// Use this to specify additional options when connecting to an OPC UA endpoint.
 ///
 /// # Examples
 ///
@@ -118,20 +118,15 @@ impl ClientBuilder {
     ///
     /// The endpoint URL must not contain any NUL bytes.
     pub fn connect(self, endpoint_url: &str) -> Result<Client> {
-        log::info!("Connecting to endpoint {endpoint_url}");
+        let mut client = self.build();
+        client.connect(endpoint_url)?;
+        Ok(client)
+    }
 
-        let endpoint_url =
-            CString::new(endpoint_url).expect("endpoint URL does not contain NUL bytes");
-
-        let mut client = ua::Client::new_with_config(self.0);
-
-        let status_code = ua::StatusCode::new(unsafe {
-            // SAFETY: The method does not take ownership of `client`.
-            UA_Client_connect(client.as_mut_ptr(), endpoint_url.as_ptr())
-        });
-        Error::verify_good(&status_code)?;
-
-        Ok(Client(client))
+    /// Builds OPC UA client.
+    #[must_use]
+    fn build(self) -> Client {
+        Client(ua::Client::new_with_config(self.0))
     }
 
     /// Access client configuration.
@@ -160,7 +155,7 @@ pub struct Client(
 );
 
 impl Client {
-    /// Creates client connected to endpoint.
+    /// Creates default client connected to endpoint.
     ///
     /// If you need more control over the initialization, use [`ClientBuilder`] instead, and turn it
     /// into [`Client`] by calling [`connect()`](ClientBuilder::connect).
@@ -173,7 +168,9 @@ impl Client {
     ///
     /// See [`ClientBuilder::connect()`].
     pub fn new(endpoint_url: &str) -> Result<Self> {
-        ClientBuilder::default().connect(endpoint_url)
+        let mut client = Self(ua::Client::new());
+        client.connect(endpoint_url)?;
+        Ok(client)
     }
 
     /// Turns client into [`AsyncClient`].
@@ -191,6 +188,23 @@ impl Client {
     #[must_use]
     pub fn state(&self) -> ua::ClientState {
         self.0.state()
+    }
+
+    /// Connects to endpoint.
+    ///
+    /// This method is always called internally before passing new [`Client`] instances to the user:
+    /// our contract states that a `Client` should always be connected.
+    fn connect(&mut self, endpoint_url: &str) -> Result<()> {
+        log::info!("Connecting to endpoint {endpoint_url}");
+
+        let endpoint_url =
+            CString::new(endpoint_url).expect("endpoint URL does not contain NUL bytes");
+
+        let status_code = ua::StatusCode::new(unsafe {
+            // SAFETY: The method does not take ownership of `client`.
+            UA_Client_connect(self.0.as_mut_ptr(), endpoint_url.as_ptr())
+        });
+        Error::verify_good(&status_code)
     }
 
     /// Disconnects from endpoint.

@@ -1,6 +1,6 @@
-use std::ptr::NonNull;
+use std::ptr::{self, NonNull};
 
-use open62541_sys::{UA_Server, UA_Server_delete, UA_Server_new};
+use open62541_sys::{UA_Server, UA_Server_delete, UA_Server_new, UA_Server_newWithConfig};
 
 use crate::{ua, Error};
 
@@ -12,12 +12,39 @@ pub struct Server(NonNull<UA_Server>);
 
 impl Server {
     /// Creates server.
+    ///
+    /// This uses an implicit default config. Check out [`new_with_config()`](Self::new_with_config)
+    /// for an alternative.
     #[must_use]
     pub(crate) fn new() -> Self {
         let inner = unsafe { UA_Server_new() };
         // PANIC: The only possible errors here are out-of-memory.
         let inner = NonNull::new(inner).expect("create UA_Server");
         Self(inner)
+    }
+
+    /// Creates server from server config.
+    ///
+    /// This consumes the config object and makes the server the owner of all contained data therein
+    /// (e.g. logging configuration and logger instance).
+    pub(crate) fn new_with_config(config: ua::ServerConfig) -> Self {
+        let mut config = config.into_raw();
+        let inner = unsafe { UA_Server_newWithConfig(ptr::addr_of_mut!(config)) };
+        // PANIC: The only possible errors here are out-of-memory.
+        let inner = NonNull::new(inner).expect("create UA_Server");
+        Self(inner)
+    }
+
+    /// Returns const pointer to value.
+    ///
+    /// # Safety
+    ///
+    /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
+    /// may happen when `open62541` functions are called that take ownership of values by pointer.
+    #[allow(dead_code)] // This is unused for now.
+    #[must_use]
+    pub(crate) const unsafe fn as_ptr(&self) -> *const UA_Server {
+        self.0.as_ptr()
     }
 
     /// Returns mutable pointer to value.
@@ -43,11 +70,5 @@ impl Drop for Server {
         if let Err(error) = Error::verify_good(&status_code) {
             log::warn!("Error while dropping server: {error}");
         }
-    }
-}
-
-impl Default for Server {
-    fn default() -> Self {
-        Self::new()
     }
 }

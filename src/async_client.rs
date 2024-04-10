@@ -16,8 +16,7 @@ use open62541_sys::{
 use tokio::{sync::oneshot, task, time::Instant};
 
 use crate::{
-    ua, AsyncSubscription, CallbackOnce, ClientBuilder, DataType, Error, Result, ServiceRequest,
-    ServiceResponse,
+    ua, AsyncSubscription, CallbackOnce, DataType, Error, Result, ServiceRequest, ServiceResponse,
 };
 
 /// Timeout for `UA_Client_run_iterate()`.
@@ -46,11 +45,11 @@ pub struct AsyncClient {
 }
 
 impl AsyncClient {
-    /// Creates client connected to endpoint.
+    /// Creates default client connected to endpoint.
     ///
     /// If you need more control over the initialization, use [`ClientBuilder`] instead, and turn it
-    /// into [`Client`](crate::Client) by calling [`connect()`](ClientBuilder::connect), followed by
-    /// [`into_async()`](crate::Client::into_async) to get the asynchronous API.
+    /// into [`Client`](crate::Client) by calling [`connect()`](crate::ClientBuilder::connect), then
+    /// follow this with [`into_async()`](crate::Client::into_async) to get the asynchronous API.
     ///
     /// # Errors
     ///
@@ -59,8 +58,11 @@ impl AsyncClient {
     /// # Panics
     ///
     /// See [`ClientBuilder::connect()`].
+    ///
+    /// [`ClientBuilder`]: crate::ClientBuilder
+    /// [`ClientBuilder::connect()`]: crate::ClientBuilder::connect
     pub fn new(endpoint_url: &str) -> Result<Self> {
-        Ok(ClientBuilder::default().connect(endpoint_url)?.into_async())
+        Ok(crate::Client::new(endpoint_url)?.into_async())
     }
 
     pub(crate) fn from_sync(client: ua::Client) -> Self {

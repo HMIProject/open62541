@@ -1,4 +1,4 @@
-use std::ptr::NonNull;
+use std::ptr::{self, NonNull};
 
 use open62541_sys::{
     UA_Client, UA_Client_delete, UA_Client_disconnect, UA_Client_getState, UA_Client_new,
@@ -35,13 +35,25 @@ unsafe impl Send for Client {}
 unsafe impl Sync for Client {}
 
 impl Client {
+    /// Creates client.
+    ///
+    /// This uses an implicit default config. Check out [`new_with_config()`](Self::new_with_config)
+    /// for an alternative.
+    #[must_use]
+    pub(crate) fn new() -> Self {
+        let inner = unsafe { UA_Client_new() };
+        // PANIC: The only possible errors here are out-of-memory.
+        let inner = NonNull::new(inner).expect("create UA_Client");
+        Self(inner)
+    }
+
     /// Creates client from client config.
     ///
     /// This consumes the config object and makes the client the owner of all contained data therein
     /// (e.g. logging configuration and logger instance).
     pub(crate) fn new_with_config(config: ua::ClientConfig) -> Self {
         let config = config.into_raw();
-        let inner = unsafe { UA_Client_newWithConfig(&config) };
+        let inner = unsafe { UA_Client_newWithConfig(ptr::addr_of!(config)) };
         // PANIC: The only possible errors here are out-of-memory.
         let inner = NonNull::new(inner).expect("create UA_Client");
         Self(inner)
@@ -53,7 +65,6 @@ impl Client {
     ///
     /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
-    #[allow(dead_code)]
     #[must_use]
     pub(crate) const unsafe fn as_ptr(&self) -> *const UA_Client {
         self.0.as_ptr()

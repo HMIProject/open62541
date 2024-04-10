@@ -91,7 +91,7 @@ pub use self::{
     client::{Client, ClientBuilder},
     data_type::DataType,
     error::{Error, Result},
-    server::Server,
+    server::{Server, ServerBuilder},
     server_nodes::{ObjectNode, VariableNode},
     userdata::Userdata,
     value::{ScalarValue, ValueType, VariantValue},

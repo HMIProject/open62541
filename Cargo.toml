@@ -111,3 +111,7 @@ path = "examples/client_builder.rs"
 [[example]]
 name = "server"
 path = "examples/server.rs"
+
+[[example]]
+name = "server_builder"
+path = "examples/server_builder.rs"
