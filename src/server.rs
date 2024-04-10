@@ -1,3 +1,9 @@
+use std::ptr;
+
+use open62541_sys::{
+    UA_Server_addObjectNode, UA_Server_addVariableNode, UA_Server_runUntilInterrupt,
+};
+
 use crate::{ua, DataType, Error, ObjectNode, Result, VariableNode};
 
 /// OPC UA server.
@@ -19,14 +25,19 @@ impl Server {
     ///
     /// This fails when the node cannot be added.
     pub fn add_variable_node(&mut self, node: VariableNode) -> Result<()> {
-        let status_code = self.0.add_variable_node(
-            node.requested_new_node_id,
-            node.parent_node_id,
-            node.reference_type_id,
-            node.browse_name,
-            node.type_definition,
-            node.attributes,
-        );
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addVariableNode(
+                self.0.as_mut_ptr(),
+                node.requested_new_node_id.into_raw(),
+                node.parent_node_id.into_raw(),
+                node.reference_type_id.into_raw(),
+                node.browse_name.into_raw(),
+                node.type_definition.into_raw(),
+                node.attributes.into_raw(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        });
         Error::verify_good(&status_code)
     }
 
@@ -36,14 +47,19 @@ impl Server {
     ///
     /// This fails when the node cannot be added.
     pub fn add_object_node(&mut self, node: ObjectNode) -> Result<()> {
-        let status_code = self.0.add_object_node(
-            node.requested_new_node_id,
-            node.parent_node_id,
-            node.reference_type_id,
-            node.browse_name,
-            node.type_definition,
-            node.attributes,
-        );
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addObjectNode(
+                self.0.as_mut_ptr(),
+                node.requested_new_node_id.into_raw(),
+                node.parent_node_id.into_raw(),
+                node.reference_type_id.into_raw(),
+                node.browse_name.into_raw(),
+                node.type_definition.into_raw(),
+                node.attributes.into_raw(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        });
         Error::verify_good(&status_code)
     }
 
@@ -53,7 +69,13 @@ impl Server {
     ///
     /// This fails when the variable cannot be written.
     pub fn write_variable(&mut self, node_id: ua::NodeId, value: ua::Variant) -> Result<()> {
-        let status_code = self.0.write_variable(node_id, value);
+        let status_code = ua::StatusCode::new(unsafe {
+            open62541_sys::UA_Server_writeValue(
+                self.0.as_mut_ptr(),
+                node_id.into_raw(),
+                value.into_raw(),
+            )
+        });
         Error::verify_good(&status_code)
     }
 
@@ -91,7 +113,8 @@ impl Server {
     ///
     /// When an error occurred internally
     pub fn run(self) -> Result<()> {
-        let status_code = self.0.run_until_interrupt();
+        let status_code =
+            ua::StatusCode::new(unsafe { UA_Server_runUntilInterrupt(self.0.as_mut_ptr()) });
         Error::verify_good(&status_code)
     }
 }
