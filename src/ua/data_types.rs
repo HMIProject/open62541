@@ -32,6 +32,7 @@ mod extension_object;
 mod localized_text;
 mod monitored_item_create_request;
 mod monitored_item_create_result;
+mod node_attributes;
 mod node_class;
 mod node_id;
 mod node_id_type;
@@ -69,13 +70,14 @@ pub use self::{
     delete_subscriptions_response::DeleteSubscriptionsResponse, expanded_node_id::ExpandedNodeId,
     extension_object::ExtensionObject, localized_text::LocalizedText,
     monitored_item_create_request::MonitoredItemCreateRequest,
-    monitored_item_create_result::MonitoredItemCreateResult, node_class::NodeClass,
-    node_id::NodeId, node_id_type::NodeIdType, object_attributes::ObjectAttributes,
-    qualified_name::QualifiedName, read_request::ReadRequest, read_response::ReadResponse,
-    read_value_id::ReadValueId, reference_description::ReferenceDescription,
-    status_code::StatusCode, string::String, timestamps_to_return::TimestampsToReturn,
-    variable_attributes::VariableAttributes, variant::Variant, write_request::WriteRequest,
-    write_response::WriteResponse, write_value::WriteValue,
+    monitored_item_create_result::MonitoredItemCreateResult, node_attributes::NodeAttributes,
+    node_class::NodeClass, node_id::NodeId, node_id_type::NodeIdType,
+    object_attributes::ObjectAttributes, qualified_name::QualifiedName, read_request::ReadRequest,
+    read_response::ReadResponse, read_value_id::ReadValueId,
+    reference_description::ReferenceDescription, status_code::StatusCode, string::String,
+    timestamps_to_return::TimestampsToReturn, variable_attributes::VariableAttributes,
+    variant::Variant, write_request::WriteRequest, write_response::WriteResponse,
+    write_value::WriteValue,
 };
 
 macro_rules! primitive {

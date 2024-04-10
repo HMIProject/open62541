@@ -1,37 +1,28 @@
-use crate::{ua, DataType};
+use open62541_sys::UA_NodeAttributes;
+
+use crate::{ua, DataType as _};
 
 crate::data_type!(VariableAttributes);
 
-impl VariableAttributes {}
+impl VariableAttributes {
+    #[must_use]
+    pub fn with_data_type(mut self, data_type: &ua::NodeId) -> Self {
+        data_type.clone_into_raw(&mut self.0.dataType);
+        self
+    }
 
-impl Default for VariableAttributes {
-    fn default() -> Self {
-        let attrs = unsafe { &open62541_sys::UA_VariableAttributes_default };
-
-        Self(VariableAttributes::copy_ua_variable_attributes(attrs))
+    pub(crate) fn as_node_attributes(&self) -> &ua::NodeAttributes {
+        // SAFETY: This transmutes from `Self` to the inner type, and then to `UA_NodeAttributes`, a
+        // subset of `UA_VariableAttributes` with the same memory layout.
+        let node_attributes = unsafe { self.as_ptr().cast::<UA_NodeAttributes>() };
+        // SAFETY: Transmutation is allowed and pointer is valid (non-zero).
+        let node_attributes = unsafe { node_attributes.as_ref().unwrap_unchecked() };
+        ua::NodeAttributes::raw_ref(node_attributes)
     }
 }
 
-impl VariableAttributes {
-    #[must_use]
-    pub fn copy_ua_variable_attributes(
-        attrs: &open62541_sys::UA_VariableAttributes,
-    ) -> open62541_sys::UA_VariableAttributes {
-        open62541_sys::UA_VariableAttributes {
-            specifiedAttributes: attrs.specifiedAttributes,
-            displayName: ua::LocalizedText::clone_raw(&attrs.displayName).into_raw(),
-            description: ua::LocalizedText::clone_raw(&attrs.description).into_raw(),
-            writeMask: attrs.writeMask,
-            userWriteMask: attrs.userWriteMask,
-            value: ua::Variant::clone_raw(&attrs.value).into_raw(),
-            dataType: ua::NodeId::clone_raw(&attrs.dataType).into_raw(),
-            valueRank: attrs.valueRank,
-            arrayDimensionsSize: attrs.arrayDimensionsSize,
-            arrayDimensions: attrs.arrayDimensions,
-            accessLevel: attrs.accessLevel,
-            userAccessLevel: attrs.userAccessLevel,
-            minimumSamplingInterval: attrs.minimumSamplingInterval,
-            historizing: attrs.historizing,
-        }
+impl Default for VariableAttributes {
+    fn default() -> Self {
+        Self::clone_raw(unsafe { &open62541_sys::UA_VariableAttributes_default })
     }
 }

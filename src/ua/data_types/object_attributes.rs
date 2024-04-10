@@ -1,29 +1,22 @@
+use open62541_sys::UA_NodeAttributes;
+
 use crate::{ua, DataType};
 
 crate::data_type!(ObjectAttributes);
 
-impl ObjectAttributes {}
-
-impl Default for ObjectAttributes {
-    fn default() -> Self {
-        let attrs = unsafe { &open62541_sys::UA_ObjectAttributes_default };
-
-        Self(ObjectAttributes::copy_ua_object_attributes(attrs))
+impl ObjectAttributes {
+    pub(crate) fn as_node_attributes(&self) -> &ua::NodeAttributes {
+        // SAFETY: This transmutes from `Self` to the inner type, and then to `UA_NodeAttributes`, a
+        // subset of `UA_ObjectAttributes` with the same memory layout.
+        let node_attributes = unsafe { self.as_ptr().cast::<UA_NodeAttributes>() };
+        // SAFETY: Transmutation is allowed and pointer is valid (non-zero).
+        let node_attributes = unsafe { node_attributes.as_ref().unwrap_unchecked() };
+        ua::NodeAttributes::raw_ref(node_attributes)
     }
 }
 
-impl ObjectAttributes {
-    #[must_use]
-    pub fn copy_ua_object_attributes(
-        attrs: &open62541_sys::UA_ObjectAttributes,
-    ) -> open62541_sys::UA_ObjectAttributes {
-        open62541_sys::UA_ObjectAttributes {
-            specifiedAttributes: attrs.specifiedAttributes,
-            displayName: ua::LocalizedText::clone_raw(&attrs.displayName).into_raw(),
-            description: ua::LocalizedText::clone_raw(&attrs.description).into_raw(),
-            writeMask: attrs.writeMask,
-            userWriteMask: attrs.userWriteMask,
-            eventNotifier: attrs.eventNotifier,
-        }
+impl Default for ObjectAttributes {
+    fn default() -> Self {
+        Self::clone_raw(unsafe { &open62541_sys::UA_ObjectAttributes_default })
     }
 }

@@ -1,26 +1,28 @@
-use std::fmt;
+use std::{ffi::CString, fmt};
 
-use open62541_sys::UA_QualifiedName;
+use open62541_sys::UA_QUALIFIEDNAME_ALLOC;
 
-use crate::{ua, DataType as _, Error};
+use crate::{ua, DataType as _};
 
 crate::data_type!(QualifiedName);
 
 impl QualifiedName {
-    /// Creates a new qualified name from a rust string.
+    /// Creates qualified name.
     ///
-    /// # Errors
+    /// # Panics
     ///
     /// The string must not contain any NUL bytes.
-    pub fn new(namespace_index: u16, name: &str) -> Result<Self, Error> {
-        let name = ua::String::new(name)?.into_raw();
+    #[must_use]
+    pub fn new(namespace_index: u16, name: &str) -> Self {
+        let name = CString::new(name).expect("string does not contain NUL bytes");
 
-        let qualified_name = UA_QualifiedName {
-            namespaceIndex: namespace_index,
-            name,
-        };
+        let inner = unsafe { UA_QUALIFIEDNAME_ALLOC(namespace_index, name.as_ptr()) };
+        if !name.is_empty() && (inner.name.data.is_null() || inner.name.length == 0) {
+            debug_assert!(inner.name.data.is_null(), "unexpected string data");
+            panic!("string should have been allocated");
+        }
 
-        Ok(Self(qualified_name))
+        Self(inner)
     }
 
     /// Gets namespace index.
@@ -52,5 +54,20 @@ impl fmt::Display for QualifiedName {
             return write!(f, "{}", self.name());
         }
         write!(f, "{namespace_index}:{}", self.name())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ua;
+
+    #[test]
+    fn value_representation() {
+        let name = ua::QualifiedName::new(123, "lorem");
+
+        // We get the original values back.
+        //
+        assert_eq!(name.namespace_index(), 123);
+        assert_eq!(name.name().as_str(), Some("lorem"));
     }
 }
