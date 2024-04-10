@@ -5,6 +5,8 @@ use std::{
 
 use open62541_sys::{vsnprintf_va_copy, vsnprintf_va_end, UA_LogCategory, UA_LogLevel, UA_Logger};
 
+const LOG_TARGET: &str = "open62541_sys";
+
 /// Creates logger that forwards to the `log` crate.
 ///
 /// We can use this to prevent `open62541` from installing its own default logger (which outputs any
@@ -22,30 +24,30 @@ pub(crate) fn logger() -> *mut UA_Logger {
         args: open62541_sys::va_list_,
     ) {
         let Some(msg) = format_message(msg, args) else {
-            log::error!("Unknown log message");
+            log::error!(target: LOG_TARGET, "Unknown log message");
             return;
         };
 
         let msg = CStr::from_bytes_with_nul(&msg)
-            .expect("string length should match")
+            .unwrap_or(c"Invalid log message")
             .to_string_lossy();
 
         if level == UA_LogLevel::UA_LOGLEVEL_FATAL {
             // Without fatal level in `log`, fall back to error.
-            log::error!("{msg}");
+            log::error!(target: LOG_TARGET, "{msg}");
         } else if level == UA_LogLevel::UA_LOGLEVEL_ERROR {
-            log::error!("{msg}");
+            log::error!(target: LOG_TARGET, "{msg}");
         } else if level == UA_LogLevel::UA_LOGLEVEL_WARNING {
-            log::warn!("{msg}");
+            log::warn!(target: LOG_TARGET, "{msg}");
         } else if level == UA_LogLevel::UA_LOGLEVEL_INFO {
-            log::info!("{msg}");
+            log::info!(target: LOG_TARGET, "{msg}");
         } else if level == UA_LogLevel::UA_LOGLEVEL_DEBUG {
-            log::debug!("{msg}");
+            log::debug!(target: LOG_TARGET, "{msg}");
         } else if level == UA_LogLevel::UA_LOGLEVEL_TRACE {
-            log::trace!("{msg}");
+            log::trace!(target: LOG_TARGET, "{msg}");
         } else {
             // Handle unexpected level by escalating to error.
-            log::error!("{msg}");
+            log::error!(target: LOG_TARGET, "{msg}");
         }
     }
 
