@@ -30,7 +30,7 @@ fn main() -> anyhow::Result<()> {
     server.add_object_node(object_node)?;
     server.add_variable_node(variable_node)?;
 
-    server.write_variable_string(variable_node_id, "foobar")?;
+    server.write_variable_string(&variable_node_id, "foobar")?;
 
     println!("Running server");
 

@@ -74,7 +74,7 @@ impl Server {
     /// # Errors
     ///
     /// This fails when the variable node cannot be written.
-    pub fn write_variable(&mut self, node_id: ua::NodeId, value: ua::Variant) -> Result<()> {
+    pub fn write_variable(&mut self, node_id: &ua::NodeId, value: &ua::Variant) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_write(
                 self.0.as_mut_ptr(),
@@ -97,12 +97,12 @@ impl Server {
     /// #
     /// # fn write_string(
     /// #     server: &mut Server,
-    /// #     node_id: ua::NodeId,
+    /// #     node_id: &ua::NodeId,
     /// #     value: &str,
     /// # ) -> anyhow::Result<()> {
     /// let value = ua::String::new(value)?;
     /// let value = ua::Variant::init().with_scalar(&value);
-    /// server.write_variable(node_id, value)?;
+    /// server.write_variable(node_id, &value)?;
     /// # Ok(())
     /// # }
     /// ```
@@ -110,10 +110,10 @@ impl Server {
     /// # Errors
     ///
     /// This fails when the variable node cannot be written.
-    pub fn write_variable_string(&mut self, node_id: ua::NodeId, value: &str) -> Result<()> {
+    pub fn write_variable_string(&mut self, node_id: &ua::NodeId, value: &str) -> Result<()> {
         let value = ua::String::new(value)?;
         let ua_variant = ua::Variant::init().with_scalar(&value);
-        self.write_variable(node_id, ua_variant)
+        self.write_variable(node_id, &ua_variant)
     }
 
     /// Runs the server until interrupted.
