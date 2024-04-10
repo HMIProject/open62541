@@ -13,8 +13,8 @@ fn main() -> anyhow::Result<()> {
 
     let object_node = ObjectNode {
         requested_new_node_id: ua::NodeId::string(1, "the.folder"),
-        parent_node_id: ua::NodeId::numeric(0, UA_NS0ID_OBJECTSFOLDER),
-        reference_type_id: ua::NodeId::numeric(0, UA_NS0ID_ORGANIZES),
+        parent_node_id: ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
+        reference_type_id: ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
         browse_name: ua::QualifiedName::new(1, "the folder"),
         type_definition: ua::NodeId::ns0(UA_NS0ID_FOLDERTYPE),
         attributes: ua::ObjectAttributes::default(),
@@ -24,7 +24,7 @@ fn main() -> anyhow::Result<()> {
     let variable_node = VariableNode {
         requested_new_node_id: variable_node_id.clone(),
         parent_node_id: object_node.requested_new_node_id.clone(),
-        reference_type_id: ua::NodeId::numeric(0, UA_NS0ID_ORGANIZES),
+        reference_type_id: ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
         browse_name: ua::QualifiedName::new(1, "the answer"),
         type_definition: ua::NodeId::ns0(UA_NS0ID_BASEDATAVARIABLETYPE),
         attributes: ua::VariableAttributes::default()
