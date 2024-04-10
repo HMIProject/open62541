@@ -19,7 +19,7 @@ impl Server {
         Self(ua::Server::new())
     }
 
-    /// Adds variable to address space.
+    /// Adds variable node to address space.
     ///
     /// # Errors
     ///
@@ -41,7 +41,7 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Adds object to address space.
+    /// Adds object node to address space.
     ///
     /// # Errors
     ///
@@ -63,11 +63,11 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Writes value to variable.
+    /// Writes value to variable node.
     ///
     /// # Errors
     ///
-    /// This fails when the variable cannot be written.
+    /// This fails when the variable node cannot be written.
     pub fn write_variable(&mut self, node_id: ua::NodeId, value: ua::Variant) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
             open62541_sys::UA_Server_writeValue(
@@ -79,7 +79,7 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Writes string to variable.
+    /// Writes string value to variable node.
     ///
     /// This is a shortcut and roughly equivalent to the following:
     ///
@@ -100,7 +100,7 @@ impl Server {
     ///
     /// # Errors
     ///
-    /// This fails when the variable cannot be written.
+    /// This fails when the variable node cannot be written.
     pub fn write_variable_string(&mut self, node_id: ua::NodeId, value: &str) -> Result<()> {
         let value = ua::String::new(value)?;
         let ua_variant = ua::Variant::init().with_scalar(&value);
@@ -109,9 +109,12 @@ impl Server {
 
     /// Runs the server until interrupted.
     ///
+    /// The server is shut down cleanly upon receiving the `SIGINT` signal at which point the method
+    /// returns.
+    ///
     /// # Errors
     ///
-    /// When an error occurred internally
+    /// This fails when the server cannot be started.
     pub fn run(self) -> Result<()> {
         let status_code =
             ua::StatusCode::new(unsafe { UA_Server_runUntilInterrupt(self.0.as_mut_ptr()) });

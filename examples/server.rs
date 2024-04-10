@@ -6,6 +6,8 @@ fn main() -> anyhow::Result<()> {
 
     let mut server = Server::new();
 
+    println!("Adding server nodes");
+
     let object_node = ObjectNode {
         requested_new_node_id: ua::NodeId::string(1, "the.folder"),
         parent_node_id: ua::NodeId::numeric(0, UA_NS0ID_OBJECTSFOLDER),
@@ -30,7 +32,11 @@ fn main() -> anyhow::Result<()> {
 
     server.write_variable_string(variable_node_id, "foobar")?;
 
+    println!("Running server");
+
     server.run()?;
+
+    println!("Exiting");
 
     Ok(())
 }
