@@ -2,11 +2,7 @@ use std::ptr::{self, NonNull};
 
 use open62541_sys::{UA_Server, UA_StatusCode};
 
-use crate::{DataType, Error};
-
-use super::StatusCode;
-
-use crate::ua;
+use crate::{ua, DataType as _, Error};
 
 /// Wrapper for [`UA_Server`] from [`open62541_sys`].
 ///
@@ -41,10 +37,10 @@ impl Server {
 
     /// Wrapper function for `open62541_sys::UA_Server_runUntilInterrupt`
     #[must_use]
-    pub(crate) fn run_until_interrupt(self) -> StatusCode {
+    pub(crate) fn run_until_interrupt(self) -> ua::StatusCode {
         let ua_status_code: UA_StatusCode =
             unsafe { open62541_sys::UA_Server_runUntilInterrupt(self.as_mut_ptr()) };
-        StatusCode::new(ua_status_code)
+        ua::StatusCode::new(ua_status_code)
     }
 
     pub(crate) fn add_variable_node(
@@ -55,7 +51,7 @@ impl Server {
         browse_name: ua::QualifiedName,
         type_definition: ua::NodeId,
         attrs: ua::VariableAttributes,
-    ) -> StatusCode {
+    ) -> ua::StatusCode {
         let status_code: UA_StatusCode = unsafe {
             open62541_sys::UA_Server_addVariableNode(
                 self.as_mut_ptr(),
@@ -69,7 +65,7 @@ impl Server {
                 ptr::null_mut(),
             )
         };
-        StatusCode::new(status_code)
+        ua::StatusCode::new(status_code)
     }
 
     pub(crate) fn add_object_node(
@@ -80,7 +76,7 @@ impl Server {
         browse_name: ua::QualifiedName,
         type_definition: ua::NodeId,
         attrs: ua::ObjectAttributes,
-    ) -> StatusCode {
+    ) -> ua::StatusCode {
         let status_code: UA_StatusCode = unsafe {
             open62541_sys::UA_Server_addObjectNode(
                 self.as_mut_ptr(),
@@ -94,10 +90,14 @@ impl Server {
                 ptr::null_mut(),
             )
         };
-        StatusCode::new(status_code)
+        ua::StatusCode::new(status_code)
     }
 
-    pub(crate) fn write_variable(&mut self, node_id: ua::NodeId, value: ua::Variant) -> StatusCode {
+    pub(crate) fn write_variable(
+        &mut self,
+        node_id: ua::NodeId,
+        value: ua::Variant,
+    ) -> ua::StatusCode {
         let status_code = unsafe {
             open62541_sys::UA_Server_writeValue(
                 self.as_mut_ptr(),
@@ -105,7 +105,7 @@ impl Server {
                 value.into_raw(),
             )
         };
-        StatusCode::new(status_code)
+        ua::StatusCode::new(status_code)
     }
 }
 
@@ -121,7 +121,7 @@ impl Drop for Server {
         let status_code: UA_StatusCode =
             unsafe { open62541_sys::UA_Server_delete(self.as_mut_ptr()) };
 
-        let status_code = StatusCode::new(status_code);
+        let status_code = ua::StatusCode::new(status_code);
 
         if let Err(error) = Error::verify_good(&status_code) {
             log::warn!("Error while dropping server: {error}");
