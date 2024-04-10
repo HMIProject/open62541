@@ -10,7 +10,7 @@ fn main() -> anyhow::Result<()> {
         requested_new_node_id: ua::NodeId::string(1, "the.folder"),
         parent_node_id: ua::NodeId::numeric(0, UA_NS0ID_OBJECTSFOLDER),
         reference_type_id: ua::NodeId::numeric(0, UA_NS0ID_ORGANIZES),
-        browse_name: ua::QualifiedName::new(1, "the folder")?,
+        browse_name: ua::QualifiedName::new(1, "the folder"),
         type_definition: ua::NodeId::numeric(0, 0),
         attributes: ua::ObjectAttributes::default(),
     };
@@ -20,7 +20,7 @@ fn main() -> anyhow::Result<()> {
         requested_new_node_id: variable_node_id.clone(),
         parent_node_id: object_node.requested_new_node_id.clone(),
         reference_type_id: ua::NodeId::numeric(0, UA_NS0ID_ORGANIZES),
-        browse_name: ua::QualifiedName::new(1, "the answer")?,
+        browse_name: ua::QualifiedName::new(1, "the answer"),
         type_definition: ua::NodeId::numeric(0, 0),
         attributes: ua::VariableAttributes::default(),
     };
