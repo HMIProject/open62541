@@ -98,7 +98,7 @@ impl Default for ServerConfig {
         }
 
         // Set remaining attributes to their default values. This also copies the logger as laid out
-        // above to other attributes inside `config` (cleaned up by `UA_ServerConfig_clear()`).
+        // above to other attributes inside `config` (cleaned up by `UA_ServerConfig_clean()`).
         let status_code =
             ua::StatusCode::new(unsafe { UA_ServerConfig_setDefault(config.as_mut_ptr()) });
         // PANIC: The only possible errors here are out-of-memory.
