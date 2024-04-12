@@ -1,19 +1,12 @@
-use std::{
-    ffi::{c_char, c_void, CStr, CString},
-    ptr,
-    time::Duration,
-};
+use std::{ffi::CString, time::Duration};
 
-use open62541_sys::{
-    vsnprintf_va_copy, vsnprintf_va_end, UA_ClientConfig, UA_Client_connect, UA_LogCategory,
-    UA_LogLevel, UA_Logger,
-};
+use open62541_sys::{UA_ClientConfig, UA_Client_connect};
 
 use crate::{ua, DataType as _, Error, Result};
 
 /// Builder for [`Client`].
 ///
-/// Use this to specify additional options before connecting to an OPC UA endpoint.
+/// Use this to specify additional options when connecting to an OPC UA endpoint.
 ///
 /// # Examples
 ///
@@ -118,20 +111,15 @@ impl ClientBuilder {
     ///
     /// The endpoint URL must not contain any NUL bytes.
     pub fn connect(self, endpoint_url: &str) -> Result<Client> {
-        log::info!("Connecting to endpoint {endpoint_url}");
+        let mut client = self.build();
+        client.connect(endpoint_url)?;
+        Ok(client)
+    }
 
-        let endpoint_url =
-            CString::new(endpoint_url).expect("endpoint URL does not contain NUL bytes");
-
-        let mut client = ua::Client::new_with_config(self.0);
-
-        let status_code = ua::StatusCode::new(unsafe {
-            // SAFETY: The method does not take ownership of `client`.
-            UA_Client_connect(client.as_mut_ptr(), endpoint_url.as_ptr())
-        });
-        Error::verify_good(&status_code)?;
-
-        Ok(Client(client))
+    /// Builds OPC UA client.
+    #[must_use]
+    fn build(self) -> Client {
+        Client(ua::Client::new_with_config(self.0))
     }
 
     /// Access client configuration.
@@ -160,7 +148,7 @@ pub struct Client(
 );
 
 impl Client {
-    /// Creates client connected to endpoint.
+    /// Creates default client connected to endpoint.
     ///
     /// If you need more control over the initialization, use [`ClientBuilder`] instead, and turn it
     /// into [`Client`] by calling [`connect()`](ClientBuilder::connect).
@@ -193,6 +181,23 @@ impl Client {
         self.0.state()
     }
 
+    /// Connects to endpoint.
+    ///
+    /// This method is always called internally before passing new [`Client`] instances to the user:
+    /// our contract states that a `Client` should always be connected.
+    fn connect(&mut self, endpoint_url: &str) -> Result<()> {
+        log::info!("Connecting to endpoint {endpoint_url}");
+
+        let endpoint_url =
+            CString::new(endpoint_url).expect("endpoint URL does not contain NUL bytes");
+
+        let status_code = ua::StatusCode::new(unsafe {
+            // SAFETY: The method does not take ownership of `client`.
+            UA_Client_connect(self.0.as_mut_ptr(), endpoint_url.as_ptr())
+        });
+        Error::verify_good(&status_code)
+    }
+
     /// Disconnects from endpoint.
     ///
     /// This consumes the client and handles the graceful shutdown of the connection. This should be
@@ -204,147 +209,4 @@ impl Client {
     pub fn disconnect(self) {
         self.0.disconnect()
     }
-}
-
-/// Creates logger that forwards to the `log` crate.
-///
-/// We can use this to prevent `open62541` from installing its own default logger (which outputs any
-/// logs to stdout/stderr directly).
-///
-/// Note that this leaks memory unless the returned pointer is assigned to `UA_ClientConfig` (and/or
-/// `UA_Client` in turn), eventually calling `UA_Logger::clear()` with this `UA_Logger` instance.
-pub(crate) fn client_logger() -> *mut UA_Logger {
-    unsafe extern "C" fn log_c(
-        _log_context: *mut c_void,
-        level: UA_LogLevel,
-        _category: UA_LogCategory,
-        msg: *const c_char,
-        args: open62541_sys::va_list_,
-    ) {
-        let Some(msg) = format_message(msg, args) else {
-            log::error!("Unknown log message");
-            return;
-        };
-
-        let msg = CStr::from_bytes_with_nul(&msg)
-            .expect("string length should match")
-            .to_string_lossy();
-
-        if level == UA_LogLevel::UA_LOGLEVEL_FATAL {
-            // Without fatal level in `log`, fall back to error.
-            log::error!("{msg}");
-        } else if level == UA_LogLevel::UA_LOGLEVEL_ERROR {
-            log::error!("{msg}");
-        } else if level == UA_LogLevel::UA_LOGLEVEL_WARNING {
-            log::warn!("{msg}");
-        } else if level == UA_LogLevel::UA_LOGLEVEL_INFO {
-            log::info!("{msg}");
-        } else if level == UA_LogLevel::UA_LOGLEVEL_DEBUG {
-            log::debug!("{msg}");
-        } else if level == UA_LogLevel::UA_LOGLEVEL_TRACE {
-            log::trace!("{msg}");
-        } else {
-            // Handle unexpected level by escalating to error.
-            log::error!("{msg}");
-        }
-    }
-
-    unsafe extern "C" fn clear_c(logger: *mut UA_Logger) {
-        log::debug!("Clearing `log` logger");
-
-        // This consumes the `UA_Logger` structure itself, invalidating the pointer `config.logging`
-        // and thereby releasing all allocated resources.
-        //
-        // This is in line with the contract that `config.logging` may not be used anymore after its
-        // `clear()` method has been called.
-        let logger = unsafe { Box::from_raw(logger) };
-
-        // Run some sanity checks. We should only ever be called on our own data structure.
-        debug_assert!(logger.log == Some(log_c));
-        debug_assert!(logger.clear == Some(clear_c));
-
-        // As long as we do not carry data, there is nothing to clean up here.
-        debug_assert!(logger.context.is_null());
-
-        // Dropping the boxed logger cleans up allocated memory.
-        drop(logger);
-    }
-
-    log::debug!("Creating `log` logger");
-
-    // Create logger configuration. We leak the memory which is cleaned up eventually when `clear()`
-    // is called (which is `clear_c()` above).
-    Box::leak(Box::new(UA_Logger {
-        log: Some(log_c),
-        context: ptr::null_mut(),
-        clear: Some(clear_c),
-    }))
-}
-
-/// Initial buffer size when formatting messages.
-const FORMAT_MESSAGE_DEFAULT_BUFFER_LEN: usize = 128;
-
-/// Maximum buffer size when formatting messages.
-const FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN: usize = 65536;
-
-/// Formats message with `vprintf` library calls.
-///
-/// This returns the formatted message with a trailing NUL byte, or `None` when formatting fails. A
-/// long message may be truncated (see [`FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN`] for details); its last
-/// characters will be replaced with `...` to indicate this.
-fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<Vec<u8>> {
-    // Delegate string formatting to `vsnprintf()`, the length-checked string buffer variant of the
-    // variadic `vprintf` family.
-    //
-    // We use the custom `vsnprintf_va_copy()` provided by `open62541_sys`. This copies the va args
-    // and requires an explicit call to `vsnprintf_va_end()` afterwards.
-
-    // Allocate default buffer first. Only when the message doesn't fit, we need to allocate larger
-    // buffer below.
-    let mut msg_buffer: Vec<u8> = vec![0; FORMAT_MESSAGE_DEFAULT_BUFFER_LEN];
-    loop {
-        let result = unsafe {
-            vsnprintf_va_copy(
-                msg_buffer.as_mut_ptr().cast::<c_char>(),
-                msg_buffer.len(),
-                msg,
-                args,
-            )
-        };
-        let Ok(msg_len) = usize::try_from(result) else {
-            // Negative result is an error in the format string. Nothing we can do.
-            debug_assert!(result < 0);
-            // Free the `va_list` argument that is no consumed by `vsnprintf()`!
-            unsafe { vsnprintf_va_end(args) }
-            return None;
-        };
-        let buffer_len = msg_len + 1;
-        if buffer_len > msg_buffer.len() {
-            // Last byte must always be the NUL terminator, even if the message
-            // doesn't fit into the buffer.
-            debug_assert_eq!(msg_buffer.last(), Some(&0));
-            if msg_buffer.len() < FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN {
-                // Allocate larger buffer and try again.
-                msg_buffer.resize(FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN, 0);
-                continue;
-            }
-            // Message is too large to format. Truncate the message by ending it with `...`.
-            for char in msg_buffer.iter_mut().rev().skip(1).take(3) {
-                *char = b'.';
-            }
-        } else {
-            // Message fits into the buffer. Make sure that `from_bytes_with_nul()`
-            // sees the expected single NUL terminator in the final position.
-            msg_buffer.truncate(buffer_len);
-        }
-        break;
-    }
-
-    // Free the `va_list` argument that is not consumed by `vsnprintf()`!
-    unsafe { vsnprintf_va_end(args) }
-
-    // Last byte must always be the NUL terminator.
-    debug_assert_eq!(msg_buffer.last(), Some(&0));
-
-    Some(msg_buffer)
 }

@@ -3,9 +3,9 @@ name = "open62541"
 version = "0.6.0-pre.1"
 authors = ["HMI Project"]
 edition = "2021"
-# Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.76 since
-# we want to use `std::ptr::from_ref` and similar features for type safety.
-rust-version = "1.76"
+# Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.77 since
+# we want to use C-string literals.
+rust-version = "1.77"
 description = "High-level, safe bindings for the C99 library open62541, an open source and free implementation of OPC UA (OPC Unified Architecture)."
 documentation = "https://docs.rs/open62541"
 readme = "README.md"
@@ -111,3 +111,7 @@ path = "examples/client_builder.rs"
 [[example]]
 name = "server"
 path = "examples/server.rs"
+
+[[example]]
+name = "server_builder"
+path = "examples/server_builder.rs"
