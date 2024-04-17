@@ -9,3 +9,13 @@
 This crate provides high-level, safe bindings for the C99 library
 [open62541](https://www.open62541.org), an open source and free implementation of
 [OPC UA](https://opcfoundation.org/about/opc-technologies/opc-ua/).
+
+## Overview
+
+Use this crate when you want to implement an OPC UA client or server in Rust, or add these
+capabilities to an existing program.
+
+## Examples
+
+You can find examples in our [documentation](https://docs.rs/open62541) and in the `examples/`
+folder in our repository.
