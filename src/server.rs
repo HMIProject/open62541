@@ -1,4 +1,4 @@
-use std::{ffi::c_void, ptr};
+use std::{ffi::c_void, ptr, sync::Arc};
 
 use open62541_sys::{
     UA_ServerConfig, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
@@ -58,8 +58,12 @@ impl ServerBuilder {
 
     /// Builds OPC UA server.
     #[must_use]
-    pub fn build(self) -> Server {
-        Server(ua::Server::new_with_config(self.0))
+    pub fn build(self) -> (Server, ServerRunner) {
+        let server = Arc::new(ua::Server::new_with_config(self.0));
+
+        let runner = ServerRunner(Arc::clone(&server));
+        let server = Server(server);
+        (server, runner)
     }
 
     /// Access server configuration.
@@ -71,9 +75,11 @@ impl ServerBuilder {
 
 /// OPC UA server.
 ///
-/// This represents an OPC UA server. Nodes can be added through the several methods below, and then
-/// the server can be started with [`run()`](Self::run).
-pub struct Server(ua::Server);
+/// This represents an OPC UA server. Nodes can be added through the several methods below.
+///
+/// Note: The server must be started with [`ServerRunner::run()`] before it is actually visible to
+/// external clients.
+pub struct Server(Arc<ua::Server>);
 
 impl Server {
     /// Creates default server.
@@ -89,7 +95,7 @@ impl Server {
     ///
     /// See [`ServerBuilder::build()`].
     #[must_use]
-    pub fn new() -> Self {
+    pub fn new() -> (Self, ServerRunner) {
         ServerBuilder::default().build()
     }
 
@@ -191,7 +197,12 @@ impl Server {
         let ua_variant = ua::Variant::init().with_scalar(&value);
         self.write_variable(node_id, &ua_variant)
     }
+}
 
+#[allow(clippy::module_name_repetitions)]
+pub struct ServerRunner(Arc<ua::Server>);
+
+impl ServerRunner {
     /// Runs the server until interrupted.
     ///
     /// The server is shut down cleanly upon receiving the `SIGINT` signal at which point the method
@@ -204,11 +215,5 @@ impl Server {
         let status_code =
             ua::StatusCode::new(unsafe { UA_Server_runUntilInterrupt(self.0.as_mut_ptr()) });
         Error::verify_good(&status_code)
-    }
-}
-
-impl Default for Server {
-    fn default() -> Self {
-        Self::new()
     }
 }

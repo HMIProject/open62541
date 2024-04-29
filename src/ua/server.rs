@@ -10,6 +10,14 @@ use crate::{ua, Error};
 /// [`UA_Server_delete()`].
 pub struct Server(NonNull<UA_Server>);
 
+// SAFETY: We know that the underlying `UA_Server` allows access from different threads, i.e. it may
+// be dropped in a different thread from where it was created.
+unsafe impl Send for Server {}
+
+// SAFETY: The underlying `UA_Server` can be used from different threads concurrently, at least with
+// _most_ methods (those marked `UA_THREADSAFE` and/or with explicit mutex locks inside).
+unsafe impl Sync for Server {}
+
 impl Server {
     /// Creates server from server config.
     ///
