@@ -9,6 +9,8 @@ use open62541_sys::{
     UA_DataType, UA_Order, UA_clear, UA_copy, UA_init, UA_order, UA_print, UA_STATUSCODE_GOOD,
 };
 
+use crate::ua;
+
 /// Transparent wrapper for OPC UA data type.
 ///
 /// # Safety
@@ -437,9 +439,16 @@ macro_rules! enum_variants {
                 /// Enum variant
                 #[doc = paste::paste! { concat!("[`", stringify!([<$inner:upper _ $value>]), "`](open62541_sys::", stringify!($inner), "::", stringify!([<$inner:upper _ $value>]), ")") }]
                 /// from [`open62541_sys`].
+                #[allow(dead_code)] // Allow unused `pub`-declared constants in private modules.
                 pub const $value: Self = Self(
                     paste::paste! { open62541_sys::$inner::[<$inner:upper _ $value>] }
                 );
+
+                paste::paste! {
+                    // This cast is necessary on Windows builds with inner type `i32`.
+                    #[allow(clippy::as_conversions, trivial_numeric_casts)]
+                    pub const [<$value _U32>]: u32 = open62541_sys::$inner::[<$inner:upper _ $value>].0 as u32;
+                }
             )*
 
             pub(crate) fn as_u32(&self) -> u32 {
@@ -469,4 +478,24 @@ macro_rules! enum_variants {
 
 pub(crate) use enum_variants;
 
-use crate::ua;
+macro_rules! bitmask_ops {
+    ($name:ident) => {
+        impl $name {
+            /// Gets logical OR of two masks.
+            #[must_use]
+            pub const fn or(&self, other: &Self) -> Self {
+                Self::from_u32(self.as_u32() | other.as_u32())
+            }
+        }
+
+        impl std::ops::BitOr for $name {
+            type Output = Self;
+
+            fn bitor(self, rhs: Self) -> Self {
+                self.or(&rhs)
+            }
+        }
+    };
+}
+
+pub(crate) use bitmask_ops;
