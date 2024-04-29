@@ -36,14 +36,6 @@ crate::enum_variants!(
     ],
 );
 
-impl AttributeId {
-    #[deprecated(note = "use `Self::VALUE` instead")]
-    #[must_use]
-    pub const fn value() -> Self {
-        Self::VALUE
-    }
-}
-
 impl hash::Hash for AttributeId {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
         self.0.hash(state);

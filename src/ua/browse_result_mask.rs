@@ -40,66 +40,6 @@ impl BrowseResultMask {
     pub const REFERENCETYPEINFO: Self = Self(inner::BrowseResultMask::REFERENCETYPEINFO_U32);
     pub const TARGETINFO: Self = Self(inner::BrowseResultMask::TARGETINFO_U32);
 
-    #[deprecated(note = "use `Self::NONE` instead")]
-    #[must_use]
-    pub const fn none() -> Self {
-        Self::NONE
-    }
-
-    #[deprecated(note = "use `Self::REFERENCETYPEID` instead")]
-    #[must_use]
-    pub const fn reference_type_id() -> Self {
-        Self::REFERENCETYPEID
-    }
-
-    #[deprecated(note = "use `Self::ISFORWARD` instead")]
-    #[must_use]
-    pub const fn is_forward() -> Self {
-        Self::ISFORWARD
-    }
-
-    #[deprecated(note = "use `Self::NODECLASS` instead")]
-    #[must_use]
-    pub const fn node_class() -> Self {
-        Self::NODECLASS
-    }
-
-    #[deprecated(note = "use `Self::BROWSENAME` instead")]
-    #[must_use]
-    pub const fn browse_name() -> Self {
-        Self::BROWSENAME
-    }
-
-    #[deprecated(note = "use `Self::DISPLAYNAME` instead")]
-    #[must_use]
-    pub const fn display_name() -> Self {
-        Self::DISPLAYNAME
-    }
-
-    #[deprecated(note = "use `Self::TYPEDEFINITION` instead")]
-    #[must_use]
-    pub const fn type_definition() -> Self {
-        Self::TYPEDEFINITION
-    }
-
-    #[deprecated(note = "use `Self::ALL` instead")]
-    #[must_use]
-    pub const fn all() -> Self {
-        Self::ALL
-    }
-
-    #[deprecated(note = "use `Self::REFERENCETYPEINFO` instead")]
-    #[must_use]
-    pub const fn reference_type_info() -> Self {
-        Self::REFERENCETYPEINFO
-    }
-
-    #[deprecated(note = "use `Self::TARGETINFO` instead")]
-    #[must_use]
-    pub const fn target_info() -> Self {
-        Self::TARGETINFO
-    }
-
     pub(crate) const fn from_u32(mask: u32) -> Self {
         Self(mask)
     }
