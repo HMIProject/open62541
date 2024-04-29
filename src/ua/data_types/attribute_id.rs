@@ -1,7 +1,5 @@
 use std::hash;
 
-use open62541_sys::UA_AttributeId;
-
 crate::data_type!(AttributeId, UInt32);
 
 crate::enum_variants!(
@@ -42,7 +40,7 @@ impl AttributeId {
     #[deprecated(note = "use `Self::VALUE` instead")]
     #[must_use]
     pub const fn value() -> Self {
-        Self(UA_AttributeId::UA_ATTRIBUTEID_VALUE)
+        Self::VALUE
     }
 }
 

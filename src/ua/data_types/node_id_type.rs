@@ -1,5 +1,3 @@
-use open62541_sys::UA_NodeIdType;
-
 crate::data_type!(NodeIdType, UInt32);
 
 crate::enum_variants!(
@@ -12,24 +10,24 @@ impl NodeIdType {
     #[deprecated(note = "use `Self::NUMERIC` instead")]
     #[must_use]
     pub const fn numeric() -> Self {
-        Self(UA_NodeIdType::UA_NODEIDTYPE_NUMERIC)
+        Self::NUMERIC
     }
 
     #[deprecated(note = "use `Self::STRING` instead")]
     #[must_use]
     pub const fn string() -> Self {
-        Self(UA_NodeIdType::UA_NODEIDTYPE_STRING)
+        Self::STRING
     }
 
     #[deprecated(note = "use `Self::GUID` instead")]
     #[must_use]
     pub const fn guid() -> Self {
-        Self(UA_NodeIdType::UA_NODEIDTYPE_GUID)
+        Self::GUID
     }
 
     #[deprecated(note = "use `Self::BYTESTRING` instead")]
     #[must_use]
     pub const fn byte_string() -> Self {
-        Self(UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING)
+        Self::BYTESTRING
     }
 }
