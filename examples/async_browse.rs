@@ -20,10 +20,12 @@ async fn main() -> anyhow::Result<()> {
             return format!("{node_id}");
         };
 
-        let info = format!("{}, {:?}", node.display_name().text(), node.node_class());
+        let info = format!("{}, {}", node.display_name().text(), node.node_class());
 
         format!("{name} ({info}) -> {node_id}")
     });
+
+    println!("{} nodes in total", hierarchy.node_count());
 
     Ok(())
 }
@@ -212,6 +214,10 @@ impl<T> TreeNode<T> {
         }
 
         root_node
+    }
+
+    fn node_count(&self) -> usize {
+        1 + self.children.values().map(Self::node_count).sum::<usize>()
     }
 
     fn pretty_print<FL>(&self, mut label: FL)
