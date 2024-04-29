@@ -108,3 +108,22 @@ impl BrowseResultMask {
         self.0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::ua;
+
+    #[test]
+    fn combine_masks() {
+        // We support mask combinators with `|` shorthand notation.
+        let lhs = ua::BrowseResultMask::REFERENCETYPEID | ua::BrowseResultMask::ISFORWARD;
+        let rhs = ua::BrowseResultMask::REFERENCETYPEINFO;
+        assert_eq!(lhs, rhs);
+
+        // We support mask combinators in `const` expressions.
+        const LHS: ua::BrowseResultMask =
+            ua::BrowseResultMask::REFERENCETYPEID.or(&ua::BrowseResultMask::ISFORWARD);
+        const RHS: ua::BrowseResultMask = ua::BrowseResultMask::REFERENCETYPEINFO;
+        assert_eq!(LHS, RHS);
+    }
+}
