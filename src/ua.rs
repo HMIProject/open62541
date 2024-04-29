@@ -1,6 +1,7 @@
 //! Thin wrappers for [`open62541_sys`] types.
 
 mod array;
+mod browse_result_mask;
 mod client;
 mod client_config;
 mod continuation_point;
@@ -15,6 +16,7 @@ mod subscription_id;
 
 pub use self::{
     array::Array,
+    browse_result_mask::BrowseResultMask,
     client::{Client, ClientState},
     continuation_point::ContinuationPoint,
     data_types::*,

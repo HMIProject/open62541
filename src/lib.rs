@@ -92,7 +92,7 @@ pub use self::{
     value::{ScalarValue, ValueType, VariantValue},
 };
 pub(crate) use self::{
-    data_type::{data_type, enum_variants},
+    data_type::{bitmask_ops, data_type, enum_variants},
     logger::logger,
     service::{ServiceRequest, ServiceResponse},
     value::{ArrayValue, NonScalarValue},
