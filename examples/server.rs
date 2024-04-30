@@ -13,7 +13,7 @@ use open62541_sys::{
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let (mut server, runner) = Server::new();
+    let (server, runner) = Server::new();
 
     println!("Adding server nodes");
 

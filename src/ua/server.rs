@@ -50,7 +50,7 @@ impl Server {
     /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
-    pub(crate) const unsafe fn as_mut_ptr(&self) -> *mut UA_Server {
+    pub(crate) unsafe fn as_mut_ptr(&mut self) -> *mut UA_Server {
         self.0.as_ptr()
     }
 }

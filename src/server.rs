@@ -104,10 +104,11 @@ impl Server {
     /// # Errors
     ///
     /// This fails when the node cannot be added.
-    pub fn add_object_node(&mut self, node: ObjectNode) -> Result<()> {
+    pub fn add_object_node(&self, node: ObjectNode) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
-                self.0.as_mut_ptr(),
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 ua::NodeClass::OBJECT.into_raw(),
                 node.requested_new_node_id.as_ptr(),
@@ -130,10 +131,11 @@ impl Server {
     /// # Errors
     ///
     /// This fails when the node cannot be added.
-    pub fn add_variable_node(&mut self, node: VariableNode) -> Result<()> {
+    pub fn add_variable_node(&self, node: VariableNode) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
-                self.0.as_mut_ptr(),
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 ua::NodeClass::VARIABLE.into_raw(),
                 node.requested_new_node_id.as_ptr(),
@@ -156,10 +158,11 @@ impl Server {
     /// # Errors
     ///
     /// This fails when the variable node cannot be written.
-    pub fn write_variable(&mut self, node_id: &ua::NodeId, value: &ua::Variant) -> Result<()> {
+    pub fn write_variable(&self, node_id: &ua::NodeId, value: &ua::Variant) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_write(
-                self.0.as_mut_ptr(),
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
                 node_id.as_ptr(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 ua::AttributeId::VALUE.into_raw(),
@@ -192,7 +195,7 @@ impl Server {
     /// # Errors
     ///
     /// This fails when the variable node cannot be written.
-    pub fn write_variable_string(&mut self, node_id: &ua::NodeId, value: &str) -> Result<()> {
+    pub fn write_variable_string(&self, node_id: &ua::NodeId, value: &str) -> Result<()> {
         let value = ua::String::new(value)?;
         let ua_variant = ua::Variant::init().with_scalar(&value);
         self.write_variable(node_id, &ua_variant)
@@ -212,8 +215,15 @@ impl ServerRunner {
     ///
     /// This fails when the server cannot be started.
     pub fn run(self) -> Result<()> {
-        let status_code =
-            ua::StatusCode::new(unsafe { UA_Server_runUntilInterrupt(self.0.as_mut_ptr()) });
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_runUntilInterrupt(
+                // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE` but we make
+                // sure that it can only be invoked a single time (ownership of `ServerRunner`). The
+                // examples in `open62541` demonstrate that running the server in its own thread and
+                // interacting with it as we do through `Server` is okay.
+                self.0.as_ptr().cast_mut(),
+            )
+        });
         Error::verify_good(&status_code)
     }
 }
