@@ -79,6 +79,7 @@ impl ServerBuilder {
 ///
 /// Note: The server must be started with [`ServerRunner::run()`] before it can accept connections
 /// from clients.
+#[derive(Clone)]
 pub struct Server(Arc<ua::Server>);
 
 impl Server {
