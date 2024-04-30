@@ -77,8 +77,8 @@ impl ServerBuilder {
 ///
 /// This represents an OPC UA server. Nodes can be added through the several methods below.
 ///
-/// Note: The server must be started with [`ServerRunner::run()`] before it is actually visible to
-/// external clients.
+/// Note: The server must be started with [`ServerRunner::run()`] before it can accept connections
+/// from clients.
 pub struct Server(Arc<ua::Server>);
 
 impl Server {
