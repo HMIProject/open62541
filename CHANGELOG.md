@@ -16,6 +16,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Breaking: Remove associated functions for enum data types deprecated in 0.5.0, e.g.
   `ua::AttributedId::value()`. Use uppercase constants `ua::AttributedId::VALUE` instead.
+- Breaking: Split `Server::new()` and `ServerBuilder::build()` result type into `Server` and
+  `ServerRunner` to allow interacting with server's data tree while server is running.
 - Upgrade to open62541 released version 1.4.0.
 
 ## [0.6.0-pre.2] - 2024-04-12

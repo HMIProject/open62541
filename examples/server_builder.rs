@@ -5,11 +5,11 @@ fn main() -> anyhow::Result<()> {
 
     println!("Building server");
 
-    let server = ServerBuilder::default().port(4841).build();
+    let (_, runner) = ServerBuilder::default().port(4841).build();
 
     println!("Running server");
 
-    server.run()?;
+    runner.run()?;
 
     println!("Exiting");
 
