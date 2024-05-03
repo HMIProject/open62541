@@ -69,6 +69,11 @@ missing_const_for_fn = "warn"
 mod_module_files = "warn"
 pedantic = "warn"
 
+# This warns even when lint group and lint have the same level (`warn`). This is
+# very misleading and results in lots of false positives. See
+# https://github.com/rust-lang/rust-clippy/issues/12270
+lint_groups_priority = "allow"
+
 [[example]]
 name = "async_browse"
 path = "examples/async_browse.rs"
