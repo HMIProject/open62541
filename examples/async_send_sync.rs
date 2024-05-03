@@ -6,7 +6,7 @@ use open62541::{ua, AsyncClient};
 use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME;
 use tokio::task;
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 

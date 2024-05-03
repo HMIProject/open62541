@@ -8,7 +8,7 @@ use open62541_sys::{
 use rand::Rng as _;
 use tokio::time::error::Elapsed;
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 

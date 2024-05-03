@@ -7,7 +7,7 @@
 //! ```no_run
 //! use open62541::AsyncClient;
 //!
-//! # #[tokio::main(flavor = "current_thread")]
+//! # #[tokio::main]
 //! # async fn main() -> anyhow::Result<()> {
 //! #
 //! let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543")?;
@@ -22,7 +22,7 @@
 //! # use open62541::AsyncClient;
 //! use open62541::ua::NodeId;
 //!
-//! # #[tokio::main(flavor = "current_thread")]
+//! # #[tokio::main]
 //! # async fn main() -> anyhow::Result<()> {
 //! #
 //! # let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543")?;
@@ -42,7 +42,7 @@
 //! ```no_run
 //! # use open62541::{AsyncClient, ua::NodeId};
 //! #
-//! # #[tokio::main(flavor = "current_thread")]
+//! # #[tokio::main]
 //! # async fn main() -> anyhow::Result<()> {
 //! #
 //! # let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543")?;
