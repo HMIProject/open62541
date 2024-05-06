@@ -6,7 +6,8 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_DataType, UA_Order, UA_clear, UA_copy, UA_init, UA_order, UA_print, UA_STATUSCODE_GOOD,
+    UA_DataType, UA_Order, UA_clear, UA_copy, UA_init, UA_new, UA_order, UA_print,
+    UA_STATUSCODE_GOOD,
 };
 
 use crate::ua;
@@ -73,6 +74,26 @@ pub unsafe trait DataType: Debug + Clone {
     /// [`from_raw()`]: DataType::from_raw
     #[must_use]
     fn into_raw(self) -> Self::Inner;
+
+    /// Leaks wrapped value onto the heap.
+    ///
+    /// This turns a stack-allocated value into a heap-allocated one, without issuing a deep copy.
+    /// In other words, only the local memory allocation is copied (moved from stack to heap) and
+    /// any memory that is already heap-allocated (e.g. string contents) stays where it is.
+    ///
+    /// The returned value must be passed into another owned data structure or freed manually with
+    /// [`UA_delete()`] to free internal allocations and not leak memory.
+    ///
+    /// [`UA_delete()`]: open62541_sys::UA_delete
+    fn leak_into_raw(self) -> *mut Self::Inner {
+        // This gives up ownership and makes sure that moved data is not freed when scope ends.
+        let src = self.into_raw();
+        // Use `UA_new()` to create heap allocation that can be cleaned up with `UA_free()`.
+        let dst = unsafe { UA_new(Self::data_type()) }.cast::<Self::Inner>();
+        unsafe { ptr::write(dst, src) }
+        // At this point, `src` goes out of scope and is forgotten.
+        dst
+    }
 
     /// Creates wrapper initialized with defaults.
     ///

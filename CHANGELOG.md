@@ -19,6 +19,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Split `Server::new()` and `ServerBuilder::build()` result type into `Server` and
   `ServerRunner` to allow interacting with server's data tree while server is running.
 - Upgrade to open62541 released version 1.4.0.
+- Deprecate `ua::Variant::with_scalar()`. Instead of `ua::Variant::init().with_scalar(&x)`, use
+  constructor `ua::Variant::scalar(x)`.
+
+### Fixed
+
+- Avoid memory leak when calling `ua::Variant::with_scalar()` multiple times on the same value.
 
 ## [0.6.0-pre.2] - 2024-04-12
 

@@ -74,7 +74,7 @@ async fn write_value<T: DataType + Debug>(
     client
         .write_value(
             node_id,
-            &ua::DataValue::init().with_value(&ua::Variant::init().with_scalar(value)),
+            &ua::DataValue::init().with_value(&ua::Variant::scalar(value.clone())),
         )
         .await
         .context("write")?;
