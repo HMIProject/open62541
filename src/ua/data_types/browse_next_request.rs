@@ -20,6 +20,7 @@ impl BrowseNextRequest {
         self
     }
 
+    #[must_use]
     pub fn release_continuation_points(mut self, release_continuation_points: bool) -> Self {
         self.0.releaseContinuationPoints = release_continuation_points;
         self
