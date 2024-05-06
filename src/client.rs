@@ -14,7 +14,7 @@ use crate::{ua, DataType as _, Error, Result};
 /// use open62541::ClientBuilder;
 /// use std::time::Duration;
 ///
-/// # #[tokio::main(flavor = "current_thread")]
+/// # #[tokio::main]
 /// # async fn main() -> anyhow::Result<()> {
 /// #
 /// let client = ClientBuilder::default()

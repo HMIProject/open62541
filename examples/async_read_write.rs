@@ -18,7 +18,7 @@ const ATTRIBUTE_IDS: [ua::AttributeId; 11] = [
     ua::AttributeId::DATATYPEDEFINITION,
 ];
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 

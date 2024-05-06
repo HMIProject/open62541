@@ -16,7 +16,7 @@ use crate::{ua, DataType, Error, ObjectNode, Result, VariableNode};
 /// use open62541::ServerBuilder;
 /// use std::time::Duration;
 ///
-/// # #[tokio::main(flavor = "current_thread")]
+/// # #[tokio::main]
 /// # async fn main() -> anyhow::Result<()> {
 /// #
 /// let server = ServerBuilder::default()

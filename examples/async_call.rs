@@ -2,7 +2,7 @@ use anyhow::{anyhow, Context as _};
 use open62541::{ua, AsyncClient, DataType as _, ValueType};
 use open62541_sys::{UA_NS0ID_HASPROPERTY, UA_NS0ID_PROPERTYTYPE};
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
