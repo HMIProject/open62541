@@ -102,6 +102,11 @@ path = "examples/async_monitor.rs"
 required-features = ["tokio"]
 
 [[example]]
+name = "async_read_many"
+path = "examples/async_read_many.rs"
+required-features = ["tokio"]
+
+[[example]]
 name = "async_read_write"
 path = "examples/async_read_write.rs"
 required-features = ["tokio"]
