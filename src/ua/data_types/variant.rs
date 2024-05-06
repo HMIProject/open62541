@@ -176,6 +176,12 @@ impl serde::Serialize for Variant {
                     if let Some(value) = self.as_scalar::<crate::ua::$name>() {
                         return <crate::ua::$name as serde::Serialize>::serialize(value, serializer);
                     }
+
+                    $( #[cfg($cfg)] )?
+                    if let Some(value) = self.to_array::<crate::ua::$name>() {
+                        // TODO: Avoid `to_array()`, borrow `value` from `self` instead of copying.
+                        return <ua::Array<crate::ua::$name> as serde::Serialize>::serialize(&value, serializer);
+                    }
                 )*
             };
         }
@@ -278,6 +284,24 @@ mod tests {
         assert_eq!(value_type, Some(ValueType::Int64));
     }
 
+    #[test]
+    fn array_ops() {
+        let ua_array =
+            ua::Array::from_slice(&[ua::Byte::new(1), ua::Byte::new(2), ua::Byte::new(3)]);
+        let ua_variant = ua::Variant::array(ua_array);
+        let type_id = ua_variant.type_id();
+        assert_eq!(type_id, Some(&ua::NodeId::ns0(UA_NS0ID_BYTE)));
+        let value_type = ua_variant.value_type();
+        assert_eq!(value_type, Some(ValueType::Byte));
+
+        assert!(ua_variant.to_array::<ua::String>().is_none());
+        let ua_array: ua::Array<ua::Byte> = ua_variant.to_array().unwrap();
+        assert_eq!(
+            vec![ua::Byte::new(1), ua::Byte::new(2), ua::Byte::new(3)],
+            ua_array.into_vec(),
+        );
+    }
+
     #[cfg(feature = "serde")]
     mod serde {
         use crate::ua;
@@ -376,6 +400,23 @@ mod tests {
             let ua_variant = ua::Variant::scalar(ua_datetime);
             let json = serde_json::to_string(&ua_variant).unwrap();
             assert_eq!(r#""2024-02-09T16:48:52.123456Z""#, json);
+        }
+
+        #[test]
+        fn serialize_array() {
+            let ua_array =
+                ua::Array::from_slice(&[ua::Byte::new(1), ua::Byte::new(2), ua::Byte::new(3)]);
+            let ua_variant = ua::Variant::array(ua_array);
+            let json = serde_json::to_string(&ua_variant).unwrap();
+            assert_eq!("[1,2,3]", json);
+
+            let ua_array = ua::Array::from_slice(&[
+                ua::String::new("lorem").unwrap(),
+                ua::String::new(r#"ip"sum"#).unwrap(),
+            ]);
+            let ua_variant = ua::Variant::array(ua_array);
+            let json = serde_json::to_string(&ua_variant).unwrap();
+            assert_eq!(r#"["lorem","ip\"sum"]"#, json);
         }
     }
 }

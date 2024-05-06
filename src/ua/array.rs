@@ -331,7 +331,17 @@ impl<T: DataType> Drop for Array<T> {
 
 impl<T: DataType> fmt::Debug for Array<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.as_slice())
+        self.as_slice().fmt(f)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<T: DataType + serde::Serialize> serde::Serialize for Array<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_seq(self.iter())
     }
 }
 
@@ -387,5 +397,19 @@ mod tests {
         assert_eq!(array.len(), LEN);
 
         drop(array);
+    }
+
+    #[test]
+    fn print_array() {
+        let array = ua::Array::from_slice(&[ua::Byte::new(1), ua::Byte::new(2), ua::Byte::new(3)]);
+        // Our implementation uses the default `Debug` representation of slices.
+        assert_eq!("[1, 2, 3]", format!("{array:?}"));
+
+        let array = ua::Array::from_slice(&[
+            ua::String::new("lorem").unwrap(),
+            ua::String::new(r#"ip"sum"#).unwrap(),
+        ]);
+        // String contents are automatically escaped, courtesy of `UA_print()`.
+        assert_eq!(r#"["lorem", "ip\"sum"]"#, format!("{array:?}"));
     }
 }

@@ -11,6 +11,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Add logical OR combinator for `ua::BrowseResultMask` and `ua::NodeClassMask`.
 - Add const `ua::NodeClassMask` variants to initialize masks.
+- Add constructors `ua::Variant::scalar()` and `ua::Variant::array()`.
+- Add `serde` serialization for `ua::Array` and `ua::Variant` with array value.
 
 ### Changed
 
