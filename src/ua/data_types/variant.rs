@@ -41,7 +41,6 @@ impl Variant {
         variant
     }
 
-    #[deprecated(note = "use `Self::scalar()` instead")]
     #[must_use]
     pub fn with_scalar<T: DataType>(mut self, value: &T) -> Self {
         // The call to `UA_Variant_setScalarCopy()` does not free held memory which would lead to a
