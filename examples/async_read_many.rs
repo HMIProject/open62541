@@ -20,11 +20,11 @@ async fn main() -> anyhow::Result<()> {
         let client = Arc::clone(&client);
 
         tasks.spawn(async move {
-            let children = client
+            let (references, _) = client
                 .browse(&ua::NodeId::ns0(UA_NS0ID_SERVER))
                 .await
                 .context("browse")?;
-            println!("Children: {}", children.0.len());
+            println!("References: {}", references.len());
 
             let value = client
                 .read_value(&ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME))

@@ -73,9 +73,10 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Browsing node");
 
-    let references = client
+    let (references, _) = client
         .browse(&ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS))
-        .await?;
+        .await
+        .context("browse node")?;
 
     println!("{references:?}");
 

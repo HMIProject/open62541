@@ -19,6 +19,11 @@ impl BrowseNextRequest {
         );
         self
     }
+
+    pub fn release_continuation_points(mut self, release_continuation_points: bool) -> Self {
+        self.0.releaseContinuationPoints = release_continuation_points;
+        self
+    }
 }
 
 impl ServiceRequest for BrowseNextRequest {
