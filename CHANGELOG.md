@@ -14,6 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add `serde` serialization for `ua::Array` and `ua::Variant` with array value.
 - Add constructors `ua::Variant::scalar()` and `ua::Variant::array()`.
 - Add constructor `ua::DataValue::new()`.
+- Add helper method `ua::Array::into_array()` for conversion into native Rust array.
 
 ### Changed
 
