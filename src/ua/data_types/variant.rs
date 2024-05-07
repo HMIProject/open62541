@@ -285,8 +285,7 @@ mod tests {
 
     #[test]
     fn array_ops() {
-        let ua_array =
-            ua::Array::from_slice(&[ua::Byte::new(1), ua::Byte::new(2), ua::Byte::new(3)]);
+        let ua_array = ua::Array::from_slice(&[1, 2, 3].map(ua::Byte::new));
         let ua_variant = ua::Variant::array(ua_array);
         let type_id = ua_variant.type_id();
         assert_eq!(type_id, Some(&ua::NodeId::ns0(UA_NS0ID_BYTE)));
@@ -403,8 +402,7 @@ mod tests {
 
         #[test]
         fn serialize_array() {
-            let ua_array =
-                ua::Array::from_slice(&[ua::Byte::new(1), ua::Byte::new(2), ua::Byte::new(3)]);
+            let ua_array = ua::Array::from_slice(&[1, 2, 3].map(ua::Byte::new));
             let ua_variant = ua::Variant::array(ua_array);
             let json = serde_json::to_string(&ua_variant).unwrap();
             assert_eq!("[1,2,3]", json);

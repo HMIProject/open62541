@@ -401,14 +401,13 @@ mod tests {
 
     #[test]
     fn print_array() {
-        let array = ua::Array::from_slice(&[ua::Byte::new(1), ua::Byte::new(2), ua::Byte::new(3)]);
+        let array = ua::Array::from_slice(&[1, 2, 3].map(ua::Byte::new));
         // Our implementation uses the default `Debug` representation of slices.
         assert_eq!("[1, 2, 3]", format!("{array:?}"));
 
-        let array = ua::Array::from_slice(&[
-            ua::String::new("lorem").unwrap(),
-            ua::String::new(r#"ip"sum"#).unwrap(),
-        ]);
+        let array = ua::Array::from_slice(
+            &["lorem", r#"ip"sum"#].map(|string| ua::String::new(string).unwrap()),
+        );
         // String contents are automatically escaped, courtesy of `UA_print()`.
         assert_eq!(r#"["lorem", "ip\"sum"]"#, format!("{array:?}"));
     }
