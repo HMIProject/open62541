@@ -6,7 +6,8 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_DataType, UA_Order, UA_clear, UA_copy, UA_init, UA_order, UA_print, UA_STATUSCODE_GOOD,
+    UA_DataType, UA_Order, UA_clear, UA_copy, UA_init, UA_new, UA_order, UA_print,
+    UA_STATUSCODE_GOOD,
 };
 
 use crate::ua;
@@ -177,6 +178,26 @@ pub unsafe trait DataType: Debug + Clone {
         // Move ourselves into the target. This keeps existing memory allocations but we do not
         // reference them anymore because `into_raw()` gives up ownership.
         unsafe { *dst = self.into_raw() };
+    }
+
+    /// Leaks wrapped value onto the heap.
+    ///
+    /// This turns a stack-allocated value into a heap-allocated one, without issuing a deep copy.
+    /// In other words, only the local memory allocation is copied (moved from stack to heap) and
+    /// any memory that is already heap-allocated (e.g. string contents) stays where it is.
+    ///
+    /// The returned value must be passed into another owned data structure or freed manually with
+    /// [`UA_delete()`] to free internal allocations and not leak memory.
+    ///
+    /// [`UA_delete()`]: open62541_sys::UA_delete
+    fn leak_into_raw(self) -> *mut Self::Inner {
+        // Use `UA_new()` to create heap allocation that can be cleaned up with `UA_free()`.
+        let dst = unsafe { UA_new(Self::data_type()) }.cast::<Self::Inner>();
+        // Check that heap allocation was successful (we might be out of memory).
+        assert!(!dst.is_null(), "should have allocated heap memory");
+        // SAFETY: Pointer is valid (non-zero) because we just checked it.
+        self.move_into_raw(unsafe { dst.as_mut().unwrap_unchecked() });
+        dst
     }
 
     /// Creates copy without giving up ownership.

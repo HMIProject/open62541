@@ -11,6 +11,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Add logical OR combinator for `ua::BrowseResultMask` and `ua::NodeClassMask`.
 - Add const `ua::NodeClassMask` variants to initialize masks.
+- Add `serde` serialization for `ua::Array` and `ua::Variant` with array value.
+- Add constructors `ua::Variant::scalar()` and `ua::Variant::array()`.
+- Add constructor `ua::DataValue::new()`.
 
 ### Changed
 
@@ -19,6 +22,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Split `Server::new()` and `ServerBuilder::build()` result type into `Server` and
   `ServerRunner` to allow interacting with server's data tree while server is running.
 - Upgrade to open62541 released version 1.4.0.
+
+### Fixed
+
+- Avoid memory leak when calling `ua::Variant::with_scalar()` multiple times on the same value.
 
 ## [0.6.0-pre.2] - 2024-04-12
 

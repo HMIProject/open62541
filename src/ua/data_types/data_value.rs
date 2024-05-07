@@ -4,6 +4,14 @@ crate::data_type!(DataValue);
 
 impl DataValue {
     #[must_use]
+    pub fn new(value: ua::Variant) -> Self {
+        let mut inner = ua::DataValue::init();
+        value.move_into_raw(&mut inner.0.value);
+        inner.0.set_hasValue(true);
+        inner
+    }
+
+    #[must_use]
     pub fn with_value(mut self, value: &ua::Variant) -> Self {
         value.clone_into_raw(&mut self.0.value);
         self.0.set_hasValue(true);

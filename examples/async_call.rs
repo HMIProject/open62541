@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context as _};
-use open62541::{ua, AsyncClient, DataType as _, ValueType};
+use open62541::{ua, AsyncClient, ValueType};
 use open62541_sys::{UA_NS0ID_HASPROPERTY, UA_NS0ID_PROPERTYTYPE};
 
 #[tokio::main]
@@ -24,7 +24,7 @@ async fn main() -> anyhow::Result<()> {
         &client,
         &object_node_id,
         &method_io_node_id,
-        &[ua::Variant::init().with_scalar(&ua::UInt32::new(123))],
+        &[ua::Variant::scalar(ua::UInt32::new(123))],
     )
     .await?;
 
