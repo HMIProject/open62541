@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use anyhow::Context as _;
-use open62541::{ua, AsyncClient, AsyncSubscription, DataType as _};
+use open62541::{ua, AsyncClient, AsyncSubscription};
 use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
 };
@@ -95,8 +95,7 @@ async fn write_background(client: Arc<AsyncClient>, node_id: ua::NodeId) -> anyh
 
     println!("Writing {value} to node {node_id}");
 
-    let value =
-        ua::DataValue::init().with_value(&ua::Variant::init().with_scalar(&ua::Float::new(value)));
+    let value = ua::DataValue::new(ua::Variant::scalar(ua::Float::new(value)));
 
     client
         .write_value(&node_id, &value)

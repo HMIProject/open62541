@@ -197,8 +197,7 @@ impl Server {
     ///
     /// This fails when the variable node cannot be written.
     pub fn write_variable_string(&self, node_id: &ua::NodeId, value: &str) -> Result<()> {
-        let value = ua::String::new(value)?;
-        let ua_variant = ua::Variant::init().with_scalar(&value);
+        let ua_variant = ua::Variant::scalar(ua::String::new(value)?);
         self.write_variable(node_id, &ua_variant)
     }
 }
