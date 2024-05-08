@@ -97,6 +97,11 @@ path = "examples/async_client.rs"
 required-features = ["tokio"]
 
 [[example]]
+name = "async_concurrent"
+path = "examples/async_concurrent.rs"
+required-features = ["tokio"]
+
+[[example]]
 name = "async_monitor"
 path = "examples/async_monitor.rs"
 required-features = ["tokio"]
