@@ -266,6 +266,15 @@ impl<T: DataType> Array<T> {
         self.drain_all().collect()
     }
 
+    /// Converts the array into a native Rust array.
+    ///
+    /// This avoids cloning the contained values and moves them into the array directly. When the
+    /// number of array elements does not match, this returns `None`.
+    #[must_use]
+    pub fn into_array<const N: usize>(self) -> Option<[T; N]> {
+        <[T; N]>::try_from(self.into_vec()).ok()
+    }
+
     /// Gives up ownership and returns raw parts.
     ///
     /// The returned raw parts must be deallocated with [`UA_Array_delete()`] to prevent leaking any
@@ -397,6 +406,20 @@ mod tests {
         assert_eq!(array.len(), LEN);
 
         drop(array);
+    }
+
+    #[test]
+    fn convert_array() {
+        let array = ua::Array::from_slice(&[1, 2, 3].map(ua::Byte::new));
+        let wrong: Option<[ua::Byte; 4]> = array.into_array();
+        assert!(wrong.is_none());
+
+        let array = ua::Array::from_slice(&[1, 2, 3].map(ua::Byte::new));
+        let right: Option<[ua::Byte; 3]> = array.into_array();
+        assert_eq!(
+            Some([ua::Byte::new(1), ua::Byte::new(2), ua::Byte::new(3)]),
+            right
+        );
     }
 
     #[test]
