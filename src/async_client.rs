@@ -3,7 +3,7 @@ use std::{
     ptr, slice,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     thread::{self, JoinHandle},
     time::Duration,
@@ -28,7 +28,7 @@ use crate::{
 /// Since this is also the timeout we must block for when dropping the client without `disconnect()`
 /// first, the value should not be too large. On the other hand, it should not be too small to avoid
 /// repeatedly calling `poll()`/`select()` inside open62541's event loop implementation.
-const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
+const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(10);
 
 /// Connected OPC UA client (with asynchronous API).
 ///
@@ -39,7 +39,10 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 ///
 /// See [Client](crate::Client) for more details.
 pub struct AsyncClient {
-    client: Arc<ua::Client>,
+    // The mutex here is a temporary workaround and should be removed again soon (along with all the
+    // other changes from the same commit). See https://github.com/HMIProject/open62541/pull/107 for
+    // more details and an explanation.
+    client: Arc<Mutex<ua::Client>>,
     background_canceled: Arc<AtomicBool>,
     background_handle: Option<JoinHandle<()>>,
 }
@@ -66,7 +69,7 @@ impl AsyncClient {
     }
 
     pub(crate) fn from_sync(client: ua::Client) -> Self {
-        let client = Arc::new(client);
+        let client = Arc::new(Mutex::new(client));
 
         let background_canceled = Arc::new(AtomicBool::new(false));
 
@@ -117,9 +120,13 @@ impl AsyncClient {
     }
 
     /// Gets current channel and session state, and connect status.
+    #[allow(clippy::missing_panics_doc)] // Allow until mutex handling is gone again.
     #[must_use]
     pub fn state(&self) -> ua::ClientState {
-        self.client.state()
+        let Ok(client) = self.client.lock() else {
+            panic!("mutex should not have been poisoned");
+        };
+        client.state()
     }
 
     /// Disconnects from endpoint.
@@ -127,14 +134,15 @@ impl AsyncClient {
     /// This consumes the client and handles the graceful shutdown of the connection. This should be
     /// preferred over simply dropping the instance to give the server a chance to clean up and also
     /// to avoid blocking unexpectedly when the client is being dropped without calling this method.
+    #[allow(clippy::missing_panics_doc)] // Allow until mutex handling is gone again.
     pub async fn disconnect(mut self) {
         log::info!("Disconnecting from endpoint");
 
-        let status_code = ua::StatusCode::new(unsafe {
-            UA_Client_disconnectAsync(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.client.as_ptr().cast_mut(),
-            )
+        let status_code = ua::StatusCode::new({
+            let Ok(mut client) = self.client.lock() else {
+                panic!("mutex should not have been poisoned");
+            };
+            unsafe { UA_Client_disconnectAsync(client.as_mut_ptr()) }
         });
         if let Err(error) = Error::verify_good(&status_code) {
             log::warn!("Error while disconnecting client: {error}");
@@ -471,7 +479,7 @@ impl Drop for AsyncClient {
 /// each iteration. In case the loop does not finish by itself (which happens in case of disconnects
 /// and for final connection failures), the cancellation token `cancel` can be used to stop the task
 /// from the outside before the next loop iteration.
-fn background_task(client: &ua::Client, canceled: &AtomicBool) {
+fn background_task(client: &Arc<Mutex<ua::Client>>, canceled: &AtomicBool) {
     log::info!("Starting background task");
 
     // `UA_Client_run_iterate()` expects the timeout to be given in milliseconds.
@@ -486,16 +494,13 @@ fn background_task(client: &ua::Client, canceled: &AtomicBool) {
         let status_code = ua::StatusCode::new({
             log::trace!("Running iterate");
 
+            let Ok(mut client) = client.lock() else {
+                panic!("mutex should not have been poisoned");
+            };
             // This returns after the timeout even when nothing was processed. The internal mutex is
             // _not_ held for the entire time though, so we can send out requests concurrently while
             // the client is running the iteration.
-            unsafe {
-                UA_Client_run_iterate(
-                    // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                    client.as_ptr().cast_mut(),
-                    timeout_millis,
-                )
-            }
+            unsafe { UA_Client_run_iterate(client.as_mut_ptr(), timeout_millis) }
         });
         if let Err(error) = Error::verify_good(&status_code) {
             // Context-sensitive handling of bad status codes.
@@ -524,7 +529,7 @@ fn background_task(client: &ua::Client, canceled: &AtomicBool) {
 }
 
 async fn service_request<R: ServiceRequest>(
-    client: &ua::Client,
+    client: &Arc<Mutex<ua::Client>>,
     request: R,
 ) -> Result<R::Response> {
     type Cb<R> = CallbackOnce<std::result::Result<<R as ServiceRequest>::Response, ua::StatusCode>>;
@@ -571,17 +576,21 @@ async fn service_request<R: ServiceRequest>(
     log::debug!("Running {}", R::type_name());
 
     let mut request_id: UA_UInt32 = 0;
-    let status_code = ua::StatusCode::new(unsafe {
-        __UA_Client_AsyncService(
-            // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-            client.as_ptr().cast_mut(),
-            request.as_ptr().cast::<c_void>(),
-            R::data_type(),
-            Some(callback_c::<R>),
-            R::Response::data_type(),
-            Cb::<R>::prepare(callback),
-            ptr::addr_of_mut!(request_id),
-        )
+    let status_code = ua::StatusCode::new({
+        let Ok(mut client) = client.lock() else {
+            panic!("mutex should not have been poisoned");
+        };
+        unsafe {
+            __UA_Client_AsyncService(
+                client.as_mut_ptr(),
+                request.as_ptr().cast::<c_void>(),
+                R::data_type(),
+                Some(callback_c::<R>),
+                R::Response::data_type(),
+                Cb::<R>::prepare(callback),
+                ptr::addr_of_mut!(request_id),
+            )
+        }
     });
     // The request itself fails when the client is not connected (or the secure session has not been
     // established). In all other cases, `open62541` processes the request first and then may reject
