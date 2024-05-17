@@ -1,7 +1,7 @@
 use std::{
     ffi::c_void,
     ptr,
-    sync::{Arc, Weak},
+    sync::{Arc, Mutex, Weak},
 };
 
 use futures_channel::oneshot;
@@ -14,12 +14,12 @@ use crate::{ua, AsyncMonitoredItem, CallbackOnce, DataType as _, Error, Result};
 
 /// Subscription (with asynchronous API).
 pub struct AsyncSubscription {
-    client: Weak<ua::Client>,
+    client: Weak<Mutex<ua::Client>>,
     subscription_id: ua::SubscriptionId,
 }
 
 impl AsyncSubscription {
-    pub(crate) async fn new(client: &Arc<ua::Client>) -> Result<Self> {
+    pub(crate) async fn new(client: &Arc<Mutex<ua::Client>>) -> Result<Self> {
         let request = ua::CreateSubscriptionRequest::default();
 
         let response = create_subscription(client, &request).await?;
@@ -60,7 +60,7 @@ impl Drop for AsyncSubscription {
 }
 
 async fn create_subscription(
-    client: &ua::Client,
+    client: &Arc<Mutex<ua::Client>>,
     request: &ua::CreateSubscriptionRequest,
 ) -> Result<ua::CreateSubscriptionResponse> {
     type Cb = CallbackOnce<std::result::Result<ua::CreateSubscriptionResponse, ua::StatusCode>>;
@@ -107,10 +107,12 @@ async fn create_subscription(
         // does not take ownership.
         let request = unsafe { ua::CreateSubscriptionRequest::to_raw_copy(request) };
 
+        let Ok(mut client) = client.lock() else {
+            panic!("mutex should not have been poisoned");
+        };
         unsafe {
             UA_Client_Subscriptions_create_async(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                client.as_ptr().cast_mut(),
+                client.as_mut_ptr(),
                 request,
                 ptr::null_mut(),
                 None,
@@ -130,7 +132,7 @@ async fn create_subscription(
         .unwrap_or(Err(Error::internal("callback should send result")))
 }
 
-fn delete_subscriptions(client: &ua::Client, request: &ua::DeleteSubscriptionsRequest) {
+fn delete_subscriptions(client: &Arc<Mutex<ua::Client>>, request: &ua::DeleteSubscriptionsRequest) {
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
         _userdata: *mut c_void,
@@ -157,10 +159,12 @@ fn delete_subscriptions(client: &ua::Client, request: &ua::DeleteSubscriptionsRe
         // does not take ownership.
         let request = unsafe { ua::DeleteSubscriptionsRequest::to_raw_copy(request) };
 
+        let Ok(mut client) = client.lock() else {
+            panic!("mutex should not have been poisoned");
+        };
         unsafe {
             UA_Client_Subscriptions_delete_async(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                client.as_ptr().cast_mut(),
+                client.as_mut_ptr(),
                 request,
                 Some(callback_c),
                 ptr::null_mut(),

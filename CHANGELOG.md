@@ -23,6 +23,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Split `Server::new()` and `ServerBuilder::build()` result type into `Server` and
   `ServerRunner` to allow interacting with server's data tree while server is running.
 - Upgrade to open62541 released version 1.4.0.
+- Reintroduce internal mutex in `AsyncClient` to work around issue in open62541 version 1.4.
 
 ### Fixed
 

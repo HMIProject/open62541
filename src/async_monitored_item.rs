@@ -2,7 +2,7 @@ use std::{
     ffi::c_void,
     pin::Pin,
     ptr,
-    sync::{Arc, Weak},
+    sync::{Arc, Mutex, Weak},
     task::{self, Poll},
 };
 
@@ -20,7 +20,7 @@ use crate::{ua, CallbackOnce, CallbackStream, DataType as _, Error, Result};
 
 /// Monitored item (with asynchronous API).
 pub struct AsyncMonitoredItem {
-    client: Weak<ua::Client>,
+    client: Weak<Mutex<ua::Client>>,
     subscription_id: ua::SubscriptionId,
     monitored_item_id: ua::MonitoredItemId,
     rx: mpsc::Receiver<ua::DataValue>,
@@ -28,7 +28,7 @@ pub struct AsyncMonitoredItem {
 
 impl AsyncMonitoredItem {
     pub(crate) async fn new(
-        client: &Arc<ua::Client>,
+        client: &Arc<Mutex<ua::Client>>,
         subscription_id: ua::SubscriptionId,
         node_id: &ua::NodeId,
     ) -> Result<Self> {
@@ -98,7 +98,7 @@ impl Stream for AsyncMonitoredItem {
 const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
 
 async fn create_monitored_items(
-    client: &ua::Client,
+    client: &Arc<Mutex<ua::Client>>,
     request: &ua::CreateMonitoredItemsRequest,
 ) -> Result<(
     ua::CreateMonitoredItemsResponse,
@@ -203,10 +203,12 @@ async fn create_monitored_items(
         // by value but does not take ownership.
         let request = unsafe { ua::CreateMonitoredItemsRequest::to_raw_copy(request) };
 
+        let Ok(mut client) = client.lock() else {
+            panic!("mutex should not have been poisoned");
+        };
         unsafe {
             UA_Client_MonitoredItems_createDataChanges_async(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                client.as_ptr().cast_mut(),
+                client.as_mut_ptr(),
                 request,
                 contexts.as_mut_ptr().cast::<*mut c_void>(),
                 notification_callbacks.as_mut_ptr(),
@@ -227,7 +229,10 @@ async fn create_monitored_items(
         .map(|response| (response, st_rx))
 }
 
-fn delete_monitored_items(client: &ua::Client, request: &ua::DeleteMonitoredItemsRequest) {
+fn delete_monitored_items(
+    client: &Arc<Mutex<ua::Client>>,
+    request: &ua::DeleteMonitoredItemsRequest,
+) {
     unsafe extern "C" fn callback_c(
         _client: *mut UA_Client,
         _userdata: *mut c_void,
@@ -254,10 +259,12 @@ fn delete_monitored_items(client: &ua::Client, request: &ua::DeleteMonitoredItem
         // does not take ownership.
         let request = unsafe { ua::DeleteMonitoredItemsRequest::to_raw_copy(request) };
 
+        let Ok(mut client) = client.lock() else {
+            panic!("mutex should not have been poisoned");
+        };
         unsafe {
             UA_Client_MonitoredItems_delete_async(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                client.as_ptr().cast_mut(),
+                client.as_mut_ptr(),
                 request,
                 Some(callback_c),
                 ptr::null_mut(),
