@@ -39,6 +39,9 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(10);
 ///
 /// See [Client](crate::Client) for more details.
 pub struct AsyncClient {
+    // The mutex here is a temporary workaround and should be removed again soon (along with all the
+    // other changes from the same commit). See https://github.com/HMIProject/open62541/pull/107 for
+    // more details and an explanation.
     client: Arc<Mutex<ua::Client>>,
     background_canceled: Arc<AtomicBool>,
     background_handle: Option<JoinHandle<()>>,
