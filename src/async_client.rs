@@ -28,7 +28,7 @@ use crate::{
 /// Since this is also the timeout we must block for when dropping the client without `disconnect()`
 /// first, the value should not be too large. On the other hand, it should not be too small to avoid
 /// repeatedly calling `poll()`/`select()` inside open62541's event loop implementation.
-const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(10);
+const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(1);
 
 /// Connected OPC UA client (with asynchronous API).
 ///
