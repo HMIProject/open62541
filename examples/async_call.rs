@@ -37,6 +37,16 @@ async fn main() -> anyhow::Result<()> {
 
     println!("-> {value}");
 
+    // `/Root/Objects/10:Simulation/10:EventGeneratorObject`
+    let _event_generator_object_node_id = ua::NodeId::numeric(10, 1009);
+    // `/Root/Objects/10:Simulation/10:EventGeneratorObject/10:EventGeneratorMethod`
+    let event_generator_method_node_id = ua::NodeId::numeric(10, 1010);
+    let event_generator_method_definition =
+        get_definition(&client, &event_generator_method_node_id).await?;
+    // A method with 2 input arguments and no output arguments (represented by an empty array).
+    assert_eq!(event_generator_method_definition.output_arguments.as_ref().unwrap().len(), 2);
+    assert!(event_generator_method_definition.output_arguments.as_ref().unwrap().is_empty());
+
     Ok(())
 }
 
