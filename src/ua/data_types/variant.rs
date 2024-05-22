@@ -109,11 +109,15 @@ impl Variant {
             //
             // To make handling such arrays easier in user code, we allow _coercion_ of such empty
             // arrays into any data type.
-            let is_empty_array = self.0.arrayLength == 0
+            let is_empty_structured_array = self.0.arrayLength == 0
                 && unsafe {
                     UA_Variant_hasArrayType(self.as_ptr(), ua::ExtensionObject::data_type())
                 };
-            return is_empty_array.then_some(ua::Array::new(0));
+            if !is_empty_structured_array {
+                return None;
+            }
+            // Fall through to let `ua::Array::from_raw_parts()` handle the distinction between an
+            // empty and an invalid array (where `self.0.data` is the sentinel value or null).
         }
         ua::Array::from_raw_parts(self.0.data.cast::<T::Inner>(), self.0.arrayLength)
     }
