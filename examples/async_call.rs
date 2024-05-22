@@ -8,6 +8,38 @@ async fn main() -> anyhow::Result<()> {
 
     let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543").context("connect")?;
 
+    let method_node_ids = vec![
+        // The following methods define input/output argument nodes only when at least one argument
+        // exists.
+        //
+        // `/Root/Objects/10:Simulation/10:ObjectWithMethods/10:MethodI`
+        (ua::NodeId::string(10, "MethodI"), 1, 0),
+        // `/Root/Objects/10:Simulation/10:ObjectWithMethods/10:MethodIO`
+        (ua::NodeId::string(10, "MethodIO"), 1, 1),
+        // `/Root/Objects/10:Simulation/10:ObjectWithMethods/10:MethodNoArgs`
+        (ua::NodeId::string(10, "MethodNoArgs"), 0, 0),
+        // `/Root/Objects/10:Simulation/10:ObjectWithMethods/10:MethodO`
+        (ua::NodeId::string(10, "MethodO"), 0, 1),
+        //
+        // The following method is special because it explicitly defines an output argument node of
+        // _empty_ contents.
+        //
+        // `/Root/Objects/10:Simulation/10:EventGeneratorObject/10:EventGeneratorMethod`
+        (ua::NodeId::numeric(10, 1010), 2, 0),
+    ];
+
+    for (node_id, expected_input_args, expected_output_args) in method_node_ids {
+        let (input_arguments, output_arguments) = inspect_method(&client, &node_id).await?;
+        if input_arguments.len() != expected_input_args {
+            anyhow::bail!("unexpected number of input arguments");
+        }
+        if output_arguments.len() != expected_output_args {
+            anyhow::bail!("unexpected number of output arguments");
+        }
+    }
+
+    println!();
+
     // `/Root/Objects/10:Simulation/10:ObjectWithMethods`
     let object_node_id = ua::NodeId::string(10, "ObjectWithMethods");
     // `/Root/Objects/10:Simulation/10:ObjectWithMethods/10:MethodNoArgs`
@@ -40,25 +72,29 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+async fn inspect_method(
+    client: &AsyncClient,
+    method_node_id: &ua::NodeId,
+) -> anyhow::Result<(Vec<(ua::String, ValueType)>, Vec<(ua::String, ValueType)>)> {
+    println!("Getting method definition of node {method_node_id}");
+
+    let definition = get_definition(client, method_node_id).await?;
+
+    let input_arguments = definition.input_arguments.unwrap_or_default();
+    let output_arguments = definition.output_arguments.unwrap_or_default();
+
+    println!("- input arguments: {input_arguments:?}");
+    println!("- output arguments: {output_arguments:?}");
+
+    Ok((input_arguments, output_arguments))
+}
+
 async fn call_method(
     client: &AsyncClient,
     object_node_id: &ua::NodeId,
     method_node_id: &ua::NodeId,
     input_arguments: &[ua::Variant],
 ) -> anyhow::Result<Vec<ua::Variant>> {
-    println!("Getting method definition of node {method_node_id}");
-
-    let definition = get_definition(client, method_node_id).await?;
-
-    println!(
-        "- input arguments: {:?}",
-        definition.input_arguments.unwrap_or_default()
-    );
-    println!(
-        "- output arguments: {:?}",
-        definition.output_arguments.unwrap_or_default()
-    );
-
     println!("Calling node {method_node_id}");
 
     let output_arguments = client
