@@ -202,20 +202,13 @@ async fn read_sparse_node_values(
 /// and returns the list of argument names and their value types.
 fn get_arguments(value: &ua::DataValue) -> anyhow::Result<Vec<(ua::String, ValueType)>> {
     // `InputArguments` and `OutputArguments` nodes are expected to hold an array of objects of the
-    // `Argument` type. Only when no arguments are available, the value may also be of the original
-    // `Structure` type (encoded as `ua::ExtensionObject`).
+    // `Argument` type.
 
-    let value = value.value().ok_or(anyhow::anyhow!("should have value"))?;
-
-    let arguments = match value.to_array::<ua::Argument>() {
-        Some(arguments) => arguments,
-
-        // Fall back to `Structure` array but allow only when it is empty.
-        None => match value.to_array::<ua::ExtensionObject>() {
-            Some(arguments) if arguments.is_empty() => ua::Array::new(0),
-            _ => anyhow::bail!("should have array"),
-        },
-    };
+    let arguments = value
+        .value()
+        .ok_or(anyhow::anyhow!("should have value"))?
+        .to_array::<ua::Argument>()
+        .ok_or(anyhow::anyhow!("should have array"))?;
 
     Ok(arguments
         .iter()

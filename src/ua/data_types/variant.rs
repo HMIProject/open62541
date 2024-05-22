@@ -103,7 +103,17 @@ impl Variant {
     #[must_use]
     pub fn to_array<T: DataType>(&self) -> Option<ua::Array<T>> {
         if !unsafe { UA_Variant_hasArrayType(self.as_ptr(), T::data_type()) } {
-            return None;
+            // Special case: open62541 automatically converts arrays of extension objects into the
+            // contained data type (as of version 1.4). This only works for non-empty arrays since
+            // the element type needs to be known.
+            //
+            // To make handling such arrays easier in user code, we allow _coercion_ of such empty
+            // arrays into any data type.
+            let is_empty_array = self.0.arrayLength == 0
+                && unsafe {
+                    UA_Variant_hasArrayType(self.as_ptr(), ua::ExtensionObject::data_type())
+                };
+            return is_empty_array.then_some(ua::Array::new(0));
         }
         ua::Array::from_raw_parts(self.0.data.cast::<T::Inner>(), self.0.arrayLength)
     }
