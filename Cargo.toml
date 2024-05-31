@@ -1,6 +1,6 @@
 [package]
 name = "open62541"
-version = "0.6.0-pre.4"
+version = "0.6.0-pre.5"
 authors = ["HMI Project"]
 edition = "2021"
 # Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.77 since
