@@ -64,7 +64,7 @@ impl AsyncMonitoredItem {
     ///
     /// The stream will emit all value updates as they are being received. If the client disconnects
     /// or the corresponding subscription is deleted, the stream is closed.
-    pub fn into_stream(self) -> impl Stream<Item = ua::DataValue> {
+    pub fn into_stream(self) -> impl Stream<Item = ua::DataValue> + Send + Sync + 'static {
         stream::unfold(self, move |mut this| async move {
             this.next().await.map(|value| (value, this))
         })
