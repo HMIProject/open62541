@@ -20,6 +20,7 @@ mod create_monitored_items_request;
 mod create_monitored_items_response;
 mod create_subscription_request;
 mod create_subscription_respones;
+mod data_source;
 mod data_value;
 mod date_time;
 mod delete_monitored_items_request;
@@ -61,8 +62,9 @@ pub use self::{
     create_monitored_items_request::CreateMonitoredItemsRequest,
     create_monitored_items_response::CreateMonitoredItemsResponse,
     create_subscription_request::CreateSubscriptionRequest,
-    create_subscription_respones::CreateSubscriptionResponse, data_value::DataValue,
-    date_time::DateTime, delete_monitored_items_request::DeleteMonitoredItemsRequest,
+    create_subscription_respones::CreateSubscriptionResponse, data_source::DataSource,
+    data_value::DataValue, date_time::DateTime,
+    delete_monitored_items_request::DeleteMonitoredItemsRequest,
     delete_monitored_items_response::DeleteMonitoredItemsResponse,
     delete_subscriptions_request::DeleteSubscriptionsRequest,
     delete_subscriptions_response::DeleteSubscriptionsResponse, expanded_node_id::ExpandedNodeId,

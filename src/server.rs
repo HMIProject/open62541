@@ -1,10 +1,11 @@
 use std::{ffi::c_void, ptr, sync::Arc};
 
 use open62541_sys::{
-    UA_ServerConfig, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
+    UA_ServerConfig, UA_Server_addDataSourceVariableNode, UA_Server_runUntilInterrupt,
+    __UA_Server_addNode, __UA_Server_write,
 };
 
-use crate::{ua, DataType, Error, ObjectNode, Result, VariableNode};
+use crate::{ua, DataSourceVariableNode, DataType, Error, ObjectNode, Result, VariableNode};
 
 /// Builder for [`Server`].
 ///
@@ -147,6 +148,32 @@ impl Server {
                 node.type_definition.as_ptr(),
                 node.attributes.as_node_attributes().as_ptr(),
                 ua::VariableAttributes::data_type(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        });
+        Error::verify_good(&status_code)
+    }
+
+    /// Adds data source variable node to address space.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node cannot be added.
+    pub fn add_data_source_variable_node(&self, node: DataSourceVariableNode) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addDataSourceVariableNode(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // Passing ownership is trivial with primitive value (`u32`).
+                node.requested_new_node_id.into_raw(),
+                node.parent_node_id.into_raw(),
+                node.reference_type_id.into_raw(),
+                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                node.browse_name.into_raw(),
+                node.type_definition.into_raw(),
+                node.attributes.into_raw(),
+                node.data_source.into_raw(),
                 ptr::null_mut(),
                 ptr::null_mut(),
             )

@@ -127,3 +127,10 @@ path = "examples/server.rs"
 [[example]]
 name = "server_builder"
 path = "examples/server_builder.rs"
+
+
+[[example]]
+name = "data_source_callback"
+path = "examples/data_source_callback.rs"
+
+
