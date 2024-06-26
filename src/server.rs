@@ -71,9 +71,10 @@ impl ServerBuilder {
             node_id: *const UA_NodeId,
             node_context: *mut c_void,
         ) {
-            // We only ever use `NodeContext` to store dynamically allocated data in nodes created
-            // by this server. Therefore, if `node_context` is still set, `NodeContext::consume()`
-            // does the right thing. No other data must be stored in `node_context`.
+            // When associating dynamically allocated data with nodes created by this server, we
+            // always use `NodeContext`. Therefore, if `node_context` is set at all, we can/must
+            // call `NodeContext::consume()` to release that data. No other data must have been
+            // stored inside `node_context`.
             if !node_context.is_null() {
                 if let Some(node_id) = unsafe { node_id.as_ref() }.map(ua::NodeId::raw_ref) {
                     log::debug!("Destroying node {node_id}, freeing associated data");
