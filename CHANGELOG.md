@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- Allow deletion of server nodes with `Server::delete_node()`.
+
 ### Changed
 
 - Include appropriate trait bounds in return type of `AsyncMonitoredItem::into_stream()`.
