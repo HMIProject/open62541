@@ -9,6 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Allow deletion of server nodes with `Server::delete_node()`.
 - Add `BADINTERNALERROR` and `BADWRITENOTSUPPORTED` variants to `ua::StatusCode`.
 
 ### Changed
