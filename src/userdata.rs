@@ -49,8 +49,8 @@ pub struct Userdata<T>(PhantomData<T>);
 impl<T> Userdata<T> {
     /// Wraps user data.
     ///
-    /// This allocates memory. To prevent memory leaks, ensure to call [`consume()`] on the returned
-    /// pointer exactly once.
+    /// This allocates memory. To prevent memory leaks, make sure to call [`consume()`] on the
+    /// returned pointer exactly once.
     ///
     /// [`consume()`]: Self::consume
     pub fn prepare(userdata: T) -> *mut c_void {
@@ -82,7 +82,7 @@ impl<T> Userdata<T> {
         Box::leak(userdata)
     }
 
-    /// Unwraps [`c_void`] pointer and release memory.
+    /// Unwraps [`c_void`] pointer and returns owned data.
     ///
     /// # Safety
     ///
@@ -90,8 +90,8 @@ impl<T> Userdata<T> {
     /// It must not have been given to [`consume()`] yet.
     ///
     /// [`prepare()`]: Self::prepare
-    /// [`peek_at()`]: Self::peek_at
     /// [`consume()`]: Self::consume
+    #[must_use]
     pub unsafe fn consume(data: *mut c_void) -> T {
         let ptr: *mut T = data.cast::<T>();
         // Reconstruct heap-allocated `userdata` back into its `Box`.
