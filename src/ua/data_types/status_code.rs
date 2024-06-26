@@ -32,14 +32,14 @@ impl StatusCode {
     /// Note: This only checks the _severity_ of the status code. If you want to see if the code is
     /// exactly the single status code [`GOOD`](Self::GOOD), use comparison instead:
     ///
-    /// ```rust
+    /// ```
     /// use open62541::ua;
     ///
     /// # let status_code = ua::StatusCode::GOOD;
     /// if status_code == ua::StatusCode::GOOD {
     ///     //
     /// }
-    /// ````
+    /// ```
     #[must_use]
     pub fn is_good(&self) -> bool {
         unsafe { UA_StatusCode_isGood(self.0) }

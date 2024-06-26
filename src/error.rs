@@ -22,6 +22,10 @@ pub enum Error {
 }
 
 impl Error {
+    /// Creates error from status code.
+    ///
+    /// To avoid confusion, the status code should be considered bad or uncertain but not good, as
+    /// indicated by [`ua::StatusCode::is_good()`].
     #[must_use]
     pub(crate) fn new(status_code: ua::StatusCode) -> Self {
         debug_assert!(!status_code.is_good());
