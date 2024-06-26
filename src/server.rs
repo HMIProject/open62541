@@ -1,11 +1,15 @@
+mod node_context;
+
 use std::{ffi::c_void, ptr, sync::Arc};
 
 use open62541_sys::{
-    UA_ServerConfig, UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode,
-    __UA_Server_write,
+    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_deleteNode, UA_Server_runUntilInterrupt,
+    __UA_Server_addNode, __UA_Server_write,
 };
 
 use crate::{ua, DataType, Error, ObjectNode, Result, VariableNode};
+
+pub(crate) use self::node_context::NodeContext;
 
 /// Builder for [`Server`].
 ///
@@ -59,7 +63,37 @@ impl ServerBuilder {
 
     /// Builds OPC UA server.
     #[must_use]
-    pub fn build(self) -> (Server, ServerRunner) {
+    pub fn build(mut self) -> (Server, ServerRunner) {
+        unsafe extern "C" fn destructor_c(
+            _server: *mut UA_Server,
+            _session_id: *const UA_NodeId,
+            _session_context: *mut c_void,
+            node_id: *const UA_NodeId,
+            node_context: *mut c_void,
+        ) {
+            // We only ever use `NodeContext` to store dynamically allocated data in nodes created
+            // by this server. Therefore, if `node_context` is still set, `NodeContext::consume()`
+            // does the right thing. No other data must be stored in `node_context`.
+            if !node_context.is_null() {
+                if let Some(node_id) = unsafe { node_id.as_ref() }.map(ua::NodeId::raw_ref) {
+                    log::debug!("Destroying node {node_id}, freeing associated data");
+                } else {
+                    log::debug!("Destroying node, freeing associated data");
+                }
+                // SAFETY: The node destructor is run only once and we never consume the context
+                // outside of it.
+                unsafe {
+                    let _unused = NodeContext::consume(node_context);
+                }
+            }
+        }
+
+        let config = self.config_mut();
+
+        // PANIC: We never set lifecycle hooks elsewhere in config.
+        debug_assert!(config.nodeLifecycle.destructor.is_none());
+        config.nodeLifecycle.destructor = Some(destructor_c);
+
         let server = Arc::new(ua::Server::new_with_config(self.0));
 
         let runner = ServerRunner(Arc::clone(&server));
