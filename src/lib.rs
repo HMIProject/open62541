@@ -87,7 +87,7 @@ pub use self::{
     data_type::DataType,
     error::{Error, Result},
     server::{Server, ServerBuilder, ServerRunner},
-    server_nodes::{ObjectNode, VariableNode},
+    server_nodes::{DataSourceVariableNode, ObjectNode, VariableNode},
     userdata::Userdata,
     value::{ScalarValue, ValueType, VariantValue},
 };
