@@ -170,6 +170,7 @@ impl Server {
                 // SAFETY: `UA_Server_deleteNode()` expects the node ID passed by value but does not
                 // take ownership.
                 ua::NodeId::to_raw_copy(node_id),
+                // Delete all references to this node.
                 true,
             )
         });
