@@ -19,7 +19,7 @@ impl NodeContext {
     ///
     /// [`consume()`]: Self::consume
     pub(crate) fn leak(self) -> *mut c_void {
-        Userdata::prepare(self)
+        Userdata::<Self>::prepare(self)
     }
 
     /// Unwraps [`c_void`] pointer to access node context.
@@ -35,9 +35,9 @@ impl NodeContext {
     /// [`leak()`]: Self::leak
     /// [`peek_at()`]: Self::peek_at
     /// [`consume()`]: Self::consume
-    pub(crate) unsafe fn peek_at<'a>(data: *mut c_void) -> &'a mut NodeContext {
+    pub(crate) unsafe fn peek_at<'a>(data: *mut c_void) -> &'a mut Self {
         // SAFETY: We require the same safety guarantees from our callers.
-        unsafe { Userdata::peek_at(data) }
+        unsafe { Userdata::<Self>::peek_at(data) }
     }
 
     /// Unwraps [`c_void`] pointer and returns owned node context.
@@ -50,8 +50,8 @@ impl NodeContext {
     /// [`leak()`]: Self::leak
     /// [`consume()`]: Self::consume
     #[must_use]
-    pub(crate) unsafe fn consume(data: *mut c_void) -> NodeContext {
+    pub(crate) unsafe fn consume(data: *mut c_void) -> Self {
         // SAFETY: We require the same safety guarantees from our callers.
-        unsafe { Userdata::consume(data) }
+        unsafe { Userdata::<Self>::consume(data) }
     }
 }
