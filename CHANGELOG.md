@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- Add `BADINTERNALERROR` and `BADWRITENOTSUPPORTED` variants to `ua::StatusCode`.
+
 ### Changed
 
 - Include appropriate trait bounds in return type of `AsyncMonitoredItem::into_stream()`.

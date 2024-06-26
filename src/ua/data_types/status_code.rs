@@ -2,7 +2,8 @@ use std::{ffi::CStr, fmt};
 
 use open62541_sys::{
     UA_StatusCode, UA_StatusCode_isBad, UA_StatusCode_isGood, UA_StatusCode_isUncertain,
-    UA_StatusCode_name, UA_STATUSCODE_GOOD,
+    UA_StatusCode_name, UA_STATUSCODE_BADINTERNALERROR, UA_STATUSCODE_BADWRITENOTSUPPORTED,
+    UA_STATUSCODE_GOOD,
 };
 
 crate::data_type!(StatusCode);
@@ -10,6 +11,12 @@ crate::data_type!(StatusCode);
 impl StatusCode {
     /// Enum variant [`UA_STATUSCODE_GOOD`] from [`open62541_sys`].
     pub const GOOD: Self = Self(UA_STATUSCODE_GOOD);
+
+    /// Enum variant [`UA_STATUSCODE_BADINTERNALERROR`] from [`open62541_sys`].
+    pub const BADINTERNALERROR: Self = Self(UA_STATUSCODE_BADINTERNALERROR);
+
+    /// Enum variant [`UA_STATUSCODE_BADWRITENOTSUPPORTED`] from [`open62541_sys`].
+    pub const BADWRITENOTSUPPORTED: Self = Self(UA_STATUSCODE_BADWRITENOTSUPPORTED);
 
     /// Creates wrapper by taking ownership of `src`.
     #[must_use]
