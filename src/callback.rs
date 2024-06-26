@@ -154,6 +154,6 @@ impl<T> CallbackStream<T> {
     /// The given pointer must have been returned from [`prepare()`](CallbackStream::prepare) and
     /// must not have been passed into [`delete()`](CallbackStream::delete) yet.
     pub unsafe fn delete(data: *mut c_void) {
-        let _tx = unsafe { CallbackStreamUserdata::<T>::consume(data) };
+        let _unused = unsafe { CallbackStreamUserdata::<T>::consume(data) };
     }
 }
