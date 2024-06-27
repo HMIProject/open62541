@@ -1,5 +1,6 @@
 mod data_source;
 mod node_context;
+mod node_types;
 
 use std::{ffi::c_void, ptr, sync::Arc};
 
@@ -8,10 +9,13 @@ use open62541_sys::{
     UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
 };
 
-use crate::{ua, DataType, Error, ObjectNode, Result, VariableNode};
+use crate::{ua, DataType, Error, Result};
 
-pub use self::data_source::DataSource;
 pub(crate) use self::node_context::NodeContext;
+pub use self::{
+    data_source::DataSource,
+    node_types::{ObjectNode, VariableNode},
+};
 
 /// Builder for [`Server`].
 ///
