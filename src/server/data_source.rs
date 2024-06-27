@@ -63,9 +63,9 @@ impl DataSource {
             _session_context: *mut c_void,
             _node_id: *const UA_NodeId,
             node_context: *mut c_void,
-            _include_source_time_stamp: UA_Boolean,
-            _range: *const UA_NumericRange,
-            _value: *mut UA_DataValue,
+            include_source_time_stamp: UA_Boolean,
+            range: *const UA_NumericRange,
+            value: *mut UA_DataValue,
         ) -> UA_StatusCode {
             let node_context = unsafe { NodeContext::peek_at(node_context) };
             #[allow(irrefutable_let_patterns)] // We will add more node context types eventually.
@@ -76,8 +76,11 @@ impl DataSource {
             };
             let DataSource { read, .. } = data_source;
 
-            // TODO: Prepare callback context.
-            let mut context = DataSourceReadContext;
+            let mut context = DataSourceReadContext {
+                include_source_time_stamp,
+                range,
+                value,
+            };
 
             match read(&mut context) {
                 Ok(()) => ua::StatusCode::GOOD,
@@ -92,8 +95,8 @@ impl DataSource {
             _session_context: *mut c_void,
             _node_id: *const UA_NodeId,
             node_context: *mut c_void,
-            _range: *const UA_NumericRange,
-            _value: *const UA_DataValue,
+            range: *const UA_NumericRange,
+            value: *const UA_DataValue,
         ) -> UA_StatusCode {
             let node_context = unsafe { NodeContext::peek_at(node_context) };
             #[allow(irrefutable_let_patterns)] // We will add more node context types eventually.
@@ -107,8 +110,7 @@ impl DataSource {
                 return ua::StatusCode::BADWRITENOTSUPPORTED.into_raw();
             };
 
-            // TODO: Prepare callback context.
-            let mut context = DataSourceWriteContext;
+            let mut context = DataSourceWriteContext { range, value };
 
             match write(&mut context) {
                 Ok(()) => ua::StatusCode::GOOD,
@@ -132,11 +134,47 @@ impl DataSource {
 
 // TODO: Add ability to transmit read value back to server.
 #[allow(clippy::module_name_repetitions)]
-pub struct DataSourceReadContext;
+pub struct DataSourceReadContext {
+    #[allow(dead_code)]
+    include_source_time_stamp: UA_Boolean,
+    range: *const UA_NumericRange,
+    value: *mut UA_DataValue,
+}
+
+impl DataSourceReadContext {
+    pub fn range(&self) -> &ua::NumericRange {
+        // TODO: Handle unset values.
+        ua::NumericRange::raw_ref(unsafe { self.range.as_ref() }.unwrap())
+    }
+
+    pub fn set_value(&mut self, value: ua::DataValue) {
+        // TODO: Handle unset values.
+        value.move_into_raw(unsafe { self.value.as_mut() }.unwrap());
+    }
+
+    pub fn set_variant(&mut self, variant: ua::Variant) {
+        self.set_value(ua::DataValue::new(variant));
+    }
+}
 
 // TODO: Add ability to receive written value from server.
 #[allow(clippy::module_name_repetitions)]
-pub struct DataSourceWriteContext;
+pub struct DataSourceWriteContext {
+    range: *const UA_NumericRange,
+    value: *const UA_DataValue,
+}
+
+impl DataSourceWriteContext {
+    pub fn range(&self) -> &ua::NumericRange {
+        // TODO: Handle unset values.
+        ua::NumericRange::raw_ref(unsafe { self.range.as_ref() }.unwrap())
+    }
+
+    pub fn value(&mut self) -> &ua::DataValue {
+        // TODO: Handle unset values.
+        ua::DataValue::raw_ref(unsafe { self.value.as_ref() }.unwrap())
+    }
+}
 
 #[allow(clippy::module_name_repetitions)]
 pub type DataSourceResult = std::result::Result<(), ua::StatusCode>;
