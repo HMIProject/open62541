@@ -1,13 +1,13 @@
 use std::ffi::c_void;
 
-use crate::Userdata;
+use crate::{server::DataSource, Userdata};
 
 /// Context attached to server node.
 ///
 /// Nodes created by [`Server`](crate::Server) need to keep track of dynamic data structures. These
 /// are cleaned up when the corresponding node is destroyed by the server.
 pub(crate) enum NodeContext {
-    // We will add specific payloads here.
+    DataSource(DataSource),
 }
 
 #[allow(dead_code)] // We will use the methods soon.

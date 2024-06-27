@@ -1,14 +1,16 @@
+mod data_source;
 mod node_context;
 
 use std::{ffi::c_void, ptr, sync::Arc};
 
 use open62541_sys::{
-    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_deleteNode, UA_Server_runUntilInterrupt,
-    __UA_Server_addNode, __UA_Server_write,
+    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
+    UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
 };
 
 use crate::{ua, DataType, Error, ObjectNode, Result, VariableNode};
 
+pub use self::data_source::DataSource;
 pub(crate) use self::node_context::NodeContext;
 
 /// Builder for [`Server`].
@@ -187,6 +189,45 @@ impl Server {
                 ptr::null_mut(),
             )
         });
+        Error::verify_good(&status_code)
+    }
+
+    /// Adds variable node with data source to address space.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node cannot be added.
+    pub fn add_data_source_variable_node(
+        &self,
+        variable_node: VariableNode,
+        data_source: DataSource,
+    ) -> Result<()> {
+        // SAFETY: We store `node_context` inside the node to keep `data_source` alive.
+        let (data_source, node_context) = unsafe { data_source.into_raw() };
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addDataSourceVariableNode(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                variable_node.requested_new_node_id.into_raw(),
+                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                variable_node.parent_node_id.into_raw(),
+                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                variable_node.reference_type_id.into_raw(),
+                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                variable_node.browse_name.into_raw(),
+                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                variable_node.type_definition.into_raw(),
+                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                variable_node.attributes.into_raw(),
+                data_source,
+                node_context.leak(),
+                ptr::null_mut(),
+            )
+        });
+        // In case of an error, the node context has already been freed by the destructor. We must
+        // not consume it ourselves (to avoid double-freeing). In case of success, the node context
+        // will be consumed when the node is eventually deleted (`UA_ServerConfig::nodeLifecycle`).
         Error::verify_good(&status_code)
     }
 
