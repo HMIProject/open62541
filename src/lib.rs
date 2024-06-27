@@ -66,7 +66,6 @@ mod client;
 mod data_type;
 mod error;
 mod server;
-mod server_nodes;
 mod service;
 pub mod ua;
 
@@ -86,8 +85,7 @@ pub use self::{
     client::{Client, ClientBuilder},
     data_type::DataType,
     error::{Error, Result},
-    server::{DataSource, Server, ServerBuilder, ServerRunner},
-    server_nodes::{ObjectNode, VariableNode},
+    server::{DataSource, ObjectNode, Server, ServerBuilder, ServerRunner, VariableNode},
     userdata::Userdata,
     value::{ScalarValue, ValueType, VariantValue},
 };
