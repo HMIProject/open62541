@@ -8,6 +8,7 @@ mod client_config;
 mod continuation_point;
 mod data_types;
 mod monitored_item_id;
+mod node_attributes_mask;
 mod node_class_mask;
 mod numeric_range;
 mod numeric_range_dimension;
@@ -25,6 +26,7 @@ pub use self::{
     continuation_point::ContinuationPoint,
     data_types::*,
     monitored_item_id::MonitoredItemId,
+    node_attributes_mask::NodeAttributesMask,
     node_class_mask::NodeClassMask,
     numeric_range::NumericRange,
     numeric_range_dimension::NumericRangeDimension,
