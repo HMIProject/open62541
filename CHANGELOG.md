@@ -16,6 +16,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Include appropriate trait bounds in return type of `AsyncMonitoredItem::into_stream()`.
+- Breaking: Add prefix `with_` in `ua::BrowseNextRequest::with_release_continuation_points()`.
 
 ## [0.6.0-pre.5] - 2024-05-31
 
