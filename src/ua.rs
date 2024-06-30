@@ -1,5 +1,6 @@
 //! Thin wrappers for [`open62541_sys`] types.
 
+mod access_level;
 mod array;
 mod browse_result_mask;
 mod client;
@@ -17,6 +18,7 @@ mod session_state;
 mod subscription_id;
 
 pub use self::{
+    access_level::AccessLevel,
     array::Array,
     browse_result_mask::BrowseResultMask,
     client::{Client, ClientState},

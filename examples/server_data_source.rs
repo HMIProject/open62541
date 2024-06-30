@@ -34,7 +34,12 @@ fn main() -> anyhow::Result<()> {
         browse_name: ua::QualifiedName::new(1, "the answer"),
         type_definition: ua::NodeId::ns0(UA_NS0ID_BASEDATAVARIABLETYPE),
         attributes: ua::VariableAttributes::default()
-            .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING)),
+            .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING))
+            .with_access_level(
+                &ua::AccessLevel::NONE
+                    .with_current_read(true)
+                    .with_current_write(true),
+            ),
     };
 
     let current_value = Arc::new(Mutex::new(String::from("Lorem ipsum")));
