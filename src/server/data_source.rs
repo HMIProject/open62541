@@ -63,8 +63,8 @@ impl DataSource {
             _session_context: *mut c_void,
             _node_id: *const UA_NodeId,
             node_context: *mut c_void,
-            include_source_time_stamp: UA_Boolean,
-            range: *const UA_NumericRange,
+            _include_source_time_stamp: UA_Boolean,
+            _range: *const UA_NumericRange,
             value: *mut UA_DataValue,
         ) -> UA_StatusCode {
             let node_context = unsafe { NodeContext::peek_at(node_context) };
@@ -76,11 +76,7 @@ impl DataSource {
             };
             let DataSource { read, .. } = data_source;
 
-            let mut context = DataSourceReadContext {
-                include_source_time_stamp,
-                range,
-                value,
-            };
+            let mut context = DataSourceReadContext { value };
 
             match read(&mut context) {
                 Ok(()) => ua::StatusCode::GOOD,
@@ -95,7 +91,7 @@ impl DataSource {
             _session_context: *mut c_void,
             _node_id: *const UA_NodeId,
             node_context: *mut c_void,
-            range: *const UA_NumericRange,
+            _range: *const UA_NumericRange,
             value: *const UA_DataValue,
         ) -> UA_StatusCode {
             let node_context = unsafe { NodeContext::peek_at(node_context) };
@@ -110,7 +106,7 @@ impl DataSource {
                 return ua::StatusCode::BADWRITENOTSUPPORTED.into_raw();
             };
 
-            let mut context = DataSourceWriteContext { range, value };
+            let mut context = DataSourceWriteContext { value };
 
             match write(&mut context) {
                 Ok(()) => ua::StatusCode::GOOD,
@@ -132,21 +128,12 @@ impl DataSource {
     }
 }
 
-// TODO: Add ability to transmit read value back to server.
 #[allow(clippy::module_name_repetitions)]
 pub struct DataSourceReadContext {
-    #[allow(dead_code)]
-    include_source_time_stamp: UA_Boolean,
-    range: *const UA_NumericRange,
     value: *mut UA_DataValue,
 }
 
 impl DataSourceReadContext {
-    pub fn range(&self) -> &ua::NumericRange {
-        // TODO: Handle unset values.
-        ua::NumericRange::raw_ref(unsafe { self.range.as_ref() }.unwrap())
-    }
-
     pub fn set_value(&mut self, value: ua::DataValue) {
         // TODO: Handle unset values.
         value.move_into_raw(unsafe { self.value.as_mut() }.unwrap());
@@ -157,19 +144,12 @@ impl DataSourceReadContext {
     }
 }
 
-// TODO: Add ability to receive written value from server.
 #[allow(clippy::module_name_repetitions)]
 pub struct DataSourceWriteContext {
-    range: *const UA_NumericRange,
     value: *const UA_DataValue,
 }
 
 impl DataSourceWriteContext {
-    pub fn range(&self) -> &ua::NumericRange {
-        // TODO: Handle unset values.
-        ua::NumericRange::raw_ref(unsafe { self.range.as_ref() }.unwrap())
-    }
-
     pub fn value(&mut self) -> &ua::DataValue {
         // TODO: Handle unset values.
         ua::DataValue::raw_ref(unsafe { self.value.as_ref() }.unwrap())
