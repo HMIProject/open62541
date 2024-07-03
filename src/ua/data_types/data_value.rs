@@ -30,6 +30,10 @@ impl DataValue {
         self
     }
 
+    /// Gets value.
+    ///
+    /// This returns the value as [`ua::Variant`] if it is set. Returns `None` when the `DataValue`
+    /// holds no value.
     #[must_use]
     pub fn value(&self) -> Option<&ua::Variant> {
         self.0

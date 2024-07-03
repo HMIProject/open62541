@@ -49,8 +49,13 @@ fn main() -> anyhow::Result<()> {
             let current_value = Arc::clone(&current_value);
             move |context| {
                 println!("Reading data source value");
+                // PANIC: Forward panic from lock thread.
                 let value = current_value.lock().unwrap();
-                let value = ua::Variant::scalar(ua::String::new(&value).unwrap());
+                let value = ua::Variant::scalar(
+                    // We do not expect strings with NUL bytes.
+                    ua::String::new(&value).map_err(|_| ua::StatusCode::BADINTERNALERROR)?,
+                );
+                println!("-> {value:?}");
                 context.set_variant(value);
                 Ok(())
             }
@@ -59,15 +64,20 @@ fn main() -> anyhow::Result<()> {
             let current_value = Arc::clone(&current_value);
             move |context| {
                 println!("Writing data source value");
-                let value = context
+                let value = context.value();
+                println!("<- {value:?}");
+                let value = value
                     .value()
-                    .value()
-                    .unwrap()
+                    // We require that the write request holds a value.
+                    .ok_or(ua::StatusCode::BADINTERNALERROR)?
                     .as_scalar::<ua::String>()
-                    .unwrap()
+                    // The incoming value to write must be a string.
+                    .ok_or(ua::StatusCode::BADINTERNALERROR)?
                     .as_str()
-                    .unwrap()
+                    // The incoming string must be valid UTF-8.
+                    .ok_or(ua::StatusCode::BADINTERNALERROR)?
                     .into();
+                // PANIC: Forward panic from lock thread.
                 *current_value.lock().unwrap() = value;
                 Ok(())
             }

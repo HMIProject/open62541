@@ -179,7 +179,7 @@ impl DataSourceWriteContext {
     /// Gets value.
     ///
     /// This returns the value received from the client that is writing to this [`DataSource`].
-    pub fn value(&mut self) -> &ua::DataValue {
+    pub fn value(&self) -> &ua::DataValue {
         if let Some(source) = unsafe { self.value.as_ref() } {
             ua::DataValue::raw_ref(source)
         } else {
