@@ -8,7 +8,6 @@ mod client_config;
 mod continuation_point;
 mod data_types;
 mod monitored_item_id;
-mod node_attributes_mask;
 mod node_class_mask;
 mod secure_channel_state;
 mod server;
@@ -24,7 +23,6 @@ pub use self::{
     continuation_point::ContinuationPoint,
     data_types::*,
     monitored_item_id::MonitoredItemId,
-    node_attributes_mask::NodeAttributesMask,
     node_class_mask::NodeClassMask,
     secure_channel_state::SecureChannelState,
     server::Server,
