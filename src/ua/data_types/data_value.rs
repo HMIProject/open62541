@@ -8,6 +8,11 @@ impl DataValue {
         let mut inner = ua::DataValue::init();
         value.move_into_raw(&mut inner.0.value);
         inner.0.set_hasValue(true);
+        debug_assert!(!inner.0.hasStatus());
+        debug_assert!(!inner.0.hasSourceTimestamp());
+        debug_assert!(!inner.0.hasServerTimestamp());
+        debug_assert!(!inner.0.hasSourcePicoseconds());
+        debug_assert!(!inner.0.hasServerPicoseconds());
         inner
     }
 
@@ -15,6 +20,13 @@ impl DataValue {
     pub fn with_value(mut self, value: &ua::Variant) -> Self {
         value.clone_into_raw(&mut self.0.value);
         self.0.set_hasValue(true);
+        self
+    }
+
+    #[must_use]
+    pub fn with_status_code(mut self, status_code: &ua::StatusCode) -> Self {
+        status_code.clone_into_raw(&mut self.0.status);
+        self.0.set_hasStatus(true);
         self
     }
 
