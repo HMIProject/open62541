@@ -1,6 +1,7 @@
 use std::{
     ffi::c_void,
     panic::{catch_unwind, AssertUnwindSafe},
+    ptr::NonNull,
 };
 
 use open62541_sys::{
@@ -8,6 +9,9 @@ use open62541_sys::{
 };
 
 use crate::{server::NodeContext, ua, DataType};
+
+#[allow(clippy::module_name_repetitions)]
+pub type DataSourceResult = std::result::Result<(), ua::StatusCode>;
 
 /// Data source with callbacks.
 ///
@@ -37,66 +41,68 @@ pub trait DataSource {
     fn write(&mut self, context: &mut DataSourceWriteContext) -> DataSourceResult;
 }
 
-#[allow(clippy::type_complexity)]
-struct CallbackDataSource {
-    read: Box<dyn FnMut(&mut DataSourceReadContext) -> DataSourceResult>,
-    write: Option<Box<dyn FnMut(&mut DataSourceWriteContext) -> DataSourceResult>>,
-}
-
-impl CallbackDataSource {
-    #[must_use]
-    fn read_only(
-        read: impl FnMut(&mut DataSourceReadContext) -> DataSourceResult + 'static,
-    ) -> Self {
-        Self {
-            read: Box::new(read),
-            write: None,
-        }
-    }
-
-    /// Defines writable data source.
-    #[must_use]
-    fn read_write(
-        read: impl FnMut(&mut DataSourceReadContext) -> DataSourceResult + 'static,
-        write: impl FnMut(&mut DataSourceWriteContext) -> DataSourceResult + 'static,
-    ) -> Self {
-        Self {
-            read: Box::new(read),
-            write: Some(Box::new(write)),
-        }
-    }
-}
-
-impl DataSource for CallbackDataSource {
-    fn read(&mut self, context: &mut DataSourceReadContext) -> DataSourceResult {
-        (self.read)(context)
-    }
-
-    fn write(&mut self, context: &mut DataSourceWriteContext) -> DataSourceResult {
-        let Some(write) = &mut self.write else {
-            return Err(ua::StatusCode::BADWRITENOTSUPPORTED);
-        };
-        write(context)
-    }
-}
-
-/// Defines read-only data source.
+/// Context when [`DataSource`] is being read from.
 #[allow(clippy::module_name_repetitions)]
-#[must_use]
-pub fn read_only_data_source(
-    read: impl FnMut(&mut DataSourceReadContext) -> DataSourceResult + 'static,
-) -> impl DataSource {
-    CallbackDataSource::read_only(read)
+pub struct DataSourceReadContext {
+    /// Outgoing value to be read.
+    ///
+    /// This is a mutable cell where the read callback puts the data to be returned to the client.
+    value_target: NonNull<UA_DataValue>,
 }
 
-/// Defines writable data source.
+impl DataSourceReadContext {
+    /// Creates context for read callback.
+    fn new(value: *mut UA_DataValue) -> Option<Self> {
+        Some(Self {
+            value_target: NonNull::new(value)?,
+        })
+    }
+
+    /// Sets value.
+    ///
+    /// This sets the value to report back to the client that is reading from this [`DataSource`].
+    pub fn set_value(&mut self, value: ua::DataValue) {
+        let target = unsafe { self.value_target.as_mut() };
+        value.move_into_raw(target);
+    }
+
+    /// Sets variant.
+    ///
+    /// This is a shortcut for setting the value to report back to the client. See [`set_value()`].
+    ///
+    /// [`set_value()`]: Self::set_value
+    pub fn set_variant(&mut self, variant: ua::Variant) {
+        self.set_value(ua::DataValue::new(variant));
+    }
+}
+
+/// Context when [`DataSource`] is being written to.
 #[allow(clippy::module_name_repetitions)]
-#[must_use]
-pub fn read_write_data_source(
-    read: impl FnMut(&mut DataSourceReadContext) -> DataSourceResult + 'static,
-    write: impl FnMut(&mut DataSourceWriteContext) -> DataSourceResult + 'static,
-) -> impl DataSource {
-    CallbackDataSource::read_write(read, write)
+pub struct DataSourceWriteContext {
+    /// Incoming value to be written.
+    ///
+    /// This is a non-mutable (const) cell where the write callback receives the data to be written
+    /// by the client.
+    value_source: NonNull<UA_DataValue>,
+}
+
+impl DataSourceWriteContext {
+    /// Creates context for write callback.
+    fn new(value: *const UA_DataValue) -> Option<Self> {
+        Some(Self {
+            // SAFETY: `NonNull`
+            value_source: NonNull::new(value.cast_mut())?,
+        })
+    }
+
+    /// Gets value.
+    ///
+    /// This returns the value received from the client that is writing to this [`DataSource`].
+    #[must_use]
+    pub fn value(&self) -> &ua::DataValue {
+        let source = unsafe { self.value_source.as_ref() };
+        ua::DataValue::raw_ref(source)
+    }
 }
 
 /// Transforms into raw value.
@@ -128,7 +134,10 @@ pub(crate) unsafe fn wrap_data_source(
         };
 
         let mut data_source = AssertUnwindSafe(data_source);
-        let mut context = DataSourceReadContext { value };
+        let Some(mut context) = DataSourceReadContext::new(value) else {
+            // Creating context for callback should always succeed.
+            return ua::StatusCode::BADINTERNALERROR.into_raw();
+        };
 
         match catch_unwind(move || data_source.read(&mut context)) {
             Ok(Ok(())) => ua::StatusCode::GOOD,
@@ -159,7 +168,10 @@ pub(crate) unsafe fn wrap_data_source(
         };
 
         let mut data_source = AssertUnwindSafe(data_source);
-        let mut context = DataSourceWriteContext { value };
+        let Some(mut context) = DataSourceWriteContext::new(value) else {
+            // Creating context for callback should always succeed.
+            return ua::StatusCode::BADINTERNALERROR.into_raw();
+        };
 
         match catch_unwind(move || data_source.write(&mut context)) {
             Ok(Ok(())) => ua::StatusCode::GOOD,
@@ -183,53 +195,3 @@ pub(crate) unsafe fn wrap_data_source(
 
     (raw_data_source, node_context)
 }
-
-/// Context when [`DataSource`] is being read from.
-#[allow(clippy::module_name_repetitions)]
-pub struct DataSourceReadContext {
-    value: *mut UA_DataValue,
-}
-
-impl DataSourceReadContext {
-    /// Sets value.
-    ///
-    /// This sets the value to report back to the client that is reading from this [`DataSource`].
-    pub fn set_value(&mut self, value: ua::DataValue) {
-        if let Some(target) = unsafe { self.value.as_mut() } {
-            value.move_into_raw(target);
-        } else {
-            panic!("value should be set in DataSourceReadContext");
-        }
-    }
-
-    /// Sets variant.
-    ///
-    /// This is a shortcut for setting the value to report back to the client. See [`set_value()`].
-    ///
-    /// [`set_value()`]: Self::set_value
-    pub fn set_variant(&mut self, variant: ua::Variant) {
-        self.set_value(ua::DataValue::new(variant));
-    }
-}
-
-/// Context when [`DataSource`] is being written to.
-#[allow(clippy::module_name_repetitions)]
-pub struct DataSourceWriteContext {
-    value: *const UA_DataValue,
-}
-
-impl DataSourceWriteContext {
-    /// Gets value.
-    ///
-    /// This returns the value received from the client that is writing to this [`DataSource`].
-    pub fn value(&self) -> &ua::DataValue {
-        if let Some(source) = unsafe { self.value.as_ref() } {
-            ua::DataValue::raw_ref(source)
-        } else {
-            panic!("value should be set in DataSourceWriteContext");
-        }
-    }
-}
-
-#[allow(clippy::module_name_repetitions)]
-pub type DataSourceResult = std::result::Result<(), ua::StatusCode>;

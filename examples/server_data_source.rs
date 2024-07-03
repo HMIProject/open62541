@@ -1,14 +1,58 @@
-use std::{
-    sync::{Arc, Mutex},
-    thread,
-};
+use std::thread;
 
 use anyhow::Context as _;
-use open62541::{ua, DataSource, ObjectNode, Server, VariableNode};
+use open62541::{
+    ua, DataSource, DataSourceReadContext, DataSourceResult, DataSourceWriteContext, ObjectNode,
+    Server, VariableNode,
+};
 use open62541_sys::{
     UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,
     UA_NS0ID_STRING,
 };
+
+struct DynamicDataSource {
+    current_value: String,
+}
+
+impl DynamicDataSource {
+    fn new(initial_value: impl Into<String>) -> Self {
+        Self {
+            current_value: initial_value.into(),
+        }
+    }
+}
+
+impl DataSource for DynamicDataSource {
+    fn read(&mut self, context: &mut DataSourceReadContext) -> DataSourceResult {
+        println!("Reading data source value");
+        let value = ua::Variant::scalar(
+            // We do not expect strings with NUL bytes.
+            ua::String::new(&self.current_value).map_err(|_| ua::StatusCode::BADINTERNALERROR)?,
+        );
+        println!("-> {value:?}");
+        context.set_variant(value);
+        Ok(())
+    }
+
+    fn write(&mut self, context: &mut DataSourceWriteContext) -> DataSourceResult {
+        println!("Writing data source value");
+        let value = context.value();
+        println!("<- {value:?}");
+        let value = value
+            .value()
+            // We require that the write request holds a value.
+            .ok_or(ua::StatusCode::BADINTERNALERROR)?
+            .as_scalar::<ua::String>()
+            // The incoming value to write must be a string.
+            .ok_or(ua::StatusCode::BADINTERNALERROR)?
+            .as_str()
+            // The incoming string must be valid UTF-8.
+            .ok_or(ua::StatusCode::BADINTERNALERROR)?
+            .into();
+        self.current_value = value;
+        Ok(())
+    }
+}
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -42,47 +86,7 @@ fn main() -> anyhow::Result<()> {
             ),
     };
 
-    let current_value = Arc::new(Mutex::new(String::from("Lorem ipsum")));
-
-    let data_source = DataSource::read_write(
-        {
-            let current_value = Arc::clone(&current_value);
-            move |context| {
-                println!("Reading data source value");
-                // PANIC: Forward panic from lock thread.
-                let value = current_value.lock().unwrap();
-                let value = ua::Variant::scalar(
-                    // We do not expect strings with NUL bytes.
-                    ua::String::new(&value).map_err(|_| ua::StatusCode::BADINTERNALERROR)?,
-                );
-                println!("-> {value:?}");
-                context.set_variant(value);
-                Ok(())
-            }
-        },
-        {
-            let current_value = Arc::clone(&current_value);
-            move |context| {
-                println!("Writing data source value");
-                let value = context.value();
-                println!("<- {value:?}");
-                let value = value
-                    .value()
-                    // We require that the write request holds a value.
-                    .ok_or(ua::StatusCode::BADINTERNALERROR)?
-                    .as_scalar::<ua::String>()
-                    // The incoming value to write must be a string.
-                    .ok_or(ua::StatusCode::BADINTERNALERROR)?
-                    .as_str()
-                    // The incoming string must be valid UTF-8.
-                    .ok_or(ua::StatusCode::BADINTERNALERROR)?
-                    .into();
-                // PANIC: Forward panic from lock thread.
-                *current_value.lock().unwrap() = value;
-                Ok(())
-            }
-        },
-    );
+    let data_source = DynamicDataSource::new("Lorem ipsum");
 
     server
         .add_object_node(object_node)

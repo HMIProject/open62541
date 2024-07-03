@@ -13,7 +13,7 @@ use crate::{ua, DataType, Error, Result};
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
-    data_source::DataSource,
+    data_source::{DataSource, DataSourceReadContext, DataSourceResult, DataSourceWriteContext},
     node_types::{ObjectNode, VariableNode},
 };
 
