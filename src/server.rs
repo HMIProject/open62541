@@ -204,10 +204,10 @@ impl Server {
     pub fn add_data_source_variable_node(
         &self,
         variable_node: VariableNode,
-        data_source: DataSource,
+        data_source: impl DataSource + 'static,
     ) -> Result<()> {
         // SAFETY: We store `node_context` inside the node to keep `data_source` alive.
-        let (data_source, node_context) = unsafe { data_source.into_raw() };
+        let (data_source, node_context) = unsafe { data_source::wrap_data_source(data_source) };
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_addDataSourceVariableNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
