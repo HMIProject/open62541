@@ -90,7 +90,7 @@ macro_rules! enum_variants {
         impl $name {
             $(
                 /// Enum variant
-                #[doc = paste::paste! { concat!("[`", stringify!([<$inner:upper _ $value>]), "`](open62541_sys::", stringify!($inner), "::", stringify!([<$inner:upper _ $value>]), ")") }]
+                #[doc = paste::paste! { concat!("[`", stringify!([<$inner:upper _ $value>]), "`](open62541_sys::", stringify!([<$inner:upper _ $value>]), ")") }]
                 /// from [`open62541_sys`].
                 #[allow(dead_code)] // Allow unused `pub`-declared constants in private modules.
                 pub const $value: Self = Self(
