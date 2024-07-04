@@ -8,6 +8,11 @@ impl DataValue {
         let mut inner = ua::DataValue::init();
         value.move_into_raw(&mut inner.0.value);
         inner.0.set_hasValue(true);
+        debug_assert!(!inner.0.hasStatus());
+        debug_assert!(!inner.0.hasSourceTimestamp());
+        debug_assert!(!inner.0.hasServerTimestamp());
+        debug_assert!(!inner.0.hasSourcePicoseconds());
+        debug_assert!(!inner.0.hasServerPicoseconds());
         inner
     }
 
@@ -18,6 +23,17 @@ impl DataValue {
         self
     }
 
+    #[must_use]
+    pub fn with_status_code(mut self, status_code: &ua::StatusCode) -> Self {
+        status_code.clone_into_raw(&mut self.0.status);
+        self.0.set_hasStatus(true);
+        self
+    }
+
+    /// Gets value.
+    ///
+    /// This returns the value as [`ua::Variant`] if it is set. Returns `None` when the `DataValue`
+    /// holds no value.
     #[must_use]
     pub fn value(&self) -> Option<&ua::Variant> {
         self.0
