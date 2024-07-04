@@ -86,8 +86,8 @@ pub use self::{
     data_type::DataType,
     error::{Error, Result},
     server::{
-        DataSource, DataSourceReadContext, DataSourceResult, DataSourceWriteContext, ObjectNode,
-        Server, ServerBuilder, ServerRunner, VariableNode,
+        DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
+        DataSourceWriteContext, ObjectNode, Server, ServerBuilder, ServerRunner, VariableNode,
     },
     userdata::Userdata,
     value::{ScalarValue, ValueType, VariantValue},
