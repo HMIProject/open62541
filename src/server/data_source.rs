@@ -7,11 +7,37 @@ use std::{
 use open62541_sys::{
     UA_Boolean, UA_DataSource, UA_DataValue, UA_NodeId, UA_NumericRange, UA_Server, UA_StatusCode,
 };
+use thiserror::Error;
 
 use crate::{server::NodeContext, ua, DataType};
 
 #[allow(clippy::module_name_repetitions)]
-pub type DataSourceResult = std::result::Result<(), ua::StatusCode>;
+pub type DataSourceResult = Result<(), DataSourceError>;
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, Error)]
+pub enum DataSourceError {
+    #[error("{0}")]
+    StatusCode(ua::StatusCode),
+
+    #[error("operation not supported")]
+    OperationNotSupported,
+}
+
+impl DataSourceError {
+    pub(crate) fn into_status_code(self) -> ua::StatusCode {
+        match self {
+            DataSourceError::StatusCode(status_code) => status_code,
+            DataSourceError::OperationNotSupported => ua::StatusCode::BADWRITENOTSUPPORTED,
+        }
+    }
+}
+
+impl From<ua::StatusCode> for DataSourceError {
+    fn from(value: ua::StatusCode) -> Self {
+        Self::StatusCode(value)
+    }
+}
 
 /// Data source with callbacks.
 ///
@@ -139,15 +165,16 @@ pub(crate) unsafe fn wrap_data_source(
             return ua::StatusCode::BADINTERNALERROR.into_raw();
         };
 
-        match catch_unwind(move || data_source.read(&mut context)) {
+        let status_code = match catch_unwind(move || data_source.read(&mut context)) {
             Ok(Ok(())) => ua::StatusCode::GOOD,
-            Ok(Err(status_code)) => status_code,
+            Ok(Err(err)) => err.into_status_code(),
             Err(err) => {
                 log::error!("Read callback in data source panicked: {err:?}");
                 ua::StatusCode::BADINTERNALERROR
             }
-        }
-        .into_raw()
+        };
+
+        status_code.into_raw()
     }
 
     unsafe extern "C" fn write_c(
@@ -173,15 +200,16 @@ pub(crate) unsafe fn wrap_data_source(
             return ua::StatusCode::BADINTERNALERROR.into_raw();
         };
 
-        match catch_unwind(move || data_source.write(&mut context)) {
+        let status_code = match catch_unwind(move || data_source.write(&mut context)) {
             Ok(Ok(())) => ua::StatusCode::GOOD,
-            Ok(Err(status_code)) => status_code,
+            Ok(Err(err)) => err.into_status_code(),
             Err(err) => {
                 log::error!("Write callback in data source panicked: {err:?}");
                 ua::StatusCode::BADINTERNALERROR
             }
-        }
-        .into_raw()
+        };
+
+        status_code.into_raw()
     }
 
     let raw_data_source = UA_DataSource {

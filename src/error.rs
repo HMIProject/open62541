@@ -16,6 +16,7 @@ pub enum Error {
     /// Error from server.
     #[error("{0}")]
     Server(ua::StatusCode),
+
     /// Internal error.
     #[error("{0}")]
     Internal(&'static str),
