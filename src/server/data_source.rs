@@ -20,15 +20,15 @@ pub enum DataSourceError {
     #[error("{0}")]
     StatusCode(ua::StatusCode),
 
-    #[error("operation not supported")]
-    OperationNotSupported,
+    #[error("not supported")]
+    NotSupported,
 }
 
 impl DataSourceError {
     pub(crate) fn into_status_code(self) -> ua::StatusCode {
         match self {
             DataSourceError::StatusCode(status_code) => status_code,
-            DataSourceError::OperationNotSupported => ua::StatusCode::BADWRITENOTSUPPORTED,
+            DataSourceError::NotSupported => ua::StatusCode::BADNOTSUPPORTED,
         }
     }
 }
@@ -66,7 +66,7 @@ pub trait DataSource {
     /// status code is forwarded to the client.
     #[allow(unused_variables)]
     fn write(&mut self, context: &mut DataSourceWriteContext) -> DataSourceResult {
-        Err(DataSourceError::OperationNotSupported)
+        Err(DataSourceError::NotSupported)
     }
 }
 
