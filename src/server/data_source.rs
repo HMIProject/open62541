@@ -11,6 +11,10 @@ use thiserror::Error;
 
 use crate::{server::NodeContext, ua, DataType};
 
+/// Result from [`DataSource`] operations.
+///
+/// On success, the operations return `Ok(())`. The actual value is transmitted through the
+/// `context` argument. See [`DataSource::read()`] and [`DataSource::write()`] for details.
 #[allow(clippy::module_name_repetitions)]
 pub type DataSourceResult = Result<(), DataSourceError>;
 
@@ -53,7 +57,9 @@ impl From<ua::StatusCode> for DataSourceError {
 pub trait DataSource {
     /// Reads from variable.
     ///
-    /// This is called when a client wants to read the value from the variable.
+    /// This is called when a client wants to read the value from the variable. The value is
+    /// expected to be returned through the `context` argument. See
+    /// [`DataSourceReadContext::set_value()`] for details.
     ///
     /// # Errors
     ///
@@ -63,8 +69,12 @@ pub trait DataSource {
 
     /// Writes to variable.
     ///
-    /// This is called when a client wants to write the value to the variable. If not implemented,
-    /// an error `DataSource::NotSupported` is returned to the client.
+    /// This is called when a client wants to write the value to the variable. The value is
+    /// transmitted through the `context` argument. See [`DataSourceWriteContext::value()`] for
+    /// details.
+    ///
+    /// If this method is not implemented, an error [`DataSourceError::NotSupported`] is returned to
+    /// the client.
     ///
     /// # Errors
     ///
