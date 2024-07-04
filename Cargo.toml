@@ -87,13 +87,13 @@ path = "examples/async_call.rs"
 required-features = ["tokio"]
 
 [[example]]
-name = "async_client_builder"
-path = "examples/async_client_builder.rs"
+name = "async_client"
+path = "examples/async_client.rs"
 required-features = ["tokio"]
 
 [[example]]
-name = "async_client"
-path = "examples/async_client.rs"
+name = "async_client_builder"
+path = "examples/async_client_builder.rs"
 required-features = ["tokio"]
 
 [[example]]
@@ -127,3 +127,7 @@ path = "examples/server.rs"
 [[example]]
 name = "server_builder"
 path = "examples/server_builder.rs"
+
+[[example]]
+name = "server_data_source"
+path = "examples/server_data_source.rs"
