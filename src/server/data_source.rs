@@ -64,7 +64,10 @@ pub trait DataSource {
     ///
     /// This should return an appropriate error when the write is not possible. The underlying
     /// status code is forwarded to the client.
-    fn write(&mut self, context: &mut DataSourceWriteContext) -> DataSourceResult;
+    #[allow(unused_variables)]
+    fn write(&mut self, context: &mut DataSourceWriteContext) -> DataSourceResult {
+        Err(DataSourceError::OperationNotSupported)
+    }
 }
 
 /// Context when [`DataSource`] is being read from.
