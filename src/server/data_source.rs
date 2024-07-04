@@ -35,7 +35,12 @@ impl DataSourceError {
 
 impl From<ua::StatusCode> for DataSourceError {
     fn from(value: ua::StatusCode) -> Self {
-        Self::StatusCode(value)
+        // Any good error would be misleading.
+        Self::StatusCode(if value.is_good() {
+            ua::StatusCode::BADINTERNALERROR
+        } else {
+            value
+        })
     }
 }
 
@@ -58,7 +63,8 @@ pub trait DataSource {
 
     /// Writes to variable.
     ///
-    /// This is called when a client wants to write the value to the variable.
+    /// This is called when a client wants to write the value to the variable. If not implemented,
+    /// an error `DataSource::NotSupported` is returned to the client.
     ///
     /// # Errors
     ///
@@ -110,7 +116,7 @@ impl DataSourceReadContext {
 pub struct DataSourceWriteContext {
     /// Incoming value to be written.
     ///
-    /// This is a non-mutable (const) cell where the write callback receives the data to be written
+    /// This is an immutable (const) cell where the write callback receives the data to be written
     /// by the client.
     value_source: NonNull<UA_DataValue>,
 }
@@ -119,7 +125,8 @@ impl DataSourceWriteContext {
     /// Creates context for write callback.
     fn new(value: *const UA_DataValue) -> Option<Self> {
         Some(Self {
-            // SAFETY: `NonNull`
+            // SAFETY: `NonNull` implicitly expects a `*mut` but we take care to never mutate the
+            // target.
             value_source: NonNull::new(value.cast_mut())?,
         })
     }
@@ -162,11 +169,11 @@ pub(crate) unsafe fn wrap_data_source(
             return ua::StatusCode::BADINTERNALERROR.into_raw();
         };
 
-        let mut data_source = AssertUnwindSafe(data_source);
         let Some(mut context) = DataSourceReadContext::new(value) else {
             // Creating context for callback should always succeed.
             return ua::StatusCode::BADINTERNALERROR.into_raw();
         };
+        let mut data_source = AssertUnwindSafe(data_source);
 
         let status_code = match catch_unwind(move || data_source.read(&mut context)) {
             Ok(Ok(())) => ua::StatusCode::GOOD,
@@ -197,11 +204,11 @@ pub(crate) unsafe fn wrap_data_source(
             return ua::StatusCode::BADINTERNALERROR.into_raw();
         };
 
-        let mut data_source = AssertUnwindSafe(data_source);
         let Some(mut context) = DataSourceWriteContext::new(value) else {
             // Creating context for callback should always succeed.
             return ua::StatusCode::BADINTERNALERROR.into_raw();
         };
+        let mut data_source = AssertUnwindSafe(data_source);
 
         let status_code = match catch_unwind(move || data_source.write(&mut context)) {
             Ok(Ok(())) => ua::StatusCode::GOOD,
