@@ -60,6 +60,13 @@ impl NodeId {
         Self(inner)
     }
 
+    /// Creates null node ID.
+    #[must_use]
+    pub fn null() -> Self {
+        // UA_NODEID_NULL is defined with type UA_NODEIDTYPE_NUMERIC with values 0 and 0
+        NodeId::numeric(0, 0)
+    }
+
     /// Gets node ID type.
     #[must_use]
     pub fn identifier_type(&self) -> &ua::NodeIdType {

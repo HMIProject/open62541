@@ -22,6 +22,7 @@ mod create_subscription_request;
 mod create_subscription_respones;
 mod data_value;
 mod date_time;
+mod data_type_attributes;
 mod delete_monitored_items_request;
 mod delete_monitored_items_response;
 mod delete_subscriptions_request;
@@ -36,16 +37,20 @@ mod node_class;
 mod node_id;
 mod node_id_type;
 mod object_attributes;
+mod object_type_attributes;
 mod qualified_name;
 mod read_request;
 mod read_response;
 mod read_value_id;
 mod reference_description;
+mod reference_type_attributes;
 mod status_code;
 mod string;
 mod timestamps_to_return;
 mod variable_attributes;
+mod variable_type_attributes;
 mod variant;
+mod view_attributes;
 mod write_request;
 mod write_response;
 mod write_value;
@@ -62,7 +67,8 @@ pub use self::{
     create_monitored_items_response::CreateMonitoredItemsResponse,
     create_subscription_request::CreateSubscriptionRequest,
     create_subscription_respones::CreateSubscriptionResponse, data_value::DataValue,
-    date_time::DateTime, delete_monitored_items_request::DeleteMonitoredItemsRequest,
+    date_time::DateTime, data_type_attributes::DataTypeAttributes,
+    delete_monitored_items_request::DeleteMonitoredItemsRequest,
     delete_monitored_items_response::DeleteMonitoredItemsResponse,
     delete_subscriptions_request::DeleteSubscriptionsRequest,
     delete_subscriptions_response::DeleteSubscriptionsResponse, expanded_node_id::ExpandedNodeId,
@@ -70,12 +76,15 @@ pub use self::{
     monitored_item_create_request::MonitoredItemCreateRequest,
     monitored_item_create_result::MonitoredItemCreateResult, node_attributes::NodeAttributes,
     node_class::NodeClass, node_id::NodeId, node_id_type::NodeIdType,
-    object_attributes::ObjectAttributes, qualified_name::QualifiedName, read_request::ReadRequest,
+    object_attributes::ObjectAttributes, object_type_attributes::ObjectTypeAttributes,
+    qualified_name::QualifiedName, read_request::ReadRequest,
     read_response::ReadResponse, read_value_id::ReadValueId,
-    reference_description::ReferenceDescription, status_code::StatusCode, string::String,
+    reference_description::ReferenceDescription, reference_type_attributes::ReferenceTypeAttributes,
+    status_code::StatusCode, string::String,
     timestamps_to_return::TimestampsToReturn, variable_attributes::VariableAttributes,
-    variant::Variant, write_request::WriteRequest, write_response::WriteResponse,
-    write_value::WriteValue,
+    variable_type_attributes::VariableTypeAttributes,
+    variant::Variant, view_attributes::ViewAttributes, write_request::WriteRequest, 
+    write_response::WriteResponse, write_value::WriteValue,
 };
 
 macro_rules! primitive {

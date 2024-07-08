@@ -4,9 +4,9 @@ mod node_types;
 
 use std::{ffi::c_void, ptr, sync::Arc};
 
+use node_types::{DataTypeNode, ObjectTypeNode, ReferenceTypeNode, VariableTypeNode, ViewNode};
 use open62541_sys::{
-    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
+    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode, UA_Server_addVariableTypeNode, UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write 
 };
 
 use crate::{ua, DataType, Error, Result};
@@ -145,6 +145,60 @@ impl Server {
         ServerBuilder::default().build()
     }
 
+    /// Adds variable node to address space.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node cannot be added.
+    pub fn add_variable_node(&self, variable_node: VariableNode) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            __UA_Server_addNode(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // Passing ownership is trivial with primitive value (`u32`).
+                ua::NodeClass::VARIABLE.into_raw(),
+                variable_node.requested_new_node_id.as_ptr(),
+                variable_node.parent_node_id.as_ptr(),
+                variable_node.reference_type_id.as_ptr(),
+                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                variable_node.browse_name.into_raw(),
+                variable_node.type_definition.as_ptr(),
+                variable_node.attributes.as_node_attributes().as_ptr(),
+                ua::VariableAttributes::data_type(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        });
+        Error::verify_good(&status_code)
+    }
+
+    /// Adds variable type node to address space.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node cannot be added.
+    pub fn add_variable_type_node(&self, variable_type_node: VariableTypeNode) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            __UA_Server_addNode(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // Passing ownership is trivial with primitive value (`u32`).
+                ua::NodeClass::VARIABLETYPE.into_raw(),
+                variable_type_node.requested_new_node_id.as_ptr(),
+                variable_type_node.parent_node_id.as_ptr(),
+                variable_type_node.reference_type_id.as_ptr(),
+                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                variable_type_node.browse_name.into_raw(),
+                variable_type_node.type_definition.as_ptr(),
+                variable_type_node.attributes.as_node_attributes().as_ptr(),
+                ua::VariableAttributes::data_type(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        });
+        Error::verify_good(&status_code)
+    }
+
     /// Adds object node to address space.
     ///
     /// # Errors
@@ -172,26 +226,92 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Adds variable node to address space.
+    /// Adds object type node to address space.
     ///
     /// # Errors
     ///
     /// This fails when the node cannot be added.
-    pub fn add_variable_node(&self, variable_node: VariableNode) -> Result<()> {
+    pub fn add_object_type_node(&self, object_type_node: ObjectTypeNode) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
-                ua::NodeClass::VARIABLE.into_raw(),
-                variable_node.requested_new_node_id.as_ptr(),
-                variable_node.parent_node_id.as_ptr(),
-                variable_node.reference_type_id.as_ptr(),
+                ua::NodeClass::OBJECTTYPE.into_raw(),
+                object_type_node.requested_new_node_id.as_ptr(),
+                object_type_node.parent_node_id.as_ptr(),
+                object_type_node.reference_type_id.as_ptr(),
                 // TODO: Verify that `__UA_Server_addNode()` takes ownership.
-                variable_node.browse_name.into_raw(),
-                variable_node.type_definition.as_ptr(),
-                variable_node.attributes.as_node_attributes().as_ptr(),
-                ua::VariableAttributes::data_type(),
+                object_type_node.browse_name.into_raw(),
+                ua::NodeId::null().as_ptr(),
+                object_type_node.attributes.as_node_attributes().as_ptr(),
+                ua::ObjectAttributes::data_type(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        });
+        Error::verify_good(&status_code)
+    }
+
+    pub fn add_view_node(&self, view_node: ViewNode) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            __UA_Server_addNode(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // Passing ownership is trivial with primitive value (`u32`).
+                ua::NodeClass::VIEW.into_raw(),
+                view_node.requested_new_node_id.as_ptr(),
+                view_node.parent_node_id.as_ptr(),
+                view_node.reference_type_id.as_ptr(),
+                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                view_node.browse_name.into_raw(),
+                ua::NodeId::null().as_ptr(),
+                view_node.attributes.as_node_attributes().as_ptr(),
+                ua::ViewAttributes::data_type(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        });
+        Error::verify_good(&status_code)
+    }
+
+    pub fn add_reference_type_node(&self, reference_type_node: ReferenceTypeNode) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            __UA_Server_addNode(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // Passing ownership is trivial with primitive value (`u32`).
+                ua::NodeClass::REFERENCETYPE.into_raw(),
+                reference_type_node.requested_new_node_id.as_ptr(),
+                reference_type_node.parent_node_id.as_ptr(),
+                reference_type_node.reference_type_id.as_ptr(),
+                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                reference_type_node.browse_name.into_raw(),
+                ua::NodeId::null().as_ptr(),
+                reference_type_node.attributes.as_node_attributes().as_ptr(),
+                ua::ReferenceTypeAttributes::data_type(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        });
+        Error::verify_good(&status_code)
+    }
+
+    pub fn add_data_type_node(&self, data_type_node: DataTypeNode) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            __UA_Server_addNode(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // Passing ownership is trivial with primitive value (`u32`).
+                ua::NodeClass::DATATYPE.into_raw(),
+                data_type_node.requested_new_node_id.as_ptr(),
+                data_type_node.parent_node_id.as_ptr(),
+                data_type_node.reference_type_id.as_ptr(),
+                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                data_type_node.browse_name.into_raw(),
+                ua::NodeId::null().as_ptr(),
+                data_type_node.attributes.as_node_attributes().as_ptr(),
+                ua::DataTypeAttributes::data_type(),
                 ptr::null_mut(),
                 ptr::null_mut(),
             )
@@ -237,6 +357,8 @@ impl Server {
         // will be consumed when the node is eventually deleted (`UA_ServerConfig::nodeLifecycle`).
         Error::verify_good(&status_code)
     }
+
+    // TODO: Implement setVariableNodeDynamic, addMethodeNodeEx and addMethodNode.
 
     /// Deletes node from address space.
     ///
