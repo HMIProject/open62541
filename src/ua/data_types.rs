@@ -3,6 +3,7 @@
 mod application_description;
 mod application_type;
 mod argument;
+mod attributes;
 mod attribute_id;
 mod browse_description;
 mod browse_direction;
@@ -57,7 +58,8 @@ mod write_value;
 
 pub use self::{
     application_description::ApplicationDescription, application_type::ApplicationType,
-    argument::Argument, attribute_id::AttributeId, browse_description::BrowseDescription,
+    argument::Argument, attributes::Attributes, attribute_id::AttributeId, 
+    browse_description::BrowseDescription,
     browse_direction::BrowseDirection, browse_next_request::BrowseNextRequest,
     browse_next_response::BrowseNextResponse, browse_request::BrowseRequest,
     browse_response::BrowseResponse, browse_result::BrowseResult, byte_string::ByteString,
