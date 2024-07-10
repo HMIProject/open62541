@@ -166,7 +166,7 @@ impl Server {
                 // TODO: Verify that `__UA_Server_addNode()` takes ownership.
                 node.browse_name.clone().into_raw(),
                 node.get_type_definition().as_ptr(),
-                node.attributes.as_node_attributes().as_ptr(), // Segfault: Node Attributes are not valid!
+                (*node.attributes.as_node_attributes()).as_ptr(),
                 node.attributes.data_type(),
                 node_context,
                 out_new_node_id,
@@ -202,7 +202,11 @@ impl Server {
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
                 variable_node.get_type_definition().into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node.attributes.as_variable_attributes().into_raw(),
+                variable_node
+                    .attributes
+                    .as_variable_attributes()
+                    .clone()
+                    .into_raw(),
                 data_source,
                 node_context.leak(),
                 ptr::null_mut(),

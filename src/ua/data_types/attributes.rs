@@ -23,13 +23,13 @@ impl Attributes {
     fn generic_node_attributes<T: Clone + crate::data_type::DataType>(
         &self,
         inner: &T,
-    ) -> &ua::NodeAttributes {
-        let node_attributes = unsafe { inner.clone().as_ptr().cast::<UA_NodeAttributes>() };
+    ) -> *const ua::NodeAttributes {
+        let node_attributes = unsafe { (*inner).as_ptr().cast::<UA_NodeAttributes>() };
         let node_attributes = unsafe { node_attributes.as_ref().unwrap_unchecked() };
         ua::NodeAttributes::raw_ref(node_attributes)
     }
 
-    pub fn as_node_attributes(&self) -> &ua::NodeAttributes {
+    pub fn as_node_attributes(&self) -> *const ua::NodeAttributes {
         // SAFETY: This transmutes from `Self` to the inner type, and then to `UA_NodeAttributes`, a
         // subset of `UA_DataTypeAttributes` with the same memory layout.
         match self {
@@ -37,17 +37,15 @@ impl Attributes {
             Attributes::Object(inner) => self.generic_node_attributes(inner),
             Attributes::ObjectType(inner) => self.generic_node_attributes(inner),
             Attributes::ReferenceType(inner) => self.generic_node_attributes(inner),
-            Attributes::Variable(_) => {
-                self.generic_node_attributes(self.as_variable_attributes().as_node_attributes())
-            }
+            Attributes::Variable(_) => self.as_variable_attributes().as_node_attributes(),
             Attributes::VariableType(inner) => self.generic_node_attributes(inner),
             Attributes::View(inner) => self.generic_node_attributes(inner),
         }
     }
 
-    pub fn as_variable_attributes(&self) -> ua::VariableAttributes {
+    pub fn as_variable_attributes(&self) -> &ua::VariableAttributes {
         match self {
-            Attributes::Variable(inner) => inner.clone(),
+            Attributes::Variable(inner) => inner,
             _ => panic!("Cannot convert this Attribute to VariableAttribute!"),
         }
     }
