@@ -89,9 +89,9 @@ fn main() -> anyhow::Result<()> {
 
     let data_source = DynamicDataSource::new("Lorem ipsum");
 
-    server.add_node(object_node).context("add object node")?;
+    server.add_node(&object_node).context("add object node")?;
     server
-        .add_data_source_variable_node(variable_node, data_source)
+        .add_data_source_variable_node(&variable_node, data_source)
         .context("add variable node")?;
 
     // Start runner task that handles incoming connections (events).

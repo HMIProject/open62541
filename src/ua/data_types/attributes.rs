@@ -21,7 +21,6 @@ pub enum Attributes {
 
 impl Attributes {
     fn generic_node_attributes<T: Clone + crate::data_type::DataType>(
-        &self,
         inner: &T,
     ) -> *const ua::NodeAttributes {
         let node_attributes = unsafe { (*inner).as_ptr().cast::<UA_NodeAttributes>() };
@@ -29,20 +28,25 @@ impl Attributes {
         ua::NodeAttributes::raw_ref(node_attributes)
     }
 
+    #[must_use]
     pub fn as_node_attributes(&self) -> *const ua::NodeAttributes {
         // SAFETY: This transmutes from `Self` to the inner type, and then to `UA_NodeAttributes`, a
         // subset of `UA_DataTypeAttributes` with the same memory layout.
         match self {
-            Attributes::DataType(inner) => self.generic_node_attributes(inner),
-            Attributes::Object(inner) => self.generic_node_attributes(inner),
-            Attributes::ObjectType(inner) => self.generic_node_attributes(inner),
-            Attributes::ReferenceType(inner) => self.generic_node_attributes(inner),
+            Attributes::DataType(inner) => Self::generic_node_attributes(inner),
+            Attributes::Object(inner) => Self::generic_node_attributes(inner),
+            Attributes::ObjectType(inner) => Self::generic_node_attributes(inner),
+            Attributes::ReferenceType(inner) => Self::generic_node_attributes(inner),
             Attributes::Variable(_) => self.as_variable_attributes().as_node_attributes(),
-            Attributes::VariableType(inner) => self.generic_node_attributes(inner),
-            Attributes::View(inner) => self.generic_node_attributes(inner),
+            Attributes::VariableType(inner) => Self::generic_node_attributes(inner),
+            Attributes::View(inner) => Self::generic_node_attributes(inner),
         }
     }
 
+    /// # Panics
+    ///
+    /// This method will panic if self isn't `VariableAttributes` but another attributes type.
+    #[must_use]
     pub fn as_variable_attributes(&self) -> &ua::VariableAttributes {
         match self {
             Attributes::Variable(inner) => inner,
@@ -50,9 +54,10 @@ impl Attributes {
         }
     }
 
+    #[must_use]
     pub fn data_type(&self) -> *const open62541_sys::UA_DataType {
         match self {
-            Attributes::DataType(_) => ua::VariableAttributes::data_type(),
+            Attributes::DataType(_) => ua::DataTypeAttributes::data_type(),
             Attributes::Object(_) => ua::ObjectAttributes::data_type(),
             Attributes::ObjectType(_) => ua::ObjectTypeAttributes::data_type(),
             Attributes::ReferenceType(_) => ua::ReferenceTypeAttributes::data_type(),
@@ -62,7 +67,8 @@ impl Attributes {
         }
     }
 
-    pub fn node_class(&self) -> ua::NodeClass {
+    #[must_use]
+    pub const fn node_class(&self) -> ua::NodeClass {
         match self {
             Attributes::DataType(_) => ua::NodeClass::DATATYPE,
             Attributes::Object(_) => ua::NodeClass::OBJECT,

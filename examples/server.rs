@@ -44,11 +44,11 @@ fn main() -> anyhow::Result<()> {
 
     println!("Adding server nodes really");
 
-    server.add_node(object_node)?;
+    server.add_node(&object_node)?;
 
     println!("Adding server nodes variable");
 
-    server.add_node(variable_node)?;
+    server.add_node(&variable_node)?;
 
     server.write_variable_string(&variable_node_id, "foobar")?;
 

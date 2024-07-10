@@ -11,16 +11,21 @@ pub struct Node {
 }
 
 impl Node {
+    /// # Panics
+    ///
+    /// This may panic if `Object`, `Variable` or `VariableType` Attributes are used but no `typeDefinition` is specified.
+    #[must_use]
     pub fn get_type_definition(&self) -> ua::NodeId {
         match self.attributes {
-            Attributes::DataType(_) => ua::NodeId::null(),
+            Attributes::DataType(_)
+            | Attributes::ObjectType(_)
+            | Attributes::ReferenceType(_)
+            | Attributes::View(_) => ua::NodeId::null(),
             Attributes::Object(_) => self
                 .type_definition
                 .as_ref()
                 .expect("Type definition for ObjectNode must be specified!")
                 .clone(),
-            Attributes::ObjectType(_) => ua::NodeId::null(),
-            Attributes::ReferenceType(_) => ua::NodeId::null(),
             Attributes::Variable(_) => self
                 .type_definition
                 .as_ref()
@@ -31,7 +36,6 @@ impl Node {
                 .as_ref()
                 .expect("Type definition for VariableTypeNode must be specified!")
                 .clone(),
-            Attributes::View(_) => ua::NodeId::null(),
         }
     }
 }

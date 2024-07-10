@@ -150,7 +150,7 @@ impl Server {
     /// # Errors
     ///
     /// This fails when the node cannot be added.
-    pub fn add_node(&self, node: Node) -> Result<()> {
+    pub fn add_node(&self, node: &Node) -> Result<()> {
         let node_context = ptr::null_mut();
         let out_new_node_id = ptr::null_mut();
 
@@ -182,7 +182,7 @@ impl Server {
     /// This fails when the node cannot be added.
     pub fn add_data_source_variable_node(
         &self,
-        variable_node: Node,
+        node: &Node,
         data_source: impl DataSource + 'static,
     ) -> Result<()> {
         // SAFETY: We store `node_context` inside the node to keep `data_source` alive.
@@ -192,21 +192,17 @@ impl Server {
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node.requested_new_node_id.clone().into_raw(),
+                node.requested_new_node_id.clone().into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node.parent_node_id.clone().into_raw(),
+                node.parent_node_id.clone().into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node.reference_type_id.clone().into_raw(),
+                node.reference_type_id.clone().into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node.browse_name.clone().into_raw(),
+                node.browse_name.clone().into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node.get_type_definition().into_raw(),
+                node.get_type_definition().into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node
-                    .attributes
-                    .as_variable_attributes()
-                    .clone()
-                    .into_raw(),
+                node.attributes.as_variable_attributes().clone().into_raw(),
                 data_source,
                 node_context.leak(),
                 ptr::null_mut(),
