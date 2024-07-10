@@ -19,3 +19,12 @@ capabilities to an existing program.
 
 You can find examples in our [documentation](https://docs.rs/open62541) and in the `examples/`
 folder in our repository.
+
+## Contributing
+
+Make sure to use `LF` line endings and run `just pre-commit` before committing your changes.
+
+Visit the [Just Programmer's Manual](https://just.systems/man/en/) for information on installing
+`just`. After installing, run `just setup` to setup the environment required by this repository.
+
+Tip: Configure your IDE to apply `cargo fmt` formatting when saving a file.
