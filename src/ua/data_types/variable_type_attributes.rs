@@ -2,8 +2,7 @@ use crate::DataType;
 
 crate::data_type!(VariableTypeAttributes);
 
-impl VariableTypeAttributes {
-}
+impl VariableTypeAttributes {}
 
 impl Default for VariableTypeAttributes {
     fn default() -> Self {

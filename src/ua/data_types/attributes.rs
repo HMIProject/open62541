@@ -1,6 +1,12 @@
 use open62541_sys::UA_NodeAttributes;
 
-use crate::{ua::{self, DataTypeAttributes, ObjectAttributes, ObjectTypeAttributes, ReferenceTypeAttributes, VariableAttributes, VariableTypeAttributes, ViewAttributes}, DataType};
+use crate::{
+    ua::{
+        self, DataTypeAttributes, ObjectAttributes, ObjectTypeAttributes, ReferenceTypeAttributes,
+        VariableAttributes, VariableTypeAttributes, ViewAttributes,
+    },
+    DataType,
+};
 
 #[derive(Debug, Clone)]
 pub enum Attributes {
@@ -14,9 +20,11 @@ pub enum Attributes {
 }
 
 impl Attributes {
-
-    fn generic_node_attributes<T: Clone + crate::data_type::DataType>(&self, inner: &T) -> &ua::NodeAttributes {
-        let node_attributes = unsafe {inner.clone().as_ptr().cast::<UA_NodeAttributes>()};
+    fn generic_node_attributes<T: Clone + crate::data_type::DataType>(
+        &self,
+        inner: &T,
+    ) -> &ua::NodeAttributes {
+        let node_attributes = unsafe { inner.clone().as_ptr().cast::<UA_NodeAttributes>() };
         let node_attributes = unsafe { node_attributes.as_ref().unwrap_unchecked() };
         ua::NodeAttributes::raw_ref(node_attributes)
     }
@@ -29,7 +37,9 @@ impl Attributes {
             Attributes::Object(inner) => self.generic_node_attributes(inner),
             Attributes::ObjectType(inner) => self.generic_node_attributes(inner),
             Attributes::ReferenceType(inner) => self.generic_node_attributes(inner),
-            Attributes::Variable(_) => self.generic_node_attributes(self.as_variable_attributes().as_node_attributes()),
+            Attributes::Variable(_) => {
+                self.generic_node_attributes(self.as_variable_attributes().as_node_attributes())
+            }
             Attributes::VariableType(inner) => self.generic_node_attributes(inner),
             Attributes::View(inner) => self.generic_node_attributes(inner),
         }
@@ -38,7 +48,7 @@ impl Attributes {
     pub fn as_variable_attributes(&self) -> ua::VariableAttributes {
         match self {
             Attributes::Variable(inner) => inner.clone(),
-            _ => panic!("Cannot convert this Attribute to VariableAttribute!")
+            _ => panic!("Cannot convert this Attribute to VariableAttribute!"),
         }
     }
 

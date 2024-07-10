@@ -5,7 +5,8 @@ mod node_types;
 use std::{ffi::c_void, ptr, sync::Arc};
 
 use open62541_sys::{
-    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode, UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write 
+    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
+    UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
 };
 
 use crate::{ua, DataType, Error, Result};

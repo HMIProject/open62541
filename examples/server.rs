@@ -12,7 +12,9 @@ use open62541_sys::{
 
 fn main() -> anyhow::Result<()> {
     // env_logger::init();
-    let env = env_logger::Env::default().filter_or("RUST_LOG", "trace").write_style_or("RUST_LOG", "always");
+    let env = env_logger::Env::default()
+        .filter_or("RUST_LOG", "trace")
+        .write_style_or("RUST_LOG", "always");
     env_logger::init_from_env(env);
 
     let (server, runner) = Server::new();
@@ -35,8 +37,9 @@ fn main() -> anyhow::Result<()> {
         reference_type_id: ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
         browse_name: ua::QualifiedName::new(1, "the answer"),
         type_definition: Some(ua::NodeId::ns0(UA_NS0ID_BASEDATAVARIABLETYPE)),
-        attributes:ua::Attributes::Variable(ua::VariableAttributes::default()
-            .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING))),
+        attributes: ua::Attributes::Variable(
+            ua::VariableAttributes::default().with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING)),
+        ),
     };
 
     println!("Adding server nodes really");

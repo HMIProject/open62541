@@ -3,8 +3,8 @@
 mod application_description;
 mod application_type;
 mod argument;
-mod attributes;
 mod attribute_id;
+mod attributes;
 mod browse_description;
 mod browse_direction;
 mod browse_next_request;
@@ -21,9 +21,9 @@ mod create_monitored_items_request;
 mod create_monitored_items_response;
 mod create_subscription_request;
 mod create_subscription_respones;
+mod data_type_attributes;
 mod data_value;
 mod date_time;
-mod data_type_attributes;
 mod delete_monitored_items_request;
 mod delete_monitored_items_response;
 mod delete_subscriptions_request;
@@ -58,18 +58,17 @@ mod write_value;
 
 pub use self::{
     application_description::ApplicationDescription, application_type::ApplicationType,
-    argument::Argument, attributes::Attributes, attribute_id::AttributeId, 
-    browse_description::BrowseDescription,
-    browse_direction::BrowseDirection, browse_next_request::BrowseNextRequest,
-    browse_next_response::BrowseNextResponse, browse_request::BrowseRequest,
-    browse_response::BrowseResponse, browse_result::BrowseResult, byte_string::ByteString,
-    call_method_request::CallMethodRequest, call_method_result::CallMethodResult,
-    call_request::CallRequest, call_response::CallResponse,
+    argument::Argument, attribute_id::AttributeId, attributes::Attributes,
+    browse_description::BrowseDescription, browse_direction::BrowseDirection,
+    browse_next_request::BrowseNextRequest, browse_next_response::BrowseNextResponse,
+    browse_request::BrowseRequest, browse_response::BrowseResponse, browse_result::BrowseResult,
+    byte_string::ByteString, call_method_request::CallMethodRequest,
+    call_method_result::CallMethodResult, call_request::CallRequest, call_response::CallResponse,
     create_monitored_items_request::CreateMonitoredItemsRequest,
     create_monitored_items_response::CreateMonitoredItemsResponse,
     create_subscription_request::CreateSubscriptionRequest,
-    create_subscription_respones::CreateSubscriptionResponse, data_value::DataValue,
-    date_time::DateTime, data_type_attributes::DataTypeAttributes,
+    create_subscription_respones::CreateSubscriptionResponse,
+    data_type_attributes::DataTypeAttributes, data_value::DataValue, date_time::DateTime,
     delete_monitored_items_request::DeleteMonitoredItemsRequest,
     delete_monitored_items_response::DeleteMonitoredItemsResponse,
     delete_subscriptions_request::DeleteSubscriptionsRequest,
@@ -79,14 +78,13 @@ pub use self::{
     monitored_item_create_result::MonitoredItemCreateResult, node_attributes::NodeAttributes,
     node_class::NodeClass, node_id::NodeId, node_id_type::NodeIdType,
     object_attributes::ObjectAttributes, object_type_attributes::ObjectTypeAttributes,
-    qualified_name::QualifiedName, read_request::ReadRequest,
-    read_response::ReadResponse, read_value_id::ReadValueId,
-    reference_description::ReferenceDescription, reference_type_attributes::ReferenceTypeAttributes,
-    status_code::StatusCode, string::String,
+    qualified_name::QualifiedName, read_request::ReadRequest, read_response::ReadResponse,
+    read_value_id::ReadValueId, reference_description::ReferenceDescription,
+    reference_type_attributes::ReferenceTypeAttributes, status_code::StatusCode, string::String,
     timestamps_to_return::TimestampsToReturn, variable_attributes::VariableAttributes,
-    variable_type_attributes::VariableTypeAttributes,
-    variant::Variant, view_attributes::ViewAttributes, write_request::WriteRequest, 
-    write_response::WriteResponse, write_value::WriteValue,
+    variable_type_attributes::VariableTypeAttributes, variant::Variant,
+    view_attributes::ViewAttributes, write_request::WriteRequest, write_response::WriteResponse,
+    write_value::WriteValue,
 };
 
 macro_rules! primitive {
