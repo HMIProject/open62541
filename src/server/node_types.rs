@@ -2,11 +2,12 @@ use crate::ua::{self, Attributes};
 
 #[derive(Debug, Clone)]
 pub struct Node {
-    pub requested_new_node_id: ua::NodeId,
+    pub node_id: ua::NodeId,
     pub parent_node_id: ua::NodeId,
     pub reference_type_id: ua::NodeId,
     pub browse_name: ua::QualifiedName,
     pub type_definition: Option<ua::NodeId>,
+    pub node_context: Option<ua::NodeId>,
     pub attributes: Attributes,
 }
 

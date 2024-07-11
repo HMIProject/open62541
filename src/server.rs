@@ -2,14 +2,18 @@ mod data_source;
 mod node_context;
 mod node_types;
 
-use std::{ffi::c_void, ptr, sync::Arc};
+use std::{borrow::Borrow, ffi::c_void, ops::Deref, ptr, sync::Arc};
 
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
+    UA_Server_addReference, UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode,
+    __UA_Server_write,
 };
 
-use crate::{ua, DataType, Error, Result};
+use crate::{
+    ua::{self, NodeId},
+    DataType, Error, Result,
+};
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
@@ -145,22 +149,58 @@ impl Server {
         ServerBuilder::default().build()
     }
 
+    // Idea: use generic for Node struct for attribute type
+
+    pub fn add_reference(
+        &self,
+        source_id: &ua::NodeId,
+        reference_type_id: &ua::NodeId,
+        target_id: &ua::ExpandedNodeId,
+        is_forward: bool,
+    ) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            // SAFETY: This function takes the structs by value. An investiagtion in the open62541 source
+            // found that the heap allocated fields of NodeId (like String) are not used or referenced.
+            // This means the C code forgets about all the values passed here and just uses them
+            // to find internal data and uses that to change internal states.
+            // Conclusion: We can savely give access to our Rust memory and we must not pass ownership
+            // as the C code doesn't take it. (otherwise a memory leak would arise)
+            // This may be wrong, so if you are debugging corrupt memory reads of nodeId or expandedNodeId
+            // the problem could lie here.
+            UA_Server_addReference(
+                self.0.as_ptr().cast_mut(),
+                source_id.as_raw(),
+                reference_type_id.as_raw(),
+                target_id.as_raw(),
+                is_forward,
+            )
+        });
+        Error::verify_good(&status_code)
+    }
+
     /// Adds node to address space.
     ///
     /// # Errors
     ///
     /// This fails when the node cannot be added.
-    pub fn add_node(&self, node: &Node) -> Result<()> {
-        let node_context = ptr::null_mut();
-        let out_new_node_id = ptr::null_mut();
-
+    pub fn add_node(&self, node: &mut Node) -> Result<()> {
+        let mut node_context = ptr::null_mut();
+        if node.node_context.is_some() {
+            node_context = unsafe {
+                node.node_context
+                    .as_mut()
+                    .unwrap_unchecked()
+                    .as_mut_ptr()
+                    .cast()
+            };
+        }
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 node.attributes.node_class().clone().into_raw(),
-                node.requested_new_node_id.as_ptr(),
+                node.node_id.as_ptr(),
                 node.parent_node_id.as_ptr(),
                 node.reference_type_id.as_ptr(),
                 // TODO: Verify that `__UA_Server_addNode()` takes ownership.
@@ -169,7 +209,7 @@ impl Server {
                 (*node.attributes.as_node_attributes()).as_ptr(),
                 node.attributes.data_type(),
                 node_context,
-                out_new_node_id,
+                node.node_id.as_mut_ptr(),
             )
         });
         Error::verify_good(&status_code)
@@ -192,7 +232,7 @@ impl Server {
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                node.requested_new_node_id.clone().into_raw(),
+                node.node_id.clone().into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
                 node.parent_node_id.clone().into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.

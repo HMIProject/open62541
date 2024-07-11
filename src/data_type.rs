@@ -75,6 +75,13 @@ pub unsafe trait DataType: Debug + Clone {
     #[must_use]
     fn into_raw(self) -> Self::Inner;
 
+    /// Keeps ownership and returns value.
+    ///
+    /// Extrem care must be taken that no references/pointers are created which surpass the lifetime
+    /// of the value.
+    #[must_use]
+    unsafe fn as_raw(&self) -> Self::Inner;
+
     /// Creates wrapper initialized with defaults.
     ///
     /// This uses [`UA_init()`] to initialize the value and make all attributes well-defined.
@@ -395,6 +402,15 @@ macro_rules! data_type {
                 let inner = unsafe { std::ptr::read(std::ptr::addr_of!(self.0)) };
                 // Make sure that `drop()` is not called anymore.
                 std::mem::forget(self);
+                inner
+            }
+
+            #[must_use]
+            unsafe fn as_raw(&self) -> Self::Inner {
+                // SAFETY: Move value out of `self` despite it not being `Copy`.
+                // The ownership will not be passed so any reference to the value
+                // which persists longer than the value itself will be invaild.
+                let inner = unsafe { std::ptr::read(std::ptr::addr_of!(self.0)) };
                 inner
             }
         }

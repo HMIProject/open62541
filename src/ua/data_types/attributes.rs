@@ -20,6 +20,55 @@ pub enum Attributes {
 }
 
 impl Attributes {
+    pub fn display_name(&mut self, locale: &str, name: &str) -> &mut Self {
+        let localized_text =
+            ua::LocalizedText::new(locale, name).expect("Localized text could not be created!");
+        match self {
+            Attributes::DataType(ref mut inner) => unsafe {
+                // inner.as_ref().displayName = localized_text;
+                localized_text.clone_into_raw(&mut inner.as_mut().displayName);
+            },
+            Attributes::Object(ref mut inner) => unsafe {
+                localized_text.clone_into_raw(&mut inner.as_mut().displayName);
+            },
+            Attributes::ObjectType(ref mut inner) => unsafe {
+                localized_text.clone_into_raw(&mut inner.as_mut().displayName);
+            },
+            Attributes::ReferenceType(ref mut inner) => unsafe {
+                localized_text.clone_into_raw(&mut inner.as_mut().displayName);
+            },
+            Attributes::Variable(ref mut inner) => unsafe {
+                localized_text.clone_into_raw(&mut inner.as_mut().displayName);
+            },
+            Attributes::VariableType(ref mut inner) => unsafe {
+                localized_text.clone_into_raw(&mut inner.as_mut().displayName);
+            },
+            Attributes::View(ref mut inner) => unsafe {
+                localized_text.clone_into_raw(&mut inner.as_mut().displayName);
+            },
+        }
+        self
+    }
+
+    pub fn value_rank(&mut self, rank: i32) -> &mut Self {
+        match self {
+            Attributes::DataType(_)
+            | Attributes::Object(_)
+            | Attributes::ObjectType(_)
+            | Attributes::ReferenceType(_)
+            | Attributes::View(_) => {
+                panic!("No value_rank field available for this Attribute type!");
+            }
+            Attributes::Variable(ref mut inner) => unsafe {
+                inner.as_mut().valueRank = rank;
+            },
+            Attributes::VariableType(ref mut inner) => unsafe {
+                inner.as_mut().valueRank = rank;
+            },
+        }
+        self
+    }
+
     fn generic_node_attributes<T: Clone + crate::data_type::DataType>(
         inner: &T,
     ) -> *const ua::NodeAttributes {

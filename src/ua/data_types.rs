@@ -45,6 +45,7 @@ mod read_response;
 mod read_value_id;
 mod reference_description;
 mod reference_type_attributes;
+mod relative_path_element;
 mod status_code;
 mod string;
 mod timestamps_to_return;
@@ -80,11 +81,11 @@ pub use self::{
     object_attributes::ObjectAttributes, object_type_attributes::ObjectTypeAttributes,
     qualified_name::QualifiedName, read_request::ReadRequest, read_response::ReadResponse,
     read_value_id::ReadValueId, reference_description::ReferenceDescription,
-    reference_type_attributes::ReferenceTypeAttributes, status_code::StatusCode, string::String,
-    timestamps_to_return::TimestampsToReturn, variable_attributes::VariableAttributes,
-    variable_type_attributes::VariableTypeAttributes, variant::Variant,
-    view_attributes::ViewAttributes, write_request::WriteRequest, write_response::WriteResponse,
-    write_value::WriteValue,
+    reference_type_attributes::ReferenceTypeAttributes, relative_path_element::RelativePathElement,
+    status_code::StatusCode, string::String, timestamps_to_return::TimestampsToReturn,
+    variable_attributes::VariableAttributes, variable_type_attributes::VariableTypeAttributes,
+    variant::Variant, view_attributes::ViewAttributes, write_request::WriteRequest,
+    write_response::WriteResponse, write_value::WriteValue,
 };
 
 macro_rules! primitive {
