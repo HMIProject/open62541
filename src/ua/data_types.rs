@@ -35,7 +35,6 @@ mod node_attributes;
 mod node_class;
 mod node_id;
 mod node_id_type;
-mod object_attributes;
 mod qualified_name;
 mod read_request;
 mod read_response;
@@ -44,37 +43,62 @@ mod reference_description;
 mod status_code;
 mod string;
 mod timestamps_to_return;
-mod variable_attributes;
 mod variant;
 mod write_request;
 mod write_response;
 mod write_value;
 
 pub use self::{
-    application_description::ApplicationDescription, application_type::ApplicationType,
-    argument::Argument, attribute_id::AttributeId, browse_description::BrowseDescription,
-    browse_direction::BrowseDirection, browse_next_request::BrowseNextRequest,
-    browse_next_response::BrowseNextResponse, browse_request::BrowseRequest,
-    browse_response::BrowseResponse, browse_result::BrowseResult, byte_string::ByteString,
-    call_method_request::CallMethodRequest, call_method_result::CallMethodResult,
-    call_request::CallRequest, call_response::CallResponse,
+    application_description::ApplicationDescription,
+    application_type::ApplicationType,
+    argument::Argument,
+    attribute_id::AttributeId,
+    browse_description::BrowseDescription,
+    browse_direction::BrowseDirection,
+    browse_next_request::BrowseNextRequest,
+    browse_next_response::BrowseNextResponse,
+    browse_request::BrowseRequest,
+    browse_response::BrowseResponse,
+    browse_result::BrowseResult,
+    byte_string::ByteString,
+    call_method_request::CallMethodRequest,
+    call_method_result::CallMethodResult,
+    call_request::CallRequest,
+    call_response::CallResponse,
     create_monitored_items_request::CreateMonitoredItemsRequest,
     create_monitored_items_response::CreateMonitoredItemsResponse,
     create_subscription_request::CreateSubscriptionRequest,
-    create_subscription_respones::CreateSubscriptionResponse, data_value::DataValue,
-    date_time::DateTime, delete_monitored_items_request::DeleteMonitoredItemsRequest,
+    create_subscription_respones::CreateSubscriptionResponse,
+    data_value::DataValue,
+    date_time::DateTime,
+    delete_monitored_items_request::DeleteMonitoredItemsRequest,
     delete_monitored_items_response::DeleteMonitoredItemsResponse,
     delete_subscriptions_request::DeleteSubscriptionsRequest,
-    delete_subscriptions_response::DeleteSubscriptionsResponse, expanded_node_id::ExpandedNodeId,
-    extension_object::ExtensionObject, localized_text::LocalizedText,
+    delete_subscriptions_response::DeleteSubscriptionsResponse,
+    expanded_node_id::ExpandedNodeId,
+    extension_object::ExtensionObject,
+    localized_text::LocalizedText,
     monitored_item_create_request::MonitoredItemCreateRequest,
-    monitored_item_create_result::MonitoredItemCreateResult, node_attributes::NodeAttributes,
-    node_class::NodeClass, node_id::NodeId, node_id_type::NodeIdType,
-    object_attributes::ObjectAttributes, qualified_name::QualifiedName, read_request::ReadRequest,
-    read_response::ReadResponse, read_value_id::ReadValueId,
-    reference_description::ReferenceDescription, status_code::StatusCode, string::String,
-    timestamps_to_return::TimestampsToReturn, variable_attributes::VariableAttributes,
-    variant::Variant, write_request::WriteRequest, write_response::WriteResponse,
+    monitored_item_create_result::MonitoredItemCreateResult,
+    node_attributes::{
+        DataTypeAttributes, MethodAttributes, NodeAttributes, ObjectAttributes,
+        ObjectTypeAttributes, ReferenceTypeAttributes, VariableAttributes, VariableTypeAttributes,
+        ViewAttributes,
+    },
+    node_class::NodeClass,
+    node_id::NodeId,
+    node_id_type::NodeIdType,
+    qualified_name::QualifiedName,
+    read_request::ReadRequest,
+    read_response::ReadResponse,
+    read_value_id::ReadValueId,
+    reference_description::ReferenceDescription,
+    status_code::StatusCode,
+    string::String,
+    timestamps_to_return::TimestampsToReturn,
+    variant::Variant,
+    write_request::WriteRequest,
+    write_response::WriteResponse,
     write_value::WriteValue,
 };
 
