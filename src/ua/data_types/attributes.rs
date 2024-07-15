@@ -20,12 +20,15 @@ pub enum Attributes {
 }
 
 impl Attributes {
+    /// # Panics
+    ///
+    /// This panics when the giving locale and name couldn't be used to successfully create a
+    /// new `ua::LocalizedText` object.
     pub fn display_name(&mut self, locale: &str, name: &str) -> &mut Self {
         let localized_text =
             ua::LocalizedText::new(locale, name).expect("Localized text could not be created!");
         match self {
             Attributes::DataType(ref mut inner) => unsafe {
-                // inner.as_ref().displayName = localized_text;
                 localized_text.clone_into_raw(&mut inner.as_mut().displayName);
             },
             Attributes::Object(ref mut inner) => unsafe {
@@ -50,6 +53,10 @@ impl Attributes {
         self
     }
 
+    /// # Panics
+    ///
+    /// This panics if the called the attribute has the wrong type.
+    /// `value_rank` is only available for `Variable` and `VariableType`
     pub fn value_rank(&mut self, rank: i32) -> &mut Self {
         match self {
             Attributes::DataType(_)

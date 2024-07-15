@@ -5,6 +5,7 @@ use crate::ua::NodeId;
 crate::data_type!(BrowsePath);
 
 impl BrowsePath {
+    #[must_use]
     pub fn new() -> Self {
         Self::clone_raw(unsafe { &(*open62541_sys::UA_BrowsePath_new()) })
     }
@@ -29,5 +30,11 @@ impl BrowsePath {
         // otherwise the RelativePathElement would have already been freed by the time self would be.
         self.0.relativePath.elements = elements.leak_into_raw();
         self
+    }
+}
+
+impl Default for BrowsePath {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -117,8 +117,7 @@ impl ServerBuilder {
 
     pub fn from_raw_server(raw_server: *mut UA_Server) -> Server {
         let server = Arc::new(ua::Server::from_raw(raw_server));
-        let server = Server(server);
-        server
+        Server(server)
     }
 
     /// Access server configuration.
@@ -155,6 +154,7 @@ impl Server {
         ServerBuilder::default().build()
     }
 
+    #[must_use]
     pub fn translate_browse_path_to_node_ids(
         &self,
         browse_path: &ua::BrowsePath,
@@ -179,6 +179,9 @@ impl Server {
 
     // Idea: use generic for Node struct for attribute type
 
+    /// # Errors
+    ///
+    /// Will return `Err` when the `status_code` of `UA_Server_addReference` call isn't `GOOD`.
     pub fn add_reference(
         &self,
         source_id: &ua::NodeId,
@@ -191,7 +194,7 @@ impl Server {
             // found that the heap allocated fields of NodeId (like String) are not used or referenced.
             // This means the C code forgets about all the values passed here and just uses them
             // to find internal data and uses that to change internal states.
-            // Conclusion: We can savely give access to our Rust memory and we must not pass ownership
+            // Conclusion: We can safely give access to our Rust memory and we must not pass ownership
             // as the C code doesn't take it. (otherwise a memory leak would arise)
             // This may be wrong, so if you are debugging corrupt memory reads of nodeId or expandedNodeId
             // the problem could lie here.

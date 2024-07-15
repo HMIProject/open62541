@@ -76,9 +76,9 @@ impl NodeTypeLifecycle {
                 )
             };
 
-            // Forget the server so we don't call the desctructor on it
+            // Forget the server so we don't call the destructor on it
             // We only constructed it so we have access to it, the server
-            // should still be vaild after this callback.
+            // should still be valid after this callback.
             std::mem::forget(server);
 
             status_code.into_raw()
@@ -110,7 +110,7 @@ impl NodeTypeLifecycle {
                     &NodeId::clone_raw(type_node_id.as_ref().expect("Callback failed!")),
                     type_node_context,
                     &NodeId::clone_raw(node_id.as_ref().expect("Callback failed!")),
-                )
+                );
             };
         }
 

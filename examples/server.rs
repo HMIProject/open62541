@@ -21,22 +21,24 @@ fn main() -> anyhow::Result<()> {
 
     println!("Adding server nodes");
 
-    let object_node = Node {
-        requested_new_node_id: ua::NodeId::string(1, "the.folder"),
+    let mut object_node = Node {
+        node_id: ua::NodeId::string(1, "the.folder"),
         parent_node_id: ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
         reference_type_id: ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
         browse_name: ua::QualifiedName::new(1, "the folder"),
         type_definition: Some(ua::NodeId::ns0(UA_NS0ID_FOLDERTYPE)),
+        node_context: None,
         attributes: ua::Attributes::Object(ua::ObjectAttributes::default()),
     };
 
     let variable_node_id = ua::NodeId::string(1, "the.answer");
-    let variable_node = Node {
-        requested_new_node_id: variable_node_id.clone(),
-        parent_node_id: object_node.requested_new_node_id.clone(),
+    let mut variable_node = Node {
+        node_id: variable_node_id.clone(),
+        parent_node_id: object_node.node_id.clone(),
         reference_type_id: ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
         browse_name: ua::QualifiedName::new(1, "the answer"),
         type_definition: Some(ua::NodeId::ns0(UA_NS0ID_BASEDATAVARIABLETYPE)),
+        node_context: None,
         attributes: ua::Attributes::Variable(
             ua::VariableAttributes::default().with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING)),
         ),
@@ -44,11 +46,11 @@ fn main() -> anyhow::Result<()> {
 
     println!("Adding server nodes really");
 
-    server.add_node(&object_node)?;
+    server.add_node(&mut object_node)?;
 
     println!("Adding server nodes variable");
 
-    server.add_node(&variable_node)?;
+    server.add_node(&mut variable_node)?;
 
     server.write_variable_string(&variable_node_id, "foobar")?;
 

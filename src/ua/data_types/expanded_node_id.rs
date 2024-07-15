@@ -5,7 +5,8 @@ use crate::{ua, DataType as _};
 crate::data_type!(ExpandedNodeId);
 
 impl ExpandedNodeId {
-    pub fn new(expanded_node_id: UA_ExpandedNodeId) -> Self {
+    #[must_use]
+    pub const fn new(expanded_node_id: UA_ExpandedNodeId) -> Self {
         Self(expanded_node_id)
     }
     #[must_use]

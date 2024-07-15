@@ -1,21 +1,16 @@
 // This is heavily inspired by https://www.open62541.org/doc/master/tutorial_server_object.html
 
-use std::{
-    sync::mpsc::{self, RecvTimeoutError},
-    thread,
-    time::Duration,
-};
+use std::thread;
 
+use open62541::Lifecycle;
 use open62541::{
     ua::{self, NodeId, StatusCode},
     Node, NodeContext, NodeTypeLifecycle, Server,
 };
-use open62541::{Error, Lifecycle};
 use open62541_sys::{
-    UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_BASEOBJECTTYPE, UA_NS0ID_FOLDERTYPE,
-    UA_NS0ID_HASCOMPONENT, UA_NS0ID_HASMODELLINGRULE, UA_NS0ID_HASSUBTYPE,
-    UA_NS0ID_MODELLINGRULE_MANDATORY, UA_NS0ID_OBJECTATTRIBUTES, UA_NS0ID_OBJECTSFOLDER,
-    UA_NS0ID_OBJECTTYPEATTRIBUTES, UA_NS0ID_ORGANIZES, UA_NS0ID_STRING, UA_VALUERANK_SCALAR,
+    UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_BASEOBJECTTYPE, UA_NS0ID_HASCOMPONENT,
+    UA_NS0ID_HASMODELLINGRULE, UA_NS0ID_HASSUBTYPE, UA_NS0ID_MODELLINGRULE_MANDATORY,
+    UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_OBJECTTYPEATTRIBUTES, UA_NS0ID_ORGANIZES, UA_VALUERANK_SCALAR,
 };
 
 fn define_object_types(server: &Server, pump_type_id: &NodeId) {
@@ -158,10 +153,10 @@ impl Lifecycle for PumpType {
     fn constructor(
         &mut self,
         server: &mut Server,
-        session_id: &NodeId,
-        session_context: *mut std::ffi::c_void,
-        type_id: &NodeId,
-        type_context: *mut std::ffi::c_void,
+        _session_id: &NodeId,
+        _session_context: *mut std::ffi::c_void,
+        _type_id: &NodeId,
+        _type_context: *mut std::ffi::c_void,
         node_id: &NodeId,
     ) -> ua::StatusCode {
         let qualified_name = ua::QualifiedName::new(1, "Status");
@@ -185,9 +180,13 @@ impl Lifecycle for PumpType {
 
         let status = ua::Boolean::new(true);
         let value = ua::Variant::scalar(status);
-        server.write_variable(bpr.get_target(0).get_target_id().node_id(), &value);
+        let status_code =
+            server.write_variable(bpr.get_target(0).get_target_id().node_id(), &value);
+        if status_code.is_err() {
+            return StatusCode::BAD;
+        }
 
-        return StatusCode::GOOD;
+        StatusCode::GOOD
     }
     fn destructor(
         &mut self,
@@ -208,10 +207,10 @@ fn add_pump_type_constructor(server: &Server, pump_type_id: &NodeId) -> NodeCont
     node_context
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     // env_logger::init();
     let env = env_logger::Env::default()
-        .filter_or("RUST_LOG", "trace")
+        .filter_or("RUST_LOG", "debug")
         .write_style_or("RUST_LOG", "always");
     env_logger::init_from_env(env);
 
@@ -243,6 +242,4 @@ fn main() -> anyhow::Result<()> {
     println!("Exiting");
 
     println!("Done");
-
-    Ok(())
 }

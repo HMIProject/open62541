@@ -1,10 +1,11 @@
 use crate::data_type::DataType;
 
-use super::{qualified_name, QualifiedName};
+use crate::ua::QualifiedName;
 
 crate::data_type!(RelativePathElement);
 
 impl RelativePathElement {
+    #[must_use]
     pub fn new() -> Self {
         Self::clone_raw(unsafe { &(*open62541_sys::UA_RelativePathElement_new()) })
     }
@@ -38,5 +39,11 @@ impl RelativePathElement {
         // instead of being freed separately and when self is freed.
         self.0.targetName = qualified_name.into_raw();
         self
+    }
+}
+
+impl Default for RelativePathElement {
+    fn default() -> Self {
+        Self::new()
     }
 }
