@@ -12,6 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Allow defining callback-driven variable nodes with `Server::add_data_source_variable_node()`.
 - Allow deletion of server nodes with `Server::delete_node()`.
 - Add known enum variants to `ua::StatusCode`.
+- Add method `ua::ExpandedNodeId::numeric()` to create numeric expanded node IDs.
 - Add `ua::NodeAttributes` and subtypes `ua::ObjectAttributes`, `ua::VariableAttributes`,
   `ua::MethodAttributes`, `ua::ObjectTypeAttributes`, `ua::VariableTypeAttributes`,
   `ua::ReferenceTypeAttributes`, `ua::DataTypeAttributes`, `ua::ViewAttributes`.

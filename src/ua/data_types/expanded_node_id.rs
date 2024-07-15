@@ -1,8 +1,23 @@
+use open62541_sys::{UA_NodeIdType, UA_EXPANDEDNODEID_NUMERIC};
+
 use crate::{ua, DataType as _};
 
 crate::data_type!(ExpandedNodeId);
 
 impl ExpandedNodeId {
+    /// Creates numeric expanded node ID.
+    #[must_use]
+    pub fn numeric(ns_index: u16, numeric: u32) -> Self {
+        let inner = unsafe { UA_EXPANDEDNODEID_NUMERIC(ns_index, numeric) };
+        debug_assert_eq!(
+            inner.nodeId.identifierType,
+            UA_NodeIdType::UA_NODEIDTYPE_NUMERIC,
+            "new node ID should have numeric type"
+        );
+
+        Self(inner)
+    }
+
     #[must_use]
     pub fn node_id(&self) -> &ua::NodeId {
         ua::NodeId::raw_ref(&self.0.nodeId)
