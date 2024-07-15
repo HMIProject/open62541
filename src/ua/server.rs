@@ -31,6 +31,12 @@ impl Server {
         Self(inner)
     }
 
+    pub(crate) fn from_raw(raw_server: *mut UA_Server) -> Self {
+        // PANIC: The only possible errors here are out-of-memory.
+        let inner = NonNull::new(raw_server).expect("create UA_Server");
+        Self(inner)
+    }
+
     /// Returns const pointer to value.
     ///
     /// # Safety

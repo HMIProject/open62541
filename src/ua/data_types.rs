@@ -9,6 +9,9 @@ mod browse_description;
 mod browse_direction;
 mod browse_next_request;
 mod browse_next_response;
+mod browse_path;
+mod browse_path_result;
+mod browse_path_target;
 mod browse_request;
 mod browse_response;
 mod browse_result;
@@ -62,9 +65,11 @@ pub use self::{
     argument::Argument, attribute_id::AttributeId, attributes::Attributes,
     browse_description::BrowseDescription, browse_direction::BrowseDirection,
     browse_next_request::BrowseNextRequest, browse_next_response::BrowseNextResponse,
-    browse_request::BrowseRequest, browse_response::BrowseResponse, browse_result::BrowseResult,
-    byte_string::ByteString, call_method_request::CallMethodRequest,
-    call_method_result::CallMethodResult, call_request::CallRequest, call_response::CallResponse,
+    browse_path::BrowsePath, browse_path_result::BrowsePathResult,
+    browse_path_target::BrowsePathTarget, browse_request::BrowseRequest,
+    browse_response::BrowseResponse, browse_result::BrowseResult, byte_string::ByteString,
+    call_method_request::CallMethodRequest, call_method_result::CallMethodResult,
+    call_request::CallRequest, call_response::CallResponse,
     create_monitored_items_request::CreateMonitoredItemsRequest,
     create_monitored_items_response::CreateMonitoredItemsResponse,
     create_subscription_request::CreateSubscriptionRequest,

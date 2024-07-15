@@ -1,10 +1,13 @@
-use open62541_sys::UA_EXPANDEDNODEID_NUMERIC;
+use open62541_sys::{UA_ExpandedNodeId, UA_EXPANDEDNODEID_NUMERIC};
 
 use crate::{ua, DataType as _};
 
 crate::data_type!(ExpandedNodeId);
 
 impl ExpandedNodeId {
+    pub fn new(expanded_node_id: UA_ExpandedNodeId) -> Self {
+        Self(expanded_node_id)
+    }
     #[must_use]
     pub fn node_id(&self) -> &ua::NodeId {
         ua::NodeId::raw_ref(&self.0.nodeId)

@@ -1,26 +1,26 @@
 mod data_source;
 mod node_context;
+mod node_type_lifecycle;
 mod node_types;
 
-use std::{borrow::Borrow, ffi::c_void, ops::Deref, ptr, sync::Arc};
+use std::{os::raw::c_void, ptr, sync::Arc};
 
 use open62541_sys::{
-    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_addReference, UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode,
+    UA_NodeId, UA_NodeTypeLifecycle, UA_Server, UA_ServerConfig,
+    UA_Server_addDataSourceVariableNode, UA_Server_addReference, UA_Server_deleteNode,
+    UA_Server_runUntilInterrupt, UA_Server_setNodeTypeLifecycle, __UA_Server_addNode,
     __UA_Server_write,
 };
 
-use crate::{
-    ua::{self, NodeId},
-    DataType, Error, Result,
-};
+use crate::{ua, DataType, Error, Result};
 
-pub(crate) use self::node_context::NodeContext;
 pub use self::{
     data_source::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext,
     },
+    node_context::NodeContext,
+    node_type_lifecycle::{Lifecycle, NodeTypeLifecycle},
     node_types::Node,
 };
 
@@ -115,6 +115,12 @@ impl ServerBuilder {
         (server, runner)
     }
 
+    pub fn from_raw_server(raw_server: *mut UA_Server) -> Server {
+        let server = Arc::new(ua::Server::from_raw(raw_server));
+        let server = Server(server);
+        server
+    }
+
     /// Access server configuration.
     fn config_mut(&mut self) -> &mut UA_ServerConfig {
         // SAFETY: Ownership is not given away.
@@ -149,6 +155,28 @@ impl Server {
         ServerBuilder::default().build()
     }
 
+    pub fn translate_browse_path_to_node_ids(
+        &self,
+        browse_path: &ua::BrowsePath,
+    ) -> ua::BrowsePathResult {
+        unsafe {
+            ua::BrowsePathResult::from_raw(open62541_sys::UA_Server_translateBrowsePathToNodeIds(
+                self.0.as_ptr().cast_mut(),
+                browse_path.as_ptr(),
+            ))
+        }
+    }
+
+    pub fn set_node_type_lifecycle(&self, node_id: &ua::NodeId, lifecycle: UA_NodeTypeLifecycle) {
+        unsafe {
+            UA_Server_setNodeTypeLifecycle(
+                self.0.as_ptr().cast_mut(),
+                DataType::to_raw_copy(node_id),
+                lifecycle,
+            )
+        };
+    }
+
     // Idea: use generic for Node struct for attribute type
 
     pub fn add_reference(
@@ -169,9 +197,9 @@ impl Server {
             // the problem could lie here.
             UA_Server_addReference(
                 self.0.as_ptr().cast_mut(),
-                source_id.as_raw(),
-                reference_type_id.as_raw(),
-                target_id.as_raw(),
+                DataType::to_raw_copy(source_id),
+                DataType::to_raw_copy(reference_type_id),
+                DataType::to_raw_copy(target_id),
                 is_forward,
             )
         });
@@ -186,13 +214,7 @@ impl Server {
     pub fn add_node(&self, node: &mut Node) -> Result<()> {
         let mut node_context = ptr::null_mut();
         if node.node_context.is_some() {
-            node_context = unsafe {
-                node.node_context
-                    .as_mut()
-                    .unwrap_unchecked()
-                    .as_mut_ptr()
-                    .cast()
-            };
+            node_context = unsafe { node.node_context.as_mut().unwrap_unchecked() };
         }
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
@@ -208,7 +230,7 @@ impl Server {
                 node.get_type_definition().as_ptr(),
                 (*node.attributes.as_node_attributes()).as_ptr(),
                 node.attributes.data_type(),
-                node_context,
+                node_context.cast(),
                 node.node_id.as_mut_ptr(),
             )
         });

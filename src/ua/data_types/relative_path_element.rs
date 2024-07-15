@@ -1,5 +1,7 @@
 use crate::data_type::DataType;
 
+use super::{qualified_name, QualifiedName};
+
 crate::data_type!(RelativePathElement);
 
 impl RelativePathElement {
@@ -12,12 +14,12 @@ impl RelativePathElement {
         self
     }
 
-    pub fn referenceTypeId(&mut self, reference_type_id: crate::ua::NodeId) -> &mut Self {
+    pub fn reference_type_id(&mut self, reference_type_id: &crate::ua::NodeId) -> &mut Self {
         // SAFETY: The C code doesn't handle any memory so we cannot give any ownership to it.
         // In the tutorials from open62541 only UA_NODEID_NUMERIC is used, so no string heap
         // allocation, which means everything is on the stack and we can safely use as_raw(),
         // as the instance of this object will only live as long as the reference_type_id.
-        self.0.referenceTypeId = unsafe { reference_type_id.as_raw() };
+        self.0.referenceTypeId = unsafe { DataType::to_raw_copy(reference_type_id) };
         self
     }
 
@@ -31,11 +33,10 @@ impl RelativePathElement {
         self
     }
 
-    pub fn target_name(&mut self, namespace_index: u16, target_name: &str) -> &mut Self {
-        // SAFETY: the new qualified name here will hopefully not be destroyed after this
-        // function returns otherwise that will be a problem.
-        self.0.targetName =
-            unsafe { crate::ua::QualifiedName::new(namespace_index, target_name).as_raw() };
+    pub fn target_name(&mut self, qualified_name: QualifiedName) -> &mut Self {
+        // SAFETY: pass ownership of qualified_name to self, so it will be freed when self will be freed,
+        // instead of being freed separately and when self is freed.
+        self.0.targetName = qualified_name.into_raw();
         self
     }
 }
