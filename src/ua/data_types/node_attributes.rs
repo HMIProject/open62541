@@ -11,9 +11,9 @@ macro_rules! derived {
         $(
             $crate::data_type!($name);
 
-            impl $name {
+            impl $crate::AsNodeAttributes for $name {
                 #[allow(dead_code)]
-                pub(crate) fn as_node_attributes(&self) -> &ua::NodeAttributes {
+                fn as_node_attributes(&self) -> &ua::NodeAttributes {
                     // SAFETY: This transmutes from `Self` to `UA_NodeAttributes`, a strict subset of
                     // `UA_(...)Attributes` with the same memory layout.
                     let node_attributes = unsafe { self.as_ptr().cast::<UA_NodeAttributes>() };

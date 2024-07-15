@@ -9,7 +9,10 @@ use open62541_sys::{
     UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
 };
 
-use crate::{ua, DataType, Error, Result};
+use crate::{
+    ua::{self},
+    AsNodeAttributes as _, DataType, Error, Result,
+};
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
