@@ -364,7 +364,7 @@ macro_rules! data_type {
                 unsafe {
                     open62541_sys::UA_clear(
                         std::ptr::addr_of_mut!(self.0).cast::<std::ffi::c_void>(),
-                        <Self as crate::DataType>::data_type(),
+                        <Self as $crate::DataType>::data_type(),
                     )
                 }
             }
@@ -372,7 +372,7 @@ macro_rules! data_type {
 
         // SAFETY: We can transmute between our wrapper type and the inner type. This is ensured by
         // using `#[repr(transparent)]` on the type definition.
-        unsafe impl crate::DataType for $name {
+        unsafe impl $crate::DataType for $name {
             type Inner = open62541_sys::$inner;
 
             fn data_type() -> *const open62541_sys::UA_DataType {
@@ -401,13 +401,13 @@ macro_rules! data_type {
 
         impl Clone for $name {
             fn clone(&self) -> Self {
-                <Self as crate::DataType>::clone_raw(&self.0)
+                <Self as $crate::DataType>::clone_raw(&self.0)
             }
         }
 
         impl std::fmt::Debug for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let output = <Self as crate::DataType>::print(self);
+                let output = <Self as $crate::DataType>::print(self);
                 let string = output.as_ref().and_then(|output| output.as_str());
                 f.write_str(string.unwrap_or(stringify!($name)))
             }
@@ -433,7 +433,7 @@ macro_rules! data_type {
         // The implementation of [`UA_order()`] ensures a total order.
         impl std::cmp::Ord for $name {
             fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-                let result = <Self as crate::DataType>::order(self, other);
+                let result = <Self as $crate::DataType>::order(self, other);
                 match result {
                     open62541_sys::UA_Order::UA_ORDER_LESS => std::cmp::Ordering::Less,
                     open62541_sys::UA_Order::UA_ORDER_EQ => std::cmp::Ordering::Equal,

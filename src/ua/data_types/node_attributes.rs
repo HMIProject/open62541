@@ -9,7 +9,7 @@ crate::data_type!(NodeAttributes);
 macro_rules! derived {
     ($( $name:ident ),* $(,)?) => {
         $(
-            crate::data_type!($name);
+            $crate::data_type!($name);
 
             impl $name {
                 #[allow(dead_code)]

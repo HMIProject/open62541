@@ -186,14 +186,14 @@ impl serde::Serialize for Variant {
             ($self:ident, $serializer:ident, [$( $( #[cfg($cfg: meta)] )? $name:ident ),* $(,)?] $(,)?) => {
                 $(
                     $( #[cfg($cfg)] )?
-                    if let Some(value) = self.as_scalar::<crate::ua::$name>() {
-                        return <crate::ua::$name as serde::Serialize>::serialize(value, serializer);
+                    if let Some(value) = self.as_scalar::<$crate::ua::$name>() {
+                        return <$crate::ua::$name as serde::Serialize>::serialize(value, serializer);
                     }
 
                     $( #[cfg($cfg)] )?
-                    if let Some(value) = self.to_array::<crate::ua::$name>() {
+                    if let Some(value) = self.to_array::<$crate::ua::$name>() {
                         // TODO: Avoid `to_array()`, borrow `value` from `self` instead of copying.
-                        return <ua::Array<crate::ua::$name> as serde::Serialize>::serialize(&value, serializer);
+                        return <ua::Array<$crate::ua::$name> as serde::Serialize>::serialize(&value, serializer);
                     }
                 )*
             };
