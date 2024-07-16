@@ -1,8 +1,8 @@
 use std::{ffi::CString, fmt, hash, str};
 
 use open62541_sys::{
-    UA_NodeIdType, UA_NodeId_hash, UA_NodeId_parse, UA_NodeId_print, UA_NODEID_NUMERIC,
-    UA_NODEID_STRING_ALLOC,
+    UA_NodeIdType, UA_NodeId_hash, UA_NodeId_parse, UA_NodeId_print, UA_NODEID_NULL,
+    UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC,
 };
 
 use crate::{ua, DataType, Error};
@@ -58,6 +58,14 @@ impl NodeId {
         }
 
         Self(inner)
+    }
+
+    /// Creates null node ID.
+    #[must_use]
+    #[allow(dead_code)] // This can be removed in the future
+    pub(crate) fn null() -> Self {
+        // SAFETY: Read-only access of static.
+        Self::clone_raw(unsafe { &UA_NODEID_NULL })
     }
 
     /// Gets node ID type.
