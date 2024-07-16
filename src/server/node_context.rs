@@ -6,7 +6,7 @@ use crate::{server::DataSource, Userdata};
 ///
 /// Nodes created by [`Server`](crate::Server) need to keep track of dynamic data structures. These
 /// are cleaned up when the corresponding node is destroyed by the server.
-pub(crate) enum NodeContext {
+pub enum NodeContext {
     DataSource(Box<dyn DataSource>),
 }
 

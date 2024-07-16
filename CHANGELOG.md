@@ -14,6 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add known enum variants to `ua::StatusCode`.
 - Add method `ua::ExpandedNodeId::numeric()` to create numeric expanded node IDs.
 - Add type `ua::RelativePathElement`.
+- Change visibility of `NodeContext` to be public.
 
 ### Changed
 
