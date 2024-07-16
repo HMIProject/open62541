@@ -84,6 +84,9 @@ impl ServerBuilder {
             // always use `NodeContext`. Therefore, if `node_context` is set at all, we can/must
             // call `NodeContext::consume()` to release that data. No other data must have been
             // stored inside `node_context`.
+            //
+            // Note: The above assumption is not correct. See issue for more details:
+            // <https://github.com/HMIProject/open62541/issues/125>
             if !node_context.is_null() {
                 if let Some(node_id) = unsafe { node_id.as_ref() }.map(ua::NodeId::raw_ref) {
                     log::debug!("Destroying node {node_id}, freeing associated data");
@@ -92,9 +95,13 @@ impl ServerBuilder {
                 }
                 // SAFETY: The node destructor is run only once and we never consume the context
                 // outside of it.
-                unsafe {
-                    let _unused = NodeContext::consume(node_context);
-                }
+                //
+                // Note: We must not consume the node context because we cannot be sure that it
+                // points to valid memory (see above). We leak memory here. Fix this soon.
+                //
+                // unsafe {
+                //     let _unused = NodeContext::consume(node_context);
+                // }
             }
         }
 
