@@ -4,7 +4,10 @@ use std::{
     time::Duration,
 };
 
-use open62541::{ua, ObjectNode, Server, VariableNode};
+use open62541::{
+    ua::{self},
+    ObjectNode, Server, VariableNode,
+};
 use open62541_sys::{
     UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,
     UA_NS0ID_STRING,

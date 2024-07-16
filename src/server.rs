@@ -11,7 +11,7 @@ use open62541_sys::{
 
 use crate::{
     ua::{self},
-    AsNodeAttributes as _, DataType, Error, Result,
+    Attributes, DataType, Error, Result,
 };
 
 pub(crate) use self::node_context::NodeContext;
@@ -155,6 +155,37 @@ impl Server {
     #[must_use]
     pub fn new() -> (Self, ServerRunner) {
         ServerBuilder::default().build()
+    }
+
+    /// Adds node to address space.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node cannot be added.
+    pub fn add_node<T: Attributes + DataType>(&self, node: &mut node_types::Node<T>) -> Result<()> {
+        let mut context = ptr::null_mut();
+        if node.context.is_some() {
+            context = unsafe { node.context.as_mut().unwrap_unchecked() };
+        }
+        let status_code = ua::StatusCode::new(unsafe {
+            __UA_Server_addNode(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // Passing ownership is trivial with primitive value (`u32`).
+                node.attributes.node_class().clone().into_raw(),
+                node.id.as_ptr(),
+                node.parent_node_id.as_ptr(),
+                node.reference_type_id.as_ptr(),
+                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                node.browse_name.clone().into_raw(),
+                node.get_type_definition().as_ptr(),
+                (*node.attributes.as_node_attributes()).as_ptr(),
+                T::data_type(),
+                context.cast(),
+                node.id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)
     }
 
     /// Adds object node to address space.

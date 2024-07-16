@@ -1,4 +1,11 @@
+mod data_type_attributes;
+mod method_attributes;
+mod object_attributes;
+mod object_type_attributes;
+mod reference_type_attributes;
 mod variable_attributes;
+mod variable_type_attributes;
+mod view_attributes;
 
 use open62541_sys::UA_NodeAttributes;
 
@@ -11,7 +18,7 @@ macro_rules! derived {
         $(
             $crate::data_type!($name);
 
-            impl $crate::AsNodeAttributes for $name {
+            impl $crate::Attributes for $name {
                 #[allow(dead_code)]
                 fn as_node_attributes(&self) -> &ua::NodeAttributes {
                     // SAFETY: This transmutes from `Self` to `UA_NodeAttributes`, a strict subset of
@@ -20,6 +27,17 @@ macro_rules! derived {
                     // SAFETY: Transmutation is allowed and pointer is valid (non-zero).
                     let node_attributes = unsafe { node_attributes.as_ref().unwrap_unchecked() };
                     ua::NodeAttributes::raw_ref(node_attributes)
+                }
+
+                fn with_display_name(mut self, locale: &str, name: &str) -> Self {
+                    let localized_text =
+                        ua::LocalizedText::new(locale, name).expect("Localized text could not be created!");
+                    localized_text.clone_into_raw(&mut self.0.displayName);
+                    self
+                }
+
+                fn node_class(&self) -> ua::NodeClass {
+                    self.handle_node_class()
                 }
             }
 

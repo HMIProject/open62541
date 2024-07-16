@@ -12,4 +12,9 @@ impl super::VariableAttributes {
         self.0.accessLevel = access_level.as_u8();
         self
     }
+
+    #[must_use]
+    pub const fn handle_node_class(&self) -> ua::NodeClass {
+        ua::NodeClass::VARIABLE
+    }
 }
