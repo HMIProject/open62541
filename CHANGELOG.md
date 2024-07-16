@@ -13,6 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Allow deletion of server nodes with `Server::delete_node()`.
 - Add known enum variants to `ua::StatusCode`.
 - Add method `ua::ExpandedNodeId::numeric()` to create numeric expanded node IDs.
+- Add type `ua::RelativePathElement`.
 
 ### Changed
 
