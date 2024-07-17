@@ -1,36 +1,72 @@
-use crate::{
-    ua::{self},
-    Attributes,
-};
+use crate::{ua, Attributes};
 
 use super::NodeContext;
 
 pub struct Node<T: Attributes> {
-    pub id: Option<ua::NodeId>,
-    pub parent_node_id: ua::NodeId,
-    pub reference_type_id: ua::NodeId,
-    pub browse_name: ua::QualifiedName,
-    pub type_definition: Option<ua::NodeId>,
-    pub context: Option<NodeContext>,
-    pub attributes: T,
+    id: ua::NodeId,
+    parent_node_id: ua::NodeId,
+    reference_type_id: ua::NodeId,
+    browse_name: ua::QualifiedName,
+    type_definition: ua::NodeId,
+    context: Option<NodeContext>,
+    attributes: T,
 }
 
 impl<T: Attributes> Node<T> {
-    /// # Panics
-    ///
-    /// This method panics when the `type_definition` field is None,
-    /// and the node attribute type is `Variable`, `VariableType`
-    /// or `Object`
-    #[must_use]
-    pub fn get_type_definition(&self) -> ua::NodeId {
-        if self.attributes.check_node_type_definition() {
-            self.type_definition
-                .as_ref()
-                .expect("Type definition must be specified for this node type!")
-                .clone()
-        } else {
-            ua::NodeId::null()
+    pub fn init(
+        parent_node_id: ua::NodeId,
+        reference_type_id: ua::NodeId,
+        browse_name: ua::QualifiedName,
+        attributes: T,
+    ) -> Node<T> {
+        Node {
+            id: ua::NodeId::null(),
+            parent_node_id,
+            reference_type_id,
+            browse_name,
+            type_definition: ua::NodeId::null(),
+            context: None,
+            attributes,
         }
+    }
+
+    pub fn with_type_definition(mut self, type_definition: ua::NodeId) -> Self {
+        self.type_definition = type_definition;
+        self
+    }
+
+    pub const fn id(&self) -> &ua::NodeId {
+        &self.id
+    }
+
+    #[must_use]
+    pub const fn type_definition(&self) -> &ua::NodeId {
+        &self.type_definition
+    }
+
+    #[must_use]
+    pub(crate) const fn context(&self) -> &Option<NodeContext> {
+        &self.context
+    }
+
+    #[must_use]
+    pub const fn attributes(&self) -> &T {
+        &self.attributes
+    }
+
+    #[must_use]
+    pub const fn parent_node_id(&self) -> &ua::NodeId {
+        &self.parent_node_id
+    }
+
+    #[must_use]
+    pub const fn reference_type_id(&self) -> &ua::NodeId {
+        &self.reference_type_id
+    }
+
+    #[must_use]
+    pub const fn browse_name(&self) -> &ua::QualifiedName {
+        &self.browse_name
     }
 }
 

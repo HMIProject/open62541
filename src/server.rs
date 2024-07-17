@@ -4,15 +4,13 @@ mod node_types;
 
 use std::{ffi::c_void, ptr, sync::Arc};
 
+use node_types::Node;
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
     UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
 };
 
-use crate::{
-    ua::{self, NodeId},
-    Attributes, DataType, Error, Result,
-};
+use crate::{ua, Attributes, DataType, Error, Result};
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
@@ -162,33 +160,39 @@ impl Server {
     /// # Errors
     ///
     /// This fails when the node cannot be added.
-    pub fn add_node<T: Attributes + DataType>(&self, node: &mut node_types::Node<T>) -> Result<()> {
-        let mut context = ptr::null_mut();
-        if node.context.is_some() {
-            context = unsafe { node.context.as_mut().unwrap_unchecked() };
+    pub fn add_node<T: Attributes + DataType>(&self, node: &Node<T>) -> Result<ua::NodeId> {
+        let mut out_node_id: ua::NodeId = ua::NodeId::null();
+        let mut context: *mut NodeContext = ptr::null_mut();
+        if node.context().is_some() {
+            // SAFETY: `__UA_Server_addNode` takes `nodeContext` as a mutable pointer, but nothing
+            // is modified in the function. Here we cast the non-mut reference to mut
+            // Maybe the `nodeContext` could be modified internally, outside of the addNode function
+            // but this has not been clarified yet.
+            context =
+                unsafe { ptr::from_ref(node.context().as_ref().unwrap_unchecked()).cast_mut() };
         }
-        let mut out_new_node_id = NodeId::null();
+
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
-                node.attributes.node_class().clone().into_raw(),
-                node.id.get_or_insert(NodeId::null()).as_ptr(),
-                node.parent_node_id.as_ptr(),
-                node.reference_type_id.as_ptr(),
+                node.attributes().node_class().clone().into_raw(),
+                node.id().as_ptr(),
+                node.parent_node_id().as_ptr(),
+                node.reference_type_id().as_ptr(),
                 // TODO: Verify that `__UA_Server_addNode()` takes ownership.
-                node.browse_name.clone().into_raw(),
-                node.get_type_definition().as_ptr(),
-                (*node.attributes.as_node_attributes()).as_ptr(),
+                node.browse_name().clone().into_raw(),
+                node.type_definition().as_ptr(),
+                node.attributes().as_node_attributes().as_ptr(),
                 T::data_type(),
                 context.cast(),
-                out_new_node_id.as_mut_ptr(),
+                out_node_id.as_mut_ptr(),
             )
         });
-        let _ = node.id.insert(out_new_node_id);
 
-        Error::verify_good(&status_code)
+        Error::verify_good(&status_code)?;
+        Ok(out_node_id)
     }
 
     /// Adds object node to address space.
