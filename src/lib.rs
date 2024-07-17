@@ -88,8 +88,8 @@ pub use self::{
     error::{Error, Result},
     server::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
-        DataSourceWriteContext, Node, ObjectNode, Server, ServerBuilder, ServerRunner,
-        VariableNode,
+        DataSourceWriteContext, Lifecycle, LifecycleManager, Node, ObjectNode, Server,
+        ServerBuilder, ServerRunner, VariableNode,
     },
     traits::Attributes,
     userdata::Userdata,
@@ -98,6 +98,7 @@ pub use self::{
 pub(crate) use self::{
     data_type::{bitmask_ops, data_type, enum_variants},
     logger::logger,
+    server::NodeContext,
     service::{ServiceRequest, ServiceResponse},
     value::{ArrayValue, NonScalarValue},
 };

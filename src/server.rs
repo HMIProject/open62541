@@ -1,5 +1,7 @@
 mod data_source;
+mod lifecycle;
 mod node_context;
+mod node_type_lifecycle_manager;
 mod node_types;
 
 use std::{
@@ -12,7 +14,7 @@ use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
     UA_Server_addNamespace, UA_Server_addReference, UA_Server_createEvent, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
-    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
+    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt, UA_Server_setNodeTypeLifecycle,
     UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeObjectProperty,
     __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
@@ -25,6 +27,8 @@ pub use self::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext,
     },
+    lifecycle::Lifecycle,
+    node_type_lifecycle_manager::LifecycleManager,
     node_types::{Node, ObjectNode, VariableNode},
 };
 
@@ -125,6 +129,21 @@ impl ServerBuilder {
         let runner = ServerRunner(Arc::clone(&server));
         let server = Server(server);
         (server, runner)
+    }
+
+    /// This crates a Server object from a raw server pointer.
+    /// It's useful when you are in a Rust callback and want to run commands
+    /// on the server, which is only possible after converting the raw pointer
+    /// to a server object.
+    ///
+    /// # Safety
+    ///
+    /// Make sure to run `std::mem::forget(server);` before returning, so the
+    /// destructor doesn't get called. Otherwise the server would be stopped.
+    #[allow(dead_code)] // This will be used in the future
+    pub(crate) fn from_raw_server(raw_server: *mut UA_Server) -> Server {
+        let server = Arc::new(ua::Server::from_raw(raw_server));
+        Server(server)
     }
 
     /// Access server configuration.
@@ -300,6 +319,23 @@ impl Server {
         Some(found_uri)
     }
 
+    /// Sets a Lifecycle for a type node
+    ///
+    /// To use this, make use of the `LifecycleManager`
+    pub(crate) fn set_node_type_lifecycle(
+        &self,
+        node_id: &ua::NodeId,
+        lifecycle: ua::NodeTypeLifecycle,
+    ) {
+        unsafe {
+            UA_Server_setNodeTypeLifecycle(
+                self.0.as_ptr().cast_mut(),
+                DataType::to_raw_copy(node_id),
+                lifecycle.into_raw(),
+            )
+        };
+    }
+
     /// Adds node to address space.
     ///
     /// This returns the node ID that was actually inserted (when no explicit requested new node ID
@@ -406,7 +442,7 @@ impl Server {
     pub fn add_data_source_variable_node(
         &self,
         variable_node: VariableNode,
-        data_source: impl DataSource + 'static,
+        data_source: impl DataSource + 'static + std::marker::Sync + std::marker::Send,
     ) -> Result<()> {
         // SAFETY: We store `node_context` inside the node to keep `data_source` alive.
         let (data_source, node_context) = unsafe { data_source::wrap_data_source(data_source) };

@@ -1,7 +1,8 @@
 use std::{
     ffi::c_void,
-    panic::{catch_unwind, AssertUnwindSafe},
+    panic::catch_unwind,
     ptr::NonNull,
+    sync::{Arc, Mutex},
 };
 
 use open62541_sys::{
@@ -159,7 +160,7 @@ impl DataSourceWriteContext {
 /// lifetime can be extended by using [`NodeContext::leak()`] to save this value inside the
 /// corresponding server node, to be eventually cleaned up when the node is destroyed.
 pub(crate) unsafe fn wrap_data_source(
-    data_source: impl DataSource + 'static,
+    data_source: impl DataSource + 'static + std::marker::Sync + std::marker::Send,
 ) -> (UA_DataSource, NodeContext) {
     unsafe extern "C" fn read_c(
         _server: *mut UA_Server,
@@ -183,7 +184,12 @@ pub(crate) unsafe fn wrap_data_source(
             // Creating context for callback should always succeed.
             return ua::StatusCode::BADINTERNALERROR.into_raw();
         };
-        let mut data_source = AssertUnwindSafe(data_source);
+        let data_source = data_source.lock();
+        if data_source.is_err() {
+            return ua::StatusCode::BADINTERNALERROR.into_raw();
+        }
+        let mut data_source = data_source
+            .expect("data_source was successfully checked to be accessible, but it is not!");
 
         let status_code = match catch_unwind(move || data_source.read(&mut context)) {
             Ok(Ok(())) => ua::StatusCode::GOOD,
@@ -195,6 +201,8 @@ pub(crate) unsafe fn wrap_data_source(
         };
 
         status_code.into_raw()
+
+        // MutexGuard goes out of scope and unlocks the data_source
     }
 
     unsafe extern "C" fn write_c(
@@ -218,7 +226,12 @@ pub(crate) unsafe fn wrap_data_source(
             // Creating context for callback should always succeed.
             return ua::StatusCode::BADINTERNALERROR.into_raw();
         };
-        let mut data_source = AssertUnwindSafe(data_source);
+        let data_source = data_source.lock();
+        if data_source.is_err() {
+            return ua::StatusCode::BADINTERNALERROR.into_raw();
+        }
+        let mut data_source = data_source
+            .expect("data_source was successfully checked to be accessible, but it is not!");
 
         let status_code = match catch_unwind(move || data_source.write(&mut context)) {
             Ok(Ok(())) => ua::StatusCode::GOOD,
@@ -230,6 +243,8 @@ pub(crate) unsafe fn wrap_data_source(
         };
 
         status_code.into_raw()
+
+        // MutexGuard goes out of scope and unlocks the data_source
     }
 
     let raw_data_source = UA_DataSource {
@@ -239,7 +254,7 @@ pub(crate) unsafe fn wrap_data_source(
         write: Some(write_c),
     };
 
-    let node_context = NodeContext::DataSource(Box::new(data_source));
+    let node_context = NodeContext::DataSource(Arc::new(Mutex::new(data_source)));
 
     (raw_data_source, node_context)
 }

@@ -38,6 +38,7 @@ mod node_attributes;
 mod node_class;
 mod node_id;
 mod node_id_type;
+mod node_type_lifecycle;
 mod qualified_name;
 mod read_request;
 mod read_response;
@@ -96,6 +97,7 @@ pub use self::{
     node_class::NodeClass,
     node_id::NodeId,
     node_id_type::NodeIdType,
+    node_type_lifecycle::NodeTypeLifecycle,
     qualified_name::QualifiedName,
     read_request::ReadRequest,
     read_response::ReadResponse,

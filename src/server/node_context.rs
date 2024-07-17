@@ -1,13 +1,32 @@
-use std::ffi::c_void;
+use std::{
+    ffi::c_void,
+    sync::{Arc, Mutex},
+};
 
-use crate::{server::DataSource, Userdata};
+use crate::{server::DataSource, Lifecycle, Userdata};
 
 /// Context attached to server node.
 ///
 /// Nodes created by [`Server`](crate::Server) need to keep track of dynamic data structures. These
 /// are cleaned up when the corresponding node is destroyed by the server.
-pub(crate) enum NodeContext {
-    DataSource(Box<dyn DataSource>),
+#[derive(Clone)]
+pub enum NodeContext {
+    // ARC is used here to be able to reference the same `NodeContext` multiple times.
+    // This is especially useful for `Lifecycle`, as the same constructor and destructor and therefore
+    // `NodeContext` will be used by multiple objects.
+    // Using ARC enables easy cloning of the `NodeContext`, and no shady code needs to be involved.
+    // As DataSource and Lifecycle both use static lifetime, there is no need to worry about the
+    // reference count and memory deallocation.
+    // Using Box<> would have been sufficient for DataSource, but using Arc<> brings no relevant
+    // disadvantage and has the big advantage of enabling to use `#derive[Clone]]`, which is required
+    // for `Lifecycle`
+    // In theory, it would be suffienct to not clone the NodeContext directly, but to use the `c_void`
+    // pointer multiple times. But then handling such pointers in other parts of the code would have
+    // been required, which isn't exactly nice to do.
+    // Mutex is required for `DataSource` as fields in a struct implementing the trait may be mutated,
+    // which could make problems with multi-threading.
+    DataSource(Arc<Mutex<dyn DataSource + 'static + Send + Sync>>),
+    Lifecycle(Arc<dyn Lifecycle + 'static + Send + Sync>),
 }
 
 #[allow(dead_code)] // We will use the methods soon.
