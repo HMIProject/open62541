@@ -8,6 +8,9 @@ mod browse_description;
 mod browse_direction;
 mod browse_next_request;
 mod browse_next_response;
+mod browse_path;
+mod browse_path_result;
+mod browse_path_target;
 mod browse_request;
 mod browse_response;
 mod browse_result;
@@ -40,6 +43,8 @@ mod read_request;
 mod read_response;
 mod read_value_id;
 mod reference_description;
+mod relative_path;
+mod relative_path_element;
 mod status_code;
 mod string;
 mod timestamps_to_return;
@@ -57,6 +62,9 @@ pub use self::{
     browse_direction::BrowseDirection,
     browse_next_request::BrowseNextRequest,
     browse_next_response::BrowseNextResponse,
+    browse_path::BrowsePath,
+    browse_path_result::BrowsePathResult,
+    browse_path_target::BrowsePathTarget,
     browse_request::BrowseRequest,
     browse_response::BrowseResponse,
     browse_result::BrowseResult,
@@ -93,6 +101,8 @@ pub use self::{
     read_response::ReadResponse,
     read_value_id::ReadValueId,
     reference_description::ReferenceDescription,
+    relative_path::RelativePath,
+    relative_path_element::RelativePathElement,
     status_code::StatusCode,
     string::String,
     timestamps_to_return::TimestampsToReturn,
