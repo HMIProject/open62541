@@ -6,7 +6,7 @@ use crate::{
 use super::NodeContext;
 
 pub struct Node<T: Attributes> {
-    pub id: ua::NodeId,
+    pub id: Option<ua::NodeId>,
     pub parent_node_id: ua::NodeId,
     pub reference_type_id: ua::NodeId,
     pub browse_name: ua::QualifiedName,

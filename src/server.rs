@@ -10,7 +10,7 @@ use open62541_sys::{
 };
 
 use crate::{
-    ua::{self},
+    ua::{self, NodeId},
     Attributes, DataType, Error, Result,
 };
 
@@ -167,13 +167,14 @@ impl Server {
         if node.context.is_some() {
             context = unsafe { node.context.as_mut().unwrap_unchecked() };
         }
+        let mut out_new_node_id = NodeId::null();
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 node.attributes.node_class().clone().into_raw(),
-                node.id.as_ptr(),
+                node.id.get_or_insert(NodeId::null()).as_ptr(),
                 node.parent_node_id.as_ptr(),
                 node.reference_type_id.as_ptr(),
                 // TODO: Verify that `__UA_Server_addNode()` takes ownership.
@@ -182,9 +183,11 @@ impl Server {
                 (*node.attributes.as_node_attributes()).as_ptr(),
                 T::data_type(),
                 context.cast(),
-                node.id.as_mut_ptr(),
+                out_new_node_id.as_mut_ptr(),
             )
         });
+        let _ = node.id.insert(out_new_node_id);
+
         Error::verify_good(&status_code)
     }
 
