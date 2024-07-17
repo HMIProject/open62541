@@ -8,6 +8,9 @@ mod browse_description;
 mod browse_direction;
 mod browse_next_request;
 mod browse_next_response;
+mod browse_path;
+mod browse_path_result;
+mod browse_path_target;
 mod browse_request;
 mod browse_response;
 mod browse_result;
@@ -41,6 +44,7 @@ mod read_request;
 mod read_response;
 mod read_value_id;
 mod reference_description;
+mod relative_path;
 mod relative_path_element;
 mod status_code;
 mod string;
@@ -55,10 +59,11 @@ pub use self::{
     application_description::ApplicationDescription, application_type::ApplicationType,
     argument::Argument, attribute_id::AttributeId, browse_description::BrowseDescription,
     browse_direction::BrowseDirection, browse_next_request::BrowseNextRequest,
-    browse_next_response::BrowseNextResponse, browse_request::BrowseRequest,
-    browse_response::BrowseResponse, browse_result::BrowseResult, byte_string::ByteString,
-    call_method_request::CallMethodRequest, call_method_result::CallMethodResult,
-    call_request::CallRequest, call_response::CallResponse,
+    browse_next_response::BrowseNextResponse, browse_path::BrowsePath,
+    browse_path_result::BrowsePathResult, browse_path_target::BrowsePathTarget,
+    browse_request::BrowseRequest, browse_response::BrowseResponse, browse_result::BrowseResult,
+    byte_string::ByteString, call_method_request::CallMethodRequest,
+    call_method_result::CallMethodResult, call_request::CallRequest, call_response::CallResponse,
     create_monitored_items_request::CreateMonitoredItemsRequest,
     create_monitored_items_response::CreateMonitoredItemsResponse,
     create_subscription_request::CreateSubscriptionRequest,
@@ -73,10 +78,11 @@ pub use self::{
     node_class::NodeClass, node_id::NodeId, node_id_type::NodeIdType,
     object_attributes::ObjectAttributes, qualified_name::QualifiedName, read_request::ReadRequest,
     read_response::ReadResponse, read_value_id::ReadValueId,
-    reference_description::ReferenceDescription, relative_path_element::RelativePathElement,
-    status_code::StatusCode, string::String, timestamps_to_return::TimestampsToReturn,
-    variable_attributes::VariableAttributes, variant::Variant, write_request::WriteRequest,
-    write_response::WriteResponse, write_value::WriteValue,
+    reference_description::ReferenceDescription, relative_path::RelativePath,
+    relative_path_element::RelativePathElement, status_code::StatusCode, string::String,
+    timestamps_to_return::TimestampsToReturn, variable_attributes::VariableAttributes,
+    variant::Variant, write_request::WriteRequest, write_response::WriteResponse,
+    write_value::WriteValue,
 };
 
 macro_rules! primitive {
