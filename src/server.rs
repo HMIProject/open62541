@@ -155,6 +155,19 @@ impl Server {
         ServerBuilder::default().build()
     }
 
+    #[must_use]
+    pub fn translate_browse_path_to_node_ids(
+        &self,
+        browse_path: &ua::BrowsePath,
+    ) -> ua::BrowsePathResult {
+        unsafe {
+            ua::BrowsePathResult::from_raw(open62541_sys::UA_Server_translateBrowsePathToNodeIds(
+                self.0.as_ptr().cast_mut(),
+                browse_path.as_ptr(),
+            ))
+        }
+    }
+
     /// Adds node to address space.
     ///
     /// This returns the node ID that was actually inserted (when no explicit requested new node ID
