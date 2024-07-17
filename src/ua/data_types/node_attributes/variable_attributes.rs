@@ -14,7 +14,18 @@ impl super::VariableAttributes {
     }
 
     #[must_use]
+    pub fn with_value_rank(mut self, rank: i32) -> Self {
+        self.0.valueRank = rank;
+        self
+    }
+
+    #[must_use]
     pub const fn handle_node_class(&self) -> ua::NodeClass {
         ua::NodeClass::VARIABLE
+    }
+
+    #[must_use]
+    pub const fn handle_check_node_type_definition(&self) -> bool {
+        true
     }
 }

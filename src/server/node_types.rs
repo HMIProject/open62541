@@ -16,10 +16,21 @@ pub struct Node<T: Attributes> {
 }
 
 impl<T: Attributes> Node<T> {
+    /// # Panics
+    ///
+    /// This method panics when the `type_definition` field is None,
+    /// and the node attribute type is `Variable`, `VariableType`
+    /// or `Object`
+    #[must_use]
     pub fn get_type_definition(&self) -> ua::NodeId {
-        todo!("Not implemented yet!");
-        #[allow(unreachable_code)]
-        ua::NodeId::null()
+        if self.attributes.check_node_type_definition() {
+            self.type_definition
+                .as_ref()
+                .expect("Type definition must be specified for this node type!")
+                .clone()
+        } else {
+            ua::NodeId::null()
+        }
     }
 }
 
