@@ -9,14 +9,18 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_addNamespace, UA_Server_addReference, UA_Server_deleteNode,
+    UA_ExpandedNodeId, UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
+    UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse, UA_Server_browseNext,
+    UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
     UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, __UA_Server_addNode,
     __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
-use crate::{ua, Attributes, DataType, Error, Result};
+use crate::{
+    ua::{self, Array, ExpandedNodeId},
+    Attributes, DataType, Error, Result,
+};
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
@@ -158,6 +162,89 @@ impl Server {
     #[must_use]
     pub fn new() -> (Self, ServerRunner) {
         ServerBuilder::default().build()
+    }
+
+    #[must_use]
+    pub fn browse(
+        &self,
+        max_references: u32,
+        browse_description: &ua::BrowseDescription,
+    ) -> ua::BrowseResult {
+        ua::BrowseResult::clone_raw(&unsafe {
+            UA_Server_browse(
+                self.0.as_ptr().cast_mut(),
+                max_references,
+                // SAFETY: No pointer to this is left in the C code
+                // after returning. A deep copy gets created internally
+                browse_description.as_ptr(),
+            )
+        })
+    }
+
+    #[must_use]
+    pub fn browse_next(
+        &self,
+        release_continuation_point: bool,
+        continuation_point: &ua::ContinuationPoint,
+    ) -> ua::BrowseResult {
+        ua::BrowseResult::clone_raw(&unsafe {
+            UA_Server_browseNext(
+                self.0.as_ptr().cast_mut(),
+                release_continuation_point,
+                // SAFETY: No pointer to this is left in the C code
+                // after returning. It is only used to find the internal pointer
+                // to the `ContinuationPoint`.
+                continuation_point.to_byte_string().as_ptr(),
+            )
+        })
+    }
+
+    /// # Panics
+    ///
+    /// This panics when `Array::from_raw_parts` returns `None`.
+    ///
+    /// # Errors
+    ///
+    /// This errors when the call to `UA_Server_browseRecursive` does
+    /// not return `ua::StatusCode::GOOD`.
+    pub fn browse_recursive(
+        &self,
+        browse_description: &ua::BrowseDescription,
+        result: &mut Array<ExpandedNodeId>,
+    ) -> Result<()> {
+        let mut result_size: usize = 0;
+        let mut result_ptr: *mut UA_ExpandedNodeId = std::ptr::null_mut();
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_browseRecursive(
+                self.0.as_ptr().cast_mut(),
+                browse_description.as_ptr(),
+                &mut result_size,
+                &mut result_ptr,
+            )
+        });
+        *result = Array::from_raw_parts(result_ptr, result_size)
+            .expect("Cannot create array from outputs of UA_Server_browseRecursive!");
+        Error::verify_good(&status_code)
+    }
+
+    #[must_use]
+    pub fn browse_simplified_browse_path(
+        &self,
+        origin: &ua::NodeId,
+        browse_path: Array<ua::QualifiedName>,
+    ) -> ua::BrowsePathResult {
+        let browse_path_parts = browse_path.into_raw_parts();
+        ua::BrowsePathResult::clone_raw(&unsafe {
+            UA_Server_browseSimplifiedBrowsePath(
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: This is only used to find an internal pointer
+                // to the node, and then never used again, so no
+                // references are left after this function call.
+                DataType::to_raw_copy(origin),
+                browse_path_parts.0,
+                browse_path_parts.1,
+            )
+        })
     }
 
     /// Adds a new namespace to the server. Returns the index of the new namespace.

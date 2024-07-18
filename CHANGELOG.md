@@ -26,6 +26,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add method `ua::NodeId::into_expanded_node_id()`.
 - Add method `Server::translate_browse_path_to_node_ids()`.
 - Implement `Index` and `IndexMut` for `ua::Array` to allow direct element access.
+- Add methods `Server::browse()`, `Server::browse_next()`, `Server::browse_recursive()` and
+  `Server::browse_simplified_browse_path()`.
 
 ### Changed
 
