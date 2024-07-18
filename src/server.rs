@@ -87,6 +87,8 @@ impl ServerBuilder {
             //
             // Note: The above assumption is not correct. See issue for more details:
             // <https://github.com/HMIProject/open62541/issues/125>
+            //
+            // FIXME: Find solution to prevent memory leak.
             if !node_context.is_null() {
                 if let Some(node_id) = unsafe { node_id.as_ref() }.map(ua::NodeId::raw_ref) {
                     log::debug!("Destroying node {node_id}, freeing associated data");
