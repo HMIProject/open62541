@@ -12,7 +12,8 @@ use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
     UA_Server_addNamespace, UA_Server_addReference, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
-    UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, __UA_Server_addNode,
+    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
+    UA_Server_translateBrowsePathToNodeIds, UA_Server_writeObjectProperty, __UA_Server_addNode,
     __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
@@ -683,6 +684,64 @@ impl Server {
     pub fn write_variable_string(&self, node_id: &ua::NodeId, value: &str) -> Result<()> {
         let ua_variant = ua::Variant::scalar(ua::String::new(value)?);
         self.write_variable(node_id, &ua_variant)
+    }
+
+    /// Write an object property. The property is represented as a `VariableNode` with
+    /// a `HasProperty` reference from the `ObjectNode`. The `VariableNode` is
+    /// identified by its `BrowseName`. Writing the property sets the value attribute
+    /// of the `VariableNode`.
+    /// _(Description from open62541 source code)_
+    ///
+    /// # Errors
+    ///
+    /// Errors when writing the object property was not successful.
+    pub fn write_object_property(
+        &self,
+        object_id: &ua::NodeId,
+        property_name: &ua::QualifiedName,
+        value: &ua::Variant,
+    ) -> Result<()> {
+        let status_code = unsafe {
+            ua::StatusCode::new(UA_Server_writeObjectProperty(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: Using DataType::to_raw_copy is safe here as
+                // the C code copies everything by value and does not
+                // keep references to our parameters.
+                DataType::to_raw_copy(object_id),
+                DataType::to_raw_copy(property_name),
+                DataType::to_raw_copy(value),
+            ))
+        };
+        Error::verify_good(&status_code)
+    }
+
+    /// Read an object property.
+    /// Returns the read object property.
+    ///
+    /// # Errors
+    ///
+    /// Errors when reading the object property was not successful.
+    pub fn read_object_property(
+        &self,
+        object_id: &ua::NodeId,
+        property_name: &ua::QualifiedName,
+    ) -> Result<ua::Variant> {
+        let mut value = ua::Variant::init();
+        let status_code = unsafe {
+            ua::StatusCode::new(UA_Server_readObjectProperty(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: Using DataType::to_raw_copy is safe here as
+                // the C code copies everything by value and does not
+                // keep references to our parameters.
+                DataType::to_raw_copy(object_id),
+                DataType::to_raw_copy(property_name),
+                value.as_mut_ptr(),
+            ))
+        };
+        Error::verify_good(&status_code)?;
+        Ok(value)
     }
 }
 
