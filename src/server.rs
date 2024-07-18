@@ -6,7 +6,8 @@ use std::{ffi::c_void, ptr, sync::Arc};
 
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
+    UA_Server_deleteNode, UA_Server_runUntilInterrupt, UA_Server_updateCertificate,
+    __UA_Server_addNode, __UA_Server_write,
 };
 
 use crate::{ua, DataType, Error, Result};
@@ -152,6 +153,32 @@ impl Server {
     #[must_use]
     pub fn new() -> (Self, ServerRunner) {
         ServerBuilder::default().build()
+    }
+
+    /// Updates server certificate.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the certificate cannot be updated.
+    pub fn update_certificate(
+        &self,
+        old_certificate: &ua::ByteString,
+        new_certificate: &ua::ByteString,
+        new_private_key: &ua::ByteString,
+        close_sessions: bool,
+        close_secure_channels: bool,
+    ) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_updateCertificate(
+                self.0.as_ptr().cast_mut(),
+                old_certificate.as_ptr(),
+                new_certificate.as_ptr(),
+                new_private_key.as_ptr(),
+                close_sessions,
+                close_secure_channels,
+            )
+        });
+        Error::verify_good(&status_code)
     }
 
     /// Adds object node to address space.

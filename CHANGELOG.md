@@ -15,6 +15,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add method `ua::ExpandedNodeId::numeric()` to create numeric expanded node IDs.
 - Add types `ua::RelativePath`, `ua::RelativePathElement`, `ua::BrowsePath`, `ua::BrowsePathResult`,
   `ua::BrowsePathTarget`.
+- Add method `Server::update_certificate()`.
 
 ### Changed
 
