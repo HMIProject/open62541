@@ -1,7 +1,6 @@
-use crate::{ua, Attributes};
+use crate::{ua, Attributes, DataType};
 
 use super::NodeContext;
-
 pub struct Node<T: Attributes> {
     id: ua::NodeId,
     parent_node_id: ua::NodeId,
@@ -12,8 +11,20 @@ pub struct Node<T: Attributes> {
     attributes: T,
 }
 
-impl<T: Attributes> Node<T> {
-    pub fn init(
+impl<T: Attributes + DataType> Node<T> {
+    pub fn init() -> Node<T> {
+        Node {
+            id: ua::NodeId::null(),
+            parent_node_id: ua::NodeId::null(),
+            reference_type_id: ua::NodeId::null(),
+            browse_name: ua::QualifiedName::init(),
+            type_definition: ua::NodeId::null(),
+            context: None,
+            attributes: T::init(),
+        }
+    }
+
+    pub fn new(
         parent_node_id: ua::NodeId,
         reference_type_id: ua::NodeId,
         browse_name: ua::QualifiedName,
