@@ -2,14 +2,20 @@ mod data_source;
 mod node_context;
 mod node_types;
 
-use std::{ffi::c_void, ptr, sync::Arc};
+use std::{
+    ffi::{c_void, CString},
+    ptr,
+    sync::Arc,
+};
 
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
+    UA_Server_addNamespace, UA_Server_deleteNode, UA_Server_getNamespaceByIndex,
+    UA_Server_getNamespaceByName, UA_Server_runUntilInterrupt, __UA_Server_addNode,
+    __UA_Server_write,
 };
 
-use crate::{ua, Attributes, DataType as _, Error, Result};
+use crate::{ua, Attributes, DataType, Error, Result};
 
 pub(crate) use self::node_context::NodeContext;
 use self::node_types::Node;
@@ -153,6 +159,59 @@ impl Server {
     #[must_use]
     pub fn new() -> (Self, ServerRunner) {
         ServerBuilder::default().build()
+    }
+
+    /// Adds a new namespace to the server. Returns the index of the new namespace.
+    ///
+    /// # Panics
+    ///
+    /// This panics when the given name could not be converted to a `CString`.
+    #[must_use]
+    pub fn add_namespace(&self, name: &str) -> u16 {
+        let c_name = CString::new(name).unwrap().into_raw();
+        let index = unsafe { UA_Server_addNamespace(self.0.as_ptr().cast_mut(), c_name) };
+        drop(unsafe { CString::from_raw(c_name) });
+        index
+    }
+
+    /// Get namespace by name from the server.
+    ///
+    /// # Errors
+    ///
+    /// This errors when the namespace could not be found.
+    pub fn get_namespace_by_name(
+        &self,
+        namespace_uri: &ua::String,
+        found_index: &mut usize,
+    ) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_getNamespaceByName(
+                self.0.as_ptr().cast_mut(),
+                DataType::to_raw_copy(namespace_uri),
+                found_index,
+            )
+        });
+        Error::verify_good(&status_code)
+    }
+
+    /// Get namespace by index from the server.
+    ///
+    /// # Errors
+    ///
+    /// This errors when the namespace could not be found.
+    pub fn get_namespace_by_index(
+        &self,
+        namespace_index: usize,
+        found_uri: &mut ua::String,
+    ) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_getNamespaceByIndex(
+                self.0.as_ptr().cast_mut(),
+                namespace_index,
+                found_uri.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)
     }
 
     /// Adds node to address space.
