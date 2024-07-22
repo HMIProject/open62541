@@ -6,10 +6,11 @@ use std::{ffi::c_void, ptr, sync::Arc};
 
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
+    UA_Server_addReference, UA_Server_deleteNode, UA_Server_deleteReference,
+    UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
 };
 
-use crate::{ua, Attributes, DataType as _, Error, Result};
+use crate::{ua, Attributes, DataType, Error, Result};
 
 pub(crate) use self::node_context::NodeContext;
 use self::node_types::Node;
@@ -153,6 +154,64 @@ impl Server {
     #[must_use]
     pub fn new() -> (Self, ServerRunner) {
         ServerBuilder::default().build()
+    }
+
+    /// Add a reference from one node to another.
+    ///
+    /// # Errors
+    ///
+    /// This fails when adding the reference fails.
+    pub fn add_reference(
+        &self,
+        source_id: &ua::NodeId,
+        reference_type_id: &ua::NodeId,
+        target_id: &ua::ExpandedNodeId,
+        is_forward: bool,
+    ) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addReference(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: `NodeId`s are used to find internal pointers, are
+                // not modified and no reference to these variables lives beyond
+                // this function call. Passing by value is safe here.
+                DataType::to_raw_copy(source_id),
+                DataType::to_raw_copy(reference_type_id),
+                DataType::to_raw_copy(target_id),
+                is_forward,
+            )
+        });
+        Error::verify_good(&status_code)
+    }
+
+    /// Delete a reference between two nodes
+    ///
+    /// # Errors
+    ///
+    /// This fails when adding the reference fails.
+    pub fn delete_reference(
+        &self,
+        source_node_id: &ua::NodeId,
+        reference_type_id: &ua::NodeId,
+        target_node_id: &ua::ExpandedNodeId,
+        is_forward: bool,
+        delete_bidirectional: bool,
+    ) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_deleteReference(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: `NodeId`s are used to find internal pointers, are
+                // not modified and no reference to these variables lives beyond
+                // this function call. Passing by value is safe here.
+                DataType::to_raw_copy(source_node_id),
+                DataType::to_raw_copy(reference_type_id),
+                is_forward,
+                DataType::to_raw_copy(target_node_id),
+                delete_bidirectional,
+            )
+        });
+        Error::verify_good(&status_code)
     }
 
     /// Adds node to address space.
