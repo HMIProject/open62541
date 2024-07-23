@@ -13,8 +13,8 @@ pub struct Node<T: Attributes> {
 }
 
 impl<T: Attributes + DataType> Node<T> {
-    pub fn init() -> Node<T> {
-        Node {
+    pub fn init() -> Self {
+        Self {
             id: ua::NodeId::null(),
             parent_node_id: ua::NodeId::null(),
             reference_type_id: ua::NodeId::null(),
@@ -30,8 +30,8 @@ impl<T: Attributes + DataType> Node<T> {
         reference_type_id: ua::NodeId,
         browse_name: ua::QualifiedName,
         attributes: T,
-    ) -> Node<T> {
-        Node {
+    ) -> Self {
+        Self {
             id: ua::NodeId::null(),
             parent_node_id,
             reference_type_id,
