@@ -1,4 +1,87 @@
-use crate::ua;
+use crate::{ua, Attributes, DataType};
+
+use super::NodeContext;
+
+pub struct Node<T> {
+    pub(crate) requested_new_node_id: ua::NodeId,
+    pub(crate) parent_node_id: ua::NodeId,
+    pub(crate) reference_type_id: ua::NodeId,
+    pub(crate) browse_name: ua::QualifiedName,
+    pub(crate) type_definition: ua::NodeId,
+    pub(crate) attributes: T,
+    pub(crate) context: Option<NodeContext>,
+}
+
+impl<T: Attributes> Node<T> {
+    pub fn init() -> Self {
+        Self {
+            requested_new_node_id: ua::NodeId::null(),
+            parent_node_id: ua::NodeId::null(),
+            reference_type_id: ua::NodeId::null(),
+            browse_name: ua::QualifiedName::init(),
+            type_definition: ua::NodeId::null(),
+            attributes: T::init(),
+            context: None,
+        }
+    }
+
+    pub fn new(
+        parent_node_id: ua::NodeId,
+        reference_type_id: ua::NodeId,
+        browse_name: ua::QualifiedName,
+        attributes: T,
+    ) -> Self {
+        Self {
+            requested_new_node_id: ua::NodeId::null(),
+            parent_node_id,
+            reference_type_id,
+            browse_name,
+            type_definition: ua::NodeId::null(),
+            attributes,
+            context: None,
+        }
+    }
+
+    pub fn with_requested_new_node_id(mut self, requested_new_node_id: ua::NodeId) -> Self {
+        self.requested_new_node_id = requested_new_node_id;
+        self
+    }
+
+    pub fn with_type_definition(mut self, type_definition: ua::NodeId) -> Self {
+        self.type_definition = type_definition;
+        self
+    }
+
+    #[must_use]
+    pub const fn requested_new_node_id(&self) -> &ua::NodeId {
+        &self.requested_new_node_id
+    }
+
+    #[must_use]
+    pub const fn parent_node_id(&self) -> &ua::NodeId {
+        &self.parent_node_id
+    }
+
+    #[must_use]
+    pub const fn reference_type_id(&self) -> &ua::NodeId {
+        &self.reference_type_id
+    }
+
+    #[must_use]
+    pub const fn browse_name(&self) -> &ua::QualifiedName {
+        &self.browse_name
+    }
+
+    #[must_use]
+    pub const fn type_definition(&self) -> &ua::NodeId {
+        &self.type_definition
+    }
+
+    #[must_use]
+    pub const fn attributes(&self) -> &T {
+        &self.attributes
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ObjectNode {

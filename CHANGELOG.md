@@ -18,6 +18,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add `ua::NodeAttributes` and subtypes `ua::ObjectAttributes`, `ua::VariableAttributes`,
   `ua::MethodAttributes`, `ua::ObjectTypeAttributes`, `ua::VariableTypeAttributes`,
   `ua::ReferenceTypeAttributes`, `ua::DataTypeAttributes`, `ua::ViewAttributes`.
+- Add generic way of adding nodes with `Server::add_node()` and associated `Node` type.
 
 ### Changed
 

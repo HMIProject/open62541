@@ -90,7 +90,7 @@ pub use self::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext, ObjectNode, Server, ServerBuilder, ServerRunner, VariableNode,
     },
-    traits::AsNodeAttributes,
+    traits::Attributes,
     userdata::Userdata,
     value::{ScalarValue, ValueType, VariantValue},
 };

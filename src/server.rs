@@ -9,12 +9,10 @@ use open62541_sys::{
     UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
 };
 
-use crate::{
-    ua::{self},
-    AsNodeAttributes as _, DataType, Error, Result,
-};
+use crate::{ua, Attributes, DataType as _, Error, Result};
 
 pub(crate) use self::node_context::NodeContext;
+use self::node_types::Node;
 pub use self::{
     data_source::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
@@ -155,6 +153,50 @@ impl Server {
     #[must_use]
     pub fn new() -> (Self, ServerRunner) {
         ServerBuilder::default().build()
+    }
+
+    /// Adds node to address space.
+    ///
+    /// This returns the node ID that was actually inserted (when no explicit requested new node ID
+    /// was given in `node`).
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node cannot be added.
+    pub fn add_node<T: Attributes>(&self, node: Node<T>) -> Result<ua::NodeId> {
+        let Node {
+            requested_new_node_id,
+            parent_node_id,
+            reference_type_id,
+            browse_name,
+            type_definition,
+            attributes,
+            context,
+        } = node;
+
+        let mut out_node_id = ua::NodeId::null();
+
+        let status_code = ua::StatusCode::new(unsafe {
+            __UA_Server_addNode(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // Passing ownership is trivial with primitive value (`u32`).
+                attributes.node_class().clone().into_raw(),
+                requested_new_node_id.as_ptr(),
+                parent_node_id.as_ptr(),
+                reference_type_id.as_ptr(),
+                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                browse_name.clone().into_raw(),
+                type_definition.as_ptr(),
+                attributes.as_node_attributes().as_ptr(),
+                attributes.attribute_type(),
+                context.map_or(ptr::null_mut(), NodeContext::leak),
+                out_node_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        Ok(out_node_id)
     }
 
     /// Adds object node to address space.

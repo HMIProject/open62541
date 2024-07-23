@@ -13,6 +13,7 @@ mod secure_channel_state;
 mod server;
 mod server_config;
 mod session_state;
+mod specified_attributes;
 mod subscription_id;
 
 pub use self::{
@@ -27,6 +28,7 @@ pub use self::{
     secure_channel_state::SecureChannelState,
     server::Server,
     session_state::SessionState,
+    specified_attributes::SpecifiedAttributes,
     subscription_id::SubscriptionId,
 };
 pub(crate) use self::{client_config::ClientConfig, server_config::ServerConfig};
