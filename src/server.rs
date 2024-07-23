@@ -178,7 +178,7 @@ impl Server {
                 self.0.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 node.attributes().node_class().clone().into_raw(),
-                node.id().as_ptr(),
+                node.requested_new_node_id().as_ptr(),
                 node.parent_node_id().as_ptr(),
                 node.reference_type_id().as_ptr(),
                 // TODO: Verify that `__UA_Server_addNode()` takes ownership.
