@@ -1,12 +1,16 @@
 use open62541_sys::UA_DataType;
 
-use crate::ua;
+use crate::{ua, DataType};
 
-pub trait Attributes {
+pub trait Attributes: DataType {
     /// Gets associated node class.
     fn node_class(&self) -> ua::NodeClass;
 
     /// Gets associated attribute type.
+    ///
+    /// This is [`<Self as DataType>::data_type()`] with a more appropriate name.
+    ///
+    /// [`<Self as DataType>::data_type()`]: DataType::data_type()
     fn attribute_type(&self) -> *const UA_DataType;
 
     /// Sets display name.

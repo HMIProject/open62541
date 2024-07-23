@@ -2,7 +2,7 @@ use crate::{ua, Attributes, DataType};
 
 use super::NodeContext;
 
-pub struct Node<T: Attributes> {
+pub struct Node<T> {
     requested_new_node_id: ua::NodeId,
     parent_node_id: ua::NodeId,
     reference_type_id: ua::NodeId,
@@ -12,7 +12,7 @@ pub struct Node<T: Attributes> {
     context: Option<NodeContext>,
 }
 
-impl<T: Attributes + DataType> Node<T> {
+impl<T: Attributes> Node<T> {
     pub fn init() -> Self {
         Self {
             requested_new_node_id: ua::NodeId::null(),

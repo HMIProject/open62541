@@ -172,20 +172,22 @@ impl Server {
                 unsafe { ptr::from_ref(node.context().as_ref().unwrap_unchecked()).cast_mut() };
         }
 
+        let attributes = node.attributes();
+
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
-                node.attributes().node_class().clone().into_raw(),
+                attributes.node_class().clone().into_raw(),
                 node.requested_new_node_id().as_ptr(),
                 node.parent_node_id().as_ptr(),
                 node.reference_type_id().as_ptr(),
                 // TODO: Verify that `__UA_Server_addNode()` takes ownership.
                 node.browse_name().clone().into_raw(),
                 node.type_definition().as_ptr(),
-                node.attributes().as_node_attributes().as_ptr(),
-                T::data_type(),
+                attributes.as_node_attributes().as_ptr(),
+                attributes.attribute_type(),
                 context.cast(),
                 out_node_id.as_mut_ptr(),
             )
