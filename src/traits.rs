@@ -1,10 +1,13 @@
 use crate::ua;
 
 pub trait Attributes {
-    fn as_node_attributes(&self) -> &ua::NodeAttributes;
-
-    #[must_use]
-    fn with_display_name(self, locale: &str, name: &str) -> Self;
-
+    /// Gets associated node class.
     fn node_class(&self) -> ua::NodeClass;
+
+    /// Sets display name.
+    #[must_use]
+    fn with_display_name(self, display_name: &ua::LocalizedText) -> Self;
+
+    /// Gets generic [`ua::NodeAttributes`] type.
+    fn as_node_attributes(&self) -> &ua::NodeAttributes;
 }

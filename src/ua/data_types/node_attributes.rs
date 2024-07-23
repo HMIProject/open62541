@@ -14,6 +14,18 @@ macro_rules! derived {
             }
 
             impl $crate::Attributes for paste::paste!{[<$name Attributes>]} {
+                fn node_class(&self) -> ua::NodeClass {
+                    paste::paste! {
+                        ua::NodeClass::[<$name:upper>]
+                    }
+                }
+
+                fn with_display_name(mut self, display_name: &ua::LocalizedText) -> Self {
+                    display_name.clone_into_raw(&mut self.0.displayName);
+                    self.0.specifiedAttributes |= ua::SpecifiedAttributes::DISPLAYNAME;
+                    self
+                }
+
                 #[allow(dead_code)]
                 fn as_node_attributes(&self) -> &ua::NodeAttributes {
                     // SAFETY: This transmutes from `Self` to `UA_NodeAttributes`, a strict subset of
@@ -22,19 +34,6 @@ macro_rules! derived {
                     // SAFETY: Transmutation is allowed and pointer is valid (non-zero).
                     let node_attributes = unsafe { node_attributes.as_ref().unwrap_unchecked() };
                     ua::NodeAttributes::raw_ref(node_attributes)
-                }
-
-                fn with_display_name(mut self, locale: &str, name: &str) -> Self {
-                    let localized_text =
-                        ua::LocalizedText::new(locale, name).expect("Localized text could not be created!");
-                    localized_text.clone_into_raw(&mut self.0.displayName);
-                    self
-                }
-
-                fn node_class(&self) -> ua::NodeClass {
-                    paste::paste! {
-                        ua::NodeClass::[<$name:upper>]
-                    }
                 }
             }
 
