@@ -1,8 +1,13 @@
+use open62541_sys::UA_DataType;
+
 use crate::ua;
 
 pub trait Attributes {
     /// Gets associated node class.
     fn node_class(&self) -> ua::NodeClass;
+
+    /// Gets associated attribute type.
+    fn attribute_type(&self) -> *const UA_DataType;
 
     /// Sets display name.
     #[must_use]

@@ -1,6 +1,6 @@
 mod variable_attributes;
 
-use open62541_sys::UA_NodeAttributes;
+use open62541_sys::{UA_DataType, UA_NodeAttributes};
 
 use crate::{ua, DataType as _};
 
@@ -18,6 +18,10 @@ macro_rules! derived {
                     paste::paste! {
                         ua::NodeClass::[<$name:upper>]
                     }
+                }
+
+                fn attribute_type(&self) -> *const UA_DataType {
+                    <Self as $crate::DataType>::data_type()
                 }
 
                 fn with_display_name(mut self, display_name: &ua::LocalizedText) -> Self {
