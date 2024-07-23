@@ -3,13 +3,13 @@ use crate::{ua, Attributes, DataType};
 use super::NodeContext;
 
 pub struct Node<T> {
-    requested_new_node_id: ua::NodeId,
-    parent_node_id: ua::NodeId,
-    reference_type_id: ua::NodeId,
-    browse_name: ua::QualifiedName,
-    type_definition: ua::NodeId,
-    attributes: T,
-    context: Option<NodeContext>,
+    pub(crate) requested_new_node_id: ua::NodeId,
+    pub(crate) parent_node_id: ua::NodeId,
+    pub(crate) reference_type_id: ua::NodeId,
+    pub(crate) browse_name: ua::QualifiedName,
+    pub(crate) type_definition: ua::NodeId,
+    pub(crate) attributes: T,
+    pub(crate) context: Option<NodeContext>,
 }
 
 impl<T: Attributes> Node<T> {
@@ -80,11 +80,6 @@ impl<T: Attributes> Node<T> {
     #[must_use]
     pub const fn attributes(&self) -> &T {
         &self.attributes
-    }
-
-    #[must_use]
-    pub(crate) const fn context(&self) -> &Option<NodeContext> {
-        &self.context
     }
 }
 

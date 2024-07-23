@@ -9,7 +9,7 @@ use open62541_sys::{
     UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
 };
 
-use crate::{ua, Attributes, DataType, Error, Result};
+use crate::{ua, Attributes, DataType as _, Error, Result};
 
 pub(crate) use self::node_context::NodeContext;
 use self::node_types::Node;
@@ -157,22 +157,24 @@ impl Server {
 
     /// Adds node to address space.
     ///
+    /// This returns the node ID that was actually inserted (when no explicit requested new node ID
+    /// was given in `node`).
+    ///
     /// # Errors
     ///
     /// This fails when the node cannot be added.
-    pub fn add_node<T: Attributes + DataType>(&self, node: &Node<T>) -> Result<ua::NodeId> {
-        let mut out_node_id: ua::NodeId = ua::NodeId::null();
-        let mut context: *mut NodeContext = ptr::null_mut();
-        if node.context().is_some() {
-            // SAFETY: `__UA_Server_addNode` takes `nodeContext` as a mutable pointer, but nothing
-            // is modified in the function. Here we cast the non-mut reference to mut
-            // Maybe the `nodeContext` could be modified internally, outside of the addNode function
-            // but this has not been clarified yet.
-            context =
-                unsafe { ptr::from_ref(node.context().as_ref().unwrap_unchecked()).cast_mut() };
-        }
+    pub fn add_node<T: Attributes>(&self, node: Node<T>) -> Result<ua::NodeId> {
+        let Node {
+            requested_new_node_id,
+            parent_node_id,
+            reference_type_id,
+            browse_name,
+            type_definition,
+            attributes,
+            context,
+        } = node;
 
-        let attributes = node.attributes();
+        let mut out_node_id = ua::NodeId::null();
 
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
@@ -180,20 +182,20 @@ impl Server {
                 self.0.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 attributes.node_class().clone().into_raw(),
-                node.requested_new_node_id().as_ptr(),
-                node.parent_node_id().as_ptr(),
-                node.reference_type_id().as_ptr(),
+                requested_new_node_id.as_ptr(),
+                parent_node_id.as_ptr(),
+                reference_type_id.as_ptr(),
                 // TODO: Verify that `__UA_Server_addNode()` takes ownership.
-                node.browse_name().clone().into_raw(),
-                node.type_definition().as_ptr(),
+                browse_name.clone().into_raw(),
+                type_definition.as_ptr(),
                 attributes.as_node_attributes().as_ptr(),
                 attributes.attribute_type(),
-                context.cast(),
+                context.map_or(ptr::null_mut(), NodeContext::leak),
                 out_node_id.as_mut_ptr(),
             )
         });
-
         Error::verify_good(&status_code)?;
+
         Ok(out_node_id)
     }
 
