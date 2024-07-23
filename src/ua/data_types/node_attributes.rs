@@ -1,11 +1,4 @@
-mod data_type_attributes;
-mod method_attributes;
-mod object_attributes;
-mod object_type_attributes;
-mod reference_type_attributes;
 mod variable_attributes;
-mod variable_type_attributes;
-mod view_attributes;
 
 use open62541_sys::UA_NodeAttributes;
 
@@ -16,9 +9,11 @@ crate::data_type!(NodeAttributes);
 macro_rules! derived {
     ($( $name:ident ),* $(,)?) => {
         $(
-            $crate::data_type!($name);
+            paste::paste! {
+                $crate::data_type!([<$name Attributes>]);
+            }
 
-            impl $crate::Attributes for $name {
+            impl $crate::Attributes for paste::paste!{[<$name Attributes>]} {
                 #[allow(dead_code)]
                 fn as_node_attributes(&self) -> &ua::NodeAttributes {
                     // SAFETY: This transmutes from `Self` to `UA_NodeAttributes`, a strict subset of
@@ -37,14 +32,16 @@ macro_rules! derived {
                 }
 
                 fn node_class(&self) -> ua::NodeClass {
-                    self.handle_node_class()
+                    paste::paste! {
+                        ua::NodeClass::[<$name:upper>]
+                    }
                 }
             }
 
-            impl Default for $name {
+            impl Default for paste::paste!{[<$name Attributes>]} {
                 fn default() -> Self {
                     paste::paste! {
-                        Self::clone_raw(unsafe { &open62541_sys::[<UA_ $name _default>] })
+                        Self::clone_raw(unsafe { &open62541_sys::[<UA_ $name Attributes_default>] })
                     }
                 }
             }
@@ -55,13 +52,13 @@ macro_rules! derived {
 // This adds basic declarations and shared functionality such as upcasting to `ua::NodeAttributes`.
 // See sub-modules for type-specific implementations, e.g. `variable_attributes`.
 derived!(
-    ObjectAttributes,
-    VariableAttributes,
-    MethodAttributes,
-    ObjectTypeAttributes,
-    VariableTypeAttributes,
-    ReferenceTypeAttributes,
-    DataTypeAttributes,
-    ViewAttributes,
-    // GenericAttributes, // Omitted for now because the `Default` impl above cannot be used here.
+    Object,
+    Variable,
+    Method,
+    ObjectType,
+    VariableType,
+    ReferenceType,
+    DataType,
+    View,
+    // Generic, // Omitted for now because the `Default` impl above cannot be used here.
 );
