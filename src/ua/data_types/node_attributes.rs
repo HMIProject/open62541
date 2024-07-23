@@ -39,10 +39,6 @@ macro_rules! derived {
                 fn node_class(&self) -> ua::NodeClass {
                     self.handle_node_class()
                 }
-
-                fn check_node_type_definition(&self) -> bool {
-                    self.handle_check_node_type_definition()
-                }
             }
 
             impl Default for $name {
