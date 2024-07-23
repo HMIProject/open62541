@@ -1,6 +1,7 @@
 use crate::{ua, Attributes, DataType};
 
 use super::NodeContext;
+
 pub struct Node<T: Attributes> {
     id: ua::NodeId,
     parent_node_id: ua::NodeId,
