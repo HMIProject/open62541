@@ -26,7 +26,7 @@ macro_rules! derived {
 
                 fn with_display_name(mut self, display_name: &ua::LocalizedText) -> Self {
                     display_name.clone_into_raw(&mut self.0.displayName);
-                    self.0.specifiedAttributes |= ua::SpecifiedAttributes::DISPLAYNAME;
+                    self.0.specifiedAttributes |= ua::SpecifiedAttributes::DISPLAYNAME.as_u32();
                     self
                 }
 
