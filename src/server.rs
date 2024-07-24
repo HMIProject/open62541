@@ -165,12 +165,11 @@ impl Server {
     ///
     /// # Panics
     ///
-    /// This panics when the given name could not be converted to a `CString`.
+    /// The string identifier must not contain any NUL bytes.
     #[must_use]
     pub fn add_namespace(&self, name: &str) -> u16 {
-        let c_name = CString::new(name).unwrap().into_raw();
-        let index = unsafe { UA_Server_addNamespace(self.0.as_ptr().cast_mut(), c_name) };
-        drop(unsafe { CString::from_raw(c_name) });
+        let name = CString::new(name).expect("name does not contain NUL bytes");
+        let index = unsafe { UA_Server_addNamespace(self.0.as_ptr().cast_mut(), name.as_ptr()) };
         index
     }
 
