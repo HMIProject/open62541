@@ -1,6 +1,6 @@
-use open62541_sys::UA_DataType;
+use open62541_sys::{UA_DataType, UA_Server};
 
-use crate::{ua, DataType};
+use crate::{ua, DataType, Result};
 
 pub trait Attributes: DataType {
     /// Gets associated node class.
@@ -19,4 +19,23 @@ pub trait Attributes: DataType {
 
     /// Gets generic [`ua::NodeAttributes`] type.
     fn as_node_attributes(&self) -> &ua::NodeAttributes;
+}
+
+pub trait Readable: Sized {
+    /// Reads a attribute from a server node
+    ///
+    /// # Usage
+    ///
+    /// Make sure to check the `attribute_id` is compatible
+    /// to the data type.
+    ///
+    /// # Errors
+    ///
+    /// This errors when the `attribute_id` isn't compatible
+    /// or the attribute could not be read.
+    fn read(
+        server: *const UA_Server,
+        attribute_id: ua::AttributeId,
+        node_id: &ua::NodeId,
+    ) -> Result<Self>;
 }

@@ -19,6 +19,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ua::MethodAttributes`, `ua::ObjectTypeAttributes`, `ua::VariableTypeAttributes`,
   `ua::ReferenceTypeAttributes`, `ua::DataTypeAttributes`, `ua::ViewAttributes`.
 - Add generic way of adding nodes with `Server::add_node()` and associated `Node` type.
+- Add type-safe, generic attribute reading functionality with `Server::read()` and a macro
+  `server_read!()` that allows type safe reading without using explicit types
 
 ### Changed
 
