@@ -20,7 +20,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ua::ReferenceTypeAttributes`, `ua::DataTypeAttributes`, `ua::ViewAttributes`.
 - Add generic way of adding nodes with `Server::add_node()` and associated `Node` type.
 - Add method `Server::translate_browse_path_to_node_ids()`.
-- Enable conversion from raw `UA_Server` pointer to `Server` object
 
 ### Changed
 
