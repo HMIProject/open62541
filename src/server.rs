@@ -184,6 +184,7 @@ impl Server {
     ) -> Result<ua::BrowseResult> {
         let result = ua::BrowseResult::clone_raw(&unsafe {
             UA_Server_browse(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 max_references,
                 // SAFETY: No pointer to this is left in the C code
@@ -216,6 +217,7 @@ impl Server {
     ) -> Result<ua::BrowseResult> {
         let result = ua::BrowseResult::clone_raw(&unsafe {
             UA_Server_browseNext(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 release_continuation_point,
                 // SAFETY: No pointer to this is left in the C code
@@ -261,6 +263,7 @@ impl Server {
         let mut result_ptr: *mut UA_ExpandedNodeId = std::ptr::null_mut();
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_browseRecursive(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 browse_description.as_ptr(),
                 &mut result_size,
@@ -301,6 +304,7 @@ impl Server {
         let browse_path_parts = browse_path.into_raw_parts();
         let result = ua::BrowsePathResult::clone_raw(&unsafe {
             UA_Server_browseSimplifiedBrowsePath(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // SAFETY: This is only used to find an internal pointer
                 // to the node, and then never used again, so no
