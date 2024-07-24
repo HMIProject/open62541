@@ -169,7 +169,13 @@ impl Server {
     #[must_use]
     pub fn add_namespace(&self, name: &str) -> u16 {
         let name = CString::new(name).expect("name does not contain NUL bytes");
-        let index = unsafe { UA_Server_addNamespace(self.0.as_ptr().cast_mut(), name.as_ptr()) };
+        let index = unsafe {
+            UA_Server_addNamespace(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                name.as_ptr(),
+            )
+        };
         index
     }
 
@@ -178,19 +184,22 @@ impl Server {
     /// # Errors
     ///
     /// This errors when the namespace could not be found.
-    pub fn get_namespace_by_name(
-        &self,
-        namespace_uri: &ua::String,
-        found_index: &mut usize,
-    ) -> Result<()> {
+    pub fn get_namespace_by_name(&self, namespace_uri: &ua::String) -> Result<u16> {
+        let mut found_index: usize = 0;
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_getNamespaceByName(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
+                // SAFETY: The String is used for comparing with internal Strings.
+                // Nothing is changed and it is only used in the scope of the function.
+                // This means passing by value is safe here.
                 DataType::to_raw_copy(namespace_uri),
-                found_index,
+                &mut found_index,
             )
         });
-        Error::verify_good(&status_code)
+        Error::verify_good(&status_code)?;
+        u16::try_from(found_index)
+            .map_err(|_| Error::internal("Could not convert from usize to u16!"))
     }
 
     /// Get namespace by index from the server.
@@ -198,19 +207,18 @@ impl Server {
     /// # Errors
     ///
     /// This errors when the namespace could not be found.
-    pub fn get_namespace_by_index(
-        &self,
-        namespace_index: usize,
-        found_uri: &mut ua::String,
-    ) -> Result<()> {
+    pub fn get_namespace_by_index(&self, namespace_index: usize) -> Result<ua::String> {
+        let mut found_uri = ua::String::init();
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_getNamespaceByIndex(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 namespace_index,
                 found_uri.as_mut_ptr(),
             )
         });
-        Error::verify_good(&status_code)
+        Error::verify_good(&status_code)?;
+        Ok(found_uri)
     }
 
     /// Adds node to address space.
