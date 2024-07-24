@@ -164,7 +164,13 @@ impl Server {
         ServerBuilder::default().build()
     }
 
-    /// # Errors
+    /// Browses the references of a given node.
+    /// Information about the operation is stored in the
+    /// `browse_description` parameter.
+    /// `max_references` specifies the maximum amount of references that will
+    /// be searched for.
+    ///
+    ///  # Errors
     ///
     /// Errors when the browsing was not successful.
     pub fn browse(
@@ -185,6 +191,13 @@ impl Server {
         Ok(result)
     }
 
+    /// Continue browsing the references of a given node.
+    /// Information about the operation is stored in the
+    /// `continuation_point` parameter.
+    /// `release_continuation_point` specifies whether the
+    /// internal continuation point should be released after
+    /// the operation finishes.
+    ///
     /// # Errors
     ///
     /// Errors when the browsing was not successful.
@@ -207,6 +220,19 @@ impl Server {
         Ok(result)
     }
 
+    /// Non-standard version of the Browse service that recurses into child nodes.
+    ///
+    /// Possible loops (that can occur for non-hierarchical references) are handled
+    /// internally. Every node is added at most once to the results array.
+    ///
+    /// Nodes are only added if they match the `NodeClassMask` in the
+    /// `BrowseDescription`. However, child nodes are still recursed into if the
+    /// `NodeClass` does not match. So it is possible, for example, to get all
+    /// `VariableNodes` below a certain `ObjectNode`, with additional objects in the
+    /// hierarchy below.
+    ///
+    /// _(Description from open62541 source code)_
+    ///
     /// # Panics
     ///
     /// Panics when not enough memory is available.
@@ -234,6 +260,17 @@ impl Server {
         Ok(result)
     }
 
+    /// A simplified `TranslateBrowsePathsToNodeIds` based on the
+    /// `SimpleAttributeOperand` type (Part 4, 7.4.4.5).
+    ///
+    /// This specifies a relative path using a list of `BrowseNames` instead of the
+    /// `RelativePath` structure. The list of `BrowseNames` is equivalent to a
+    /// `RelativePath` that specifies forward references which are subtypes of the
+    /// `HierarchicalReferences` `ReferenceType`. All Nodes followed by the browsePath
+    /// shall be of the `NodeClass` Object or Variable.
+    ///
+    /// _(Description from open62541 source code)_
+    ///
     /// # Errors
     ///
     /// Errors when the browsing was not successful.
