@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use open62541::{ua, ObjectNode, Server, VariableNode};
+use open62541::{server_read, ua, ObjectNode, Server, VariableNode, __read_operation};
 use open62541_sys::{
     UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,
     UA_NS0ID_STRING,
@@ -41,6 +41,8 @@ fn main() -> anyhow::Result<()> {
     server.add_variable_node(variable_node)?;
 
     server.write_variable_string(&variable_node_id, "foobar")?;
+
+    read_example(&server, &variable_node_id)?;
 
     let (cancel_tx, cancel_rx) = mpsc::channel();
 
@@ -90,5 +92,25 @@ fn main() -> anyhow::Result<()> {
 
     println!("Done");
 
+    Ok(())
+}
+
+/// Example for using `Server::read()` method or `server_read!()` macro
+fn read_example(server: &Server, variable_node_id: &ua::NodeId) -> anyhow::Result<()> {
+    // Read browse name by directly calling server.read and specifying the necessary type
+    let browse_name1: ua::QualifiedName =
+        server.read(ua::AttributeId::BROWSENAME, variable_node_id)?;
+
+    // Read browse name by using a macro which enables not specifying the type explicitly.
+    let browse_name2 = server_read!(BROWSENAME, server, variable_node_id)?;
+
+    println!(
+        "browse_name of variable_node using server.read: {}",
+        browse_name1.name()
+    );
+    println!(
+        "browse_name of variable_node using macro: {}",
+        browse_name2.name()
+    );
     Ok(())
 }
