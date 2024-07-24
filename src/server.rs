@@ -165,10 +165,14 @@ impl Server {
     }
 
     /// Browses the references of a given node.
-    /// Information about the operation is stored in the
-    /// `browse_description` parameter.
-    /// `max_references` specifies the maximum amount of references that will
-    /// be searched for.
+    ///
+    /// # Usage
+    ///
+    /// * Information about the operation is stored in the
+    ///   `browse_description` parameter.
+    /// * `max_references` specifies the maximum amount of references that will
+    ///   be searched for.
+    /// * Returns the browse result
     ///
     ///  # Errors
     ///
@@ -192,11 +196,15 @@ impl Server {
     }
 
     /// Continue browsing the references of a given node.
-    /// Information about the operation is stored in the
-    /// `continuation_point` parameter.
-    /// `release_continuation_point` specifies whether the
-    /// internal continuation point should be released after
-    /// the operation finishes.
+    ///
+    /// # Usage
+    ///
+    /// * Information about the operation is stored in the
+    ///   `continuation_point` parameter.
+    /// * `release_continuation_point` specifies whether the
+    ///   internal continuation point should be released after
+    ///    the operation finishes.
+    /// * Returns the browse result
     ///
     /// # Errors
     ///
@@ -232,6 +240,11 @@ impl Server {
     /// hierarchy below.
     ///
     /// _(Description from open62541 source code)_
+    ///
+    /// # Usage
+    ///
+    /// * Use `browse_description` to describe the browse operation
+    /// * Returns an `Array` containing all the found `ExpandedNodeId`s
     ///
     /// # Panics
     ///
@@ -270,6 +283,12 @@ impl Server {
     /// shall be of the `NodeClass` Object or Variable.
     ///
     /// _(Description from open62541 source code)_
+    ///
+    /// # Usage
+    ///
+    /// * Specify the `origin` for which references will be searched for
+    /// * Pass an `Array` of `ua::QualifiedName` in which the browsing
+    ///   will happen.
     ///
     /// # Errors
     ///
