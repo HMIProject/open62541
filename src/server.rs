@@ -163,19 +163,19 @@ impl Server {
 
     /// Adds a new namespace to the server. Returns the index of the new namespace.
     ///
-    /// # Panics
+    /// # Errors
     ///
     /// The string identifier must not contain any NUL bytes.
-    #[must_use]
-    pub fn add_namespace(&self, name: &str) -> u16 {
-        let name = CString::new(name).expect("name does not contain NUL bytes");
-        unsafe {
+    pub fn add_namespace(&self, name: &str) -> Result<u16> {
+        let name = CString::new(name)
+            .map_err(|_| Error::internal("String identifier contains NUL bytes!"))?;
+        Ok(unsafe {
             UA_Server_addNamespace(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 name.as_ptr(),
             )
-        }
+        })
     }
 
     /// Get namespace by name from the server. Returns the found namespace index.
