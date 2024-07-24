@@ -169,17 +169,16 @@ impl Server {
     #[must_use]
     pub fn add_namespace(&self, name: &str) -> u16 {
         let name = CString::new(name).expect("name does not contain NUL bytes");
-        let index = unsafe {
+        unsafe {
             UA_Server_addNamespace(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 name.as_ptr(),
             )
-        };
-        index
+        }
     }
 
-    /// Get namespace by name from the server.
+    /// Get namespace by name from the server. Returns the found namespace index.
     ///
     /// # Errors
     ///
@@ -202,7 +201,7 @@ impl Server {
             .map_err(|_| Error::internal("Could not convert from usize to u16!"))
     }
 
-    /// Get namespace by index from the server.
+    /// Get namespace by index from the server. Returns the found namespace uri.
     ///
     /// # Errors
     ///
