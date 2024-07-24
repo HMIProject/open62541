@@ -164,13 +164,15 @@ impl Server {
         ServerBuilder::default().build()
     }
 
-    #[must_use]
+    /// # Errors
+    ///
+    /// Errors when the browsing was not successful.
     pub fn browse(
         &self,
         max_references: u32,
         browse_description: &ua::BrowseDescription,
-    ) -> ua::BrowseResult {
-        ua::BrowseResult::clone_raw(&unsafe {
+    ) -> Result<ua::BrowseResult> {
+        let result = ua::BrowseResult::clone_raw(&unsafe {
             UA_Server_browse(
                 self.0.as_ptr().cast_mut(),
                 max_references,
@@ -178,16 +180,20 @@ impl Server {
                 // after returning. A deep copy gets created internally
                 browse_description.as_ptr(),
             )
-        })
+        });
+        Error::verify_good(&result.status_code())?;
+        Ok(result)
     }
 
-    #[must_use]
+    /// # Errors
+    ///
+    /// Errors when the browsing was not successful.
     pub fn browse_next(
         &self,
         release_continuation_point: bool,
         continuation_point: &ua::ContinuationPoint,
-    ) -> ua::BrowseResult {
-        ua::BrowseResult::clone_raw(&unsafe {
+    ) -> Result<ua::BrowseResult> {
+        let result = ua::BrowseResult::clone_raw(&unsafe {
             UA_Server_browseNext(
                 self.0.as_ptr().cast_mut(),
                 release_continuation_point,
@@ -196,22 +202,22 @@ impl Server {
                 // to the `ContinuationPoint`.
                 continuation_point.to_byte_string().as_ptr(),
             )
-        })
+        });
+        Error::verify_good(&result.status_code())?;
+        Ok(result)
     }
 
     /// # Panics
     ///
-    /// This panics when `Array::from_raw_parts` returns `None`.
+    /// Panics when not enough memory is available.
     ///
     /// # Errors
     ///
-    /// This errors when the call to `UA_Server_browseRecursive` does
-    /// not return `ua::StatusCode::GOOD`.
+    /// Errors when the browsing was not successful.
     pub fn browse_recursive(
         &self,
         browse_description: &ua::BrowseDescription,
-        result: &mut Array<ExpandedNodeId>,
-    ) -> Result<()> {
+    ) -> Result<Array<ExpandedNodeId>> {
         let mut result_size: usize = 0;
         let mut result_ptr: *mut UA_ExpandedNodeId = std::ptr::null_mut();
         let status_code = ua::StatusCode::new(unsafe {
@@ -222,19 +228,22 @@ impl Server {
                 &mut result_ptr,
             )
         });
-        *result = Array::from_raw_parts(result_ptr, result_size)
+        let result = Array::from_raw_parts(result_ptr, result_size)
             .expect("Cannot create array from outputs of UA_Server_browseRecursive!");
-        Error::verify_good(&status_code)
+        Error::verify_good(&status_code)?;
+        Ok(result)
     }
 
-    #[must_use]
+    /// # Errors
+    ///
+    /// Errors when the browsing was not successful.
     pub fn browse_simplified_browse_path(
         &self,
         origin: &ua::NodeId,
         browse_path: Array<ua::QualifiedName>,
-    ) -> ua::BrowsePathResult {
+    ) -> Result<ua::BrowsePathResult> {
         let browse_path_parts = browse_path.into_raw_parts();
-        ua::BrowsePathResult::clone_raw(&unsafe {
+        let result = ua::BrowsePathResult::clone_raw(&unsafe {
             UA_Server_browseSimplifiedBrowsePath(
                 self.0.as_ptr().cast_mut(),
                 // SAFETY: This is only used to find an internal pointer
@@ -244,7 +253,9 @@ impl Server {
                 browse_path_parts.0,
                 browse_path_parts.1,
             )
-        })
+        });
+        Error::verify_good(&result.status_code())?;
+        Ok(result)
     }
 
     /// Adds a new namespace to the server. Returns the index of the new namespace.
