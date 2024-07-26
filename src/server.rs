@@ -174,27 +174,6 @@ impl Server {
         ServerBuilder::default().build()
     }
 
-    /// Translates browse path to node ids.
-    /// Returns `ua::BrowsePathResult` with all the found `ua::NodeId`s.
-    ///
-    /// # Errors
-    ///
-    /// An error will be returned if the search was not successful.
-    pub fn translate_browse_path_to_node_ids(
-        &self,
-        browse_path: &ua::BrowsePath,
-    ) -> Result<ua::BrowsePathResult> {
-        let result = unsafe {
-            ua::BrowsePathResult::from_raw(open62541_sys::UA_Server_translateBrowsePathToNodeIds(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.0.as_ptr().cast_mut(),
-                browse_path.as_ptr(),
-            ))
-        };
-        Error::verify_good(&result.status_code())?;
-        Ok(result)
-    }
-
     /// Adds a new namespace to the server. Returns the index of the new namespace.
     ///
     /// If the namespace already exists, it is not re-created but its index is returned.
@@ -605,6 +584,27 @@ impl Server {
             )
         });
         Error::verify_good(&status_code)
+    }
+
+    /// Translates browse path to node ids.
+    /// Returns `ua::BrowsePathResult` with all the found `ua::NodeId`s.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the search was not successful.
+    pub fn translate_browse_path_to_node_ids(
+        &self,
+        browse_path: &ua::BrowsePath,
+    ) -> Result<ua::BrowsePathResult> {
+        let result = unsafe {
+            ua::BrowsePathResult::from_raw(open62541_sys::UA_Server_translateBrowsePathToNodeIds(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                browse_path.as_ptr(),
+            ))
+        };
+        Error::verify_good(&result.status_code())?;
+        Ok(result)
     }
 
     /// Writes value to variable node.
