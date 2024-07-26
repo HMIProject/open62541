@@ -19,6 +19,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ua::MethodAttributes`, `ua::ObjectTypeAttributes`, `ua::VariableTypeAttributes`,
   `ua::ReferenceTypeAttributes`, `ua::DataTypeAttributes`, `ua::ViewAttributes`.
 - Add generic way of adding nodes with `Server::add_node()` and associated `Node` type.
+- Add methods `Server::add_namespace()`, `Server::get_namespace_by_name()`, and
+  `Server::get_namespace_by_index()`.
+- Add methods `Server::add_reference()` and `Server::delete_reference()`.
+- Add method `Error::status_code()` to get original OPC UA status code that caused the error.
+- Add method `ua::NodeId::into_expanded_node_id()`.
+- Add method `Server::translate_browse_path_to_node_ids()`.
+- Implement `Index` and `IndexMut` for `ua::Array` to allow direct element access.
 - Add type-safe, generic attribute reading functionality with `Server::read()` and a macro
   `server_read!()` that allows type safe reading without using explicit types
 

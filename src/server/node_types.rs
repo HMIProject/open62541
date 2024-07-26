@@ -13,6 +13,7 @@ pub struct Node<T> {
 }
 
 impl<T: Attributes> Node<T> {
+    #[must_use]
     pub fn init() -> Self {
         Self {
             requested_new_node_id: ua::NodeId::null(),
@@ -25,6 +26,7 @@ impl<T: Attributes> Node<T> {
         }
     }
 
+    #[must_use]
     pub fn new(
         parent_node_id: ua::NodeId,
         reference_type_id: ua::NodeId,
@@ -42,11 +44,13 @@ impl<T: Attributes> Node<T> {
         }
     }
 
+    #[must_use]
     pub fn with_requested_new_node_id(mut self, requested_new_node_id: ua::NodeId) -> Self {
         self.requested_new_node_id = requested_new_node_id;
         self
     }
 
+    #[must_use]
     pub fn with_type_definition(mut self, type_definition: ua::NodeId) -> Self {
         self.type_definition = type_definition;
         self
