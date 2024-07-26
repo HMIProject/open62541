@@ -33,14 +33,13 @@ pub use self::{
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```
 /// use open62541::ServerBuilder;
-/// use std::time::Duration;
 ///
 /// # #[tokio::main]
 /// # async fn main() -> anyhow::Result<()> {
 /// #
-/// let server = ServerBuilder::default()
+/// let (server, runner) = ServerBuilder::default()
 ///     .server_urls(&["opc.tcp://localhost:4840"])
 ///     .build();
 /// #
@@ -168,6 +167,24 @@ impl Server {
     /// # Panics
     ///
     /// The namespace URI must not contain any NUL bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::ServerBuilder;
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let ns_index = server.add_namespace("http://hmi-project.com/UA/");
+    ///
+    /// // Application URI takes index 1, new namespaces start at index 2.
+    /// assert!(ns_index >= 2);
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     #[must_use]
     pub fn add_namespace(&self, namespace_uri: &str) -> u16 {
         let name = CString::new(namespace_uri).expect("namespace URI does not contain NUL bytes");
@@ -186,6 +203,24 @@ impl Server {
     /// Looks up namespace by its URI.
     ///
     /// This returns the found namespace index.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{ServerBuilder, ua};
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let ns_index = server.add_namespace("http://hmi-project.com/UA/");
+    ///
+    /// let ns_uri = ua::String::new("http://hmi-project.com/UA/").unwrap();
+    /// assert_eq!(server.get_namespace_by_name(&ns_uri), Some(ns_index));
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     #[must_use]
     pub fn get_namespace_by_name(&self, namespace_uri: &ua::String) -> Option<u16> {
         let mut found_index = 0;
@@ -211,6 +246,24 @@ impl Server {
     /// Looks up namespace by its index.
     ///
     /// This returns the found namespace URI.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{ServerBuilder, ua};
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let ns_index = server.add_namespace("http://hmi-project.com/UA/");
+    ///
+    /// let ns_uri = ua::String::new("http://hmi-project.com/UA/").unwrap();
+    /// assert_eq!(server.get_namespace_by_index(ns_index), Some(ns_uri));
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     #[must_use]
     pub fn get_namespace_by_index(&self, namespace_index: u16) -> Option<ua::String> {
         let mut found_uri = ua::String::init();
