@@ -25,6 +25,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add method `Error::status_code()` to get original OPC UA status code that caused the error.
 - Add method `ua::NodeId::into_expanded_node_id()`.
 - Add method `Server::translate_browse_path_to_node_ids()`.
+- Implement `Index` and `IndexMut` for `ua::Array` to allow direct element access.
 
 ### Changed
 
