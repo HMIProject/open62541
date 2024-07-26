@@ -592,6 +592,49 @@ impl Server {
     /// # Errors
     ///
     /// An error will be returned if the translation was not successful.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{DataType as _, ServerBuilder, ua};
+    /// use open62541_sys::{
+    ///     UA_NS0ID_SERVER_SERVERSTATUS, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME,
+    /// };
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let target_name_1 = ua::QualifiedName::new(0, "BuildInfo");
+    /// let target_name_2 = ua::QualifiedName::new(0, "ProductName");
+    ///
+    /// let targets = server.translate_browse_path_to_node_ids(&ua::BrowsePath::init()
+    ///     .with_starting_node(&ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS))
+    ///     .with_relative_path(&ua::RelativePath::init()
+    ///         .with_elements(&[
+    ///             ua::RelativePathElement::init().with_target_name(&target_name_1),
+    ///             ua::RelativePathElement::init().with_target_name(&target_name_2),
+    ///         ])
+    ///     )
+    /// )?;
+    ///
+    /// // Translation above returns a single target.
+    /// assert_eq!(targets.len(), 1);
+    /// let target = &targets[0];
+    ///
+    /// // The given path leads to the right node ID.
+    /// assert_eq!(
+    ///     target.target_id(),
+    ///     &ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME)
+    ///         .into_expanded_node_id()
+    /// );
+    ///
+    /// // All relative path elements were processed.
+    /// assert_eq!(target.remaining_path_index(), None);
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn translate_browse_path_to_node_ids(
         &self,
         browse_path: &ua::BrowsePath,
