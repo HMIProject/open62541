@@ -2,23 +2,28 @@ mod data_source;
 mod node_context;
 mod node_types;
 
-use std::{ffi::c_void, ptr, sync::Arc};
+use std::{
+    ffi::{c_void, CString},
+    ptr,
+    sync::Arc,
+};
 
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_deleteNode, UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
+    UA_Server_addNamespace, UA_Server_addReference, UA_Server_deleteNode,
+    UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
+    UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
-use crate::{ua, Attributes, DataType as _, Error, Result};
+use crate::{ua, Attributes, DataType, Error, Result};
 
 pub(crate) use self::node_context::NodeContext;
-use self::node_types::Node;
 pub use self::{
     data_source::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext,
     },
-    node_types::{ObjectNode, VariableNode},
+    node_types::{Node, ObjectNode, VariableNode},
 };
 
 /// Builder for [`Server`].
@@ -27,14 +32,13 @@ pub use self::{
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```
 /// use open62541::ServerBuilder;
-/// use std::time::Duration;
 ///
 /// # #[tokio::main]
 /// # async fn main() -> anyhow::Result<()> {
 /// #
-/// let server = ServerBuilder::default()
+/// let (server, runner) = ServerBuilder::default()
 ///     .server_urls(&["opc.tcp://localhost:4840"])
 ///     .build();
 /// #
@@ -191,6 +195,145 @@ impl Server {
         Ok(result)
     }
 
+    /// Adds a new namespace to the server. Returns the index of the new namespace.
+    ///
+    /// If the namespace already exists, it is not re-created but its index is returned.
+    ///
+    /// # Panics
+    ///
+    /// The namespace URI must not contain any NUL bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::ServerBuilder;
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let ns_index = server.add_namespace("http://hmi-project.com/UA/");
+    ///
+    /// // Application URI takes index 1, new namespaces start at index 2.
+    /// assert!(ns_index >= 2);
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn add_namespace(&self, namespace_uri: &str) -> u16 {
+        let name = CString::new(namespace_uri).expect("namespace URI does not contain NUL bytes");
+        let result = unsafe {
+            UA_Server_addNamespace(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                name.as_ptr(),
+            )
+        };
+        // PANIC: The only possible errors here are out-of-memory.
+        assert!(result != 0, "namespace should have been added");
+        result
+    }
+
+    /// Looks up namespace by its URI.
+    ///
+    /// This returns the found namespace index.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{ServerBuilder, ua};
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let ns_index = server.add_namespace("http://hmi-project.com/UA/");
+    ///
+    /// let ns_uri = ua::String::new("http://hmi-project.com/UA/").unwrap();
+    /// assert_eq!(server.get_namespace_by_name(&ns_uri), Some(ns_index));
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn get_namespace_by_name(&self, namespace_uri: &ua::String) -> Option<u16> {
+        let mut found_index = 0;
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_getNamespaceByName(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: The `String` is used for comparison with internal strings only. It is not
+                // changed and it is only used in the scope of the function. This means ownership is
+                // preserved and passing by value is safe here.
+                DataType::to_raw_copy(namespace_uri),
+                ptr::addr_of_mut!(found_index),
+            )
+        });
+        if !status_code.is_good() {
+            debug_assert_eq!(status_code.code(), UA_STATUSCODE_BADNOTFOUND);
+            return None;
+        }
+        // Namespace index is always expected to fit into `u16`.
+        found_index.try_into().ok()
+    }
+
+    /// Looks up namespace by its index.
+    ///
+    /// This returns the found namespace URI.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{ServerBuilder, ua};
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let ns_index = server.add_namespace("http://hmi-project.com/UA/");
+    ///
+    /// let ns_uri = ua::String::new("http://hmi-project.com/UA/").unwrap();
+    /// assert_eq!(server.get_namespace_by_index(ns_index), Some(ns_uri));
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// Namespace index 0 is always the OPC UA namespace with a fixed URI:
+    ///
+    /// ```
+    /// # use open62541::{ServerBuilder, ua};
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let ns_uri = ua::String::new("http://opcfoundation.org/UA/").unwrap();
+    /// assert_eq!(server.get_namespace_by_index(0), Some(ns_uri));
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn get_namespace_by_index(&self, namespace_index: u16) -> Option<ua::String> {
+        let mut found_uri = ua::String::init();
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_getNamespaceByIndex(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                namespace_index.into(),
+                found_uri.as_mut_ptr(),
+            )
+        });
+        if !status_code.is_good() {
+            // PANIC: The only other possible errors here are out-of-memory.
+            debug_assert_eq!(status_code.code(), UA_STATUSCODE_BADNOTFOUND);
+            return None;
+        }
+        Some(found_uri)
+    }
+
     /// Adds node to address space.
     ///
     /// This returns the node ID that was actually inserted (when no explicit requested new node ID
@@ -345,6 +488,120 @@ impl Server {
                 ua::NodeId::to_raw_copy(node_id),
                 // Delete all references to this node.
                 true,
+            )
+        });
+        Error::verify_good(&status_code)
+    }
+
+    /// Adds a reference from one node to another.
+    ///
+    /// # Errors
+    ///
+    /// This fails when adding the reference fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{DataType as _, Node, ServerBuilder, ua};
+    /// # use open62541_sys::{
+    /// #     UA_NS0ID_HASCOMPONENT, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ROOTFOLDER, UA_NS0ID_STRING,
+    /// # };
+    /// use open62541_sys::{UA_NS0ID_ORGANIZES};
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// // let parent_one_node_id = server.add_node(/* snip */)?;
+    /// # let parent_one_node_id = server.add_node(Node::new(
+    /// #     ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
+    /// #     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    /// #     ua::QualifiedName::new(1, "ParentOne"),
+    /// #     ua::ObjectAttributes::init(),
+    /// # ))?;
+    /// // let parent_two_node_id = server.add_node(/* snip */)?;
+    /// # let parent_two_node_id = server.add_node(Node::new(
+    /// #     ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
+    /// #     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    /// #     ua::QualifiedName::new(1, "ParentTwo"),
+    /// #     ua::ObjectAttributes::init(),
+    /// # ))?;
+    ///
+    /// let variable_node_id = server.add_node(Node::new(
+    ///     parent_one_node_id.clone(),
+    ///     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    ///     ua::QualifiedName::new(1, "Variable"),
+    ///     ua::VariableAttributes::init(),
+    /// ))?;
+    ///
+    /// // This makes the variable available in two parents.
+    /// server.add_reference(
+    ///     &parent_two_node_id,
+    ///     &ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    ///     &variable_node_id.clone().into_expanded_node_id(),
+    ///     true,
+    /// )?;
+    ///
+    /// // Duplicating an existing reference is not allowed.
+    /// let error = server.add_reference(
+    ///     &parent_one_node_id,
+    ///     &ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    ///     &variable_node_id.clone().into_expanded_node_id(),
+    ///     true,
+    /// ).unwrap_err();
+    /// assert_eq!(error.status_code(), ua::StatusCode::BADDUPLICATEREFERENCENOTALLOWED);
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn add_reference(
+        &self,
+        source_id: &ua::NodeId,
+        reference_type_id: &ua::NodeId,
+        target_id: &ua::ExpandedNodeId,
+        is_forward: bool,
+    ) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addReference(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: The `NodeId` values are used to find internal pointers, are not modified
+                // and no references to these variables exist beyond this function call. Passing by
+                // value is safe here.
+                DataType::to_raw_copy(source_id),
+                DataType::to_raw_copy(reference_type_id),
+                DataType::to_raw_copy(target_id),
+                is_forward,
+            )
+        });
+        Error::verify_good(&status_code)
+    }
+
+    /// Deletes a reference between two nodes.
+    ///
+    /// # Errors
+    ///
+    /// This fails when deleting the reference fails.
+    pub fn delete_reference(
+        &self,
+        source_node_id: &ua::NodeId,
+        reference_type_id: &ua::NodeId,
+        target_node_id: &ua::ExpandedNodeId,
+        is_forward: bool,
+        delete_bidirectional: bool,
+    ) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_deleteReference(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: The `NodeId` values are used to find internal pointers, are not modified
+                // and no references to these variables exist beyond this function call. Passing by
+                // value is safe here.
+                DataType::to_raw_copy(source_node_id),
+                DataType::to_raw_copy(reference_type_id),
+                is_forward,
+                DataType::to_raw_copy(target_node_id),
+                delete_bidirectional,
             )
         });
         Error::verify_good(&status_code)

@@ -1,4 +1,4 @@
-use open62541_sys::{UA_NodeIdType, UA_EXPANDEDNODEID_NUMERIC};
+use open62541_sys::{UA_NodeIdType, UA_EXPANDEDNODEID_NODEID, UA_EXPANDEDNODEID_NUMERIC};
 
 use crate::{ua, DataType as _};
 
@@ -16,6 +16,13 @@ impl ExpandedNodeId {
         );
 
         Self(inner)
+    }
+
+    /// Creates expanded node ID from node ID.
+    #[must_use]
+    pub(crate) fn from_node_id(node_id: ua::NodeId) -> Self {
+        // This passes ownership into the created expanded node ID.
+        Self(unsafe { UA_EXPANDEDNODEID_NODEID(node_id.into_raw()) })
     }
 
     #[must_use]
