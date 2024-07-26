@@ -101,6 +101,12 @@ impl NodeId {
             (self.0.namespaceIndex, ua::String::raw_ref(identifier))
         })
     }
+
+    /// Turns node ID into expanded node ID.
+    #[must_use]
+    pub fn into_expanded_node_id(self) -> ua::ExpandedNodeId {
+        ua::ExpandedNodeId::from_node_id(self)
+    }
 }
 
 impl hash::Hash for NodeId {

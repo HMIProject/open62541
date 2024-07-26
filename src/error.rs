@@ -41,6 +41,19 @@ impl Error {
         }
     }
 
+    /// Gets associated OPC UA status code.
+    ///
+    /// This returns the original status code except for internal errors where the generic status
+    /// code [`ua::StatusCode::BAD`] is returned instead.
+    #[must_use]
+    pub fn status_code(&self) -> ua::StatusCode {
+        match self {
+            // TODO: Avoid clone and make `ua::StatusCode` derive `Copy`.
+            Error::Server(status_code) => status_code.clone(),
+            Error::Internal(_) => ua::StatusCode::BAD,
+        }
+    }
+
     #[allow(dead_code)] // --no-default-features
     #[must_use]
     pub(crate) const fn internal(message: &'static str) -> Self {
