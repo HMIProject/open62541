@@ -12,7 +12,8 @@ use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
     UA_Server_addNamespace, UA_Server_addReference, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
-    UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
+    UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, __UA_Server_addNode,
+    __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
 use crate::{ua, Attributes, DataType, Error, Result};
@@ -586,18 +587,20 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Translates browse path to node ids.
-    /// Returns `ua::BrowsePathResult` with all the found `ua::NodeId`s.
+    /// Translates browse path to node IDs.
+    ///
+    /// Returns [`ua::BrowsePathResult`]. See related methods [`ua::BrowsePathResult::targets()`]
+    /// and [`ua::BrowsePathTarget::target_id()`] for details how to get the resulting node IDs.
     ///
     /// # Errors
     ///
-    /// An error will be returned if the search was not successful.
+    /// An error will be returned if the translation was not successful.
     pub fn translate_browse_path_to_node_ids(
         &self,
         browse_path: &ua::BrowsePath,
     ) -> Result<ua::BrowsePathResult> {
         let result = unsafe {
-            ua::BrowsePathResult::from_raw(open62541_sys::UA_Server_translateBrowsePathToNodeIds(
+            ua::BrowsePathResult::from_raw(UA_Server_translateBrowsePathToNodeIds(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 browse_path.as_ptr(),
