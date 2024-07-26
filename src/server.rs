@@ -18,13 +18,12 @@ use open62541_sys::{
 use crate::{ua, Attributes, DataType, Error, Result};
 
 pub(crate) use self::node_context::NodeContext;
-use self::node_types::Node;
 pub use self::{
     data_source::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext,
     },
-    node_types::{ObjectNode, VariableNode},
+    node_types::{Node, ObjectNode, VariableNode},
 };
 
 /// Builder for [`Server`].
