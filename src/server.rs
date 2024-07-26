@@ -163,18 +163,24 @@ impl Server {
 
     /// Adds a new namespace to the server. Returns the index of the new namespace.
     ///
+    /// If the namespace already exists, it is not re-created but its index is returned.
+    ///
     /// # Panics
     ///
-    /// The string identifier must not contain any NUL bytes.
-    pub fn add_namespace(&self, name: &str) -> Result<u16> {
-        let name = CString::new(name).expect("namespace name does not contain NUL bytes");
-        Ok(unsafe {
+    /// The namespace URI must not contain any NUL bytes.
+    #[must_use]
+    pub fn add_namespace(&self, namespace_uri: &str) -> u16 {
+        let name = CString::new(namespace_uri).expect("namespace URI does not contain NUL bytes");
+        let result = unsafe {
             UA_Server_addNamespace(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 name.as_ptr(),
             )
-        })
+        };
+        // PANIC: The only possible errors here are out-of-memory.
+        assert!(result != 0, "namespace should have been added");
+        result
     }
 
     /// Get namespace by name from the server. Returns the found namespace index.
