@@ -12,7 +12,7 @@ use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
     UA_Server_addNamespace, UA_Server_deleteNode, UA_Server_getNamespaceByIndex,
     UA_Server_getNamespaceByName, UA_Server_runUntilInterrupt, __UA_Server_addNode,
-    __UA_Server_write,
+    __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
 use crate::{ua, Attributes, DataType, Error, Result};
@@ -183,46 +183,51 @@ impl Server {
         result
     }
 
-    /// Get namespace by name from the server. Returns the found namespace index.
+    /// Looks up namespace by its URI.
     ///
-    /// # Errors
-    ///
-    /// This errors when the namespace could not be found.
-    pub fn get_namespace_by_name(&self, namespace_uri: &ua::String) -> Result<u16> {
-        let mut found_index: usize = 0;
+    /// This returns the found namespace index.
+    #[must_use]
+    pub fn get_namespace_by_name(&self, namespace_uri: &ua::String) -> Option<u16> {
+        let mut found_index = 0;
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_getNamespaceByName(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                // SAFETY: The String is used for comparing with internal Strings.
-                // Nothing is changed and it is only used in the scope of the function.
-                // This means passing by value is safe here.
+                // SAFETY: The `String` is used for comparison with internal strings only. It is not
+                // changed and it is only used in the scope of the function. This means ownership is
+                // preserved and passing by value is safe here.
                 DataType::to_raw_copy(namespace_uri),
-                &mut found_index,
+                ptr::addr_of_mut!(found_index),
             )
         });
-        Error::verify_good(&status_code)?;
-        u16::try_from(found_index)
-            .map_err(|_| Error::internal("Could not convert from usize to u16!"))
+        if !status_code.is_good() {
+            debug_assert_eq!(status_code.code(), UA_STATUSCODE_BADNOTFOUND);
+            return None;
+        }
+        // Namespace index is always expected to fit into `u16`.
+        found_index.try_into().ok()
     }
 
-    /// Get namespace by index from the server. Returns the found namespace uri.
+    /// Looks up namespace by its index.
     ///
-    /// # Errors
-    ///
-    /// This errors when the namespace could not be found.
-    pub fn get_namespace_by_index(&self, namespace_index: usize) -> Result<ua::String> {
+    /// This returns the found namespace URI.
+    #[must_use]
+    pub fn get_namespace_by_index(&self, namespace_index: u16) -> Option<ua::String> {
         let mut found_uri = ua::String::init();
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_getNamespaceByIndex(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                namespace_index,
+                namespace_index.into(),
                 found_uri.as_mut_ptr(),
             )
         });
-        Error::verify_good(&status_code)?;
-        Ok(found_uri)
+        if !status_code.is_good() {
+            // PANIC: The only other possible errors here are out-of-memory.
+            debug_assert_eq!(status_code.code(), UA_STATUSCODE_BADNOTFOUND);
+            return None;
+        }
+        Some(found_uri)
     }
 
     /// Adds node to address space.
