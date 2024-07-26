@@ -589,16 +589,13 @@ impl Server {
 
     /// Translates browse path to node IDs.
     ///
-    /// Returns [`ua::BrowsePathResult`]. See related methods [`ua::BrowsePathResult::targets()`]
-    /// and [`ua::BrowsePathTarget::target_id()`] for details how to get the resulting node IDs.
-    ///
     /// # Errors
     ///
     /// An error will be returned if the translation was not successful.
     pub fn translate_browse_path_to_node_ids(
         &self,
         browse_path: &ua::BrowsePath,
-    ) -> Result<ua::BrowsePathResult> {
+    ) -> Result<ua::Array<ua::BrowsePathTarget>> {
         let result = unsafe {
             ua::BrowsePathResult::from_raw(UA_Server_translateBrowsePathToNodeIds(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
@@ -607,7 +604,10 @@ impl Server {
             ))
         };
         Error::verify_good(&result.status_code())?;
-        Ok(result)
+        let targets = result
+            .targets()
+            .ok_or(Error::internal("translation should return targets"))?;
+        Ok(targets)
     }
 
     /// Writes value to variable node.
