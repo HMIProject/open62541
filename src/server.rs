@@ -126,21 +126,6 @@ impl ServerBuilder {
         (server, runner)
     }
 
-    /// This crates a Server object from a raw server pointer.
-    /// It's useful when you are in a Rust callback and want to run commands
-    /// on the server, which is only possible after converting the raw pointer
-    /// to a server object.
-    ///
-    /// # Safety
-    ///
-    /// Make sure to run `std::mem::forget(server);` before returning, so the
-    /// destructor doesn't get called. Otherwise the server would be stopped.
-    #[allow(dead_code)] // This will be used in the future
-    pub(crate) fn from_raw_server(raw_server: *mut UA_Server) -> Server {
-        let server = Arc::new(ua::Server::from_raw(raw_server));
-        Server(server)
-    }
-
     /// Access server configuration.
     fn config_mut(&mut self) -> &mut UA_ServerConfig {
         // SAFETY: Ownership is not given away.
