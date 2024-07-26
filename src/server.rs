@@ -462,6 +462,62 @@ impl Server {
     /// # Errors
     ///
     /// This fails when adding the reference fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{DataType as _, Node, ServerBuilder, ua};
+    /// # use open62541_sys::{
+    /// #     UA_NS0ID_HASCOMPONENT, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ROOTFOLDER, UA_NS0ID_STRING,
+    /// # };
+    /// use open62541_sys::{UA_NS0ID_ORGANIZES};
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// // let parent_one_node_id = server.add_node(/* snip */)?;
+    /// # let parent_one_node_id = server.add_node(Node::new(
+    /// #     ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
+    /// #     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    /// #     ua::QualifiedName::new(1, "ParentOne"),
+    /// #     ua::ObjectAttributes::init(),
+    /// # ))?;
+    /// // let parent_two_node_id = server.add_node(/* snip */)?;
+    /// # let parent_two_node_id = server.add_node(Node::new(
+    /// #     ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
+    /// #     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    /// #     ua::QualifiedName::new(1, "ParentTwo"),
+    /// #     ua::ObjectAttributes::init(),
+    /// # ))?;
+    ///
+    /// let variable_node_id = server.add_node(Node::new(
+    ///     parent_one_node_id.clone(),
+    ///     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    ///     ua::QualifiedName::new(1, "Variable"),
+    ///     ua::VariableAttributes::init(),
+    /// ))?;
+    ///
+    /// // This makes the variable available in two parents.
+    /// server.add_reference(
+    ///     &parent_two_node_id,
+    ///     &ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    ///     &variable_node_id.clone().into_expanded_node_id(),
+    ///     true,
+    /// )?;
+    ///
+    /// // Duplicating an existing reference is not allowed.
+    /// let error = server.add_reference(
+    ///     &parent_one_node_id,
+    ///     &ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    ///     &variable_node_id.clone().into_expanded_node_id(),
+    ///     true,
+    /// ).unwrap_err();
+    /// assert_eq!(error.status_code(), ua::StatusCode::BADDUPLICATEREFERENCENOTALLOWED);
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn add_reference(
         &self,
         source_id: &ua::NodeId,
