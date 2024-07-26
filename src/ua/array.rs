@@ -2,6 +2,7 @@ use std::{
     ffi::c_void,
     fmt, mem,
     num::NonZeroUsize,
+    ops,
     ptr::{self, NonNull},
     slice,
 };
@@ -341,6 +342,20 @@ impl<T: DataType> Drop for Array<T> {
 impl<T: DataType> fmt::Debug for Array<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_slice().fmt(f)
+    }
+}
+
+impl<T: DataType> ops::Index<usize> for Array<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.as_slice()[index]
+    }
+}
+
+impl<T: DataType> ops::IndexMut<usize> for Array<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.as_slice_mut()[index]
     }
 }
 

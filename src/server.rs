@@ -12,7 +12,8 @@ use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
     UA_Server_addNamespace, UA_Server_addReference, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
-    UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
+    UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, __UA_Server_addNode,
+    __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
 use crate::{ua, Attributes, DataType, Error, Result};
@@ -569,6 +570,72 @@ impl Server {
             )
         });
         Error::verify_good(&status_code)
+    }
+
+    /// Translates browse path to node IDs.
+    ///
+    /// # Errors
+    ///
+    /// An error will be returned if the translation was not successful.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{DataType as _, ServerBuilder, ua};
+    /// use open62541_sys::{
+    ///     UA_NS0ID_SERVER_SERVERSTATUS, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME,
+    /// };
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let target_name_1 = ua::QualifiedName::new(0, "BuildInfo");
+    /// let target_name_2 = ua::QualifiedName::new(0, "ProductName");
+    ///
+    /// let targets = server.translate_browse_path_to_node_ids(&ua::BrowsePath::init()
+    ///     .with_starting_node(&ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS))
+    ///     .with_relative_path(&ua::RelativePath::init()
+    ///         .with_elements(&[
+    ///             ua::RelativePathElement::init().with_target_name(&target_name_1),
+    ///             ua::RelativePathElement::init().with_target_name(&target_name_2),
+    ///         ])
+    ///     )
+    /// )?;
+    ///
+    /// // Translation above returns a single target.
+    /// assert_eq!(targets.len(), 1);
+    /// let target = &targets[0];
+    ///
+    /// // The given path leads to the right node ID.
+    /// assert_eq!(
+    ///     target.target_id(),
+    ///     &ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME)
+    ///         .into_expanded_node_id()
+    /// );
+    ///
+    /// // All relative path elements were processed.
+    /// assert_eq!(target.remaining_path_index(), None);
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn translate_browse_path_to_node_ids(
+        &self,
+        browse_path: &ua::BrowsePath,
+    ) -> Result<ua::Array<ua::BrowsePathTarget>> {
+        let result = unsafe {
+            ua::BrowsePathResult::from_raw(UA_Server_translateBrowsePathToNodeIds(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                browse_path.as_ptr(),
+            ))
+        };
+        Error::verify_good(&result.status_code())?;
+        let targets = result
+            .targets()
+            .ok_or(Error::internal("translation should return targets"))?;
+        Ok(targets)
     }
 
     /// Writes value to variable node.
