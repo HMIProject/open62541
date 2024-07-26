@@ -22,6 +22,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add methods `Server::add_namespace()`, `Server::get_namespace_by_name()`, and
   `Server::get_namespace_by_index()`.
 - Add methods `Server::add_reference()` and `Server::delete_reference()`.
+- Add method `Error::status_code()` to get original OPC UA status code that caused the error.
 
 ### Changed
 
