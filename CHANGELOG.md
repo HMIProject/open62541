@@ -19,6 +19,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ua::MethodAttributes`, `ua::ObjectTypeAttributes`, `ua::VariableTypeAttributes`,
   `ua::ReferenceTypeAttributes`, `ua::DataTypeAttributes`, `ua::ViewAttributes`.
 - Add generic way of adding nodes with `Server::add_node()` and associated `Node` type.
+- Add methods `Server::add_namespace()`, `Server::get_namespace_by_name()`, and
+  `Server::get_namespace_by_index()`.
 - Add methods `Server::add_reference()` and `Server::delete_reference()`.
 
 ### Changed

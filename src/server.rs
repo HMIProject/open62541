@@ -2,12 +2,17 @@ mod data_source;
 mod node_context;
 mod node_types;
 
-use std::{ffi::c_void, ptr, sync::Arc};
+use std::{
+    ffi::{c_void, CString},
+    ptr,
+    sync::Arc,
+};
 
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_addReference, UA_Server_deleteNode, UA_Server_deleteReference,
-    UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write,
+    UA_Server_addNamespace, UA_Server_addReference, UA_Server_deleteNode,
+    UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
+    UA_Server_runUntilInterrupt, __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
 use crate::{ua, Attributes, DataType, Error, Result};
@@ -28,14 +33,13 @@ pub use self::{
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```
 /// use open62541::ServerBuilder;
-/// use std::time::Duration;
 ///
 /// # #[tokio::main]
 /// # async fn main() -> anyhow::Result<()> {
 /// #
-/// let server = ServerBuilder::default()
+/// let (server, runner) = ServerBuilder::default()
 ///     .server_urls(&["opc.tcp://localhost:4840"])
 ///     .build();
 /// #
@@ -212,6 +216,145 @@ impl Server {
             )
         });
         Error::verify_good(&status_code)
+    }
+
+    /// Adds a new namespace to the server. Returns the index of the new namespace.
+    ///
+    /// If the namespace already exists, it is not re-created but its index is returned.
+    ///
+    /// # Panics
+    ///
+    /// The namespace URI must not contain any NUL bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::ServerBuilder;
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let ns_index = server.add_namespace("http://hmi-project.com/UA/");
+    ///
+    /// // Application URI takes index 1, new namespaces start at index 2.
+    /// assert!(ns_index >= 2);
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn add_namespace(&self, namespace_uri: &str) -> u16 {
+        let name = CString::new(namespace_uri).expect("namespace URI does not contain NUL bytes");
+        let result = unsafe {
+            UA_Server_addNamespace(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                name.as_ptr(),
+            )
+        };
+        // PANIC: The only possible errors here are out-of-memory.
+        assert!(result != 0, "namespace should have been added");
+        result
+    }
+
+    /// Looks up namespace by its URI.
+    ///
+    /// This returns the found namespace index.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{ServerBuilder, ua};
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let ns_index = server.add_namespace("http://hmi-project.com/UA/");
+    ///
+    /// let ns_uri = ua::String::new("http://hmi-project.com/UA/").unwrap();
+    /// assert_eq!(server.get_namespace_by_name(&ns_uri), Some(ns_index));
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn get_namespace_by_name(&self, namespace_uri: &ua::String) -> Option<u16> {
+        let mut found_index = 0;
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_getNamespaceByName(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: The `String` is used for comparison with internal strings only. It is not
+                // changed and it is only used in the scope of the function. This means ownership is
+                // preserved and passing by value is safe here.
+                DataType::to_raw_copy(namespace_uri),
+                ptr::addr_of_mut!(found_index),
+            )
+        });
+        if !status_code.is_good() {
+            debug_assert_eq!(status_code.code(), UA_STATUSCODE_BADNOTFOUND);
+            return None;
+        }
+        // Namespace index is always expected to fit into `u16`.
+        found_index.try_into().ok()
+    }
+
+    /// Looks up namespace by its index.
+    ///
+    /// This returns the found namespace URI.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{ServerBuilder, ua};
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let ns_index = server.add_namespace("http://hmi-project.com/UA/");
+    ///
+    /// let ns_uri = ua::String::new("http://hmi-project.com/UA/").unwrap();
+    /// assert_eq!(server.get_namespace_by_index(ns_index), Some(ns_uri));
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// Namespace index 0 is always the OPC UA namespace with a fixed URI:
+    ///
+    /// ```
+    /// # use open62541::{ServerBuilder, ua};
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let ns_uri = ua::String::new("http://opcfoundation.org/UA/").unwrap();
+    /// assert_eq!(server.get_namespace_by_index(0), Some(ns_uri));
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn get_namespace_by_index(&self, namespace_index: u16) -> Option<ua::String> {
+        let mut found_uri = ua::String::init();
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_getNamespaceByIndex(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                namespace_index.into(),
+                found_uri.as_mut_ptr(),
+            )
+        });
+        if !status_code.is_good() {
+            // PANIC: The only other possible errors here are out-of-memory.
+            debug_assert_eq!(status_code.code(), UA_STATUSCODE_BADNOTFOUND);
+            return None;
+        }
+        Some(found_uri)
     }
 
     /// Adds node to address space.

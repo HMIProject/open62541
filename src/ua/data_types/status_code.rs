@@ -68,6 +68,11 @@ impl StatusCode {
     pub fn name(&self) -> &'static str {
         status_code_name(self.0)
     }
+
+    /// Gets status code.
+    pub(crate) const fn code(&self) -> UA_StatusCode {
+        self.0
+    }
 }
 
 impl fmt::Display for StatusCode {
