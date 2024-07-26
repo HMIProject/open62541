@@ -264,6 +264,22 @@ impl Server {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// Namespace index 0 is always the OPC UA namespace with a fixed URI:
+    ///
+    /// ```
+    /// # use open62541::{ServerBuilder, ua};
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let ns_uri = ua::String::new("http://opcfoundation.org/UA/").unwrap();
+    /// assert_eq!(server.get_namespace_by_index(0), Some(ns_uri));
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     #[must_use]
     pub fn get_namespace_by_index(&self, namespace_index: u16) -> Option<ua::String> {
         let mut found_uri = ua::String::init();
