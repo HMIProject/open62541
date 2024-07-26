@@ -458,7 +458,7 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Add a reference from one node to another.
+    /// Adds a reference from one node to another.
     ///
     /// # Errors
     ///
@@ -474,9 +474,9 @@ impl Server {
             UA_Server_addReference(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                // SAFETY: `NodeId`s are used to find internal pointers, are
-                // not modified and no reference to these variables lives beyond
-                // this function call. Passing by value is safe here.
+                // SAFETY: The `NodeId` values are used to find internal pointers, are not modified
+                // and no references to these variables exist beyond this function call. Passing by
+                // value is safe here.
                 DataType::to_raw_copy(source_id),
                 DataType::to_raw_copy(reference_type_id),
                 DataType::to_raw_copy(target_id),
@@ -486,11 +486,11 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Delete a reference between two nodes
+    /// Deletes a reference between two nodes.
     ///
     /// # Errors
     ///
-    /// This fails when adding the reference fails.
+    /// This fails when deleting the reference fails.
     pub fn delete_reference(
         &self,
         source_node_id: &ua::NodeId,
@@ -503,9 +503,9 @@ impl Server {
             UA_Server_deleteReference(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                // SAFETY: `NodeId`s are used to find internal pointers, are
-                // not modified and no reference to these variables lives beyond
-                // this function call. Passing by value is safe here.
+                // SAFETY: The `NodeId` values are used to find internal pointers, are not modified
+                // and no references to these variables exist beyond this function call. Passing by
+                // value is safe here.
                 DataType::to_raw_copy(source_node_id),
                 DataType::to_raw_copy(reference_type_id),
                 is_forward,
