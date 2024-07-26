@@ -9,14 +9,22 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
+    UA_NodeId, UA_Server, UA_ServerConfig, UA_ServerConfig_addSecurityPolicyAes128Sha256RsaOaep,
+    UA_ServerConfig_addSecurityPolicyAes256Sha256RsaPss,
+    UA_ServerConfig_addSecurityPolicyBasic128Rsa15, UA_ServerConfig_addSecurityPolicyBasic256,
+    UA_ServerConfig_addSecurityPolicyBasic256Sha256,
+    UA_ServerConfig_setDefaultWithSecureSecurityPolicies,
+    UA_ServerConfig_setDefaultWithSecurityPolicies, UA_Server_addDataSourceVariableNode,
     UA_Server_addNamespace, UA_Server_addReference, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
     UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, __UA_Server_addNode,
     __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
-use crate::{ua, Attributes, DataType, Error, Result};
+use crate::{
+    ua::{self, Array},
+    Attributes, DataType, Error, Result,
+};
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
@@ -26,6 +34,85 @@ pub use self::{
     },
     node_types::{Node, ObjectNode, VariableNode},
 };
+
+// Macro for generating add_security policy methods which have the same
+// wrapper function signature.
+macro_rules! generate_security_policy_methods {
+    ($($fn_name:ident, $policy_func:ident, $doc:literal);* $(;)?) => {
+        $(
+            #[doc = $doc]
+            ///
+            /// # Errors
+            ///
+            /// Errors when the security policy could not be added.
+            pub fn $fn_name(
+                mut self,
+                certificate: &ua::ByteString,
+                private_key: &ua::ByteString,
+            ) -> Result<()> {
+                let status_code = ua::StatusCode::new(unsafe {
+                    $policy_func(
+                        self.config_mut(),
+                        certificate.as_ptr(),
+                        private_key.as_ptr(),
+                    )
+                });
+                Error::verify_good(&status_code)
+            }
+        )*
+    };
+}
+
+// Macro for generating set_default_with_policies methods which have the same
+// wrapper function signature.
+macro_rules! generate_set_default_with_policies {
+    ($(($fn_name:ident, $c_fn:ident, $doc:literal));* $(;)?) => {
+        $(
+            #[doc = $doc]
+            ///
+            /// # Errors
+            ///
+            /// Errors when the default configuration with security policies could not be set.
+            pub fn $fn_name(
+                mut self,
+                port_number: u16,
+                certificate: &ua::ByteString,
+                private_key: &ua::ByteString,
+                trust_list: ua::Array<ua::ByteString>,
+                issuer_list: ua::Array<ua::ByteString>,
+                revocation_list: ua::Array<ua::ByteString>,
+            ) -> Result<()> {
+                let (trust_list_size, trust_list) = trust_list.into_raw_parts();
+                let (issuer_list_size, issuer_list) = issuer_list.into_raw_parts();
+                let (revocation_list_size, revocation_list) = revocation_list.into_raw_parts();
+
+                let status_code = ua::StatusCode::new(unsafe {
+                    $c_fn(
+                        self.config_mut(),
+                        port_number,
+                        certificate.as_ptr(),
+                        private_key.as_ptr(),
+                        trust_list,
+                        trust_list_size,
+                        issuer_list,
+                        issuer_list_size,
+                        revocation_list,
+                        revocation_list_size,
+                    )
+                });
+
+                // Clean up the memory of the arrays.
+                let panic_msg = "Could not convert from *mut UA_String array ptr to ua::Array<ua::ByteString>! \
+                                This is required for freeing memory!";
+                drop(Array::<ua::ByteString>::from_raw_parts(trust_list, trust_list_size).expect(panic_msg));
+                drop(Array::<ua::ByteString>::from_raw_parts(issuer_list, issuer_list_size).expect(panic_msg));
+                drop(Array::<ua::ByteString>::from_raw_parts(revocation_list, revocation_list_size).expect(panic_msg));
+
+                Error::verify_good(&status_code)
+            }
+        )*
+    };
+}
 
 /// Builder for [`Server`].
 ///
@@ -74,6 +161,21 @@ impl ServerBuilder {
         ua::Array::from_iter(server_urls)
             .move_into_raw(&mut config.serverUrlsSize, &mut config.serverUrls);
         self
+    }
+
+    // Generate security policy methods, as they all share the same wrapper function signature expect the names.
+    generate_security_policy_methods! {
+        add_security_policy_basic128_rsa15, UA_ServerConfig_addSecurityPolicyBasic128Rsa15, "Add security policy BASIC128 RSA15";
+        add_security_policy_aes256_sha256_rsa_pss, UA_ServerConfig_addSecurityPolicyAes256Sha256RsaPss, "Add security policy AES256 SHA256 RSA PSS";
+        add_security_policy_basic256, UA_ServerConfig_addSecurityPolicyBasic256, "Add security policy BASIC256";
+        add_security_policy_basic256_sha256, UA_ServerConfig_addSecurityPolicyBasic256Sha256, "Add security policy BASIC256 SHA256";
+        add_security_policy_aes128_sha256_rsa_oaep, UA_ServerConfig_addSecurityPolicyAes128Sha256RsaOaep, "Add security policy AES128 SHA256 RSA OAEP";
+    }
+
+    // Generate set default with policies methods, as they both share the same wrapper function signature expect the names.
+    generate_set_default_with_policies! {
+        (set_default_with_secure_security_policies, UA_ServerConfig_setDefaultWithSecureSecurityPolicies, "Set default with secure security policies");
+        (set_default_with_security_policies, UA_ServerConfig_setDefaultWithSecurityPolicies, "Set default with security policies");
     }
 
     /// Builds OPC UA server.
