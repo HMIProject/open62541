@@ -653,16 +653,16 @@ impl Server {
         max_references: u32,
         browse_description: &ua::BrowseDescription,
     ) -> Result<ua::BrowseResult> {
-        let result = ua::BrowseResult::clone_raw(&unsafe {
-            UA_Server_browse(
+        let result = unsafe {
+            ua::BrowseResult::from_raw(UA_Server_browse(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 max_references,
                 // SAFETY: No pointer to this is left in the C code
                 // after returning. A deep copy gets created internally
                 browse_description.as_ptr(),
-            )
-        });
+            ))
+        };
         Error::verify_good(&result.status_code())?;
         Ok(result)
     }
@@ -686,8 +686,8 @@ impl Server {
         release_continuation_point: bool,
         continuation_point: &ua::ContinuationPoint,
     ) -> Result<ua::BrowseResult> {
-        let result = ua::BrowseResult::clone_raw(&unsafe {
-            UA_Server_browseNext(
+        let result = unsafe {
+            ua::BrowseResult::from_raw(UA_Server_browseNext(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 release_continuation_point,
@@ -695,8 +695,8 @@ impl Server {
                 // after returning. It is only used to find the internal pointer
                 // to the `ContinuationPoint`.
                 continuation_point.to_byte_string().as_ptr(),
-            )
-        });
+            ))
+        };
         Error::verify_good(&result.status_code())?;
         Ok(result)
     }
@@ -773,8 +773,8 @@ impl Server {
         browse_path: Array<ua::QualifiedName>,
     ) -> Result<ua::BrowsePathResult> {
         let browse_path_parts = browse_path.into_raw_parts();
-        let result = ua::BrowsePathResult::clone_raw(&unsafe {
-            UA_Server_browseSimplifiedBrowsePath(
+        let result = unsafe {
+            ua::BrowsePathResult::from_raw(UA_Server_browseSimplifiedBrowsePath(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // SAFETY: This is only used to find an internal pointer
@@ -783,8 +783,8 @@ impl Server {
                 DataType::to_raw_copy(origin),
                 browse_path_parts.0,
                 browse_path_parts.1,
-            )
-        });
+            ))
+        };
         Error::verify_good(&result.status_code())?;
         Ok(result)
     }
