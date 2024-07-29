@@ -569,20 +569,21 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Creates an event. Returns the `ua::NodeId` of the created event.
+    /// Creates an event.
+    ///
+    /// This returns the [`ua::NodeId`] of the created event.
     ///
     /// # Errors
     ///
-    /// Errors when the event could not be created.
+    /// This fails when the event could not be created.
     pub fn create_event(&self, event_type: &ua::NodeId) -> Result<ua::NodeId> {
-        let mut out_node_id: ua::NodeId = ua::NodeId::init();
+        let mut out_node_id = ua::NodeId::init();
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_createEvent(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                // SAFETY: Passing as value is okay here, as event_type
-                // is only used for the scope of the function and does not
-                // get modified
+                // SAFETY: Passing as value is okay here, as event_type is only used for the scope
+                // of the function and does not get modified.
                 DataType::to_raw_copy(event_type),
                 out_node_id.as_mut_ptr(),
             )
@@ -591,25 +592,26 @@ impl Server {
         Ok(out_node_id)
     }
 
-    /// Triggers an event. Returns the `EventId` of the new event.
+    /// Triggers an event.
+    ///
+    /// This returns the [`ua::EventId`] of the new event.
     ///
     /// # Errors
     ///
-    /// Errors when the event could not be triggered
+    /// This fails when the event could not be triggered.
     pub fn trigger_event(
         &self,
         event_node_id: &ua::NodeId,
         origin_id: &ua::NodeId,
         delete_event_node: bool,
-    ) -> Result<ua::ByteString> {
-        let mut out_event_id: ua::ByteString = ua::ByteString::init();
+    ) -> Result<ua::EventId> {
+        let mut out_event_id = ua::ByteString::init();
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_triggerEvent(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                // SAFETY: Passing as value is okay here, as the variables
-                // are only used for the scope of the function and do not
-                // get modified
+                // SAFETY: Passing as value is okay here, as the variables are only used for the
+                // scope of the function and do not get modified.
                 DataType::to_raw_copy(event_node_id),
                 DataType::to_raw_copy(origin_id),
                 out_event_id.as_mut_ptr(),
