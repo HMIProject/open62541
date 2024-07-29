@@ -11,6 +11,6 @@ impl BrowsePathResult {
     #[must_use]
     pub fn targets(&self) -> Option<ua::Array<ua::BrowsePathTarget>> {
         // TODO: Adjust signature to return non-owned value instead.
-        ua::Array::from_raw_parts(self.0.targets, self.0.targetsSize)
+        ua::Array::from_raw_parts(self.0.targetsSize, self.0.targets)
     }
 }

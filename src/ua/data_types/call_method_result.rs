@@ -11,12 +11,12 @@ impl CallMethodResult {
     #[must_use]
     pub fn input_argument_results(&self) -> Option<ua::Array<ua::StatusCode>> {
         // TODO: Adjust signature to return non-owned value instead.
-        ua::Array::from_raw_parts(self.0.inputArgumentResults, self.0.inputArgumentResultsSize)
+        ua::Array::from_raw_parts(self.0.inputArgumentResultsSize, self.0.inputArgumentResults)
     }
 
     #[must_use]
     pub fn output_arguments(&self) -> Option<ua::Array<ua::Variant>> {
         // TODO: Adjust signature to return non-owned value instead.
-        ua::Array::from_raw_parts(self.0.outputArguments, self.0.outputArgumentsSize)
+        ua::Array::from_raw_parts(self.0.outputArgumentsSize, self.0.outputArguments)
     }
 }

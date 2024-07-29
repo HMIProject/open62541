@@ -27,6 +27,12 @@ impl ContinuationPoint {
     }
 
     /// Gets underlying representation.
+    #[must_use]
+    pub(crate) const fn as_byte_string(&self) -> &ua::ByteString {
+        &self.0
+    }
+
+    /// Gets underlying representation.
     pub(crate) fn to_byte_string(&self) -> ua::ByteString {
         self.0.clone()
     }

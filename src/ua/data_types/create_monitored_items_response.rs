@@ -6,8 +6,8 @@ impl CreateMonitoredItemsResponse {
     #[must_use]
     pub fn monitored_item_ids(&self) -> Option<Vec<ua::MonitoredItemId>> {
         let results = ua::Array::<ua::MonitoredItemCreateResult>::from_raw_parts(
-            self.0.results,
             self.0.resultsSize,
+            self.0.results,
         )?;
 
         let monitored_item_ids: Vec<_> = results

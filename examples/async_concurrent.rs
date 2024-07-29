@@ -21,7 +21,10 @@ async fn main() -> anyhow::Result<()> {
 
         tasks.spawn(async move {
             let (references, _) = client
-                .browse(&ua::NodeId::ns0(UA_NS0ID_SERVER))
+                .browse(
+                    &ua::BrowseDescription::default()
+                        .with_node_id(&ua::NodeId::ns0(UA_NS0ID_SERVER)),
+                )
                 .await
                 .context("browse")?;
             println!("References: {}", references.len());

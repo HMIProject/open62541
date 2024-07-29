@@ -344,12 +344,28 @@ impl AsyncClient {
 
     /// Browses specific node.
     ///
+    /// Use [`ua::BrowseDescription::default()`](ua::BrowseDescription) to set sensible defaults to
+    /// browse a specific node's children (forward references of the `HierarchicalReferences` type)
+    /// like this:
+    ///
+    /// ```
+    /// # use open62541::{AsyncClient, Result, ua};
+    /// use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS;
+    ///
+    /// # async fn example(client: &AsyncClient) -> Result<()> {
+    /// let node_id = ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS);
+    /// let browse_description = ua::BrowseDescription::default().with_node_id(&node_id);
+    /// let (references, continuation_point) = client.browse(&browse_description).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
     /// # Errors
     ///
     /// This fails when the node does not exist or it cannot be browsed.
-    pub async fn browse(&self, node_id: &ua::NodeId) -> BrowseResult {
-        let request = ua::BrowseRequest::init()
-            .with_nodes_to_browse(&[ua::BrowseDescription::default().with_node_id(node_id)]);
+    pub async fn browse(&self, browse_description: &ua::BrowseDescription) -> BrowseResult {
+        let request =
+            ua::BrowseRequest::init().with_nodes_to_browse(slice::from_ref(browse_description));
 
         let response = service_request(&self.client, request).await?;
 
@@ -361,7 +377,7 @@ impl AsyncClient {
             return Err(Error::internal("browse should return a result"));
         };
 
-        to_browse_result(result, Some(node_id))
+        to_browse_result(result, Some(browse_description.node_id()))
     }
 
     /// Browses several nodes at once.
@@ -377,13 +393,11 @@ impl AsyncClient {
     /// browsed, an inner `Err` is returned.
     ///
     /// [`browse()`]: Self::browse
-    pub async fn browse_many(&self, node_ids: &[ua::NodeId]) -> Result<Vec<BrowseResult>> {
-        let nodes_to_browse: Vec<_> = node_ids
-            .iter()
-            .map(|node_id| ua::BrowseDescription::default().with_node_id(node_id))
-            .collect();
-
-        let request = ua::BrowseRequest::init().with_nodes_to_browse(&nodes_to_browse);
+    pub async fn browse_many(
+        &self,
+        browse_descriptions: &[ua::BrowseDescription],
+    ) -> Result<Vec<BrowseResult>> {
+        let request = ua::BrowseRequest::init().with_nodes_to_browse(browse_descriptions);
 
         let response = service_request(&self.client, request).await?;
 
@@ -393,12 +407,14 @@ impl AsyncClient {
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
-        debug_assert_eq!(results.len(), node_ids.len());
+        debug_assert_eq!(results.len(), browse_descriptions.len());
 
         let results: Vec<_> = results
             .iter()
-            .zip(node_ids)
-            .map(|(result, node_id)| to_browse_result(result, Some(node_id)))
+            .zip(browse_descriptions)
+            .map(|(result, browse_description)| {
+                to_browse_result(result, Some(browse_description.node_id()))
+            })
             .collect();
 
         Ok(results)

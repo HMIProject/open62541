@@ -10,9 +10,10 @@ use std::{
 
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_addNamespace, UA_Server_addReference, UA_Server_createEvent, UA_Server_deleteNode,
-    UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
-    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
+    UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse, UA_Server_browseNext,
+    UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent,
+    UA_Server_deleteNode, UA_Server_deleteReference, UA_Server_getNamespaceByIndex,
+    UA_Server_getNamespaceByName, UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
     UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeObjectProperty,
     __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
@@ -631,6 +632,230 @@ impl Server {
         Ok(event_id)
     }
 
+    /// Browses specific node.
+    ///
+    /// Use [`ua::BrowseDescription::default()`](ua::BrowseDescription) to set sensible defaults to
+    /// browse a specific node's children (forward references of the `HierarchicalReferences` type)
+    /// like this:
+    ///
+    /// ```
+    /// # use open62541::{Result, Server, ua};
+    /// use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS;
+    ///
+    /// # async fn example(server: &Server) -> Result<()> {
+    /// let node_id = ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS);
+    /// let browse_description = ua::BrowseDescription::default().with_node_id(&node_id);
+    /// let (references, continuation_point) = server.browse(1000, &browse_description)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or it cannot be browsed.
+    pub fn browse(
+        &self,
+        max_references: usize,
+        browse_description: &ua::BrowseDescription,
+    ) -> BrowseResult {
+        let max_references = u32::try_from(max_references).map_err(|_| {
+            Error::internal("maximum references to return should be in range of u32")
+        })?;
+        let result = unsafe {
+            ua::BrowseResult::from_raw(UA_Server_browse(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                max_references,
+                browse_description.as_ptr(),
+            ))
+        };
+        Error::verify_good(&result.status_code())?;
+        to_browse_result(&result)
+    }
+
+    /// Browses continuation point for more references.
+    ///
+    /// This uses a continuation point returned from [`browse()`] whenever not all references were
+    /// returned (due to `max_references`).
+    ///
+    /// # Errors
+    ///
+    /// This fails when the browsing was not successful.
+    ///
+    /// [`browse()`]: Self::browse
+    pub fn browse_next(&self, continuation_point: &ua::ContinuationPoint) -> BrowseResult {
+        let result = unsafe {
+            ua::BrowseResult::from_raw(UA_Server_browseNext(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // We do not release the continuation point but browse it instead.
+                false,
+                continuation_point.as_byte_string().as_ptr(),
+            ))
+        };
+        Error::verify_good(&result.status_code())?;
+        to_browse_result(&result)
+    }
+
+    /// Browses nodes recursively.
+    ///
+    /// This is a non-standard version of the `Browse` service that recurses into child nodes. This
+    /// handles possible loops (that can occur for non-hierarchical references) and adds every node
+    /// at most once to the resulting list.
+    ///
+    /// Nodes are only added if they match the `NodeClassMask` in the `BrowseDescription`. However,
+    /// child nodes are still recursed into if the `NodeClass` does not match. So it is possible,
+    /// for example, to get all `VariableNode`s below a certain `ObjectNode`, with additional
+    /// objects in the hierarchy below.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the browsing was not successful.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::collections::HashSet;
+    /// # use open62541::{DataType as _, ServerBuilder, ua};
+    /// use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let targets = server.browse_recursive(
+    ///     &ua::BrowseDescription::default().with_node_id(
+    ///         &ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS),
+    ///     ),
+    /// )?;
+    ///
+    /// // Browse above returns the expected number of well-known nodes.
+    /// assert_eq!(targets.len(), 12);
+    /// # assert_eq!(
+    /// #     targets
+    /// #         .as_slice()
+    /// #         .iter()
+    /// #         .map(|node| node.node_id().as_ns0().unwrap())
+    /// #         .collect::<HashSet<_>>(),
+    /// #     HashSet::from([
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDNUMBER,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTURI,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_SOFTWAREVERSION,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_SECONDSTILLSHUTDOWN,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_SHUTDOWNREASON,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_STATE,
+    /// #     ])
+    /// # );
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn browse_recursive(
+        &self,
+        browse_description: &ua::BrowseDescription,
+    ) -> Result<ua::Array<ua::ExpandedNodeId>> {
+        let mut result_size = 0;
+        let mut result_ptr = ptr::null_mut();
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_browseRecursive(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                browse_description.as_ptr(),
+                &mut result_size,
+                &mut result_ptr,
+            )
+        });
+        Error::verify_good(&status_code)?;
+        let Some(result) = ua::Array::from_raw_parts(result_size, result_ptr) else {
+            return Err(Error::internal("recursive browse should return result"));
+        };
+        Ok(result)
+    }
+
+    /// Browses simplified browse path.
+    ///
+    /// This specifies a relative path using [`ua::QualifiedName`] instead of [`ua::RelativePath`],
+    /// using forward references and subtypes of `HierarchicalReferences`, matching the defaults of
+    /// [`ua::BrowseDescription`]. All nodes followed by `browse_path` shall be of the node classes
+    /// `Object` or `Variable`.
+    ///
+    /// See [`translate_browse_path_to_node_ids()`](Self::translate_browse_path_to_node_ids) if you
+    /// need more control over the references involved.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the browsing was not successful.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{DataType as _, ServerBuilder, ua};
+    /// use open62541_sys::{
+    ///     UA_NS0ID_SERVER_SERVERSTATUS, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME,
+    /// };
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let target_name_1 = ua::QualifiedName::new(0, "BuildInfo");
+    /// let target_name_2 = ua::QualifiedName::new(0, "ProductName");
+    ///
+    /// let targets = server.browse_simplified_browse_path(
+    ///     &ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS),
+    ///     &[target_name_1, target_name_2],
+    /// )?;
+    ///
+    /// // Translation above returns a single target.
+    /// assert_eq!(targets.len(), 1);
+    /// let target = &targets[0];
+    ///
+    /// // The given path leads to the right node ID.
+    /// assert_eq!(
+    ///     target.target_id(),
+    ///     &ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME)
+    ///         .into_expanded_node_id()
+    /// );
+    ///
+    /// // All relative path elements were processed.
+    /// assert_eq!(target.remaining_path_index(), None);
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn browse_simplified_browse_path(
+        &self,
+        origin: &ua::NodeId,
+        browse_path: &[ua::QualifiedName],
+    ) -> Result<ua::Array<ua::BrowsePathTarget>> {
+        // SAFETY: The raw pointer is only used in the call below and `browse_path` is still alive
+        // until the end of this function.
+        let (browse_path_size, browse_path_ptr) =
+            unsafe { ua::Array::raw_parts_from_slice(browse_path) };
+        let result = unsafe {
+            ua::BrowsePathResult::from_raw(UA_Server_browseSimplifiedBrowsePath(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: The function expects a copy but does not take ownership. In particular,
+                // memory lives only on the stack and is not released when the function returns.
+                DataType::to_raw_copy(origin),
+                browse_path_size,
+                browse_path_ptr,
+            ))
+        };
+        Error::verify_good(&result.status_code())?;
+        let targets = result
+            .targets()
+            .ok_or(Error::internal("browse should return targets"))?;
+        Ok(targets)
+    }
+
     /// Translates browse path to node IDs.
     ///
     /// # Errors
@@ -906,4 +1131,20 @@ impl ServerRunner {
         });
         Error::verify_good(&status_code)
     }
+}
+
+/// Result type for browsing.
+pub type BrowseResult = Result<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>;
+
+/// Converts [`ua::BrowseResult`] to our public result type.
+fn to_browse_result(result: &ua::BrowseResult) -> BrowseResult {
+    // Make sure to verify the inner status code inside `BrowseResult`. The service request finishes
+    // without error, even when browsing the node has failed.
+    Error::verify_good(&result.status_code())?;
+
+    let Some(references) = result.references() else {
+        return Err(Error::internal("browse should return references"));
+    };
+
+    Ok((references.into_vec(), result.continuation_point()))
 }
