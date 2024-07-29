@@ -686,15 +686,15 @@ impl Server {
         self.write_variable(node_id, &ua_variant)
     }
 
-    /// Write an object property. The property is represented as a `VariableNode` with
-    /// a `HasProperty` reference from the `ObjectNode`. The `VariableNode` is
-    /// identified by its `BrowseName`. Writing the property sets the value attribute
-    /// of the `VariableNode`.
-    /// _(Description from open62541 source code)_
+    /// Writes object property.
+    ///
+    /// The property is represented as a `VariableNode` with a `HasProperty` reference from the
+    /// `ObjectNode`. The `VariableNode` is identified by its `BrowseName`. Writing the property
+    /// sets the value attribute of the `VariableNode`.
     ///
     /// # Errors
     ///
-    /// Errors when writing the object property was not successful.
+    /// This fails when writing the object property was not successful.
     pub fn write_object_property(
         &self,
         object_id: &ua::NodeId,
@@ -705,9 +705,8 @@ impl Server {
             ua::StatusCode::new(UA_Server_writeObjectProperty(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                // SAFETY: Using DataType::to_raw_copy is safe here as
-                // the C code copies everything by value and does not
-                // keep references to our parameters.
+                // SAFETY: The function expects copies but does not take ownership. In particular,
+                // memory lives only on the stack and is not released when the function returns.
                 DataType::to_raw_copy(object_id),
                 DataType::to_raw_copy(property_name),
                 DataType::to_raw_copy(value),
@@ -716,12 +715,11 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Read an object property.
-    /// Returns the read object property.
+    /// Reads object property.
     ///
     /// # Errors
     ///
-    /// Errors when reading the object property was not successful.
+    /// This fails when reading the object property was not successful.
     pub fn read_object_property(
         &self,
         object_id: &ua::NodeId,
@@ -732,9 +730,8 @@ impl Server {
             ua::StatusCode::new(UA_Server_readObjectProperty(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                // SAFETY: Using DataType::to_raw_copy is safe here as
-                // the C code copies everything by value and does not
-                // keep references to our parameters.
+                // SAFETY: The function expects copies but does not take ownership. In particular,
+                // memory lives only on the stack and is not released when the function returns.
                 DataType::to_raw_copy(object_id),
                 DataType::to_raw_copy(property_name),
                 value.as_mut_ptr(),
