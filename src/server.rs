@@ -619,7 +619,10 @@ impl Server {
             )
         });
         Error::verify_good(&status_code)?;
-        Ok(out_event_id)
+        let Some(event_id) = ua::EventId::new(out_event_id) else {
+            return Err(Error::internal("trigger should return event ID"));
+        };
+        Ok(event_id)
     }
 
     /// Translates browse path to node IDs.
