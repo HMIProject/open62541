@@ -320,7 +320,6 @@ impl Server {
         } = node;
 
         let mut out_node_id = ua::NodeId::null();
-
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
@@ -340,7 +339,6 @@ impl Server {
             )
         });
         Error::verify_good(&status_code)?;
-
         Ok(out_node_id)
     }
 
