@@ -701,7 +701,7 @@ impl Server {
     ///
     /// # Errors
     ///
-    /// Errors when the browsing was not successful.
+    /// This fails when the browsing was not successful.
     pub fn browse_recursive(
         &self,
         browse_description: &ua::BrowseDescription,
@@ -723,46 +723,82 @@ impl Server {
         Ok(result)
     }
 
-    /// A simplified `TranslateBrowsePathsToNodeIds` based on the
-    /// `SimpleAttributeOperand` type (Part 4, 7.4.4.5).
+    /// Browses simplified browse path.
     ///
-    /// This specifies a relative path using a list of `BrowseNames` instead of the
-    /// `RelativePath` structure. The list of `BrowseNames` is equivalent to a
-    /// `RelativePath` that specifies forward references which are subtypes of the
-    /// `HierarchicalReferences` `ReferenceType`. All Nodes followed by the browsePath
-    /// shall be of the `NodeClass` Object or Variable.
+    /// This specifies a relative path using [`ua::QualifiedName`] instead of [`ua::RelativePath`],
+    /// using forward references and subtypes of `HierarchicalReferences`, matching the defaults of
+    /// [`ua::BrowseDescription`]. All nodes followed by `browse_path` shall be of the node classes
+    /// `Object` or `Variable`.
     ///
-    /// _(Description from open62541 source code)_
-    ///
-    /// # Usage
-    ///
-    /// * Specify the `origin` for which references will be searched for
-    /// * Pass an `Array` of `ua::QualifiedName` in which the browsing
-    ///   will happen.
+    /// See [`translate_browse_path_to_node_ids()`](Self::translate_browse_path_to_node_ids) if you
+    /// need more control over the references involved.
     ///
     /// # Errors
     ///
-    /// Errors when the browsing was not successful.
+    /// This fails when the browsing was not successful.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{DataType as _, ServerBuilder, ua};
+    /// use open62541_sys::{
+    ///     UA_NS0ID_SERVER_SERVERSTATUS, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME,
+    /// };
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let target_name_1 = ua::QualifiedName::new(0, "BuildInfo");
+    /// let target_name_2 = ua::QualifiedName::new(0, "ProductName");
+    ///
+    /// let targets = server.browse_simplified_browse_path(
+    ///     &ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS),
+    ///     &[target_name_1, target_name_2],
+    /// )?;
+    ///
+    /// // Translation above returns a single target.
+    /// assert_eq!(targets.len(), 1);
+    /// let target = &targets[0];
+    ///
+    /// // The given path leads to the right node ID.
+    /// assert_eq!(
+    ///     target.target_id(),
+    ///     &ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME)
+    ///         .into_expanded_node_id()
+    /// );
+    ///
+    /// // All relative path elements were processed.
+    /// assert_eq!(target.remaining_path_index(), None);
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn browse_simplified_browse_path(
         &self,
         origin: &ua::NodeId,
-        browse_path: Array<ua::QualifiedName>,
-    ) -> Result<ua::BrowsePathResult> {
-        let browse_path_parts = browse_path.into_raw_parts();
+        browse_path: &[ua::QualifiedName],
+    ) -> Result<ua::Array<ua::BrowsePathTarget>> {
+        // SAFETY: The raw pointer is only used in the call below and `browse_path` is still alive
+        // until the end of this function.
+        let (browse_path_size, browse_path_ptr) =
+            unsafe { ua::Array::raw_parts_from_slice(browse_path) };
         let result = unsafe {
             ua::BrowsePathResult::from_raw(UA_Server_browseSimplifiedBrowsePath(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                // SAFETY: This is only used to find an internal pointer
-                // to the node, and then never used again, so no
-                // references are left after this function call.
+                // SAFETY: The function expects a copy but does not take ownership. In particular,
+                // memory lives only on the stack and is not released when the function returns.
                 DataType::to_raw_copy(origin),
-                browse_path_parts.0,
-                browse_path_parts.1,
+                browse_path_size,
+                browse_path_ptr,
             ))
         };
         Error::verify_good(&result.status_code())?;
-        Ok(result)
+        let targets = result
+            .targets()
+            .ok_or(Error::internal("browse should return targets"))?;
+        Ok(targets)
     }
 
     /// Translates browse path to node IDs.
