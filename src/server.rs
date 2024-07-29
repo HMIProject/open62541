@@ -669,8 +669,7 @@ impl Server {
     /// #     node_id: &ua::NodeId,
     /// #     value: &str,
     /// # ) -> anyhow::Result<()> {
-    /// let value = ua::String::new(value)?;
-    /// let value = ua::Variant::init().with_scalar(&value);
+    /// let value = ua::Variant::scalar(ua::String::new(value)?);
     /// server.write_variable(node_id, &value)?;
     /// # Ok(())
     /// # }
