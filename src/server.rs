@@ -469,9 +469,7 @@ impl Server {
     ///
     /// ```
     /// # use open62541::{DataType as _, Node, ServerBuilder, ua};
-    /// # use open62541_sys::{
-    /// #     UA_NS0ID_HASCOMPONENT, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ROOTFOLDER, UA_NS0ID_STRING,
-    /// # };
+    /// # use open62541_sys::{UA_NS0ID_HASCOMPONENT, UA_NS0ID_OBJECTSFOLDER};
     /// use open62541_sys::{UA_NS0ID_ORGANIZES};
     ///
     /// # #[tokio::main]
@@ -666,7 +664,7 @@ impl Server {
     /// ```
     /// # use open62541::{ua, DataType as _, Server};
     /// #
-    /// # fn write_string(
+    /// # fn write_variable_string(
     /// #     server: &mut Server,
     /// #     node_id: &ua::NodeId,
     /// #     value: &str,
@@ -691,6 +689,52 @@ impl Server {
     /// # Errors
     ///
     /// This fails when reading the object property was not successful.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{DataType as _, Node, ServerBuilder, ua};
+    /// # use open62541_sys::{
+    /// #     UA_NS0ID_HASPROPERTY, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES, UA_NS0ID_STRING,
+    /// # };
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// # let object_node_id = server.add_node(Node::new(
+    /// #     ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
+    /// #     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    /// #     ua::QualifiedName::new(1, "SomeObject"),
+    /// #     ua::ObjectAttributes::init(),
+    /// # ))?;
+    /// # let variable_node_id = server.add_node(Node::new(
+    /// #     object_node_id.clone(),
+    /// #     ua::NodeId::ns0(UA_NS0ID_HASPROPERTY),
+    /// #     ua::QualifiedName::new(1, "SomeVariable"),
+    /// #     ua::VariableAttributes::init()
+    /// #         .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING))
+    /// #         .with_value_rank(-1),
+    /// # ))?;
+    /// #
+    /// # server.write_object_property(
+    /// #     &object_node_id,
+    /// #     &ua::QualifiedName::new(1, "SomeVariable"),
+    /// #     &ua::Variant::scalar(ua::String::new("LoremIpsum")?),
+    /// # )?;
+    /// #
+    /// let value = server.read_object_property(
+    ///     &object_node_id,
+    ///     &ua::QualifiedName::new(1, "SomeVariable"),
+    /// )?;
+    /// # assert_eq!(
+    /// #     value.as_scalar::<ua::String>().and_then(ua::String::as_str),
+    /// #     Some("LoremIpsum")
+    /// # );
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn read_object_property(
         &self,
         object_id: &ua::NodeId,
@@ -721,6 +765,43 @@ impl Server {
     /// # Errors
     ///
     /// This fails when writing the object property was not successful.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{DataType as _, Node, ServerBuilder, ua};
+    /// # use open62541_sys::{
+    /// #     UA_NS0ID_HASPROPERTY, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES, UA_NS0ID_STRING,
+    /// # };
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// # let object_node_id = server.add_node(Node::new(
+    /// #     ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
+    /// #     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    /// #     ua::QualifiedName::new(1, "SomeObject"),
+    /// #     ua::ObjectAttributes::init(),
+    /// # ))?;
+    /// # let variable_node_id = server.add_node(Node::new(
+    /// #     object_node_id.clone(),
+    /// #     ua::NodeId::ns0(UA_NS0ID_HASPROPERTY),
+    /// #     ua::QualifiedName::new(1, "SomeVariable"),
+    /// #     ua::VariableAttributes::init()
+    /// #         .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING))
+    /// #         .with_value_rank(-1),
+    /// # ))?;
+    /// #
+    /// server.write_object_property(
+    ///     &object_node_id,
+    ///     &ua::QualifiedName::new(1, "SomeVariable"),
+    ///     &ua::Variant::scalar(ua::String::new("LoremIpsum")?),
+    /// )?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn write_object_property(
         &self,
         object_id: &ua::NodeId,
