@@ -282,20 +282,15 @@ impl<T: DataType> Array<T> {
     /// memory. Alternatively, they may be re-wrapped by [`from_raw_parts()`](Self::from_raw_parts).
     #[must_use]
     pub(crate) fn into_raw_parts(self) -> (usize, *mut T::Inner) {
-        let (ptr, size) = match self.0 {
-            State::Empty => {
-                // `UA_Array_new()` would return the sentinel value when "allocating" a size of `0`.
-                // We emulate this here to allow `UA_Array_delete()` and other functions to use that
-                // and handle this case appropriately (essentially making deallocation a no-op).
-                let ptr = unsafe { UA_EMPTY_ARRAY_SENTINEL };
-                (ptr.cast::<T::Inner>().cast_mut(), 0)
-            }
-            State::NonEmpty { ptr, size } => (ptr.as_ptr(), size.get()),
-        };
+        // SAFETY: This gets the raw parts but we make sure to forget about `self` below, to prevent
+        // it from being released. This leaks the data until it is captured again.
+        let (size, ptr) = unsafe { self.as_raw_parts() };
 
         // Make sure that `drop()` is not called anymore.
         mem::forget(self);
-        (size, ptr)
+        // Cast to `*mut T::Inner` because we no longer own the data. This is the only pointer to it
+        // in existence.
+        (size, ptr.cast_mut())
     }
 
     /// Moves array into `dst`, giving up ownership.
@@ -311,6 +306,52 @@ impl<T: DataType> Array<T> {
         let (size, ptr) = self.into_raw_parts();
         *dst_size = size;
         *dst = ptr;
+    }
+
+    /// Returns raw parts without giving up ownership.
+    ///
+    /// # Safety
+    ///
+    /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
+    /// may happen when `open62541` functions are called that take ownership of values by pointer.
+    #[must_use]
+    pub(crate) unsafe fn as_raw_parts(&self) -> (usize, *const T::Inner) {
+        let slice = self.as_slice();
+        unsafe { Self::raw_parts_from_slice(slice) }
+    }
+
+    /// Gets raw parts from slice.
+    ///
+    /// This is roughly equivalent to the following code but does not copy any elements:
+    ///
+    /// ```ignore
+    /// # use open62541::ua;
+    /// #
+    /// # let slice = &[ua::UInt32::new(1), ua::UInt32::new(2), ua::UInt32::new(3)];
+    /// let array = ua::Array::from_slice(slice);
+    /// let (size, ptr) = unsafe { array.as_raw_parts() };
+    /// # assert_eq!(size, 3);
+    /// # assert_eq!(unsafe { ptr.as_ref() }, Some(&1));
+    /// ```
+    ///
+    /// It allows interacting with shared collections of OPC UA data types without wrapping them
+    /// inside `ua::Array` but exactly like this would behave, including the distinction between
+    /// empty and invalid arrays (as defined by OPC UA).
+    ///
+    /// # Safety
+    ///
+    /// Ownership must not be given away, in whole or in parts. This may happen when `open62541`
+    /// functions are called that take ownership of values by pointer.
+    pub(crate) unsafe fn raw_parts_from_slice(slice: &[T]) -> (usize, *const T::Inner) {
+        if slice.is_empty() {
+            // `UA_Array_new()` would return the sentinel value when "allocating" a size of `0`. We
+            // emulate this here to allow consumers to distinguish the result from an invalid array
+            // (as defined by OPC UA).
+            let ptr = unsafe { UA_EMPTY_ARRAY_SENTINEL };
+            (0, ptr.cast::<T::Inner>())
+        } else {
+            (slice.len(), slice.as_ptr().cast::<T::Inner>())
+        }
     }
 }
 
