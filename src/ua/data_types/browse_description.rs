@@ -40,6 +40,11 @@ impl BrowseDescription {
         self.0.resultMask = result_mask.as_u32();
         self
     }
+
+    #[must_use]
+    pub(crate) fn node_id(&self) -> &ua::NodeId {
+        ua::NodeId::raw_ref(&self.0.nodeId)
+    }
 }
 
 impl Default for BrowseDescription {

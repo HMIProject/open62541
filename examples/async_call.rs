@@ -122,7 +122,9 @@ async fn get_definition(
 ) -> anyhow::Result<MethodDefinition> {
     // Look at children of the method node. We expect properties for input and output arguments.
     // TODO: Allow limiting set of returned children by passing filters to `BrowseDescription`.
-    let (references, _) = client.browse(method_node_id).await?;
+    let (references, _) = client
+        .browse(&ua::BrowseDescription::default().with_node_id(method_node_id))
+        .await?;
 
     // Either of input and output arguments may be absent when the method has no arguments.
     let mut input_arguments = None;

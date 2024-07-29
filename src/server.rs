@@ -634,14 +634,33 @@ impl Server {
 
     /// Browses specific node.
     ///
+    /// Use [`ua::BrowseDescription::default()`](ua::BrowseDescription) to set sensible defaults to
+    /// browse a specific node's children (forward references of the `HierarchicalReferences` type)
+    /// like this:
+    ///
+    /// ```
+    /// # use open62541::{Result, Server, ua};
+    /// use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS;
+    ///
+    /// # async fn example(server: &Server) -> Result<()> {
+    /// let node_id = ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS);
+    /// let browse_description = ua::BrowseDescription::default().with_node_id(&node_id);
+    /// let (references, continuation_point) = server.browse(1000, &browse_description)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
     /// # Errors
     ///
     /// This fails when the node does not exist or it cannot be browsed.
-    pub fn browse(&self, max_references: usize, node_id: &ua::NodeId) -> BrowseResult {
+    pub fn browse(
+        &self,
+        max_references: usize,
+        browse_description: &ua::BrowseDescription,
+    ) -> BrowseResult {
         let max_references = u32::try_from(max_references).map_err(|_| {
             Error::internal("maximum references to return should be in range of u32")
         })?;
-        let browse_description = ua::BrowseDescription::default().with_node_id(node_id);
         let result = unsafe {
             ua::BrowseResult::from_raw(UA_Server_browse(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.

@@ -74,7 +74,10 @@ async fn main() -> anyhow::Result<()> {
     println!("Browsing node");
 
     let (references, _) = client
-        .browse(&ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS))
+        .browse(
+            &ua::BrowseDescription::default()
+                .with_node_id(&ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS)),
+        )
         .await
         .context("browse node")?;
 

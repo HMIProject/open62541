@@ -114,7 +114,14 @@ async fn browse_many_contd(
     client: &AsyncClient,
     node_ids: &[ua::NodeId],
 ) -> Result<Vec<Result<Vec<ua::ReferenceDescription>>>> {
-    let mut results = client.browse_many(node_ids).await?;
+    let mut results = client
+        .browse_many(
+            &node_ids
+                .iter()
+                .map(|node_id| ua::BrowseDescription::default().with_node_id(node_id))
+                .collect::<Vec<_>>(),
+        )
+        .await?;
 
     debug_assert_eq!(results.len(), node_ids.len());
     // Tracks index of the original node ID for this result index.
