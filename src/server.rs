@@ -9,7 +9,7 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_ExpandedNodeId, UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
+    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
     UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse, UA_Server_browseNext,
     UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent,
     UA_Server_deleteNode, UA_Server_deleteReference, UA_Server_getNamespaceByIndex,
@@ -18,10 +18,7 @@ use open62541_sys::{
     __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
-use crate::{
-    ua::{self, Array, ExpandedNodeId},
-    Attributes, DataType, Error, Result,
-};
+use crate::{ua, Attributes, DataType, Error, Result};
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
@@ -662,6 +659,10 @@ impl Server {
     /// This uses a continuation point returned from [`browse()`] whenever not all references were
     /// returned (due to `max_references`).
     ///
+    /// # Errors
+    ///
+    /// This fails when the browsing was not successful.
+    ///
     /// [`browse()`]: Self::browse
     pub fn browse_next(&self, continuation_point: &ua::ContinuationPoint) -> BrowseResult {
         let result = unsafe {
@@ -677,37 +678,71 @@ impl Server {
         to_browse_result(&result)
     }
 
-    /// Non-standard version of the Browse service that recurses into child nodes.
+    /// Browses nodes recursively.
     ///
-    /// Possible loops (that can occur for non-hierarchical references) are handled
-    /// internally. Every node is added at most once to the results array.
+    /// This is a non-standard version of the `Browse` service that recurses into child nodes. This
+    /// handles possible loops (that can occur for non-hierarchical references) and adds every node
+    /// at most once to the resulting list.
     ///
-    /// Nodes are only added if they match the `NodeClassMask` in the
-    /// `BrowseDescription`. However, child nodes are still recursed into if the
-    /// `NodeClass` does not match. So it is possible, for example, to get all
-    /// `VariableNodes` below a certain `ObjectNode`, with additional objects in the
-    /// hierarchy below.
-    ///
-    /// _(Description from open62541 source code)_
-    ///
-    /// # Usage
-    ///
-    /// * Use `browse_description` to describe the browse operation
-    /// * Returns an `Array` containing all the found `ExpandedNodeId`s
-    ///
-    /// # Panics
-    ///
-    /// Panics when not enough memory is available.
+    /// Nodes are only added if they match the `NodeClassMask` in the `BrowseDescription`. However,
+    /// child nodes are still recursed into if the `NodeClass` does not match. So it is possible,
+    /// for example, to get all `VariableNode`s below a certain `ObjectNode`, with additional
+    /// objects in the hierarchy below.
     ///
     /// # Errors
     ///
     /// This fails when the browsing was not successful.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::collections::HashSet;
+    /// # use open62541::{DataType as _, ServerBuilder, ua};
+    /// use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let targets = server.browse_recursive(
+    ///     &ua::BrowseDescription::default().with_node_id(
+    ///         &ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS),
+    ///     ),
+    /// )?;
+    ///
+    /// // Browse above returns the expected number of well-known nodes.
+    /// assert_eq!(targets.len(), 12);
+    /// # assert_eq!(
+    /// #     targets
+    /// #         .as_slice()
+    /// #         .iter()
+    /// #         .map(|node| node.node_id().as_ns0().unwrap())
+    /// #         .collect::<HashSet<_>>(),
+    /// #     HashSet::from([
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDNUMBER,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTURI,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_SOFTWAREVERSION,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_SECONDSTILLSHUTDOWN,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_SHUTDOWNREASON,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME,
+    /// #         open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_STATE,
+    /// #     ])
+    /// # );
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn browse_recursive(
         &self,
         browse_description: &ua::BrowseDescription,
-    ) -> Result<Array<ExpandedNodeId>> {
-        let mut result_size: usize = 0;
-        let mut result_ptr: *mut UA_ExpandedNodeId = std::ptr::null_mut();
+    ) -> Result<ua::Array<ua::ExpandedNodeId>> {
+        let mut result_size = 0;
+        let mut result_ptr = ptr::null_mut();
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_browseRecursive(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
@@ -717,9 +752,10 @@ impl Server {
                 &mut result_ptr,
             )
         });
-        let result = Array::from_raw_parts(result_size, result_ptr)
-            .expect("Cannot create array from outputs of UA_Server_browseRecursive!");
         Error::verify_good(&status_code)?;
+        let Some(result) = ua::Array::from_raw_parts(result_size, result_ptr) else {
+            return Err(Error::internal("recursive browse should return result"));
+        };
         Ok(result)
     }
 
