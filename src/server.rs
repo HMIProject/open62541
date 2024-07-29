@@ -686,6 +686,32 @@ impl Server {
         self.write_variable(node_id, &ua_variant)
     }
 
+    /// Reads object property.
+    ///
+    /// # Errors
+    ///
+    /// This fails when reading the object property was not successful.
+    pub fn read_object_property(
+        &self,
+        object_id: &ua::NodeId,
+        property_name: &ua::QualifiedName,
+    ) -> Result<ua::Variant> {
+        let mut value = ua::Variant::init();
+        let status_code = unsafe {
+            ua::StatusCode::new(UA_Server_readObjectProperty(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: The function expects copies but does not take ownership. In particular,
+                // memory lives only on the stack and is not released when the function returns.
+                DataType::to_raw_copy(object_id),
+                DataType::to_raw_copy(property_name),
+                value.as_mut_ptr(),
+            ))
+        };
+        Error::verify_good(&status_code)?;
+        Ok(value)
+    }
+
     /// Writes object property.
     ///
     /// The property is represented as a `VariableNode` with a `HasProperty` reference from the
@@ -713,32 +739,6 @@ impl Server {
             ))
         };
         Error::verify_good(&status_code)
-    }
-
-    /// Reads object property.
-    ///
-    /// # Errors
-    ///
-    /// This fails when reading the object property was not successful.
-    pub fn read_object_property(
-        &self,
-        object_id: &ua::NodeId,
-        property_name: &ua::QualifiedName,
-    ) -> Result<ua::Variant> {
-        let mut value = ua::Variant::init();
-        let status_code = unsafe {
-            ua::StatusCode::new(UA_Server_readObjectProperty(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.0.as_ptr().cast_mut(),
-                // SAFETY: The function expects copies but does not take ownership. In particular,
-                // memory lives only on the stack and is not released when the function returns.
-                DataType::to_raw_copy(object_id),
-                DataType::to_raw_copy(property_name),
-                value.as_mut_ptr(),
-            ))
-        };
-        Error::verify_good(&status_code)?;
-        Ok(value)
     }
 }
 
