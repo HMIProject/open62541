@@ -319,6 +319,8 @@ impl Server {
             context,
         } = node;
 
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
         let mut out_node_id = ua::NodeId::null();
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
@@ -577,6 +579,8 @@ impl Server {
     ///
     /// This fails when the event could not be created.
     pub fn create_event(&self, event_type: &ua::NodeId) -> Result<ua::NodeId> {
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
         let mut out_node_id = ua::NodeId::init();
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_createEvent(
@@ -605,6 +609,8 @@ impl Server {
         origin_id: &ua::NodeId,
         delete_event_node: bool,
     ) -> Result<ua::EventId> {
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
         let mut out_event_id = ua::ByteString::init();
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_triggerEvent(
