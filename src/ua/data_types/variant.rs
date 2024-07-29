@@ -119,7 +119,7 @@ impl Variant {
             // Fall through to let `ua::Array::from_raw_parts()` handle the distinction between an
             // empty and an invalid array (where `self.0.data` is the sentinel value or null).
         }
-        ua::Array::from_raw_parts(self.0.data.cast::<T::Inner>(), self.0.arrayLength)
+        ua::Array::from_raw_parts(self.0.arrayLength, self.0.data.cast::<T::Inner>())
     }
 
     #[must_use]

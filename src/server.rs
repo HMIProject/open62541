@@ -717,7 +717,7 @@ impl Server {
                 &mut result_ptr,
             )
         });
-        let result = Array::from_raw_parts(result_ptr, result_size)
+        let result = Array::from_raw_parts(result_size, result_ptr)
             .expect("Cannot create array from outputs of UA_Server_browseRecursive!");
         Error::verify_good(&status_code)?;
         Ok(result)

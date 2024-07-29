@@ -158,7 +158,7 @@ impl<T: DataType> Array<T> {
     ///
     /// Enough memory must be available to allocate array.
     #[must_use]
-    pub(crate) fn from_raw_parts(ptr: *const T::Inner, size: usize) -> Option<Self> {
+    pub(crate) fn from_raw_parts(size: usize, ptr: *const T::Inner) -> Option<Self> {
         if size == 0 {
             if ptr.is_null() {
                 // This indicates an undefined array of unknown length. We do not handle this in the
@@ -306,7 +306,7 @@ impl<T: DataType> Array<T> {
     /// After this, it is the responsibility of `dst` to eventually clean up the data.
     pub(crate) fn move_into_raw(self, dst_size: &mut usize, dst: &mut *mut T::Inner) {
         // Make sure to clean up any previous value in target.
-        let _unused = Self::from_raw_parts(*dst, *dst_size);
+        let _unused = Self::from_raw_parts(*dst_size, *dst);
 
         let (size, ptr) = self.into_raw_parts();
         *dst_size = size;
@@ -417,7 +417,7 @@ mod tests {
             unsafe { UA_NODEID_STRING_ALLOC(0, string.as_ptr()) };
         drop(string);
 
-        let array: Array<T> = Array::from_raw_parts(ptr, size).unwrap();
+        let array: Array<T> = Array::from_raw_parts(size, ptr).unwrap();
         assert_eq!(array.len(), LEN);
 
         drop(array);

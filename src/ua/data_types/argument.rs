@@ -21,7 +21,7 @@ impl Argument {
     #[must_use]
     pub fn array_dimensions(&self) -> Option<ua::Array<ua::UInt32>> {
         // TODO: Adjust signature to return non-owned value instead.
-        ua::Array::from_raw_parts(self.0.arrayDimensions, self.0.arrayDimensionsSize)
+        ua::Array::from_raw_parts(self.0.arrayDimensionsSize, self.0.arrayDimensions)
     }
 
     #[must_use]
