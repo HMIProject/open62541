@@ -7,6 +7,7 @@ mod client;
 mod client_config;
 mod continuation_point;
 mod data_types;
+mod event_id;
 mod monitored_item_id;
 mod node_class_mask;
 mod secure_channel_state;
@@ -23,6 +24,7 @@ pub use self::{
     client::{Client, ClientState},
     continuation_point::ContinuationPoint,
     data_types::*,
+    event_id::EventId,
     monitored_item_id::MonitoredItemId,
     node_class_mask::NodeClassMask,
     secure_channel_state::SecureChannelState,

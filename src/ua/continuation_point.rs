@@ -12,7 +12,7 @@ impl ContinuationPoint {
     ///
     /// Note: The given string should not be empty.
     #[must_use]
-    pub(crate) fn new(continuation_point: &ua::ByteString) -> Option<Self> {
+    pub(crate) fn new(continuation_point: ua::ByteString) -> Option<Self> {
         // Unset continuation points indicate that the `BrowseResult` contains all references and no
         // continuation is actually necessary.
         if continuation_point.is_invalid() {
@@ -23,9 +23,10 @@ impl ContinuationPoint {
         // this is not an invalid string (as defined by OPC UA) but it might indicate an error.
         debug_assert!(!continuation_point.is_empty());
 
-        Some(Self(continuation_point.clone()))
+        Some(Self(continuation_point))
     }
 
+    /// Gets underlying representation.
     pub(crate) fn to_byte_string(&self) -> ua::ByteString {
         self.0.clone()
     }

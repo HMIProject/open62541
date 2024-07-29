@@ -10,10 +10,11 @@ use std::{
 
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_addNamespace, UA_Server_addReference, UA_Server_deleteNode,
+    UA_Server_addNamespace, UA_Server_addReference, UA_Server_createEvent, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
-    UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, __UA_Server_addNode,
-    __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
+    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
+    UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeObjectProperty,
+    __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
 use crate::{ua, Attributes, DataType, Error, Result};
@@ -318,8 +319,9 @@ impl Server {
             context,
         } = node;
 
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
         let mut out_node_id = ua::NodeId::null();
-
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
@@ -339,7 +341,6 @@ impl Server {
             )
         });
         Error::verify_good(&status_code)?;
-
         Ok(out_node_id)
     }
 
@@ -468,9 +469,7 @@ impl Server {
     ///
     /// ```
     /// # use open62541::{DataType as _, Node, ServerBuilder, ua};
-    /// # use open62541_sys::{
-    /// #     UA_NS0ID_HASCOMPONENT, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ROOTFOLDER, UA_NS0ID_STRING,
-    /// # };
+    /// # use open62541_sys::{UA_NS0ID_HASCOMPONENT, UA_NS0ID_OBJECTSFOLDER};
     /// use open62541_sys::{UA_NS0ID_ORGANIZES};
     ///
     /// # #[tokio::main]
@@ -572,6 +571,66 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
+    /// Creates an event.
+    ///
+    /// This returns the [`ua::NodeId`] of the created event.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the event could not be created.
+    pub fn create_event(&self, event_type: &ua::NodeId) -> Result<ua::NodeId> {
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
+        let mut out_node_id = ua::NodeId::init();
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_createEvent(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: Passing as value is okay here, as event_type is only used for the scope
+                // of the function and does not get modified.
+                DataType::to_raw_copy(event_type),
+                out_node_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+        Ok(out_node_id)
+    }
+
+    /// Triggers an event.
+    ///
+    /// This returns the [`ua::EventId`] of the new event.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the event could not be triggered.
+    pub fn trigger_event(
+        &self,
+        event_node_id: &ua::NodeId,
+        origin_id: &ua::NodeId,
+        delete_event_node: bool,
+    ) -> Result<ua::EventId> {
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
+        let mut out_event_id = ua::ByteString::init();
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_triggerEvent(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: Passing as value is okay here, as the variables are only used for the
+                // scope of the function and do not get modified.
+                DataType::to_raw_copy(event_node_id),
+                DataType::to_raw_copy(origin_id),
+                out_event_id.as_mut_ptr(),
+                delete_event_node,
+            )
+        });
+        Error::verify_good(&status_code)?;
+        let Some(event_id) = ua::EventId::new(out_event_id) else {
+            return Err(Error::internal("trigger should return event ID"));
+        };
+        Ok(event_id)
+    }
+
     /// Translates browse path to node IDs.
     ///
     /// # Errors
@@ -665,13 +724,12 @@ impl Server {
     /// ```
     /// # use open62541::{ua, DataType as _, Server};
     /// #
-    /// # fn write_string(
+    /// # fn write_variable_string(
     /// #     server: &mut Server,
     /// #     node_id: &ua::NodeId,
     /// #     value: &str,
     /// # ) -> anyhow::Result<()> {
-    /// let value = ua::String::new(value)?;
-    /// let value = ua::Variant::init().with_scalar(&value);
+    /// let value = ua::Variant::scalar(ua::String::new(value)?);
     /// server.write_variable(node_id, &value)?;
     /// # Ok(())
     /// # }
@@ -683,6 +741,144 @@ impl Server {
     pub fn write_variable_string(&self, node_id: &ua::NodeId, value: &str) -> Result<()> {
         let ua_variant = ua::Variant::scalar(ua::String::new(value)?);
         self.write_variable(node_id, &ua_variant)
+    }
+
+    /// Reads object property.
+    ///
+    /// # Errors
+    ///
+    /// This fails when reading the object property was not successful.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{DataType as _, Node, ServerBuilder, ua};
+    /// # use open62541_sys::{
+    /// #     UA_NS0ID_HASPROPERTY, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES, UA_NS0ID_STRING,
+    /// # };
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// # let object_node_id = server.add_node(Node::new(
+    /// #     ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
+    /// #     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    /// #     ua::QualifiedName::new(1, "SomeObject"),
+    /// #     ua::ObjectAttributes::init(),
+    /// # ))?;
+    /// # let variable_node_id = server.add_node(Node::new(
+    /// #     object_node_id.clone(),
+    /// #     ua::NodeId::ns0(UA_NS0ID_HASPROPERTY),
+    /// #     ua::QualifiedName::new(1, "SomeVariable"),
+    /// #     ua::VariableAttributes::init()
+    /// #         .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING))
+    /// #         .with_value_rank(-1),
+    /// # ))?;
+    /// #
+    /// # server.write_object_property(
+    /// #     &object_node_id,
+    /// #     &ua::QualifiedName::new(1, "SomeVariable"),
+    /// #     &ua::Variant::scalar(ua::String::new("LoremIpsum")?),
+    /// # )?;
+    /// #
+    /// let value = server.read_object_property(
+    ///     &object_node_id,
+    ///     &ua::QualifiedName::new(1, "SomeVariable"),
+    /// )?;
+    /// # assert_eq!(
+    /// #     value.as_scalar::<ua::String>().and_then(ua::String::as_str),
+    /// #     Some("LoremIpsum")
+    /// # );
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn read_object_property(
+        &self,
+        object_id: &ua::NodeId,
+        property_name: &ua::QualifiedName,
+    ) -> Result<ua::Variant> {
+        let mut value = ua::Variant::init();
+        let status_code = unsafe {
+            ua::StatusCode::new(UA_Server_readObjectProperty(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: The function expects copies but does not take ownership. In particular,
+                // memory lives only on the stack and is not released when the function returns.
+                DataType::to_raw_copy(object_id),
+                DataType::to_raw_copy(property_name),
+                value.as_mut_ptr(),
+            ))
+        };
+        Error::verify_good(&status_code)?;
+        Ok(value)
+    }
+
+    /// Writes object property.
+    ///
+    /// The property is represented as a `VariableNode` with a `HasProperty` reference from the
+    /// `ObjectNode`. The `VariableNode` is identified by its `BrowseName`. Writing the property
+    /// sets the value attribute of the `VariableNode`.
+    ///
+    /// # Errors
+    ///
+    /// This fails when writing the object property was not successful.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{DataType as _, Node, ServerBuilder, ua};
+    /// # use open62541_sys::{
+    /// #     UA_NS0ID_HASPROPERTY, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES, UA_NS0ID_STRING,
+    /// # };
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// # let object_node_id = server.add_node(Node::new(
+    /// #     ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
+    /// #     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+    /// #     ua::QualifiedName::new(1, "SomeObject"),
+    /// #     ua::ObjectAttributes::init(),
+    /// # ))?;
+    /// # let variable_node_id = server.add_node(Node::new(
+    /// #     object_node_id.clone(),
+    /// #     ua::NodeId::ns0(UA_NS0ID_HASPROPERTY),
+    /// #     ua::QualifiedName::new(1, "SomeVariable"),
+    /// #     ua::VariableAttributes::init()
+    /// #         .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING))
+    /// #         .with_value_rank(-1),
+    /// # ))?;
+    /// #
+    /// server.write_object_property(
+    ///     &object_node_id,
+    ///     &ua::QualifiedName::new(1, "SomeVariable"),
+    ///     &ua::Variant::scalar(ua::String::new("LoremIpsum")?),
+    /// )?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn write_object_property(
+        &self,
+        object_id: &ua::NodeId,
+        property_name: &ua::QualifiedName,
+        value: &ua::Variant,
+    ) -> Result<()> {
+        let status_code = unsafe {
+            ua::StatusCode::new(UA_Server_writeObjectProperty(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: The function expects copies but does not take ownership. In particular,
+                // memory lives only on the stack and is not released when the function returns.
+                DataType::to_raw_copy(object_id),
+                DataType::to_raw_copy(property_name),
+                DataType::to_raw_copy(value),
+            ))
+        };
+        Error::verify_good(&status_code)
     }
 }
 

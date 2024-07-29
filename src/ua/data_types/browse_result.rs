@@ -22,6 +22,6 @@ impl BrowseResult {
     /// [`AsyncClient::browse_next()`]: crate::AsyncClient::browse_next
     #[must_use]
     pub fn continuation_point(&self) -> Option<ua::ContinuationPoint> {
-        ua::ContinuationPoint::new(ua::ByteString::raw_ref(&self.0.continuationPoint))
+        ua::ContinuationPoint::new(ua::ByteString::raw_ref(&self.0.continuationPoint).clone())
     }
 }
