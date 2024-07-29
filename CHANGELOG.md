@@ -26,6 +26,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add method `ua::NodeId::into_expanded_node_id()`.
 - Add method `Server::translate_browse_path_to_node_ids()`.
 - Implement `Index` and `IndexMut` for `ua::Array` to allow direct element access.
+- Add methods `Server::write_object_property()` and `Server::read_object_property()`.
 - Add methods `Server::create_event()` and `Server::trigger_event()`.
 
 ### Changed
