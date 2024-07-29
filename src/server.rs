@@ -165,160 +165,6 @@ impl Server {
         ServerBuilder::default().build()
     }
 
-    /// Browses the references of a given node.
-    ///
-    /// # Usage
-    ///
-    /// * Information about the operation is stored in the
-    ///   `browse_description` parameter.
-    /// * `max_references` specifies the maximum amount of references that will
-    ///   be searched for.
-    /// * Returns the browse result
-    ///
-    ///  # Errors
-    ///
-    /// Errors when the browsing was not successful.
-    pub fn browse(
-        &self,
-        max_references: u32,
-        browse_description: &ua::BrowseDescription,
-    ) -> Result<ua::BrowseResult> {
-        let result = ua::BrowseResult::clone_raw(&unsafe {
-            UA_Server_browse(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.0.as_ptr().cast_mut(),
-                max_references,
-                // SAFETY: No pointer to this is left in the C code
-                // after returning. A deep copy gets created internally
-                browse_description.as_ptr(),
-            )
-        });
-        Error::verify_good(&result.status_code())?;
-        Ok(result)
-    }
-
-    /// Continue browsing the references of a given node.
-    ///
-    /// # Usage
-    ///
-    /// * Information about the operation is stored in the
-    ///   `continuation_point` parameter.
-    /// * `release_continuation_point` specifies whether the
-    ///   internal continuation point should be released after
-    ///    the operation finishes.
-    /// * Returns the browse result
-    ///
-    /// # Errors
-    ///
-    /// Errors when the browsing was not successful.
-    pub fn browse_next(
-        &self,
-        release_continuation_point: bool,
-        continuation_point: &ua::ContinuationPoint,
-    ) -> Result<ua::BrowseResult> {
-        let result = ua::BrowseResult::clone_raw(&unsafe {
-            UA_Server_browseNext(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.0.as_ptr().cast_mut(),
-                release_continuation_point,
-                // SAFETY: No pointer to this is left in the C code
-                // after returning. It is only used to find the internal pointer
-                // to the `ContinuationPoint`.
-                continuation_point.to_byte_string().as_ptr(),
-            )
-        });
-        Error::verify_good(&result.status_code())?;
-        Ok(result)
-    }
-
-    /// Non-standard version of the Browse service that recurses into child nodes.
-    ///
-    /// Possible loops (that can occur for non-hierarchical references) are handled
-    /// internally. Every node is added at most once to the results array.
-    ///
-    /// Nodes are only added if they match the `NodeClassMask` in the
-    /// `BrowseDescription`. However, child nodes are still recursed into if the
-    /// `NodeClass` does not match. So it is possible, for example, to get all
-    /// `VariableNodes` below a certain `ObjectNode`, with additional objects in the
-    /// hierarchy below.
-    ///
-    /// _(Description from open62541 source code)_
-    ///
-    /// # Usage
-    ///
-    /// * Use `browse_description` to describe the browse operation
-    /// * Returns an `Array` containing all the found `ExpandedNodeId`s
-    ///
-    /// # Panics
-    ///
-    /// Panics when not enough memory is available.
-    ///
-    /// # Errors
-    ///
-    /// Errors when the browsing was not successful.
-    pub fn browse_recursive(
-        &self,
-        browse_description: &ua::BrowseDescription,
-    ) -> Result<Array<ExpandedNodeId>> {
-        let mut result_size: usize = 0;
-        let mut result_ptr: *mut UA_ExpandedNodeId = std::ptr::null_mut();
-        let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_browseRecursive(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.0.as_ptr().cast_mut(),
-                browse_description.as_ptr(),
-                &mut result_size,
-                &mut result_ptr,
-            )
-        });
-        let result = Array::from_raw_parts(result_ptr, result_size)
-            .expect("Cannot create array from outputs of UA_Server_browseRecursive!");
-        Error::verify_good(&status_code)?;
-        Ok(result)
-    }
-
-    /// A simplified `TranslateBrowsePathsToNodeIds` based on the
-    /// `SimpleAttributeOperand` type (Part 4, 7.4.4.5).
-    ///
-    /// This specifies a relative path using a list of `BrowseNames` instead of the
-    /// `RelativePath` structure. The list of `BrowseNames` is equivalent to a
-    /// `RelativePath` that specifies forward references which are subtypes of the
-    /// `HierarchicalReferences` `ReferenceType`. All Nodes followed by the browsePath
-    /// shall be of the `NodeClass` Object or Variable.
-    ///
-    /// _(Description from open62541 source code)_
-    ///
-    /// # Usage
-    ///
-    /// * Specify the `origin` for which references will be searched for
-    /// * Pass an `Array` of `ua::QualifiedName` in which the browsing
-    ///   will happen.
-    ///
-    /// # Errors
-    ///
-    /// Errors when the browsing was not successful.
-    pub fn browse_simplified_browse_path(
-        &self,
-        origin: &ua::NodeId,
-        browse_path: Array<ua::QualifiedName>,
-    ) -> Result<ua::BrowsePathResult> {
-        let browse_path_parts = browse_path.into_raw_parts();
-        let result = ua::BrowsePathResult::clone_raw(&unsafe {
-            UA_Server_browseSimplifiedBrowsePath(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.0.as_ptr().cast_mut(),
-                // SAFETY: This is only used to find an internal pointer
-                // to the node, and then never used again, so no
-                // references are left after this function call.
-                DataType::to_raw_copy(origin),
-                browse_path_parts.0,
-                browse_path_parts.1,
-            )
-        });
-        Error::verify_good(&result.status_code())?;
-        Ok(result)
-    }
-
     /// Adds a new namespace to the server. Returns the index of the new namespace.
     ///
     /// If the namespace already exists, it is not re-created but its index is returned.
@@ -787,6 +633,160 @@ impl Server {
             return Err(Error::internal("trigger should return event ID"));
         };
         Ok(event_id)
+    }
+
+    /// Browses the references of a given node.
+    ///
+    /// # Usage
+    ///
+    /// * Information about the operation is stored in the
+    ///   `browse_description` parameter.
+    /// * `max_references` specifies the maximum amount of references that will
+    ///   be searched for.
+    /// * Returns the browse result
+    ///
+    ///  # Errors
+    ///
+    /// Errors when the browsing was not successful.
+    pub fn browse(
+        &self,
+        max_references: u32,
+        browse_description: &ua::BrowseDescription,
+    ) -> Result<ua::BrowseResult> {
+        let result = ua::BrowseResult::clone_raw(&unsafe {
+            UA_Server_browse(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                max_references,
+                // SAFETY: No pointer to this is left in the C code
+                // after returning. A deep copy gets created internally
+                browse_description.as_ptr(),
+            )
+        });
+        Error::verify_good(&result.status_code())?;
+        Ok(result)
+    }
+
+    /// Continue browsing the references of a given node.
+    ///
+    /// # Usage
+    ///
+    /// * Information about the operation is stored in the
+    ///   `continuation_point` parameter.
+    /// * `release_continuation_point` specifies whether the
+    ///   internal continuation point should be released after
+    ///    the operation finishes.
+    /// * Returns the browse result
+    ///
+    /// # Errors
+    ///
+    /// Errors when the browsing was not successful.
+    pub fn browse_next(
+        &self,
+        release_continuation_point: bool,
+        continuation_point: &ua::ContinuationPoint,
+    ) -> Result<ua::BrowseResult> {
+        let result = ua::BrowseResult::clone_raw(&unsafe {
+            UA_Server_browseNext(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                release_continuation_point,
+                // SAFETY: No pointer to this is left in the C code
+                // after returning. It is only used to find the internal pointer
+                // to the `ContinuationPoint`.
+                continuation_point.to_byte_string().as_ptr(),
+            )
+        });
+        Error::verify_good(&result.status_code())?;
+        Ok(result)
+    }
+
+    /// Non-standard version of the Browse service that recurses into child nodes.
+    ///
+    /// Possible loops (that can occur for non-hierarchical references) are handled
+    /// internally. Every node is added at most once to the results array.
+    ///
+    /// Nodes are only added if they match the `NodeClassMask` in the
+    /// `BrowseDescription`. However, child nodes are still recursed into if the
+    /// `NodeClass` does not match. So it is possible, for example, to get all
+    /// `VariableNodes` below a certain `ObjectNode`, with additional objects in the
+    /// hierarchy below.
+    ///
+    /// _(Description from open62541 source code)_
+    ///
+    /// # Usage
+    ///
+    /// * Use `browse_description` to describe the browse operation
+    /// * Returns an `Array` containing all the found `ExpandedNodeId`s
+    ///
+    /// # Panics
+    ///
+    /// Panics when not enough memory is available.
+    ///
+    /// # Errors
+    ///
+    /// Errors when the browsing was not successful.
+    pub fn browse_recursive(
+        &self,
+        browse_description: &ua::BrowseDescription,
+    ) -> Result<Array<ExpandedNodeId>> {
+        let mut result_size: usize = 0;
+        let mut result_ptr: *mut UA_ExpandedNodeId = std::ptr::null_mut();
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_browseRecursive(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                browse_description.as_ptr(),
+                &mut result_size,
+                &mut result_ptr,
+            )
+        });
+        let result = Array::from_raw_parts(result_ptr, result_size)
+            .expect("Cannot create array from outputs of UA_Server_browseRecursive!");
+        Error::verify_good(&status_code)?;
+        Ok(result)
+    }
+
+    /// A simplified `TranslateBrowsePathsToNodeIds` based on the
+    /// `SimpleAttributeOperand` type (Part 4, 7.4.4.5).
+    ///
+    /// This specifies a relative path using a list of `BrowseNames` instead of the
+    /// `RelativePath` structure. The list of `BrowseNames` is equivalent to a
+    /// `RelativePath` that specifies forward references which are subtypes of the
+    /// `HierarchicalReferences` `ReferenceType`. All Nodes followed by the browsePath
+    /// shall be of the `NodeClass` Object or Variable.
+    ///
+    /// _(Description from open62541 source code)_
+    ///
+    /// # Usage
+    ///
+    /// * Specify the `origin` for which references will be searched for
+    /// * Pass an `Array` of `ua::QualifiedName` in which the browsing
+    ///   will happen.
+    ///
+    /// # Errors
+    ///
+    /// Errors when the browsing was not successful.
+    pub fn browse_simplified_browse_path(
+        &self,
+        origin: &ua::NodeId,
+        browse_path: Array<ua::QualifiedName>,
+    ) -> Result<ua::BrowsePathResult> {
+        let browse_path_parts = browse_path.into_raw_parts();
+        let result = ua::BrowsePathResult::clone_raw(&unsafe {
+            UA_Server_browseSimplifiedBrowsePath(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // SAFETY: This is only used to find an internal pointer
+                // to the node, and then never used again, so no
+                // references are left after this function call.
+                DataType::to_raw_copy(origin),
+                browse_path_parts.0,
+                browse_path_parts.1,
+            )
+        });
+        Error::verify_good(&result.status_code())?;
+        Ok(result)
     }
 
     /// Translates browse path to node IDs.
