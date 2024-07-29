@@ -635,70 +635,46 @@ impl Server {
         Ok(event_id)
     }
 
-    /// Browses the references of a given node.
+    /// Browses specific node.
     ///
-    /// # Usage
+    /// # Errors
     ///
-    /// * Information about the operation is stored in the
-    ///   `browse_description` parameter.
-    /// * `max_references` specifies the maximum amount of references that will
-    ///   be searched for.
-    /// * Returns the browse result
-    ///
-    ///  # Errors
-    ///
-    /// Errors when the browsing was not successful.
-    pub fn browse(
-        &self,
-        max_references: u32,
-        browse_description: &ua::BrowseDescription,
-    ) -> Result<ua::BrowseResult> {
+    /// This fails when the node does not exist or it cannot be browsed.
+    pub fn browse(&self, max_references: usize, node_id: &ua::NodeId) -> BrowseResult {
+        let max_references = u32::try_from(max_references).map_err(|_| {
+            Error::internal("maximum references to return should be in range of u32")
+        })?;
+        let browse_description = ua::BrowseDescription::default().with_node_id(node_id);
         let result = unsafe {
             ua::BrowseResult::from_raw(UA_Server_browse(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 max_references,
-                // SAFETY: No pointer to this is left in the C code
-                // after returning. A deep copy gets created internally
                 browse_description.as_ptr(),
             ))
         };
         Error::verify_good(&result.status_code())?;
-        Ok(result)
+        to_browse_result(&result)
     }
 
-    /// Continue browsing the references of a given node.
+    /// Browses continuation point for more references.
     ///
-    /// # Usage
+    /// This uses a continuation point returned from [`browse()`] whenever not all references were
+    /// returned (due to `max_references`).
     ///
-    /// * Information about the operation is stored in the
-    ///   `continuation_point` parameter.
-    /// * `release_continuation_point` specifies whether the
-    ///   internal continuation point should be released after
-    ///    the operation finishes.
-    /// * Returns the browse result
-    ///
-    /// # Errors
-    ///
-    /// Errors when the browsing was not successful.
-    pub fn browse_next(
-        &self,
-        release_continuation_point: bool,
-        continuation_point: &ua::ContinuationPoint,
-    ) -> Result<ua::BrowseResult> {
+    /// [`browse()`]: Self::browse
+    pub fn browse_next(&self, continuation_point: &ua::ContinuationPoint) -> BrowseResult {
         let result = unsafe {
             ua::BrowseResult::from_raw(UA_Server_browseNext(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                release_continuation_point,
-                // SAFETY: No pointer to this is left in the C code
-                // after returning. It is only used to find the internal pointer
-                // to the `ContinuationPoint`.
-                continuation_point.to_byte_string().as_ptr(),
+                // We do not release the continuation point but browse it instead.
+                false,
+                continuation_point.as_byte_string().as_ptr(),
             ))
         };
         Error::verify_good(&result.status_code())?;
-        Ok(result)
+        to_browse_result(&result)
     }
 
     /// Non-standard version of the Browse service that recurses into child nodes.
@@ -1064,4 +1040,20 @@ impl ServerRunner {
         });
         Error::verify_good(&status_code)
     }
+}
+
+/// Result type for browsing.
+pub type BrowseResult = Result<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>;
+
+/// Converts [`ua::BrowseResult`] to our public result type.
+fn to_browse_result(result: &ua::BrowseResult) -> BrowseResult {
+    // Make sure to verify the inner status code inside `BrowseResult`. The service request finishes
+    // without error, even when browsing the node has failed.
+    Error::verify_good(&result.status_code())?;
+
+    let Some(references) = result.references() else {
+        return Err(Error::internal("browse should return references"));
+    };
+
+    Ok((references.into_vec(), result.continuation_point()))
 }
