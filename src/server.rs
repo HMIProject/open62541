@@ -10,7 +10,7 @@ use std::{
 };
 
 use method_types::{wrap_callback, MethodNodeArgumentsNodeIds};
-use node_types::MethodNode;
+pub use node_types::MethodNode;
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
     UA_Server_addMethodNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
@@ -461,16 +461,14 @@ impl Server {
     pub fn add_method_node(
         &self,
         node: MethodNode,
-        callback: impl MethodCallback,
+        callback: impl MethodCallback + 'static,
     ) -> Result<(ua::NodeId, Option<MethodNodeArgumentsNodeIds>)> {
         let MethodNode {
             requested_new_node_id,
             parent_node_id,
             reference_type_id,
             browse_name,
-            type_definition,
             attributes,
-            context,
             input_arguments,
             output_arguments,
             arguments_request_new_node_ids,

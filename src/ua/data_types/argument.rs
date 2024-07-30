@@ -33,4 +33,24 @@ impl Argument {
     pub fn value_type(&self) -> ValueType {
         ValueType::from_data_type(self.data_type())
     }
+
+    pub fn with_name(mut self, name: ua::String) -> Self {
+        name.move_into_raw(&mut self.0.name);
+        self
+    }
+
+    pub fn with_data_type(mut self, data_type: ua::NodeId) -> Self {
+        data_type.move_into_raw(&mut self.0.dataType);
+        self
+    }
+
+    pub fn with_value_rank(mut self, value_rank: i32) -> Self {
+        self.0.valueRank = value_rank;
+        self
+    }
+
+    pub fn with_description(mut self, description: ua::LocalizedText) -> Self {
+        description.move_into_raw(&mut self.0.description);
+        self
+    }
 }

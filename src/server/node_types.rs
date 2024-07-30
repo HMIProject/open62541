@@ -112,14 +112,12 @@ pub struct VariableNode {
 }
 
 pub struct MethodNode {
-    pub(crate) requested_new_node_id: ua::NodeId,
-    pub(crate) parent_node_id: ua::NodeId,
-    pub(crate) reference_type_id: ua::NodeId,
-    pub(crate) browse_name: ua::QualifiedName,
-    pub(crate) type_definition: ua::NodeId,
-    pub(crate) attributes: MethodAttributes,
-    pub(crate) context: Option<NodeContext>,
-    pub(crate) input_arguments: Array<ua::Argument>,
-    pub(crate) output_arguments: Array<ua::Argument>,
-    pub(crate) arguments_request_new_node_ids: Option<MethodNodeArgumentsNodeIds>,
+    pub requested_new_node_id: ua::NodeId,
+    pub parent_node_id: ua::NodeId,
+    pub reference_type_id: ua::NodeId,
+    pub browse_name: ua::QualifiedName,
+    pub attributes: MethodAttributes,
+    pub input_arguments: Array<ua::Argument>,
+    pub output_arguments: Array<ua::Argument>,
+    pub arguments_request_new_node_ids: Option<MethodNodeArgumentsNodeIds>,
 }
