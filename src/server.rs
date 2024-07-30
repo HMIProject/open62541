@@ -1,4 +1,5 @@
 mod data_source;
+mod method_types;
 mod node_context;
 mod node_types;
 
@@ -8,12 +9,15 @@ use std::{
     sync::Arc,
 };
 
+use method_types::{wrap_callback, MethodNodeArgumentsNodeIds};
+use node_types::MethodNode;
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse, UA_Server_browseNext,
-    UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent,
-    UA_Server_deleteNode, UA_Server_deleteReference, UA_Server_getNamespaceByIndex,
-    UA_Server_getNamespaceByName, UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
+    UA_Server_addMethodNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
+    UA_Server_addReference, UA_Server_browse, UA_Server_browseNext, UA_Server_browseRecursive,
+    UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
+    UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
+    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
     UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeObjectProperty,
     __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
@@ -26,6 +30,7 @@ pub use self::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext,
     },
+    method_types::MethodCallback,
     node_types::{Node, ObjectNode, VariableNode},
 };
 
@@ -436,6 +441,96 @@ impl Server {
         // not consume it ourselves (to avoid double-freeing). In case of success, the node context
         // will be consumed when the node is eventually deleted (`UA_ServerConfig::nodeLifecycle`).
         Error::verify_good(&status_code)
+    }
+
+    /// Add a method node to the address space.
+    ///
+    /// does something
+    ///
+    /// do not supply type definition
+    ///
+    /// missing parameters:
+    /// UA_MethodCallback method,
+    /// size_t inputArgumentsSize, const UA_Argument *inputArguments,
+    /// const UA_NodeId inputArgumentsRequestedNewNodeId,
+    /// UA_NodeId *inputArgumentsOutNewNodeId,
+    /// size_t outputArgumentsSize, const UA_Argument *outputArguments,
+    /// const UA_NodeId outputArgumentsRequestedNewNodeId,
+    /// UA_NodeId *outputArgumentsOutNewNodeId
+    ///
+    pub fn add_method_node(
+        &self,
+        node: MethodNode,
+        callback: impl MethodCallback,
+    ) -> Result<(ua::NodeId, Option<MethodNodeArgumentsNodeIds>)> {
+        let MethodNode {
+            requested_new_node_id,
+            parent_node_id,
+            reference_type_id,
+            browse_name,
+            type_definition,
+            attributes,
+            context,
+            input_arguments,
+            output_arguments,
+            arguments_request_new_node_ids,
+        } = node;
+
+        let (raw_callback, context) = unsafe { wrap_callback(callback) };
+        let (input_arguments_size, input_arguments) = unsafe { input_arguments.as_raw_parts() };
+        let (output_arguments_size, output_arguments) = unsafe { output_arguments.as_raw_parts() };
+
+        let (arguments_request_new_node_ids, is_extended_call) =
+            if arguments_request_new_node_ids.is_none() {
+                (
+                    MethodNodeArgumentsNodeIds {
+                        input: ua::NodeId::null(),
+                        output: ua::NodeId::null(),
+                    },
+                    false,
+                )
+            } else {
+                (arguments_request_new_node_ids.expect(""), true)
+            };
+
+        let mut arguments_out_node_ids = MethodNodeArgumentsNodeIds::init();
+
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
+        let mut out_node_id = ua::NodeId::null();
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addMethodNodeEx(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // Passing ownership is trivial with primitive value (`u32`).,
+                requested_new_node_id.into_raw(),
+                parent_node_id.into_raw(),
+                reference_type_id.into_raw(),
+                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                browse_name.clone().into_raw(),
+                attributes.into_raw(),
+                raw_callback,
+                input_arguments_size,
+                input_arguments,
+                arguments_request_new_node_ids.input.into_raw(),
+                arguments_out_node_ids.input.as_mut_ptr(),
+                output_arguments_size,
+                output_arguments,
+                arguments_request_new_node_ids.output.into_raw(),
+                arguments_out_node_ids.output.as_mut_ptr(),
+                context.leak(),
+                out_node_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+        Ok((
+            out_node_id,
+            if is_extended_call {
+                Some(arguments_out_node_ids)
+            } else {
+                None
+            },
+        ))
     }
 
     /// Deletes node from address space.

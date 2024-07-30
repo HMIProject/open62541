@@ -2,12 +2,15 @@ use std::ffi::c_void;
 
 use crate::{server::DataSource, Userdata};
 
+use super::MethodCallback;
+
 /// Context attached to server node.
 ///
 /// Nodes created by [`Server`](crate::Server) need to keep track of dynamic data structures. These
 /// are cleaned up when the corresponding node is destroyed by the server.
 pub(crate) enum NodeContext {
     DataSource(Box<dyn DataSource>),
+    MethodCallback(Box<dyn MethodCallback>),
 }
 
 #[allow(dead_code)] // We will use the methods soon.
