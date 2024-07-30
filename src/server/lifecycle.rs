@@ -20,7 +20,6 @@ pub trait Lifecycle {
     #[allow(unused_variables)]
     fn constructor(
         &self,
-        server: &mut Server,
         session_id: &NodeId,
         session_context: *mut c_void,
         type_id: &NodeId,
@@ -40,7 +39,6 @@ pub trait Lifecycle {
     #[allow(unused_variables)]
     fn destructor(
         &self,
-        server: &mut Server,
         session_id: &NodeId,
         session_context: *mut c_void,
         type_id: &NodeId,

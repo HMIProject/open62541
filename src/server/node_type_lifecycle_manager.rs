@@ -121,7 +121,7 @@ impl<'a> LifecycleManager<'a> {
         lifecycle: (impl Lifecycle + 'static + std::marker::Send + std::marker::Sync),
     ) -> Self {
         unsafe extern "C" fn constructor_c(
-            server: *mut UA_Server,
+            _server: *mut UA_Server,
             session_id: *const UA_NodeId,
             session_context: *mut c_void,
             type_node_id: *const UA_NodeId,
@@ -139,16 +139,12 @@ impl<'a> LifecycleManager<'a> {
                 return ua::StatusCode::BADINTERNALERROR.into_raw();
             };
 
-            let mut server =
-                unsafe { ServerBuilder::from_raw_server(server.as_mut().unwrap_unchecked()) };
-
             // We expect the passed parameters to be valid. If they aren't, something went wrong badly and we
             // panic here.
             let panic_str = "Invalid parameters passed to the callback. Callback failed!";
 
             let status_code = unsafe {
                 lifecycle.constructor(
-                    &mut server,
                     &ua::NodeId::clone_raw(session_id.as_ref().expect(panic_str)),
                     session_context,
                     &ua::NodeId::clone_raw(type_node_id.as_ref().expect(panic_str)),
@@ -157,16 +153,11 @@ impl<'a> LifecycleManager<'a> {
                 )
             };
 
-            // Forget the server so we don't call the destructor on it
-            // We only constructed it so we have access to it, the server
-            // should still be valid after this callback.
-            std::mem::forget(server);
-
             status_code.into_raw()
         }
 
         unsafe extern "C" fn destructor_c(
-            server: *mut UA_Server,
+            _server: *mut UA_Server,
             session_id: *const UA_NodeId,
             session_context: *mut c_void,
             type_node_id: *const UA_NodeId,
@@ -192,7 +183,6 @@ impl<'a> LifecycleManager<'a> {
 
             unsafe {
                 lifecycle.destructor(
-                    &mut ServerBuilder::from_raw_server(server.as_mut().unwrap_unchecked()),
                     &ua::NodeId::clone_raw(session_id.as_ref().expect(panic_str)),
                     session_context,
                     &ua::NodeId::clone_raw(type_node_id.as_ref().expect(panic_str)),
