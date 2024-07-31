@@ -985,9 +985,9 @@ impl Server {
         Error::verify_good(&result.status_code().unwrap_or(ua::StatusCode::GOOD))?;
         let value = result.value().ok_or(Error::internal("missing value"))?;
         let value = value
-            .as_scalar::<T::Value>()
+            .to_scalar::<T::Value>()
             .ok_or(Error::internal("unexpected data type"))?;
-        Ok(value.clone())
+        Ok(value)
     }
 
     /// Writes value to variable node.
