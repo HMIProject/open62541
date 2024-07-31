@@ -18,6 +18,8 @@ macro_rules! attribute_impl {
 
             impl $crate::ua::AttributeId {
                 paste::paste! {
+                    /// Implementation of [`crate::Attribute`] for
+                    #[doc = concat!("[`", stringify!([<$name:upper>]), "`](Self::", stringify!([<$name:upper>]), ").")]
                     pub const [<$name:upper _T>]: $crate::attributes::$name =
                         $crate::attributes::$name;
                 }
