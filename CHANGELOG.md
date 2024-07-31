@@ -30,6 +30,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add methods `Server::create_event()` and `Server::trigger_event()`.
 - Add methods `Server::browse()`, `Server::browse_next()`, `Server::browse_recursive()`, and
   `Server::browse_simplified_browse_path()`.
+- Add method `Server::read_attribute()` to read node attributes in a type-safe way.
 
 ### Changed
 
