@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use open62541::{ua, ObjectNode, Server, VariableNode};
+use open62541::{ua, Attribute, ObjectNode, Server, VariableNode};
 use open62541_sys::{
     UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,
     UA_NS0ID_STRING,
@@ -41,6 +41,15 @@ fn main() -> anyhow::Result<()> {
     server.add_variable_node(variable_node)?;
 
     server.write_variable_string(&variable_node_id, "foobar")?;
+
+    read_attribute(&server, &variable_node_id, ua::AttributeId::NODEID_T)?;
+    read_attribute(&server, &variable_node_id, ua::AttributeId::NODECLASS_T)?;
+    read_attribute(&server, &variable_node_id, ua::AttributeId::BROWSENAME_T)?;
+    read_attribute(&server, &variable_node_id, ua::AttributeId::DISPLAYNAME_T)?;
+
+    for attribute in [ua::AttributeId::DESCRIPTION, ua::AttributeId::WRITEMASK] {
+        read_attribute(&server, &variable_node_id, &attribute)?;
+    }
 
     let (cancel_tx, cancel_rx) = mpsc::channel();
 
@@ -89,6 +98,18 @@ fn main() -> anyhow::Result<()> {
     }
 
     println!("Done");
+
+    Ok(())
+}
+
+fn read_attribute(
+    server: &Server,
+    node_id: &ua::NodeId,
+    attribute: impl Attribute,
+) -> anyhow::Result<()> {
+    let value = server.read_attribute(node_id, attribute)?;
+
+    println!("- attribute {attribute:?} has value {value:?}");
 
     Ok(())
 }
