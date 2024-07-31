@@ -75,6 +75,7 @@ mod async_client;
 mod async_monitored_item;
 #[cfg(feature = "tokio")]
 mod async_subscription;
+mod attributes;
 #[cfg(feature = "tokio")]
 mod callback;
 mod logger;
@@ -91,7 +92,7 @@ pub use self::{
         DataSourceWriteContext, Node, ObjectNode, Server, ServerBuilder, ServerRunner,
         VariableNode,
     },
-    traits::Attributes,
+    traits::{Attribute, Attributes},
     userdata::Userdata,
     value::{ScalarValue, ValueType, VariantValue},
 };
