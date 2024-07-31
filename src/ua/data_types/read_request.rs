@@ -6,9 +6,9 @@ impl ReadRequest {
     #[must_use]
     pub fn with_timestamps_to_return(
         mut self,
-        timestamps_to_return: ua::TimestampsToReturn,
+        timestamps_to_return: &ua::TimestampsToReturn,
     ) -> Self {
-        timestamps_to_return.move_into_raw(&mut self.0.timestampsToReturn);
+        timestamps_to_return.clone_into_raw(&mut self.0.timestampsToReturn);
         self
     }
 
