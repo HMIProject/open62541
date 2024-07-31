@@ -249,7 +249,7 @@ impl AsyncClient {
             .collect();
 
         let request = ua::ReadRequest::init()
-            // We do return and therefore do not request timestamps now.
+            // We don't return and thus don't have to fetch timestamps.
             .with_timestamps_to_return(ua::TimestampsToReturn::NEITHER)
             .with_nodes_to_read(&nodes_to_read);
 
