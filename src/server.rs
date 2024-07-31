@@ -12,8 +12,7 @@ use std::{
 use method_types::{wrap_callback, MethodNodeArgumentsNodeIds};
 pub use node_types::MethodNode;
 use open62541_sys::{
-    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_addMethodNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
+    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
     UA_Server_addReference, UA_Server_browse, UA_Server_browseNext, UA_Server_browseRecursive,
     UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,

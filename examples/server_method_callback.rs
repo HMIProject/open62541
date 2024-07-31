@@ -1,17 +1,15 @@
 use std::{
-    any::{Any, TypeId},
     thread,
 };
 
-use anyhow::Context as _;
 use open62541::{
     ua::{self, MethodAttributes},
-    Attributes, DataSource, DataSourceReadContext, DataSourceResult, DataSourceWriteContext,
-    DataType, MethodCallback, MethodNode, ObjectNode, Result, Server, VariableNode,
+    Attributes,
+    DataType, MethodCallback, MethodNode, Result, Server,
 };
 use open62541_sys::{
-    UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_HASCOMPONENT,
-    UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES, UA_NS0ID_STRING,
+    UA_NS0ID_HASCOMPONENT,
+    UA_NS0ID_OBJECTSFOLDER,
 };
 
 struct ExampleCallback {}
