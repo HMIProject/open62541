@@ -12,13 +12,14 @@ use std::{
 use method_types::{wrap_callback, MethodNodeArgumentsNodeIds};
 pub use node_types::MethodNode;
 use open62541_sys::{
-    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
-    UA_Server_addReference, UA_Server_browse, UA_Server_browseNext, UA_Server_browseRecursive,
-    UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
-    UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
-    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
-    UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeObjectProperty,
-    __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
+    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
+    UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse,
+    UA_Server_browseNext, UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath,
+    UA_Server_createEvent, UA_Server_deleteNode, UA_Server_deleteReference,
+    UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName, UA_Server_readObjectProperty,
+    UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent,
+    UA_Server_writeObjectProperty, __UA_Server_addNode, __UA_Server_write,
+    UA_STATUSCODE_BADNOTFOUND,
 };
 
 use crate::{ua, Attributes, DataType, Error, Result};
@@ -449,14 +450,17 @@ impl Server {
     /// do not supply type definition
     ///
     /// missing parameters:
-    /// UA_MethodCallback method,
-    /// size_t inputArgumentsSize, const UA_Argument *inputArguments,
-    /// const UA_NodeId inputArgumentsRequestedNewNodeId,
-    /// UA_NodeId *inputArgumentsOutNewNodeId,
-    /// size_t outputArgumentsSize, const UA_Argument *outputArguments,
-    /// const UA_NodeId outputArgumentsRequestedNewNodeId,
-    /// UA_NodeId *outputArgumentsOutNewNodeId
+    /// `UA_MethodCallback` method,
+    /// `size_t` inputArgumentsSize, const `UA_Argument` *inputArguments,
+    /// const `UA_NodeId` inputArgumentsRequestedNewNodeId,
+    /// `UA_NodeId` *inputArgumentsOutNewNodeId,
+    /// `size_t` outputArgumentsSize, const `UA_Argument` *outputArguments,
+    /// const `UA_NodeId` outputArgumentsRequestedNewNodeId,
+    /// `UA_NodeId` *outputArgumentsOutNewNodeId
     ///
+    /// # Errors
+    ///
+    /// This fails when the method node could not be added to the server namespace.
     pub fn add_method_node(
         &self,
         node: MethodNode,
@@ -478,7 +482,9 @@ impl Server {
         let (output_arguments_size, output_arguments) = unsafe { output_arguments.as_raw_parts() };
 
         let (arguments_request_new_node_ids, is_extended_call) =
-            if arguments_request_new_node_ids.is_none() {
+            if let Some(arguments_request_new_node_ids_tmp) = arguments_request_new_node_ids {
+                (arguments_request_new_node_ids_tmp, true)
+            } else {
                 (
                     MethodNodeArgumentsNodeIds {
                         input: ua::NodeId::null(),
@@ -486,8 +492,6 @@ impl Server {
                     },
                     false,
                 )
-            } else {
-                (arguments_request_new_node_ids.expect(""), true)
             };
 
         let mut arguments_out_node_ids = MethodNodeArgumentsNodeIds::init();

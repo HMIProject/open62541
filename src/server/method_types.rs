@@ -21,6 +21,9 @@ impl MethodNodeArgumentsNodeIds {
 }
 
 pub trait MethodCallback {
+    /// # Errors
+    ///
+    /// This errors when the callback was not successful
     fn callback(
         &self,
         session_id: ua::NodeId,

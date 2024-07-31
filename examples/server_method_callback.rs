@@ -1,16 +1,10 @@
-use std::{
-    thread,
-};
+use std::thread;
 
 use open62541::{
     ua::{self, MethodAttributes},
-    Attributes,
-    DataType, MethodCallback, MethodNode, Result, Server,
+    Attributes, DataType, MethodCallback, MethodNode, Result, Server,
 };
-use open62541_sys::{
-    UA_NS0ID_HASCOMPONENT,
-    UA_NS0ID_OBJECTSFOLDER,
-};
+use open62541_sys::{UA_NS0ID_HASCOMPONENT, UA_NS0ID_OBJECTSFOLDER};
 
 struct ExampleCallback {}
 
