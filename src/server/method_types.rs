@@ -88,9 +88,12 @@ pub(crate) unsafe fn wrap_callback(
                 assert!(output_size == return_value.len(), "The method node callback returned an invalid amount of output arguments. \
                 Make sure to return exactly the amount of arguments which were specified when adding this node to the namespace!");
 
+                let binding = return_value[0].to_scalar::<ua::String>().unwrap();
+                let _string1 = binding.as_str().unwrap();
+
                 // The output size is fixed, we don't need it, but the move_into_raw requires a location to write it to.
                 // To solve this, we just write into a unused variable.
-                let mut size: usize = 0;
+                let mut size: usize = output_size;
                 return_value.move_into_raw(&mut size, &mut output);
                 ua::StatusCode::GOOD
             }

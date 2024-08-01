@@ -14,9 +14,20 @@ impl MethodCallback for ExampleCallback {
         _session_id: ua::NodeId,
         _method_id: ua::NodeId,
         _object_id: ua::NodeId,
-        _input: ua::Array<ua::Variant>,
+        input: ua::Array<ua::Variant>,
     ) -> Result<ua::Array<ua::Variant>> {
-        todo!()
+        let input_string = input[0].to_scalar::<ua::String>().unwrap();
+        let input_string = input_string.as_str().unwrap();
+        let output_string1: String = "Nice input string: ".to_owned();
+        let output_string2 = output_string1 + input_string;
+        let output_string3: ua::String = ua::String::new(&output_string2).unwrap();
+        let output_variant = [ua::Variant::scalar(output_string3)];
+        let output_array: ua::Array<ua::Variant> = ua::Array::from_slice(&output_variant);
+
+        let binding = output_array[0].to_scalar::<ua::String>().unwrap();
+        let _string1 = binding.as_str().unwrap();
+
+        Ok(output_array)
     }
 }
 
