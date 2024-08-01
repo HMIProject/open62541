@@ -1,10 +1,7 @@
-use crate::{
-    ua::{self, Array, MethodAttributes},
-    Attributes, DataType,
-};
+use crate::{ua, Attributes, DataType};
 
-use super::NodeContext;
-use crate::server::method_types::MethodNodeArgumentsNodeIds;
+use crate::server::NodeContext;
+use crate::MethodNodeArgumentsNodeIds;
 
 pub struct Node<T> {
     pub(crate) requested_new_node_id: ua::NodeId,
@@ -116,8 +113,8 @@ pub struct MethodNode {
     pub parent_node_id: ua::NodeId,
     pub reference_type_id: ua::NodeId,
     pub browse_name: ua::QualifiedName,
-    pub attributes: MethodAttributes,
-    pub input_arguments: Array<ua::Argument>,
-    pub output_arguments: Array<ua::Argument>,
+    pub attributes: ua::MethodAttributes,
+    pub input_arguments: ua::Array<ua::Argument>,
+    pub output_arguments: ua::Array<ua::Argument>,
     pub arguments_request_new_node_ids: Option<MethodNodeArgumentsNodeIds>,
 }

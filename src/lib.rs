@@ -88,8 +88,8 @@ pub use self::{
     error::{Error, Result},
     server::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
-        DataSourceWriteContext, MethodCallback, MethodNode, Node, ObjectNode, Server,
-        ServerBuilder, ServerRunner, VariableNode,
+        DataSourceWriteContext, MethodCallback, MethodNode, MethodNodeArgumentsNodeIds, Node,
+        ObjectNode, Server, ServerBuilder, ServerRunner, VariableNode,
     },
     traits::Attributes,
     userdata::Userdata,

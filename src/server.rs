@@ -9,8 +9,7 @@ use std::{
     sync::Arc,
 };
 
-use method_types::{wrap_callback, MethodNodeArgumentsNodeIds};
-pub use node_types::MethodNode;
+use method_types::wrap_callback;
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
     UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse,
@@ -30,8 +29,8 @@ pub use self::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext,
     },
-    method_types::MethodCallback,
-    node_types::{Node, ObjectNode, VariableNode},
+    method_types::{MethodCallback, MethodNodeArgumentsNodeIds},
+    node_types::{MethodNode, Node, ObjectNode, VariableNode},
 };
 
 /// Builder for [`Server`].
