@@ -445,19 +445,6 @@ impl Server {
 
     /// Add a method node to the address space.
     ///
-    /// does something
-    ///
-    /// do not supply type definition
-    ///
-    /// missing parameters:
-    /// `UA_MethodCallback` method,
-    /// `size_t` inputArgumentsSize, const `UA_Argument` *inputArguments,
-    /// const `UA_NodeId` inputArgumentsRequestedNewNodeId,
-    /// `UA_NodeId` *inputArgumentsOutNewNodeId,
-    /// `size_t` outputArgumentsSize, const `UA_Argument` *outputArguments,
-    /// const `UA_NodeId` outputArgumentsRequestedNewNodeId,
-    /// `UA_NodeId` *outputArgumentsOutNewNodeId
-    ///
     /// # Errors
     ///
     /// This fails when the method node could not be added to the server namespace.
@@ -481,6 +468,8 @@ impl Server {
         let (input_arguments_size, input_arguments) = unsafe { input_arguments.as_raw_parts() };
         let (output_arguments_size, output_arguments) = unsafe { output_arguments.as_raw_parts() };
 
+        // Unwrap the requested new node ids if they exist, otherwise, use `ua::NodeId::null` for the call.
+        // If they were supplied, this is an extended call and we return the new `ua::NodeId`s, otherwise we don't.
         let (arguments_request_new_node_ids, is_extended_call) =
             if let Some(arguments_request_new_node_ids_tmp) = arguments_request_new_node_ids {
                 (arguments_request_new_node_ids_tmp, true)
@@ -503,11 +492,10 @@ impl Server {
             UA_Server_addMethodNodeEx(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                // Passing ownership is trivial with primitive value (`u32`).,
+                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
                 requested_new_node_id.into_raw(),
                 parent_node_id.into_raw(),
                 reference_type_id.into_raw(),
-                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
                 browse_name.clone().into_raw(),
                 attributes.into_raw(),
                 raw_callback,
