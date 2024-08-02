@@ -64,6 +64,7 @@ impl<T: DataType> DataValue<T> {
 }
 
 impl DataValue<ua::Variant> {
+    #[allow(dead_code)] // --no-default-features
     pub(crate) fn cast<T: DataType>(self) -> Result<DataValue<T>> {
         let Self {
             value,
