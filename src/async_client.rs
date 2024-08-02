@@ -16,8 +16,8 @@ use open62541_sys::{
 use tokio::{sync::oneshot, task, time::Instant};
 
 use crate::{
-    ua, AsyncSubscription, CallbackOnce, DataType, DataValue, Error, Result, ServiceRequest,
-    ServiceResponse,
+    ua, AsyncSubscription, Attribute, CallbackOnce, DataType, DataValue, Error, Result,
+    ServiceRequest, ServiceResponse,
 };
 
 /// Timeout for `UA_Client_run_iterate()`.
@@ -164,7 +164,7 @@ impl AsyncClient {
     /// [`read_attributes()`]: Self::read_attributes
     /// [`read_many_attributes()`]: Self::read_many_attributes
     pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<DataValue<ua::Variant>> {
-        self.read_attribute(node_id, &ua::AttributeId::VALUE).await
+        self.read_attribute(node_id, ua::AttributeId::VALUE_T).await
     }
 
     /// Reads node attribute.
@@ -177,19 +177,19 @@ impl AsyncClient {
     ///
     /// [`read_value()`]: Self::read_value
     #[allow(clippy::missing_panics_doc)]
-    pub async fn read_attribute(
+    pub async fn read_attribute<T: Attribute>(
         &self,
         node_id: &ua::NodeId,
-        attribute_id: &ua::AttributeId,
-    ) -> Result<DataValue<ua::Variant>> {
-        let mut values = self
-            .read_attributes(node_id, slice::from_ref(attribute_id))
-            .await?;
+        attribute: T,
+    ) -> Result<DataValue<T::Value>> {
+        let mut values = self.read_attributes(node_id, &[attribute.id()]).await?;
 
         // ERROR: We give a slice with one item to `read_attributes()` and expect a single result
         // value.
         debug_assert_eq!(values.len(), 1);
-        values.pop().expect("should contain exactly one attribute")
+        let value = values.pop().expect("should contain exactly one attribute");
+
+        value.and_then(DataValue::cast::<T::Value>)
     }
 
     /// Reads several node attributes.
@@ -263,14 +263,15 @@ impl AsyncClient {
                 // An unset status code is considered valid: servers are not required to include the
                 // status code in their response when not necessary.
                 Error::verify_good(&result.status_code().unwrap_or(ua::StatusCode::GOOD))?;
-
                 result.to_generic::<ua::Variant>()
             })
             .collect();
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
-        debug_assert_eq!(results.len(), node_attributes.len());
+        if results.len() != node_attributes.len() {
+            return Err(Error::internal("unexpected number of read results"));
+        }
 
         Ok(results)
     }
@@ -408,7 +409,9 @@ impl AsyncClient {
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
-        debug_assert_eq!(results.len(), browse_descriptions.len());
+        if results.len() != browse_descriptions.len() {
+            return Err(Error::internal("unexpected number of browse results"));
+        }
 
         let results: Vec<_> = results
             .iter()
@@ -450,7 +453,9 @@ impl AsyncClient {
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
-        debug_assert_eq!(results.len(), continuation_points.len());
+        if results.len() != continuation_points.len() {
+            return Err(Error::Internal("unexpected number of browse results"));
+        }
 
         let results: Vec<_> = results
             .iter()

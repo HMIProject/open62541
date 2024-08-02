@@ -55,3 +55,31 @@ impl<T: DataType> DataValue<T> {
         self.server_picoseconds
     }
 }
+
+impl DataValue<ua::Variant> {
+    pub(crate) fn cast<T: DataType>(self) -> Result<DataValue<T>> {
+        let Self {
+            value,
+            source_timestamp,
+            server_timestamp,
+            source_picoseconds,
+            server_picoseconds,
+        } = self;
+
+        let value = value
+            .map(|value| {
+                value
+                    .to_scalar::<T>()
+                    .ok_or(Error::internal("unexpected data type"))
+            })
+            .transpose()?;
+
+        Ok(DataValue {
+            value,
+            source_timestamp,
+            server_timestamp,
+            source_picoseconds,
+            server_picoseconds,
+        })
+    }
+}
