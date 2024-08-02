@@ -31,6 +31,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add methods `Server::browse()`, `Server::browse_next()`, `Server::browse_recursive()`, and
   `Server::browse_simplified_browse_path()`.
 - Add method `Server::read_attribute()` to read node attributes in a type-safe way.
+- Add methods to `ua::DataValue` to get source/server timestamps.
 
 ### Changed
 

@@ -42,6 +42,34 @@ impl DataValue {
     }
 
     #[must_use]
+    pub fn source_timestamp(&self) -> Option<&ua::DateTime> {
+        self.0
+            .hasSourceTimestamp()
+            .then(|| ua::DateTime::raw_ref(&self.0.sourceTimestamp))
+    }
+
+    #[must_use]
+    pub fn server_timestamp(&self) -> Option<&ua::DateTime> {
+        self.0
+            .hasServerTimestamp()
+            .then(|| ua::DateTime::raw_ref(&self.0.serverTimestamp))
+    }
+
+    #[must_use]
+    pub fn source_picoseconds(&self) -> Option<u16> {
+        self.0
+            .hasSourcePicoseconds()
+            .then_some(self.0.sourcePicoseconds)
+    }
+
+    #[must_use]
+    pub fn server_picoseconds(&self) -> Option<u16> {
+        self.0
+            .hasServerPicoseconds()
+            .then_some(self.0.serverPicoseconds)
+    }
+
+    #[must_use]
     pub fn status_code(&self) -> Option<ua::StatusCode> {
         self.0
             .hasStatus()
