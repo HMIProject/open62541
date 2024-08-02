@@ -86,18 +86,27 @@ impl Variant {
 
     #[must_use]
     pub fn as_scalar<T: DataType>(&self) -> Option<&T> {
-        if !unsafe { UA_Variant_hasScalarType(self.as_ptr(), T::data_type()) } {
-            return None;
-        }
-        unsafe { self.0.data.cast::<T::Inner>().as_ref() }.map(|value| T::raw_ref(value))
+        self.scalar_data::<T>().map(T::raw_ref)
     }
 
     #[must_use]
     pub fn to_scalar<T: DataType>(&self) -> Option<T> {
-        if !unsafe { UA_Variant_hasScalarType(self.as_ptr(), T::data_type()) } {
-            return None;
+        self.scalar_data::<T>().map(T::clone_raw)
+    }
+
+    #[must_use]
+    fn scalar_data<T: DataType>(&self) -> Option<&T::Inner> {
+        if unsafe { UA_Variant_hasScalarType(self.as_ptr(), T::data_type()) } {
+            unsafe { self.0.data.cast::<T::Inner>().as_ref() }
+        } else {
+            if T::data_type() != Self::data_type() {
+                return None;
+            }
+            // If type conversion to `ua::Variant` is requested, we fall back to `self` as-is (OPC
+            // UA specifies that variants cannot directly contain other variants; we use this here
+            // to allow idempotent unwrapping which is useful in generic code).
+            unsafe { self.as_ptr().cast::<T::Inner>().as_ref() }
         }
-        unsafe { self.0.data.cast::<T::Inner>().as_ref() }.map(|value| T::clone_raw(value))
     }
 
     #[must_use]
