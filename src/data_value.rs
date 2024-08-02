@@ -3,7 +3,7 @@ use crate::{ua, DataType, Error, Result};
 /// Typed variant of [`ua::DataValue`].
 #[derive(Debug, Clone)]
 pub struct DataValue<T> {
-    value: Option<T>,
+    value: T,
     source_timestamp: Option<ua::DateTime>,
     server_timestamp: Option<ua::DateTime>,
     source_picoseconds: Option<u16>,
@@ -12,14 +12,16 @@ pub struct DataValue<T> {
 
 impl<T: DataType> DataValue<T> {
     pub(crate) fn new(data_value: &ua::DataValue) -> Result<Self> {
+        // Verify that data value is valid before accessing value. The OPC UA specification requires
+        // us to do so. The status code may be omitted, in which case it is treated as valid data.
+        Error::verify_good(&data_value.status_code().unwrap_or(ua::StatusCode::GOOD))?;
+
+        // When the status code indicates a good data value, the value is expected to be set.
         let value = data_value
             .value()
-            .map(|value| {
-                value
-                    .to_scalar::<T>()
-                    .ok_or(Error::internal("unexpected data type"))
-            })
-            .transpose()?;
+            .ok_or(Error::Internal("missing value"))?
+            .to_scalar::<T>()
+            .ok_or(Error::internal("unexpected data type"))?;
 
         Ok(Self {
             value,
@@ -31,8 +33,8 @@ impl<T: DataType> DataValue<T> {
     }
 
     #[must_use]
-    pub const fn value(&self) -> Option<&T> {
-        self.value.as_ref()
+    pub const fn value(&self) -> &T {
+        &self.value
     }
 
     #[must_use]
@@ -67,12 +69,8 @@ impl DataValue<ua::Variant> {
         } = self;
 
         let value = value
-            .map(|value| {
-                value
-                    .to_scalar::<T>()
-                    .ok_or(Error::internal("unexpected data type"))
-            })
-            .transpose()?;
+            .to_scalar::<T>()
+            .ok_or(Error::internal("unexpected data type"))?;
 
         Ok(DataValue {
             value,

@@ -208,7 +208,6 @@ fn get_arguments(value: &DataValue<ua::Variant>) -> anyhow::Result<Vec<(ua::Stri
 
     let arguments = value
         .value()
-        .ok_or(anyhow::anyhow!("should have value"))?
         .to_array::<ua::Argument>()
         .ok_or(anyhow::anyhow!("should have array"))?;
 

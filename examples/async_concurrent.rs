@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context as _};
+use anyhow::Context as _;
 use open62541::{ua, AsyncClient};
 use open62541_sys::{UA_NS0ID_SERVER, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME};
 use tokio::task::JoinSet;
@@ -33,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
                 .read_value(&ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME))
                 .await
                 .context("read")?;
-            let value = value.value().ok_or(anyhow!("no value"))?.to_value();
+            let value = value.value().to_value();
             println!("Value: {value:?}");
 
             Ok::<_, anyhow::Error>(())
