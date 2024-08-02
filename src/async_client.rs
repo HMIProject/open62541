@@ -16,7 +16,8 @@ use open62541_sys::{
 use tokio::{sync::oneshot, task, time::Instant};
 
 use crate::{
-    ua, AsyncSubscription, CallbackOnce, DataType, Error, Result, ServiceRequest, ServiceResponse,
+    ua, AsyncSubscription, CallbackOnce, DataType, DataValue, Error, Result, ServiceRequest,
+    ServiceResponse,
 };
 
 /// Timeout for `UA_Client_run_iterate()`.
@@ -162,7 +163,7 @@ impl AsyncClient {
     /// [`read_attribute()`]: Self::read_attribute
     /// [`read_attributes()`]: Self::read_attributes
     /// [`read_many_attributes()`]: Self::read_many_attributes
-    pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<ua::DataValue> {
+    pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<DataValue<ua::Variant>> {
         self.read_attribute(node_id, &ua::AttributeId::VALUE).await
     }
 
@@ -175,13 +176,12 @@ impl AsyncClient {
     /// This fails when the node does not exist or the attribute cannot be read.
     ///
     /// [`read_value()`]: Self::read_value
-    // TODO: Return inner `ua::Variant` instead of `ua::DataValue`.
     #[allow(clippy::missing_panics_doc)]
     pub async fn read_attribute(
         &self,
         node_id: &ua::NodeId,
         attribute_id: &ua::AttributeId,
-    ) -> Result<ua::DataValue> {
+    ) -> Result<DataValue<ua::Variant>> {
         let mut values = self
             .read_attributes(node_id, slice::from_ref(attribute_id))
             .await?;
@@ -205,12 +205,11 @@ impl AsyncClient {
     /// attributes cannot be read, an inner `Err` is returned.
     ///
     /// [`read_attribute()`]: Self::read_attribute
-    // TODO: Return inner `ua::Variant` instead of `ua::DataValue`.
     pub async fn read_attributes(
         &self,
         node_id: &ua::NodeId,
         attribute_ids: &[ua::AttributeId],
-    ) -> Result<Vec<Result<ua::DataValue>>> {
+    ) -> Result<Vec<Result<DataValue<ua::Variant>>>> {
         // TODO: Avoid cloning, use `AsRef` in `read_many_attributes()`?
         self.read_many_attributes(
             &attribute_ids
@@ -234,11 +233,10 @@ impl AsyncClient {
     /// attributes cannot be read, an inner `Err` is returned.
     ///
     /// [`read_attributes()`]: Self::read_attributes
-    // TODO: Return inner `ua::Variant` instead of `ua::DataValue`.
     pub async fn read_many_attributes(
         &self,
         node_attributes: &[(ua::NodeId, ua::AttributeId)],
-    ) -> Result<Vec<Result<ua::DataValue>>> {
+    ) -> Result<Vec<Result<DataValue<ua::Variant>>>> {
         let nodes_to_read: Vec<_> = node_attributes
             .iter()
             .map(|(node_id, attribute_id)| {
@@ -261,12 +259,12 @@ impl AsyncClient {
 
         let results: Vec<_> = results
             .iter()
-            .map(|result| -> Result<ua::DataValue> {
+            .map(|result| -> Result<DataValue<ua::Variant>> {
                 // An unset status code is considered valid: servers are not required to include the
                 // status code in their response when not necessary.
                 Error::verify_good(&result.status_code().unwrap_or(ua::StatusCode::GOOD))?;
 
-                Ok(result.clone())
+                result.to_generic::<ua::Variant>()
             })
             .collect();
 
