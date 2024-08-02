@@ -1,4 +1,4 @@
-use crate::{ua, DataType as _};
+use crate::{ua, DataType, Result};
 
 crate::data_type!(DataValue);
 
@@ -74,5 +74,9 @@ impl DataValue {
         self.0
             .hasStatus()
             .then(|| ua::StatusCode::new(self.0.status))
+    }
+
+    pub(crate) fn to_generic<T: DataType>(&self) -> Result<crate::DataValue<T>> {
+        crate::DataValue::new(self)
     }
 }

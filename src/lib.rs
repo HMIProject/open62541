@@ -78,6 +78,7 @@ mod async_subscription;
 mod attributes;
 #[cfg(feature = "tokio")]
 mod callback;
+mod data_value;
 mod logger;
 mod traits;
 mod userdata;
@@ -86,6 +87,7 @@ mod value;
 pub use self::{
     client::{Client, ClientBuilder},
     data_type::DataType,
+    data_value::DataValue,
     error::{Error, Result},
     server::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
