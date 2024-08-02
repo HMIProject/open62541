@@ -259,12 +259,7 @@ impl AsyncClient {
 
         let results: Vec<_> = results
             .iter()
-            .map(|result| -> Result<DataValue<ua::Variant>> {
-                // An unset status code is considered valid: servers are not required to include the
-                // status code in their response when not necessary.
-                Error::verify_good(&result.status_code().unwrap_or(ua::StatusCode::GOOD))?;
-                result.to_generic::<ua::Variant>()
-            })
+            .map(ua::DataValue::to_generic::<ua::Variant>)
             .collect();
 
         // The OPC UA specification state that the resulting list has the same number of elements as

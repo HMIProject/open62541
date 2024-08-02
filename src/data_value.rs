@@ -38,6 +38,11 @@ impl<T: DataType> DataValue<T> {
     }
 
     #[must_use]
+    pub fn into_value(self) -> T {
+        self.value
+    }
+
+    #[must_use]
     pub const fn source_timestamp(&self) -> Option<&ua::DateTime> {
         self.source_timestamp.as_ref()
     }
