@@ -189,7 +189,7 @@ impl AsyncClient {
         debug_assert_eq!(values.len(), 1);
         let value = values.pop().expect("should contain exactly one attribute");
 
-        value.and_then(DataValue::cast::<T::Value>)
+        value.and_then(DataValue::into_scalar::<T::Value>)
     }
 
     /// Reads several node attributes.
