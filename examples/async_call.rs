@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context as _};
-use open62541::{ua, AsyncClient, ValueType};
+use open62541::{ua, AsyncClient, DataValue, ValueType};
 use open62541_sys::{UA_NS0ID_HASPROPERTY, UA_NS0ID_PROPERTYTYPE};
 
 #[tokio::main]
@@ -168,7 +168,7 @@ async fn get_definition(
 async fn read_sparse_node_values(
     client: &AsyncClient,
     node_ids: &[Option<ua::NodeId>],
-) -> anyhow::Result<Vec<Option<ua::DataValue>>> {
+) -> anyhow::Result<Vec<Option<DataValue<ua::Variant>>>> {
     // Condense sparse list into dense list for request.
     let node_attributes: Vec<_> = node_ids
         .iter()
@@ -202,13 +202,12 @@ async fn read_sparse_node_values(
 ///
 /// This looks into the value returned from reading `InputArguments` and `OutputArguments` property
 /// and returns the list of argument names and their value types.
-fn get_arguments(value: &ua::DataValue) -> anyhow::Result<Vec<(ua::String, ValueType)>> {
+fn get_arguments(value: &DataValue<ua::Variant>) -> anyhow::Result<Vec<(ua::String, ValueType)>> {
     // `InputArguments` and `OutputArguments` nodes are expected to hold an array of objects of the
     // `Argument` type.
 
     let arguments = value
         .value()
-        .ok_or(anyhow::anyhow!("should have value"))?
         .to_array::<ua::Argument>()
         .ok_or(anyhow::anyhow!("should have array"))?;
 

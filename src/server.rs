@@ -19,7 +19,7 @@ use open62541_sys::{
     UA_STATUSCODE_BADNOTFOUND,
 };
 
-use crate::{ua, Attribute, Attributes, DataType, Error, Result};
+use crate::{ua, Attribute, Attributes, DataType, DataValue, Error, Result};
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
@@ -949,13 +949,15 @@ impl Server {
     /// let node_id = ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS);
     ///
     /// // Use static dispatch to get expected value type directly:
-    /// let browse_name = server.read_attribute(&node_id, ua::AttributeId::BROWSENAME_T)?;
+    /// let browse_name = server
+    ///     .read_attribute(&node_id, ua::AttributeId::BROWSENAME_T)?
+    ///     .into_value();
     /// // The type of `browse_name` is `ua::QualifiedName` here.
     /// assert_eq!(browse_name, ua::QualifiedName::new(0, "ServerStatus"));
     ///
     /// // Use dynamic attribute and unwrap `ua::Variant` manually:
     /// let attribute_id: ua::AttributeId = ua::AttributeId::BROWSENAME;
-    /// let browse_name = server.read_attribute(&node_id, &attribute_id)?;
+    /// let browse_name = server.read_attribute(&node_id, &attribute_id)?.into_value();
     /// // The type of `browse_name` is `ua::Variant` here.
     /// let browse_name = browse_name.to_scalar::<ua::QualifiedName>().unwrap();
     /// assert_eq!(browse_name, ua::QualifiedName::new(0, "ServerStatus"));
@@ -970,7 +972,7 @@ impl Server {
         &self,
         node_id: &ua::NodeId,
         attribute: T,
-    ) -> Result<T::Value> {
+    ) -> Result<DataValue<T::Value>> {
         let item = ua::ReadValueId::init()
             .with_node_id(node_id)
             .with_attribute_id(&attribute.id());
@@ -981,13 +983,7 @@ impl Server {
                 ua::TimestampsToReturn::NEITHER.into_raw(),
             ))
         };
-        // By convention, `open62541` only sets status code when something went wrong.
-        Error::verify_good(&result.status_code().unwrap_or(ua::StatusCode::GOOD))?;
-        let value = result.value().ok_or(Error::internal("missing value"))?;
-        let value = value
-            .to_scalar::<T::Value>()
-            .ok_or(Error::internal("unexpected data type"))?;
-        Ok(value)
+        result.to_generic::<T::Value>()
     }
 
     /// Writes value to variable node.

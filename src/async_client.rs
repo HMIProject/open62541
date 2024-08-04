@@ -16,7 +16,8 @@ use open62541_sys::{
 use tokio::{sync::oneshot, task, time::Instant};
 
 use crate::{
-    ua, AsyncSubscription, CallbackOnce, DataType, Error, Result, ServiceRequest, ServiceResponse,
+    ua, AsyncSubscription, Attribute, CallbackOnce, DataType, DataValue, Error, Result,
+    ServiceRequest, ServiceResponse,
 };
 
 /// Timeout for `UA_Client_run_iterate()`.
@@ -162,8 +163,8 @@ impl AsyncClient {
     /// [`read_attribute()`]: Self::read_attribute
     /// [`read_attributes()`]: Self::read_attributes
     /// [`read_many_attributes()`]: Self::read_many_attributes
-    pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<ua::DataValue> {
-        self.read_attribute(node_id, &ua::AttributeId::VALUE).await
+    pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<DataValue<ua::Variant>> {
+        self.read_attribute(node_id, ua::AttributeId::VALUE_T).await
     }
 
     /// Reads node attribute.
@@ -175,21 +176,20 @@ impl AsyncClient {
     /// This fails when the node does not exist or the attribute cannot be read.
     ///
     /// [`read_value()`]: Self::read_value
-    // TODO: Return inner `ua::Variant` instead of `ua::DataValue`.
     #[allow(clippy::missing_panics_doc)]
-    pub async fn read_attribute(
+    pub async fn read_attribute<T: Attribute>(
         &self,
         node_id: &ua::NodeId,
-        attribute_id: &ua::AttributeId,
-    ) -> Result<ua::DataValue> {
-        let mut values = self
-            .read_attributes(node_id, slice::from_ref(attribute_id))
-            .await?;
+        attribute: T,
+    ) -> Result<DataValue<T::Value>> {
+        let mut values = self.read_attributes(node_id, &[attribute.id()]).await?;
 
         // ERROR: We give a slice with one item to `read_attributes()` and expect a single result
         // value.
         debug_assert_eq!(values.len(), 1);
-        values.pop().expect("should contain exactly one attribute")
+        let value = values.pop().expect("should contain exactly one attribute");
+
+        value.and_then(DataValue::into_scalar::<T::Value>)
     }
 
     /// Reads several node attributes.
@@ -205,12 +205,11 @@ impl AsyncClient {
     /// attributes cannot be read, an inner `Err` is returned.
     ///
     /// [`read_attribute()`]: Self::read_attribute
-    // TODO: Return inner `ua::Variant` instead of `ua::DataValue`.
     pub async fn read_attributes(
         &self,
         node_id: &ua::NodeId,
         attribute_ids: &[ua::AttributeId],
-    ) -> Result<Vec<Result<ua::DataValue>>> {
+    ) -> Result<Vec<Result<DataValue<ua::Variant>>>> {
         // TODO: Avoid cloning, use `AsRef` in `read_many_attributes()`?
         self.read_many_attributes(
             &attribute_ids
@@ -234,11 +233,10 @@ impl AsyncClient {
     /// attributes cannot be read, an inner `Err` is returned.
     ///
     /// [`read_attributes()`]: Self::read_attributes
-    // TODO: Return inner `ua::Variant` instead of `ua::DataValue`.
     pub async fn read_many_attributes(
         &self,
         node_attributes: &[(ua::NodeId, ua::AttributeId)],
-    ) -> Result<Vec<Result<ua::DataValue>>> {
+    ) -> Result<Vec<Result<DataValue<ua::Variant>>>> {
         let nodes_to_read: Vec<_> = node_attributes
             .iter()
             .map(|(node_id, attribute_id)| {
@@ -261,18 +259,14 @@ impl AsyncClient {
 
         let results: Vec<_> = results
             .iter()
-            .map(|result| -> Result<ua::DataValue> {
-                // An unset status code is considered valid: servers are not required to include the
-                // status code in their response when not necessary.
-                Error::verify_good(&result.status_code().unwrap_or(ua::StatusCode::GOOD))?;
-
-                Ok(result.clone())
-            })
+            .map(ua::DataValue::to_generic::<ua::Variant>)
             .collect();
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
-        debug_assert_eq!(results.len(), node_attributes.len());
+        if results.len() != node_attributes.len() {
+            return Err(Error::internal("unexpected number of read results"));
+        }
 
         Ok(results)
     }
@@ -410,7 +404,9 @@ impl AsyncClient {
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
-        debug_assert_eq!(results.len(), browse_descriptions.len());
+        if results.len() != browse_descriptions.len() {
+            return Err(Error::internal("unexpected number of browse results"));
+        }
 
         let results: Vec<_> = results
             .iter()
@@ -452,7 +448,9 @@ impl AsyncClient {
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
-        debug_assert_eq!(results.len(), continuation_points.len());
+        if results.len() != continuation_points.len() {
+            return Err(Error::Internal("unexpected number of browse results"));
+        }
 
         let results: Vec<_> = results
             .iter()

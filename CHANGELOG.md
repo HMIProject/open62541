@@ -31,6 +31,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add methods `Server::browse()`, `Server::browse_next()`, `Server::browse_recursive()`, and
   `Server::browse_simplified_browse_path()`.
 - Add method `Server::read_attribute()` to read node attributes in a type-safe way.
+- Add methods to `ua::DataValue` to get source/server timestamps.
 
 ### Changed
 
@@ -39,6 +40,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Upgrade to open62541 released version 1.4.3.
 - Breaking: Change signatures of `AsyncClient::browse()` and `AsyncClient::browse_many()` to accept
   `ua::BrowseDescription` instead of `ua::NodeId` for better control over the resulting references.
+- Breaking: Return typed variant `DataValue` instead of `ua::DataValue` from `AsyncClient` read
+  operations.
 
 ## [0.6.0-pre.5] - 2024-05-31
 
