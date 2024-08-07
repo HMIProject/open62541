@@ -38,10 +38,7 @@ async fn read_background(client: Arc<AsyncClient>) -> anyhow::Result<()> {
 
     println!(
         "Node {node_id} has value {:?}",
-        value
-            .value()
-            .and_then(ua::Variant::as_scalar)
-            .and_then(ua::DateTime::to_utc)
+        value.value().as_scalar().and_then(ua::DateTime::to_utc)
     );
 
     Ok(())

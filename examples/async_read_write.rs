@@ -51,10 +51,7 @@ async fn read_attributes(client: &AsyncClient, node_id: &ua::NodeId) -> anyhow::
 
     for (attribute_id, value) in ATTRIBUTE_IDS.iter().zip(attribute_values.iter()) {
         match value {
-            Ok(value) => match value.value() {
-                Some(value) => println!("- {attribute_id} -> {value:?}"),
-                None => println!("- {attribute_id} -> (no value)"),
-            },
+            Ok(value) => println!("- {attribute_id} -> {value:?}"),
             Err(err) => println!("- {attribute_id} -> {err}"),
         }
     }

@@ -15,13 +15,13 @@ use open62541_sys::{
     UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse,
     UA_Server_browseNext, UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath,
     UA_Server_createEvent, UA_Server_deleteNode, UA_Server_deleteReference,
-    UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName, UA_Server_readObjectProperty,
-    UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent,
-    UA_Server_writeObjectProperty, __UA_Server_addNode, __UA_Server_write,
-    UA_STATUSCODE_BADNOTFOUND,
+    UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName, UA_Server_read,
+    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
+    UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeObjectProperty,
+    __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
-use crate::{ua, Attributes, DataType, Error, Result};
+use crate::{ua, Attribute, Attributes, DataType, DataValue, Error, Result};
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
@@ -1003,6 +1003,69 @@ impl Server {
             .targets()
             .ok_or(Error::internal("translation should return targets"))?;
         Ok(targets)
+    }
+
+    /// Reads node attribute.
+    ///
+    /// This method supports static dispatch to the correct value type at compile time and can be
+    /// used in two ways:
+    ///
+    /// 1. Use statically known attribute type `_T` from [`ua::AttributeId`] to get correct value
+    ///    type directly.
+    /// 2. Use dynamic [`ua::AttributeId`] value and handle the resulting [`ua::Variant`].
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or the attribute cannot be read.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use open62541::{DataType as _, ServerBuilder, ua};
+    /// # use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS;
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// # let (server, _) = ServerBuilder::default().build();
+    /// #
+    /// let node_id = ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS);
+    ///
+    /// // Use static dispatch to get expected value type directly:
+    /// let browse_name = server
+    ///     .read_attribute(&node_id, ua::AttributeId::BROWSENAME_T)?
+    ///     .into_value();
+    /// // The type of `browse_name` is `ua::QualifiedName` here.
+    /// assert_eq!(browse_name, ua::QualifiedName::new(0, "ServerStatus"));
+    ///
+    /// // Use dynamic attribute and unwrap `ua::Variant` manually:
+    /// let attribute_id: ua::AttributeId = ua::AttributeId::BROWSENAME;
+    /// let browse_name = server.read_attribute(&node_id, &attribute_id)?.into_value();
+    /// // The type of `browse_name` is `ua::Variant` here.
+    /// let browse_name = browse_name.to_scalar::<ua::QualifiedName>().unwrap();
+    /// assert_eq!(browse_name, ua::QualifiedName::new(0, "ServerStatus"));
+    /// #
+    /// # let unknown_node_id = ua::NodeId::ns0(123_456_789);
+    /// # assert!(server.read_attribute(&unknown_node_id, ua::AttributeId::NODEID_T).is_err());
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn read_attribute<T: Attribute>(
+        &self,
+        node_id: &ua::NodeId,
+        attribute: T,
+    ) -> Result<DataValue<T::Value>> {
+        let item = ua::ReadValueId::init()
+            .with_node_id(node_id)
+            .with_attribute_id(&attribute.id());
+        let result = unsafe {
+            ua::DataValue::from_raw(UA_Server_read(
+                self.0.as_ptr().cast_mut(),
+                item.as_ptr(),
+                ua::TimestampsToReturn::NEITHER.into_raw(),
+            ))
+        };
+        result.to_generic::<T::Value>()
     }
 
     /// Writes value to variable node.
