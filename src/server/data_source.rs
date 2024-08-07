@@ -9,7 +9,7 @@ use open62541_sys::{
 };
 use thiserror::Error;
 
-use crate::{server::NodeContext, ua, DataType};
+use crate::{server::NodeContext, ua, DataType as _};
 
 /// Result from [`DataSource`] operations.
 ///
@@ -50,7 +50,7 @@ impl From<ua::StatusCode> for DataSourceError {
 
 /// Data source with callbacks.
 ///
-/// The read and write callbacks implement the operations on the variable when it is added via
+/// The `read` and `write` callbacks implement the operations on the variable when it is added via
 /// [`Server::add_data_source_variable_node()`].
 ///
 /// [`Server::add_data_source_variable_node()`]: crate::Server::add_data_source_variable_node
@@ -65,6 +65,7 @@ pub trait DataSource {
     ///
     /// This should return an appropriate error when the read is not possible. The underlying status
     /// code is forwarded to the client.
+    // TODO: Check if we can guarantee `&mut self`.
     fn read(&mut self, context: &mut DataSourceReadContext) -> DataSourceResult;
 
     /// Writes to variable.
@@ -80,6 +81,7 @@ pub trait DataSource {
     ///
     /// This should return an appropriate error when the write is not possible. The underlying
     /// status code is forwarded to the client.
+    // TODO: Check if we can guarantee `&mut self`.
     #[allow(unused_variables)]
     fn write(&mut self, context: &mut DataSourceWriteContext) -> DataSourceResult {
         Err(DataSourceError::NotSupported)
@@ -96,7 +98,7 @@ pub struct DataSourceReadContext {
 }
 
 impl DataSourceReadContext {
-    /// Creates context for read callback.
+    /// Creates context for `read` callback.
     fn new(value: *mut UA_DataValue) -> Option<Self> {
         Some(Self {
             value_target: NonNull::new(value)?,
@@ -107,8 +109,8 @@ impl DataSourceReadContext {
     ///
     /// This sets the value to report back to the client that is reading from this [`DataSource`].
     pub fn set_value(&mut self, value: ua::DataValue) {
-        let target = unsafe { self.value_target.as_mut() };
-        value.move_into_raw(target);
+        let value_target = unsafe { self.value_target.as_mut() };
+        value.move_into_raw(value_target);
     }
 
     /// Sets variant.
@@ -132,7 +134,7 @@ pub struct DataSourceWriteContext {
 }
 
 impl DataSourceWriteContext {
-    /// Creates context for write callback.
+    /// Creates context for `write` callback.
     fn new(value: *const UA_DataValue) -> Option<Self> {
         Some(Self {
             // SAFETY: `NonNull` implicitly expects a `*mut` but we take care to never mutate the
@@ -146,8 +148,8 @@ impl DataSourceWriteContext {
     /// This returns the value received from the client that is writing to this [`DataSource`].
     #[must_use]
     pub fn value(&self) -> &ua::DataValue {
-        let source = unsafe { self.value_source.as_ref() };
-        ua::DataValue::raw_ref(source)
+        let value_source = unsafe { self.value_source.as_ref() };
+        ua::DataValue::raw_ref(value_source)
     }
 }
 

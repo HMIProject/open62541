@@ -1,5 +1,5 @@
 mod data_source;
-mod method_types;
+mod method_callback;
 mod node_context;
 mod node_types;
 
@@ -9,7 +9,6 @@ use std::{
     sync::Arc,
 };
 
-use method_types::wrap_callback;
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
     UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse,
@@ -29,7 +28,9 @@ pub use self::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext,
     },
-    method_types::{MethodCallback, MethodNodeArgumentsNodeIds},
+    method_callback::{
+        MethodCallback, MethodCallbackContext, MethodCallbackError, MethodCallbackResult,
+    },
     node_types::{MethodNode, Node, ObjectNode, VariableNode},
 };
 
@@ -326,7 +327,7 @@ impl Server {
 
         // This out variable must be initialized without memory allocation because the call below
         // overwrites it in place, without releasing any held data first.
-        let mut out_node_id = ua::NodeId::null();
+        let mut out_new_node_id = ua::NodeId::null();
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
@@ -342,11 +343,11 @@ impl Server {
                 attributes.as_node_attributes().as_ptr(),
                 attributes.attribute_type(),
                 context.map_or(ptr::null_mut(), NodeContext::leak),
-                out_node_id.as_mut_ptr(),
+                out_new_node_id.as_mut_ptr(),
             )
         });
         Error::verify_good(&status_code)?;
-        Ok(out_node_id)
+        Ok(out_new_node_id)
     }
 
     /// Adds object node to address space.
@@ -442,16 +443,16 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Add a method node to the address space.
+    /// Adds method node to address space.
     ///
     /// # Errors
     ///
-    /// This fails when the method node could not be added to the server namespace.
+    /// This fails when the node cannot be added.
     pub fn add_method_node(
         &self,
-        node: MethodNode,
+        method_node: MethodNode,
         callback: impl MethodCallback + 'static,
-    ) -> Result<(ua::NodeId, Option<MethodNodeArgumentsNodeIds>)> {
+    ) -> Result<(ua::NodeId, (ua::NodeId, ua::NodeId))> {
         let MethodNode {
             requested_new_node_id,
             parent_node_id,
@@ -459,65 +460,64 @@ impl Server {
             browse_name,
             attributes,
             input_arguments,
+            input_arguments_requested_new_node_id,
             output_arguments,
-            arguments_request_new_node_ids,
-        } = node;
+            output_arguments_requested_new_node_id,
+        } = method_node;
 
-        let (raw_callback, context) = unsafe { wrap_callback(callback) };
+        // SAFETY: We store `node_context` inside the node to keep `data_source` alive.
+        let (method_callback, node_context) =
+            unsafe { method_callback::wrap_method_callback(callback) };
+
         let (input_arguments_size, input_arguments) = unsafe { input_arguments.as_raw_parts() };
         let (output_arguments_size, output_arguments) = unsafe { output_arguments.as_raw_parts() };
 
-        // Unwrap the requested new node ids if they exist, otherwise, use `ua::NodeId::null` for the call.
-        // If they were supplied, this is an extended call and we return the new `ua::NodeId`s, otherwise we don't.
-        let (arguments_request_new_node_ids, is_extended_call) =
-            if let Some(arguments_request_new_node_ids_tmp) = arguments_request_new_node_ids {
-                (arguments_request_new_node_ids_tmp, true)
-            } else {
-                (
-                    MethodNodeArgumentsNodeIds {
-                        input: ua::NodeId::null(),
-                        output: ua::NodeId::null(),
-                    },
-                    false,
-                )
-            };
+        // These out variables must be initialized without memory allocation because the call below
+        // overwrites them in place, without releasing any held data first.
+        let mut input_arguments_out_new_node_id = ua::NodeId::null();
+        let mut output_arguments_out_new_node_id = ua::NodeId::null();
+        let mut out_new_node_id = ua::NodeId::null();
 
-        let mut arguments_out_node_ids = MethodNodeArgumentsNodeIds::init();
-
-        // This out variable must be initialized without memory allocation because the call below
-        // overwrites it in place, without releasing any held data first.
-        let mut out_node_id = ua::NodeId::null();
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_addMethodNodeEx(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
                 requested_new_node_id.into_raw(),
+                // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
                 parent_node_id.into_raw(),
+                // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
                 reference_type_id.into_raw(),
+                // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
                 browse_name.clone().into_raw(),
+                // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
                 attributes.into_raw(),
-                raw_callback,
+                method_callback,
                 input_arguments_size,
                 input_arguments,
-                arguments_request_new_node_ids.input.into_raw(),
-                arguments_out_node_ids.input.as_mut_ptr(),
+                input_arguments_requested_new_node_id
+                    .unwrap_or_else(ua::NodeId::null)
+                    // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
+                    .into_raw(),
+                input_arguments_out_new_node_id.as_mut_ptr(),
                 output_arguments_size,
                 output_arguments,
-                arguments_request_new_node_ids.output.into_raw(),
-                arguments_out_node_ids.output.as_mut_ptr(),
-                context.leak(),
-                out_node_id.as_mut_ptr(),
+                output_arguments_requested_new_node_id
+                    .unwrap_or_else(ua::NodeId::null)
+                    // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
+                    .into_raw(),
+                output_arguments_out_new_node_id.as_mut_ptr(),
+                node_context.leak(),
+                out_new_node_id.as_mut_ptr(),
             )
         });
         Error::verify_good(&status_code)?;
         Ok((
-            out_node_id,
-            if is_extended_call {
-                Some(arguments_out_node_ids)
-            } else {
-                None
-            },
+            out_new_node_id,
+            (
+                input_arguments_out_new_node_id,
+                output_arguments_out_new_node_id,
+            ),
         ))
     }
 

@@ -1,7 +1,6 @@
 use crate::{ua, Attributes, DataType};
 
 use crate::server::NodeContext;
-use crate::MethodNodeArgumentsNodeIds;
 
 pub struct Node<T> {
     pub(crate) requested_new_node_id: ua::NodeId,
@@ -115,6 +114,7 @@ pub struct MethodNode {
     pub browse_name: ua::QualifiedName,
     pub attributes: ua::MethodAttributes,
     pub input_arguments: ua::Array<ua::Argument>,
+    pub input_arguments_requested_new_node_id: Option<ua::NodeId>,
     pub output_arguments: ua::Array<ua::Argument>,
-    pub arguments_request_new_node_ids: Option<MethodNodeArgumentsNodeIds>,
+    pub output_arguments_requested_new_node_id: Option<ua::NodeId>,
 }

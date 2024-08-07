@@ -1,21 +1,16 @@
 use std::thread;
 
 use open62541::{
-    ua::{self, MethodAttributes},
-    Attributes, DataType, MethodCallback, MethodNode, Result, Server,
+    ua, Attributes, DataType, MethodCallback, MethodCallbackContext, MethodCallbackResult,
+    MethodNode, Server,
 };
 use open62541_sys::{UA_NS0ID_HASCOMPONENT, UA_NS0ID_OBJECTSFOLDER};
 
 struct ExampleCallback {}
 
 impl MethodCallback for ExampleCallback {
-    fn callback(
-        &self,
-        _session_id: ua::NodeId,
-        _method_id: ua::NodeId,
-        _object_id: ua::NodeId,
-        input: ua::Array<ua::Variant>,
-    ) -> Result<ua::Array<ua::Variant>> {
+    fn call(&mut self, context: &mut MethodCallbackContext) -> MethodCallbackResult {
+        let input = context.input_arguments();
         let input_string = input[0].to_scalar::<ua::String>().unwrap();
         let input_string = input_string.as_str().unwrap();
         let output_string1: String = "Nice input string: ".to_owned();
@@ -26,8 +21,11 @@ impl MethodCallback for ExampleCallback {
 
         let binding = output_array[0].to_scalar::<ua::String>().unwrap();
         let _string1 = binding.as_str().unwrap();
+        context
+            .set_output_arguments(output_array.as_slice())
+            .unwrap();
 
-        Ok(output_array)
+        Ok(())
     }
 }
 
@@ -51,17 +49,18 @@ fn main() -> anyhow::Result<()> {
         .with_value_rank(-1);
 
     let method_node = MethodNode {
-        browse_name: ua::QualifiedName::new(1, "hello world"),
         requested_new_node_id: ua::NodeId::numeric(1, 62541),
-        attributes: MethodAttributes::init()
+        parent_node_id: ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
+        reference_type_id: ua::NodeId::ns0(UA_NS0ID_HASCOMPONENT),
+        browse_name: ua::QualifiedName::new(1, "hello world"),
+        attributes: ua::MethodAttributes::init()
             .with_display_name(&ua::LocalizedText::new("en-US", "Hello World")?)
             .with_executable(true)
             .with_user_executable(true),
-        arguments_request_new_node_ids: None,
         input_arguments: ua::Array::from_slice(&[input_argument]),
+        input_arguments_requested_new_node_id: None,
         output_arguments: ua::Array::from_slice(&[output_argument]),
-        parent_node_id: ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
-        reference_type_id: ua::NodeId::ns0(UA_NS0ID_HASCOMPONENT),
+        output_arguments_requested_new_node_id: None,
     };
 
     server.add_method_node(method_node, ExampleCallback {})?;
