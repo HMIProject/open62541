@@ -1,8 +1,9 @@
 use std::ffi::c_void;
 
-use crate::{server::DataSource, Userdata};
-
-use super::MethodCallback;
+use crate::{
+    server::{DataSource, MethodCallback},
+    Userdata,
+};
 
 /// Context attached to server node.
 ///

@@ -66,7 +66,7 @@ pub trait MethodCallback {
     /// This is called when a client wants to call the method. The input arguments are available,
     /// and the output arguments are expected to be returned, through the `context` argument. See
     /// [`MethodCallbackContext::input_arguments()`] and
-    /// [`MethodCallbackContext::set_output_arguments()`] for details.
+    /// [`MethodCallbackContext::output_arguments()`] for details.
     ///
     /// # Errors
     ///
@@ -76,7 +76,7 @@ pub trait MethodCallback {
     fn call(&mut self, context: &mut MethodCallbackContext) -> MethodCallbackResult;
 }
 
-/// Context when [`DataSource`] is being read from.
+/// Context when [`MethodCallback`] is being called.
 #[allow(clippy::module_name_repetitions)]
 pub struct MethodCallbackContext {
     object_id: NonNull<UA_NodeId>,

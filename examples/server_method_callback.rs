@@ -44,16 +44,16 @@ fn main() -> anyhow::Result<()> {
 
     println!("Adding server nodes");
 
-    let input_argument: ua::Argument = ua::Argument::init()
-        .with_data_type(ua::NodeId::numeric(0, 12))
-        .with_name(ua::String::new("MyInput")?)
-        .with_description(ua::LocalizedText::new("en-US", "A String")?)
+    let input_argument = ua::Argument::init()
+        .with_data_type(&ua::NodeId::numeric(0, 12))
+        .with_name(&ua::String::new("MyInput")?)
+        .with_description(&ua::LocalizedText::new("en-US", "A String")?)
         .with_value_rank(-1);
 
-    let output_argument: ua::Argument = ua::Argument::init()
-        .with_data_type(ua::NodeId::numeric(0, 12))
-        .with_name(ua::String::new("MyOutput")?)
-        .with_description(ua::LocalizedText::new("en-US", "A String")?)
+    let output_argument = ua::Argument::init()
+        .with_data_type(&ua::NodeId::numeric(0, 12))
+        .with_name(&ua::String::new("MyOutput")?)
+        .with_description(&ua::LocalizedText::new("en-US", "A String")?)
         .with_value_rank(-1);
 
     let method_node = MethodNode {
