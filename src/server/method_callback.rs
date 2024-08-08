@@ -62,7 +62,7 @@ pub trait MethodCallback {
     /// This is called when a client wants to call the method. The input arguments are available,
     /// and the output arguments are expected to be returned, through the `context` argument. See
     /// [`MethodCallbackContext::input_arguments()`] and
-    /// [`MethodCallbackContext::output_arguments()`] for details.
+    /// [`MethodCallbackContext::output_arguments_mut()`] for details.
     ///
     /// # Errors
     ///
