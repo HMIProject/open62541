@@ -142,11 +142,11 @@ impl MethodCallbackContext {
         input_arguments
     }
 
-    /// Sets output arguments.
+    /// Gets mutable reference to output arguments.
     ///
-    /// This sets the values to report back to the client that is calling this [`MethodCallback`].
-    // TODO: Make error more specific.
-    pub fn output_arguments(&mut self) -> &mut [ua::Variant] {
+    /// This allows setting the values to report back to the client that is calling this
+    /// [`MethodCallback`].
+    pub fn output_arguments_mut(&mut self) -> &mut [ua::Variant] {
         let Some(output_arguments) = (unsafe {
             ua::Array::slice_from_raw_parts_mut(self.output_size, self.output_target.as_ptr())
         }) else {

@@ -27,7 +27,7 @@ impl MethodCallback for ExampleCallback {
         ))?);
 
         let output_argument = context
-            .output_arguments()
+            .output_arguments_mut()
             .get_mut(0)
             .ok_or(ua::StatusCode::BADARGUMENTSMISSING)?;
 
