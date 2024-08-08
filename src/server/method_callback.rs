@@ -13,7 +13,7 @@ use crate::{server::NodeContext, ua, DataType as _};
 
 /// Result from [`MethodCallback`] operations.
 ///
-/// On success, the operations return `Ok(())`. The actual value is transmitted through the
+/// On success, the operations return `Ok(())`. The actual values are transmitted through the
 /// `context` argument. See [`MethodCallback::call()`] for details.
 pub type MethodCallbackResult = Result<(), MethodCallbackError>;
 
@@ -27,28 +27,26 @@ pub enum MethodCallbackError {
 }
 
 impl MethodCallbackError {
+    #[must_use]
+    pub fn from_status_code(status_code: ua::StatusCode) -> Self {
+        // Any good error would be misleading.
+        Self::StatusCode(if status_code.is_good() {
+            ua::StatusCode::BADINTERNALERROR
+        } else {
+            status_code
+        })
+    }
+
+    #[must_use]
+    pub fn from_error(error: &crate::Error) -> Self {
+        Self::from_status_code(error.status_code())
+    }
+
     pub(crate) fn into_status_code(self) -> ua::StatusCode {
         match self {
             MethodCallbackError::StatusCode(status_code) => status_code,
             MethodCallbackError::NotSupported => ua::StatusCode::BADNOTSUPPORTED,
         }
-    }
-}
-
-impl From<ua::StatusCode> for MethodCallbackError {
-    fn from(value: ua::StatusCode) -> Self {
-        // Any good error would be misleading.
-        Self::StatusCode(if value.is_good() {
-            ua::StatusCode::BADINTERNALERROR
-        } else {
-            value
-        })
-    }
-}
-
-impl From<crate::Error> for MethodCallbackError {
-    fn from(value: crate::Error) -> Self {
-        value.status_code().into()
     }
 }
 

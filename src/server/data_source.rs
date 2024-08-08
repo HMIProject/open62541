@@ -27,22 +27,21 @@ pub enum DataSourceError {
 }
 
 impl DataSourceError {
+    #[must_use]
+    pub fn from_status_code(status_code: ua::StatusCode) -> Self {
+        // Any good error would be misleading.
+        Self::StatusCode(if status_code.is_good() {
+            ua::StatusCode::BADINTERNALERROR
+        } else {
+            status_code
+        })
+    }
+
     pub(crate) fn into_status_code(self) -> ua::StatusCode {
         match self {
             DataSourceError::StatusCode(status_code) => status_code,
             DataSourceError::NotSupported => ua::StatusCode::BADNOTSUPPORTED,
         }
-    }
-}
-
-impl From<ua::StatusCode> for DataSourceError {
-    fn from(value: ua::StatusCode) -> Self {
-        // Any good error would be misleading.
-        Self::StatusCode(if value.is_good() {
-            ua::StatusCode::BADINTERNALERROR
-        } else {
-            value
-        })
     }
 }
 

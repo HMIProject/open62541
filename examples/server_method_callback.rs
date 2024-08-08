@@ -2,8 +2,8 @@ use std::thread;
 
 use anyhow::Context as _;
 use open62541::{
-    ua, Attributes, DataType, MethodCallback, MethodCallbackContext, MethodCallbackResult,
-    MethodNode, Server,
+    ua, Attributes, DataType, MethodCallback, MethodCallbackContext, MethodCallbackError,
+    MethodCallbackResult, MethodNode, Server,
 };
 use open62541_sys::{UA_NS0ID_HASCOMPONENT, UA_NS0ID_OBJECTSFOLDER};
 
@@ -15,21 +15,25 @@ impl MethodCallback for ExampleCallback {
         let input_argument = context
             .input_arguments()
             .get(0)
-            .ok_or(ua::StatusCode::BADARGUMENTSMISSING)?;
+            .ok_or(ua::StatusCode::BADARGUMENTSMISSING)
+            .map_err(MethodCallbackError::from_status_code)?;
 
         let input_value = input_argument
             .as_scalar::<ua::String>()
             .and_then(|string| string.as_str())
-            .ok_or(ua::StatusCode::BADINTERNALERROR)?;
+            .ok_or(ua::StatusCode::BADINTERNALERROR)
+            .map_err(MethodCallbackError::from_status_code)?;
 
-        let output_value = ua::Variant::scalar(ua::String::new(&format!(
-            "Nice input string: {input_value}"
-        ))?);
+        let output_value = ua::Variant::scalar(
+            ua::String::new(&format!("Nice input string: {input_value}"))
+                .map_err(|err| MethodCallbackError::from_error(&err))?,
+        );
 
         let output_argument = context
             .output_arguments_mut()
             .get_mut(0)
-            .ok_or(ua::StatusCode::BADARGUMENTSMISSING)?;
+            .ok_or(ua::StatusCode::BADARGUMENTSMISSING)
+            .map_err(MethodCallbackError::from_status_code)?;
 
         *output_argument = output_value;
 
