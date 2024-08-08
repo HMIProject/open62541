@@ -1,5 +1,6 @@
 use std::thread;
 
+use anyhow::Context as _;
 use open62541::{
     ua, Attributes, DataType, MethodCallback, MethodCallbackContext, MethodCallbackResult,
     MethodNode, Server,
@@ -9,21 +10,28 @@ use open62541_sys::{UA_NS0ID_HASCOMPONENT, UA_NS0ID_OBJECTSFOLDER};
 struct ExampleCallback {}
 
 impl MethodCallback for ExampleCallback {
+    #[allow(clippy::get_first)] // We want to make 0-based access to arguments clearer.
     fn call(&mut self, context: &mut MethodCallbackContext) -> MethodCallbackResult {
-        let input = context.input_arguments();
-        let input_string = input[0].to_scalar::<ua::String>().unwrap();
-        let input_string = input_string.as_str().unwrap();
-        let output_string1: String = "Nice input string: ".to_owned();
-        let output_string2 = output_string1 + input_string;
-        let output_string3: ua::String = ua::String::new(&output_string2).unwrap();
-        let output_variant = [ua::Variant::scalar(output_string3)];
-        let output_array: ua::Array<ua::Variant> = ua::Array::from_slice(&output_variant);
+        let input_argument = context
+            .input_arguments()
+            .get(0)
+            .ok_or(ua::StatusCode::BADARGUMENTSMISSING)?;
 
-        let binding = output_array[0].to_scalar::<ua::String>().unwrap();
-        let _string1 = binding.as_str().unwrap();
-        context
-            .set_output_arguments(output_array.as_slice())
-            .unwrap();
+        let input_value = input_argument
+            .as_scalar::<ua::String>()
+            .and_then(|string| string.as_str())
+            .ok_or(ua::StatusCode::BADINTERNALERROR)?;
+
+        let output_value = ua::Variant::scalar(ua::String::new(&format!(
+            "Nice input string: {input_value}"
+        ))?);
+
+        let output_argument = context
+            .output_arguments()
+            .get_mut(0)
+            .ok_or(ua::StatusCode::BADARGUMENTSMISSING)?;
+
+        *output_argument = output_value;
 
         Ok(())
     }
@@ -63,7 +71,7 @@ fn main() -> anyhow::Result<()> {
         output_arguments_requested_new_node_id: None,
     };
 
-    server.add_method_node(method_node, ExampleCallback {})?;
+    let (method_node_id, _) = server.add_method_node(method_node, ExampleCallback {})?;
 
     // Start runner task that handles incoming connections (events).
     let runner_task_handle = thread::spawn(|| -> anyhow::Result<()> {
@@ -81,6 +89,10 @@ fn main() -> anyhow::Result<()> {
     }
 
     println!("Exiting");
+
+    server
+        .delete_node(&method_node_id)
+        .context("delete method node")?;
 
     println!("Done");
 

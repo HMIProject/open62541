@@ -105,12 +105,21 @@ impl DataSourceReadContext {
         })
     }
 
+    /// Gets mutable reference to value.
+    ///
+    /// This allows setting the value to report back to the client that is reading from this
+    /// [`DataSource`].
+    #[must_use]
+    pub fn value(&mut self) -> &mut ua::DataValue {
+        let value_source = unsafe { self.value_target.as_mut() };
+        ua::DataValue::raw_mut(value_source)
+    }
+
     /// Sets value.
     ///
     /// This sets the value to report back to the client that is reading from this [`DataSource`].
     pub fn set_value(&mut self, value: ua::DataValue) {
-        let value_target = unsafe { self.value_target.as_mut() };
-        value.move_into_raw(value_target);
+        *self.value() = value;
     }
 
     /// Sets variant.
@@ -119,7 +128,7 @@ impl DataSourceReadContext {
     ///
     /// [`set_value()`]: Self::set_value
     pub fn set_variant(&mut self, variant: ua::Variant) {
-        self.set_value(ua::DataValue::new(variant));
+        *self.value() = ua::DataValue::new(variant);
     }
 }
 

@@ -201,7 +201,7 @@ impl<T: DataType> Array<T> {
         Some(slice)
     }
 
-    /// Creates slice from existing raw parts.
+    /// Creates mutable slice from existing raw parts.
     ///
     /// # Safety
     ///

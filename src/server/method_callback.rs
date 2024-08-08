@@ -48,6 +48,12 @@ impl From<ua::StatusCode> for MethodCallbackError {
     }
 }
 
+impl From<crate::Error> for MethodCallbackError {
+    fn from(value: crate::Error) -> Self {
+        value.status_code().into()
+    }
+}
+
 /// Method callback.
 ///
 /// The `call` callback implement the operation on the method when it is added via
@@ -115,6 +121,7 @@ impl MethodCallbackContext {
     /// Gets object node ID.
     ///
     /// This returns the object node ID used by the client that is calling this [`MethodCallback`].
+    #[must_use]
     pub fn object_id(&self) -> &ua::NodeId {
         let object_id = unsafe { self.object_id.as_ref() };
         ua::NodeId::raw_ref(object_id)
@@ -139,7 +146,7 @@ impl MethodCallbackContext {
     ///
     /// This sets the values to report back to the client that is calling this [`MethodCallback`].
     // TODO: Make error more specific.
-    pub fn set_output_arguments(&mut self, values: &[ua::Variant]) -> Result<(), ()> {
+    pub fn output_arguments(&mut self) -> &mut [ua::Variant] {
         let Some(output_arguments) = (unsafe {
             ua::Array::slice_from_raw_parts_mut(self.output_size, self.output_target.as_ptr())
         }) else {
@@ -147,15 +154,7 @@ impl MethodCallbackContext {
             unreachable!("received invalid input arguments array");
         };
 
-        if values.len() != output_arguments.len() {
-            return Err(());
-        }
-
-        for (output_argument, value) in output_arguments.iter_mut().zip(values.iter()) {
-            value.clone_into(output_argument);
-        }
-
-        Ok(())
+        output_arguments
     }
 }
 
