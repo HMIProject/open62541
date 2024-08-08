@@ -54,7 +54,6 @@ pub use self::{
 /// # }
 /// ```
 #[derive(Default)]
-#[allow(clippy::module_name_repetitions)]
 pub struct ServerBuilder(ua::ServerConfig);
 
 impl ServerBuilder {
@@ -1253,7 +1252,6 @@ impl Server {
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
 pub struct ServerRunner(Arc<ua::Server>);
 
 impl ServerRunner {

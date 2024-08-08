@@ -15,10 +15,8 @@ use crate::{server::NodeContext, ua, DataType as _};
 ///
 /// On success, the operations return `Ok(())`. The actual value is transmitted through the
 /// `context` argument. See [`DataSource::read()`] and [`DataSource::write()`] for details.
-#[allow(clippy::module_name_repetitions)]
 pub type DataSourceResult = Result<(), DataSourceError>;
 
-#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Error)]
 pub enum DataSourceError {
     #[error("{0}")]
@@ -89,7 +87,6 @@ pub trait DataSource {
 }
 
 /// Context when [`DataSource`] is being read from.
-#[allow(clippy::module_name_repetitions)]
 pub struct DataSourceReadContext {
     /// Outgoing value to be read.
     ///
@@ -133,7 +130,6 @@ impl DataSourceReadContext {
 }
 
 /// Context when [`DataSource`] is being written to.
-#[allow(clippy::module_name_repetitions)]
 pub struct DataSourceWriteContext {
     /// Incoming value to be written.
     ///

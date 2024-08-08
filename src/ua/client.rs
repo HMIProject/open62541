@@ -10,7 +10,6 @@ use crate::{ua, DataType as _, Error};
 /// Combined state for [`Client`] and [`AsyncClient`].
 ///
 /// [`AsyncClient`]: crate::AsyncClient
-#[allow(clippy::module_name_repetitions)]
 pub struct ClientState {
     pub channel_state: ua::SecureChannelState,
     pub session_state: ua::SessionState,

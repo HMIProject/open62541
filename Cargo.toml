@@ -69,6 +69,7 @@ as_underscore = "warn"
 clone_on_ref_ptr = "warn"
 missing_const_for_fn = "warn"
 mod_module_files = "warn"
+module_name_repetitions = "allow"
 pedantic = "warn"
 
 # This warns even when lint group and lint have the same level (`warn`). This is

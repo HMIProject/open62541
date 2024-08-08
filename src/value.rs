@@ -6,7 +6,6 @@ use crate::ua;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
-#[allow(clippy::module_name_repetitions)]
 pub enum ValueType {
     /// Unsupported data type.
     ///
@@ -95,7 +94,6 @@ impl ValueType {
 
 /// Value of [`ua::Variant`].
 #[derive(Debug, Clone)]
-#[allow(clippy::module_name_repetitions)]
 pub enum VariantValue {
     Empty,
     Scalar(ScalarValue),
@@ -107,7 +105,6 @@ pub enum VariantValue {
 /// Scalar value.
 #[derive(Debug, Clone)]
 #[non_exhaustive]
-#[allow(clippy::module_name_repetitions)]
 pub enum ScalarValue {
     /// Unsupported data type.
     ///

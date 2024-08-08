@@ -15,10 +15,8 @@ use crate::{server::NodeContext, ua, DataType as _};
 ///
 /// On success, the operations return `Ok(())`. The actual value is transmitted through the
 /// `context` argument. See [`MethodCallback::call()`] for details.
-#[allow(clippy::module_name_repetitions)]
 pub type MethodCallbackResult = Result<(), MethodCallbackError>;
 
-#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Error)]
 pub enum MethodCallbackError {
     #[error("{0}")]
@@ -77,7 +75,6 @@ pub trait MethodCallback {
 }
 
 /// Context when [`MethodCallback`] is being called.
-#[allow(clippy::module_name_repetitions)]
 pub struct MethodCallbackContext {
     object_id: NonNull<UA_NodeId>,
     input_size: usize,
