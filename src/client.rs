@@ -25,7 +25,6 @@ use crate::{ua, DataType as _, Error, Result};
 /// # }
 /// ```
 #[derive(Default)]
-#[allow(clippy::module_name_repetitions)]
 pub struct ClientBuilder(ua::ClientConfig);
 
 impl ClientBuilder {

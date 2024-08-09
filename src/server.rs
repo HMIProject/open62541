@@ -1,4 +1,5 @@
 mod data_source;
+mod method_callback;
 mod node_context;
 mod node_types;
 
@@ -10,13 +11,13 @@ use std::{
 
 use open62541_sys::{
     UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse, UA_Server_browseNext,
-    UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent,
-    UA_Server_deleteNode, UA_Server_deleteReference, UA_Server_getNamespaceByIndex,
-    UA_Server_getNamespaceByName, UA_Server_read, UA_Server_readObjectProperty,
-    UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent,
-    UA_Server_writeObjectProperty, __UA_Server_addNode, __UA_Server_write,
-    UA_STATUSCODE_BADNOTFOUND,
+    UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse,
+    UA_Server_browseNext, UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath,
+    UA_Server_createEvent, UA_Server_deleteNode, UA_Server_deleteReference,
+    UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName, UA_Server_read,
+    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
+    UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeObjectProperty,
+    __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
 use crate::{ua, Attribute, Attributes, DataType, DataValue, Error, Result};
@@ -27,7 +28,10 @@ pub use self::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext,
     },
-    node_types::{Node, ObjectNode, VariableNode},
+    method_callback::{
+        MethodCallback, MethodCallbackContext, MethodCallbackError, MethodCallbackResult,
+    },
+    node_types::{MethodNode, Node, ObjectNode, VariableNode},
 };
 
 /// Builder for [`Server`].
@@ -50,7 +54,6 @@ pub use self::{
 /// # }
 /// ```
 #[derive(Default)]
-#[allow(clippy::module_name_repetitions)]
 pub struct ServerBuilder(ua::ServerConfig);
 
 impl ServerBuilder {
@@ -323,7 +326,7 @@ impl Server {
 
         // This out variable must be initialized without memory allocation because the call below
         // overwrites it in place, without releasing any held data first.
-        let mut out_node_id = ua::NodeId::null();
+        let mut out_new_node_id = ua::NodeId::null();
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
@@ -339,11 +342,11 @@ impl Server {
                 attributes.as_node_attributes().as_ptr(),
                 attributes.attribute_type(),
                 context.map_or(ptr::null_mut(), NodeContext::leak),
-                out_node_id.as_mut_ptr(),
+                out_new_node_id.as_mut_ptr(),
             )
         });
         Error::verify_good(&status_code)?;
-        Ok(out_node_id)
+        Ok(out_new_node_id)
     }
 
     /// Adds object node to address space.
@@ -437,6 +440,84 @@ impl Server {
         // not consume it ourselves (to avoid double-freeing). In case of success, the node context
         // will be consumed when the node is eventually deleted (`UA_ServerConfig::nodeLifecycle`).
         Error::verify_good(&status_code)
+    }
+
+    /// Adds method node to address space.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node cannot be added.
+    pub fn add_method_node(
+        &self,
+        method_node: MethodNode,
+        callback: impl MethodCallback + 'static,
+    ) -> Result<(ua::NodeId, (ua::NodeId, ua::NodeId))> {
+        let MethodNode {
+            requested_new_node_id,
+            parent_node_id,
+            reference_type_id,
+            browse_name,
+            attributes,
+            input_arguments,
+            input_arguments_requested_new_node_id,
+            output_arguments,
+            output_arguments_requested_new_node_id,
+        } = method_node;
+
+        // SAFETY: We store `node_context` inside the node to keep `data_source` alive.
+        let (method_callback, node_context) =
+            unsafe { method_callback::wrap_method_callback(callback) };
+
+        let (input_arguments_size, input_arguments) = unsafe { input_arguments.as_raw_parts() };
+        let (output_arguments_size, output_arguments) = unsafe { output_arguments.as_raw_parts() };
+
+        // These out variables must be initialized without memory allocation because the call below
+        // overwrites them in place, without releasing any held data first.
+        let mut input_arguments_out_new_node_id = ua::NodeId::null();
+        let mut output_arguments_out_new_node_id = ua::NodeId::null();
+        let mut out_new_node_id = ua::NodeId::null();
+
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addMethodNodeEx(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
+                requested_new_node_id.into_raw(),
+                // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
+                parent_node_id.into_raw(),
+                // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
+                reference_type_id.into_raw(),
+                // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
+                browse_name.clone().into_raw(),
+                // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
+                attributes.into_raw(),
+                method_callback,
+                input_arguments_size,
+                input_arguments,
+                input_arguments_requested_new_node_id
+                    .unwrap_or_else(ua::NodeId::null)
+                    // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
+                    .into_raw(),
+                input_arguments_out_new_node_id.as_mut_ptr(),
+                output_arguments_size,
+                output_arguments,
+                output_arguments_requested_new_node_id
+                    .unwrap_or_else(ua::NodeId::null)
+                    // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
+                    .into_raw(),
+                output_arguments_out_new_node_id.as_mut_ptr(),
+                node_context.leak(),
+                out_new_node_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+        Ok((
+            out_new_node_id,
+            (
+                input_arguments_out_new_node_id,
+                output_arguments_out_new_node_id,
+            ),
+        ))
     }
 
     /// Deletes node from address space.
@@ -1171,7 +1252,6 @@ impl Server {
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
 pub struct ServerRunner(Arc<ua::Server>);
 
 impl ServerRunner {

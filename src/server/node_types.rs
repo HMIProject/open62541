@@ -1,6 +1,6 @@
 use crate::{ua, Attributes, DataType};
 
-use super::NodeContext;
+use crate::server::NodeContext;
 
 pub struct Node<T> {
     pub(crate) requested_new_node_id: ua::NodeId,
@@ -105,4 +105,16 @@ pub struct VariableNode {
     pub browse_name: ua::QualifiedName,
     pub type_definition: ua::NodeId,
     pub attributes: ua::VariableAttributes,
+}
+
+pub struct MethodNode {
+    pub requested_new_node_id: ua::NodeId,
+    pub parent_node_id: ua::NodeId,
+    pub reference_type_id: ua::NodeId,
+    pub browse_name: ua::QualifiedName,
+    pub attributes: ua::MethodAttributes,
+    pub input_arguments: ua::Array<ua::Argument>,
+    pub input_arguments_requested_new_node_id: Option<ua::NodeId>,
+    pub output_arguments: ua::Array<ua::Argument>,
+    pub output_arguments_requested_new_node_id: Option<ua::NodeId>,
 }

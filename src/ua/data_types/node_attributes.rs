@@ -1,3 +1,4 @@
+mod method_attributes;
 mod variable_attributes;
 
 use open62541_sys::{UA_DataType, UA_NodeAttributes};

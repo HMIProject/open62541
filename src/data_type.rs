@@ -109,6 +109,20 @@ pub unsafe trait DataType: Debug + Clone {
         unsafe { ptr.unwrap_unchecked() }
     }
 
+    /// Creates mutable wrapper reference from value.
+    #[must_use]
+    fn raw_mut(src: &mut Self::Inner) -> &mut Self {
+        let src: *mut Self::Inner = src;
+        // This transmutes between the inner type and `Self` through `cast()`. Types that implement
+        // `DataType` guarantee that we can transmute between them and their inner type, so this is
+        // okay.
+        let ptr = src.cast::<Self>();
+        // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
+        let ptr = unsafe { ptr.as_mut() };
+        // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
+        unsafe { ptr.unwrap_unchecked() }
+    }
+
     /// Creates wrapper by cloning value from `src`.
     ///
     /// This uses [`UA_copy()`] to deeply copy an existing value without transferring ownership.

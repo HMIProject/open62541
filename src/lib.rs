@@ -91,7 +91,8 @@ pub use self::{
     error::{Error, Result},
     server::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
-        DataSourceWriteContext, Node, ObjectNode, Server, ServerBuilder, ServerRunner,
+        DataSourceWriteContext, MethodCallback, MethodCallbackContext, MethodCallbackError,
+        MethodCallbackResult, MethodNode, Node, ObjectNode, Server, ServerBuilder, ServerRunner,
         VariableNode,
     },
     traits::{Attribute, Attributes},

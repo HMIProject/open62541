@@ -2,8 +2,8 @@ use std::thread;
 
 use anyhow::Context as _;
 use open62541::{
-    ua, DataSource, DataSourceReadContext, DataSourceResult, DataSourceWriteContext, ObjectNode,
-    Server, VariableNode,
+    ua, DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
+    DataSourceWriteContext, ObjectNode, Server, VariableNode,
 };
 use open62541_sys::{
     UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,
@@ -27,7 +27,8 @@ impl DataSource for DynamicDataSource {
         println!("Reading data source value");
         let value = ua::Variant::scalar(
             // We do not expect strings with NUL bytes.
-            ua::String::new(&self.current_value).map_err(|_| ua::StatusCode::BADINTERNALERROR)?,
+            ua::String::new(&self.current_value)
+                .map_err(|_| DataSourceError::from_status_code(ua::StatusCode::BADINTERNALERROR))?,
         );
         println!("-> {value:?}");
         context.set_variant(value);
@@ -41,13 +42,19 @@ impl DataSource for DynamicDataSource {
         let value = value
             .value()
             // We require that the write request holds a value.
-            .ok_or(ua::StatusCode::BADINTERNALERROR)?
+            .ok_or(DataSourceError::from_status_code(
+                ua::StatusCode::BADINVALIDARGUMENT,
+            ))?
             .as_scalar::<ua::String>()
             // The incoming value to write must be a string.
-            .ok_or(ua::StatusCode::BADINTERNALERROR)?
+            .ok_or(DataSourceError::from_status_code(
+                ua::StatusCode::BADINVALIDARGUMENT,
+            ))?
             .as_str()
             // The incoming string must be valid UTF-8.
-            .ok_or(ua::StatusCode::BADINTERNALERROR)?
+            .ok_or(DataSourceError::from_status_code(
+                ua::StatusCode::BADINVALIDARGUMENT,
+            ))?
             .into();
         self.current_value = value;
         Ok(())

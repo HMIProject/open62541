@@ -38,7 +38,6 @@ use crate::Userdata;
 /// // Value has been received.
 /// assert_eq!(cell.get(), 123);
 /// ```
-#[allow(clippy::module_name_repetitions)]
 pub struct CallbackOnce<T>(PhantomData<T>);
 
 // TODO: Use inherent associated type to define this directly on `CallbackOnce`. At the moment, this
@@ -113,7 +112,6 @@ impl<T> CallbackOnce<T> {
 /// assert_eq!(block_on(rx.recv()), Some(3));
 /// assert_eq!(block_on(rx.recv()), None);
 /// ```
-#[allow(clippy::module_name_repetitions)]
 pub struct CallbackStream<T>(PhantomData<T>);
 
 // TODO: Use inherent associated type to define this directly on `CallbackOnce`. At the moment, this

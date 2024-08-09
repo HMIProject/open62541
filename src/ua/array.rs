@@ -159,6 +159,22 @@ impl<T: DataType> Array<T> {
     /// Enough memory must be available to allocate array.
     #[must_use]
     pub(crate) fn from_raw_parts(size: usize, ptr: *const T::Inner) -> Option<Self> {
+        // SAFETY: We create a temporary slice that is gone by the time this method ends. We need it
+        // only to copy the source elements.
+        let slice = unsafe { Self::slice_from_raw_parts(size, ptr) }?;
+        Some(Self::from_slice(slice))
+    }
+
+    /// Creates slice from existing raw parts.
+    ///
+    /// # Safety
+    ///
+    /// Ownership is preserved, no values are copied. Ownership must not be given away, in whole or
+    /// in parts. The returned reference must not live longer than the original pointer data.
+    pub(crate) unsafe fn slice_from_raw_parts<'a>(
+        size: usize,
+        ptr: *const T::Inner,
+    ) -> Option<&'a [T]> {
         if size == 0 {
             if ptr.is_null() {
                 // This indicates an undefined array of unknown length. We do not handle this in the
@@ -168,7 +184,7 @@ impl<T: DataType> Array<T> {
             // Otherwise, we expect the sentinel value to indicate an empty array of length 0. This,
             // we do handle and may return `Some`.
             debug_assert_eq!(ptr.cast::<c_void>(), unsafe { UA_EMPTY_ARRAY_SENTINEL });
-            return Some(Self(State::Empty));
+            return Some(&[]);
         }
 
         // We require a proper pointer for safe operation (even when we do not access the pointed-to
@@ -181,7 +197,48 @@ impl<T: DataType> Array<T> {
         //
         // SAFETY: `size` is non-zero, `array` is a valid pointer (not `UA_EMPTY_ARRAY_SENTINEL`).
         let slice = unsafe { slice::from_raw_parts(ptr.cast::<T>(), size) };
-        Some(Self::from_slice(slice))
+
+        Some(slice)
+    }
+
+    /// Creates mutable slice from existing raw parts.
+    ///
+    /// # Safety
+    ///
+    /// Ownership is preserved, no values are copied. Ownership must not be given away, in whole or
+    /// in parts. The returned reference must not live longer than the original pointer data.
+    pub(crate) unsafe fn slice_from_raw_parts_mut<'a>(
+        size: usize,
+        ptr: *mut T::Inner,
+    ) -> Option<&'a mut [T]> {
+        if size == 0 {
+            if ptr.is_null() {
+                // This indicates an undefined array of unknown length. We do not handle this in the
+                // type but return `None` instead.
+                return None;
+            }
+            // Otherwise, we expect the sentinel value to indicate an empty array of length 0. This,
+            // we do handle and may return `Some`.
+            debug_assert_eq!(ptr.cast::<c_void>().cast_const(), unsafe {
+                UA_EMPTY_ARRAY_SENTINEL
+            });
+            return Some(&mut []);
+        }
+
+        // We require a proper pointer for safe operation (even when we do not access the pointed-to
+        // memory region at all, cf. documentation of `from_raw_parts()`).
+        debug_assert!(!ptr.is_null());
+        debug_assert_ne!(ptr.cast::<c_void>().cast_const(), unsafe {
+            UA_EMPTY_ARRAY_SENTINEL
+        });
+
+        // Here we transmute the pointed-to elements from `T::Inner` to `T`. This is allowed because
+        // `T` implements the trait `DataType`.
+        //
+        // SAFETY: `size` is non-zero, `array` is a valid pointer (not `UA_EMPTY_ARRAY_SENTINEL`).
+        let slice = unsafe { slice::from_raw_parts_mut(ptr.cast::<T>(), size) };
+
+        Some(slice)
     }
 
     #[must_use]

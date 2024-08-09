@@ -32,6 +32,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Server::browse_simplified_browse_path()`.
 - Add method `Server::read_attribute()` to read node attributes in a type-safe way.
 - Add methods to `ua::DataValue` to get source/server timestamps.
+- Add method `Server::add_method_node()`, and accompanying `MethodCallback` trait, to implement
+  method nodes.
 
 ### Changed
 

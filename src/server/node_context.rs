@@ -1,6 +1,9 @@
 use std::ffi::c_void;
 
-use crate::{server::DataSource, Userdata};
+use crate::{
+    server::{DataSource, MethodCallback},
+    Userdata,
+};
 
 /// Context attached to server node.
 ///
@@ -8,6 +11,7 @@ use crate::{server::DataSource, Userdata};
 /// are cleaned up when the corresponding node is destroyed by the server.
 pub(crate) enum NodeContext {
     DataSource(Box<dyn DataSource>),
+    MethodCallback(Box<dyn MethodCallback>),
 }
 
 #[allow(dead_code)] // We will use the methods soon.

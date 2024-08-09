@@ -9,48 +9,45 @@ use open62541_sys::{
 };
 use thiserror::Error;
 
-use crate::{server::NodeContext, ua, DataType};
+use crate::{server::NodeContext, ua, DataType as _, Error};
 
 /// Result from [`DataSource`] operations.
 ///
 /// On success, the operations return `Ok(())`. The actual value is transmitted through the
 /// `context` argument. See [`DataSource::read()`] and [`DataSource::write()`] for details.
-#[allow(clippy::module_name_repetitions)]
 pub type DataSourceResult = Result<(), DataSourceError>;
 
-#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Error)]
 pub enum DataSourceError {
     #[error("{0}")]
     StatusCode(ua::StatusCode),
 
-    #[error("not supported")]
-    NotSupported,
+    #[error(transparent)]
+    Error(#[from] Error),
 }
 
 impl DataSourceError {
+    #[must_use]
+    pub fn from_status_code(status_code: ua::StatusCode) -> Self {
+        // Any good error would be misleading.
+        Self::StatusCode(if status_code.is_good() {
+            ua::StatusCode::BADINTERNALERROR
+        } else {
+            status_code
+        })
+    }
+
     pub(crate) fn into_status_code(self) -> ua::StatusCode {
         match self {
             DataSourceError::StatusCode(status_code) => status_code,
-            DataSourceError::NotSupported => ua::StatusCode::BADNOTSUPPORTED,
+            DataSourceError::Error(err) => err.status_code(),
         }
-    }
-}
-
-impl From<ua::StatusCode> for DataSourceError {
-    fn from(value: ua::StatusCode) -> Self {
-        // Any good error would be misleading.
-        Self::StatusCode(if value.is_good() {
-            ua::StatusCode::BADINTERNALERROR
-        } else {
-            value
-        })
     }
 }
 
 /// Data source with callbacks.
 ///
-/// The read and write callbacks implement the operations on the variable when it is added via
+/// The `read` and `write` callbacks implement the operations on the variable when it is added via
 /// [`Server::add_data_source_variable_node()`].
 ///
 /// [`Server::add_data_source_variable_node()`]: crate::Server::add_data_source_variable_node
@@ -65,6 +62,7 @@ pub trait DataSource {
     ///
     /// This should return an appropriate error when the read is not possible. The underlying status
     /// code is forwarded to the client.
+    // TODO: Check if we can guarantee `&mut self`.
     fn read(&mut self, context: &mut DataSourceReadContext) -> DataSourceResult;
 
     /// Writes to variable.
@@ -73,21 +71,23 @@ pub trait DataSource {
     /// transmitted through the `context` argument. See [`DataSourceWriteContext::value()`] for
     /// details.
     ///
-    /// If this method is not implemented, an error [`DataSourceError::NotSupported`] is returned to
-    /// the client.
+    /// If this method is not implemented, [`ua::StatusCode::BADNOTSUPPORTED`] is returned to the
+    /// client.
     ///
     /// # Errors
     ///
     /// This should return an appropriate error when the write is not possible. The underlying
     /// status code is forwarded to the client.
+    // TODO: Check if we can guarantee `&mut self`.
     #[allow(unused_variables)]
     fn write(&mut self, context: &mut DataSourceWriteContext) -> DataSourceResult {
-        Err(DataSourceError::NotSupported)
+        Err(DataSourceError::from_status_code(
+            ua::StatusCode::BADNOTSUPPORTED,
+        ))
     }
 }
 
 /// Context when [`DataSource`] is being read from.
-#[allow(clippy::module_name_repetitions)]
 pub struct DataSourceReadContext {
     /// Outgoing value to be read.
     ///
@@ -96,19 +96,28 @@ pub struct DataSourceReadContext {
 }
 
 impl DataSourceReadContext {
-    /// Creates context for read callback.
+    /// Creates context for `read` callback.
     fn new(value: *mut UA_DataValue) -> Option<Self> {
         Some(Self {
             value_target: NonNull::new(value)?,
         })
     }
 
+    /// Gets mutable reference to value.
+    ///
+    /// This allows setting the value to report back to the client that is reading from this
+    /// [`DataSource`].
+    #[must_use]
+    pub fn value_mut(&mut self) -> &mut ua::DataValue {
+        let value_source = unsafe { self.value_target.as_mut() };
+        ua::DataValue::raw_mut(value_source)
+    }
+
     /// Sets value.
     ///
     /// This sets the value to report back to the client that is reading from this [`DataSource`].
     pub fn set_value(&mut self, value: ua::DataValue) {
-        let target = unsafe { self.value_target.as_mut() };
-        value.move_into_raw(target);
+        *self.value_mut() = value;
     }
 
     /// Sets variant.
@@ -117,12 +126,11 @@ impl DataSourceReadContext {
     ///
     /// [`set_value()`]: Self::set_value
     pub fn set_variant(&mut self, variant: ua::Variant) {
-        self.set_value(ua::DataValue::new(variant));
+        *self.value_mut() = ua::DataValue::new(variant);
     }
 }
 
 /// Context when [`DataSource`] is being written to.
-#[allow(clippy::module_name_repetitions)]
 pub struct DataSourceWriteContext {
     /// Incoming value to be written.
     ///
@@ -132,7 +140,7 @@ pub struct DataSourceWriteContext {
 }
 
 impl DataSourceWriteContext {
-    /// Creates context for write callback.
+    /// Creates context for `write` callback.
     fn new(value: *const UA_DataValue) -> Option<Self> {
         Some(Self {
             // SAFETY: `NonNull` implicitly expects a `*mut` but we take care to never mutate the
@@ -146,8 +154,8 @@ impl DataSourceWriteContext {
     /// This returns the value received from the client that is writing to this [`DataSource`].
     #[must_use]
     pub fn value(&self) -> &ua::DataValue {
-        let source = unsafe { self.value_source.as_ref() };
-        ua::DataValue::raw_ref(source)
+        let value_source = unsafe { self.value_source.as_ref() };
+        ua::DataValue::raw_ref(value_source)
     }
 }
 
