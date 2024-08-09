@@ -71,8 +71,8 @@ pub trait DataSource {
     /// transmitted through the `context` argument. See [`DataSourceWriteContext::value()`] for
     /// details.
     ///
-    /// If this method is not implemented, an error [`DataSourceError::NotSupported`] is returned to
-    /// the client.
+    /// If this method is not implemented, [`ua::StatusCode::BADNOTSUPPORTED`] is returned to the
+    /// client.
     ///
     /// # Errors
     ///
