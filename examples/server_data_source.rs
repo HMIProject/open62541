@@ -69,18 +69,20 @@ fn main() -> anyhow::Result<()> {
     println!("Adding server nodes");
 
     let object_node = ObjectNode {
-        requested_new_node_id: ua::NodeId::string(1, "the.folder"),
+        requested_new_node_id: Some(ua::NodeId::string(1, "the.folder")),
         parent_node_id: ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
         reference_type_id: ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
         browse_name: ua::QualifiedName::new(1, "the folder"),
         type_definition: ua::NodeId::ns0(UA_NS0ID_FOLDERTYPE),
         attributes: ua::ObjectAttributes::default(),
     };
+    let object_node_id = server
+        .add_object_node(object_node)
+        .context("add object node")?;
 
-    let variable_node_id = ua::NodeId::string(1, "the.answer");
     let variable_node = VariableNode {
-        requested_new_node_id: variable_node_id.clone(),
-        parent_node_id: object_node.requested_new_node_id.clone(),
+        requested_new_node_id: Some(ua::NodeId::string(1, "the.answer")),
+        parent_node_id: object_node_id.clone(),
         reference_type_id: ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
         browse_name: ua::QualifiedName::new(1, "the answer"),
         type_definition: ua::NodeId::ns0(UA_NS0ID_BASEDATAVARIABLETYPE),
@@ -92,13 +94,8 @@ fn main() -> anyhow::Result<()> {
                     .with_current_write(true),
             ),
     };
-
     let data_source = DynamicDataSource::new("Lorem ipsum");
-
-    server
-        .add_object_node(object_node)
-        .context("add object node")?;
-    server
+    let variable_node_id = server
         .add_data_source_variable_node(variable_node, data_source)
         .context("add variable node")?;
 
