@@ -63,7 +63,7 @@ fn main() -> anyhow::Result<()> {
         .with_value_rank(-1);
 
     let method_node = MethodNode {
-        requested_new_node_id: ua::NodeId::numeric(1, 62541),
+        requested_new_node_id: Some(ua::NodeId::numeric(1, 62541)),
         parent_node_id: ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
         reference_type_id: ua::NodeId::ns0(UA_NS0ID_HASCOMPONENT),
         browse_name: ua::QualifiedName::new(1, "hello world"),
@@ -76,7 +76,6 @@ fn main() -> anyhow::Result<()> {
         output_arguments: ua::Array::from_slice(&[output_argument]),
         output_arguments_requested_new_node_id: None,
     };
-
     let (method_node_id, _) = server.add_method_node(method_node, ExampleCallback {})?;
 
     // Start runner task that handles incoming connections (events).

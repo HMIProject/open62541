@@ -324,9 +324,12 @@ impl Server {
             context,
         } = node;
 
+        let requested_new_node_id = requested_new_node_id.unwrap_or(ua::NodeId::null());
+
         // This out variable must be initialized without memory allocation because the call below
         // overwrites it in place, without releasing any held data first.
         let mut out_new_node_id = ua::NodeId::null();
+
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
@@ -346,64 +349,108 @@ impl Server {
             )
         });
         Error::verify_good(&status_code)?;
+
         Ok(out_new_node_id)
     }
 
     /// Adds object node to address space.
     ///
+    /// This returns the node ID that was actually inserted (when no explicit requested new node ID
+    /// was given in `node`).
+    ///
     /// # Errors
     ///
     /// This fails when the node cannot be added.
-    pub fn add_object_node(&self, object_node: ObjectNode) -> Result<()> {
+    pub fn add_object_node(&self, object_node: ObjectNode) -> Result<ua::NodeId> {
+        let ObjectNode {
+            requested_new_node_id,
+            parent_node_id,
+            reference_type_id,
+            browse_name,
+            type_definition,
+            attributes,
+        } = object_node;
+
+        let requested_new_node_id = requested_new_node_id.unwrap_or(ua::NodeId::null());
+
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
+        let mut out_new_node_id = ua::NodeId::null();
+
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 ua::NodeClass::OBJECT.into_raw(),
-                object_node.requested_new_node_id.as_ptr(),
-                object_node.parent_node_id.as_ptr(),
-                object_node.reference_type_id.as_ptr(),
+                requested_new_node_id.as_ptr(),
+                parent_node_id.as_ptr(),
+                reference_type_id.as_ptr(),
                 // TODO: Verify that `__UA_Server_addNode()` takes ownership.
-                object_node.browse_name.into_raw(),
-                object_node.type_definition.as_ptr(),
-                object_node.attributes.as_node_attributes().as_ptr(),
+                browse_name.into_raw(),
+                type_definition.as_ptr(),
+                attributes.as_node_attributes().as_ptr(),
                 ua::ObjectAttributes::data_type(),
                 ptr::null_mut(),
-                ptr::null_mut(),
+                out_new_node_id.as_mut_ptr(),
             )
         });
-        Error::verify_good(&status_code)
+        Error::verify_good(&status_code)?;
+
+        Ok(out_new_node_id)
     }
 
     /// Adds variable node to address space.
     ///
+    /// This returns the node ID that was actually inserted (when no explicit requested new node ID
+    /// was given in `node`).
+    ///
     /// # Errors
     ///
     /// This fails when the node cannot be added.
-    pub fn add_variable_node(&self, variable_node: VariableNode) -> Result<()> {
+    pub fn add_variable_node(&self, variable_node: VariableNode) -> Result<ua::NodeId> {
+        let VariableNode {
+            requested_new_node_id,
+            parent_node_id,
+            reference_type_id,
+            browse_name,
+            type_definition,
+            attributes,
+        } = variable_node;
+
+        let requested_new_node_id = requested_new_node_id.unwrap_or(ua::NodeId::null());
+
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
+        let mut out_new_node_id = ua::NodeId::null();
+
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_addNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 ua::NodeClass::VARIABLE.into_raw(),
-                variable_node.requested_new_node_id.as_ptr(),
-                variable_node.parent_node_id.as_ptr(),
-                variable_node.reference_type_id.as_ptr(),
+                requested_new_node_id.as_ptr(),
+                parent_node_id.as_ptr(),
+                reference_type_id.as_ptr(),
                 // TODO: Verify that `__UA_Server_addNode()` takes ownership.
-                variable_node.browse_name.into_raw(),
-                variable_node.type_definition.as_ptr(),
-                variable_node.attributes.as_node_attributes().as_ptr(),
+                browse_name.into_raw(),
+                type_definition.as_ptr(),
+                attributes.as_node_attributes().as_ptr(),
                 ua::VariableAttributes::data_type(),
                 ptr::null_mut(),
-                ptr::null_mut(),
+                out_new_node_id.as_mut_ptr(),
             )
         });
-        Error::verify_good(&status_code)
+        Error::verify_good(&status_code)?;
+
+        Ok(out_new_node_id)
     }
 
     /// Adds variable node with data source to address space.
+    ///
+    /// This returns the node ID that was actually inserted (when no explicit requested new node ID
+    /// was given in `node`).
     ///
     /// # Errors
     ///
@@ -412,7 +459,22 @@ impl Server {
         &self,
         variable_node: VariableNode,
         data_source: impl DataSource + 'static,
-    ) -> Result<()> {
+    ) -> Result<ua::NodeId> {
+        let VariableNode {
+            requested_new_node_id,
+            parent_node_id,
+            reference_type_id,
+            browse_name,
+            type_definition,
+            attributes,
+        } = variable_node;
+
+        let requested_new_node_id = requested_new_node_id.unwrap_or(ua::NodeId::null());
+
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
+        let mut out_new_node_id = ua::NodeId::null();
+
         // SAFETY: We store `node_context` inside the node to keep `data_source` alive.
         let (data_source, node_context) = unsafe { data_source::wrap_data_source(data_source) };
         let status_code = ua::StatusCode::new(unsafe {
@@ -420,29 +482,34 @@ impl Server {
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node.requested_new_node_id.into_raw(),
+                requested_new_node_id.into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node.parent_node_id.into_raw(),
+                parent_node_id.into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node.reference_type_id.into_raw(),
+                reference_type_id.into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node.browse_name.into_raw(),
+                browse_name.into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node.type_definition.into_raw(),
+                type_definition.into_raw(),
                 // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
-                variable_node.attributes.into_raw(),
+                attributes.into_raw(),
                 data_source,
                 node_context.leak(),
-                ptr::null_mut(),
+                out_new_node_id.as_mut_ptr(),
             )
         });
         // In case of an error, the node context has already been freed by the destructor. We must
         // not consume it ourselves (to avoid double-freeing). In case of success, the node context
         // will be consumed when the node is eventually deleted (`UA_ServerConfig::nodeLifecycle`).
-        Error::verify_good(&status_code)
+        Error::verify_good(&status_code)?;
+
+        Ok(out_new_node_id)
     }
 
     /// Adds method node to address space.
+    ///
+    /// This returns the node ID that was actually inserted (when no explicit requested new node ID
+    /// was given in `node`), along with the node IDs for the input and output argument nodes.
     ///
     /// # Errors
     ///
@@ -463,6 +530,8 @@ impl Server {
             output_arguments,
             output_arguments_requested_new_node_id,
         } = method_node;
+
+        let requested_new_node_id = requested_new_node_id.unwrap_or(ua::NodeId::null());
 
         // SAFETY: We store `node_context` inside the node to keep `data_source` alive.
         let (method_callback, node_context) =
@@ -511,6 +580,7 @@ impl Server {
             )
         });
         Error::verify_good(&status_code)?;
+
         Ok((
             out_new_node_id,
             (

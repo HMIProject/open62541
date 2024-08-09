@@ -3,7 +3,7 @@ use crate::{ua, Attributes, DataType};
 use crate::server::NodeContext;
 
 pub struct Node<T> {
-    pub(crate) requested_new_node_id: ua::NodeId,
+    pub(crate) requested_new_node_id: Option<ua::NodeId>,
     pub(crate) parent_node_id: ua::NodeId,
     pub(crate) reference_type_id: ua::NodeId,
     pub(crate) browse_name: ua::QualifiedName,
@@ -16,7 +16,7 @@ impl<T: Attributes> Node<T> {
     #[must_use]
     pub fn init() -> Self {
         Self {
-            requested_new_node_id: ua::NodeId::null(),
+            requested_new_node_id: None,
             parent_node_id: ua::NodeId::null(),
             reference_type_id: ua::NodeId::null(),
             browse_name: ua::QualifiedName::init(),
@@ -34,7 +34,7 @@ impl<T: Attributes> Node<T> {
         attributes: T,
     ) -> Self {
         Self {
-            requested_new_node_id: ua::NodeId::null(),
+            requested_new_node_id: None,
             parent_node_id,
             reference_type_id,
             browse_name,
@@ -46,7 +46,7 @@ impl<T: Attributes> Node<T> {
 
     #[must_use]
     pub fn with_requested_new_node_id(mut self, requested_new_node_id: ua::NodeId) -> Self {
-        self.requested_new_node_id = requested_new_node_id;
+        self.requested_new_node_id = Some(requested_new_node_id);
         self
     }
 
@@ -57,8 +57,8 @@ impl<T: Attributes> Node<T> {
     }
 
     #[must_use]
-    pub const fn requested_new_node_id(&self) -> &ua::NodeId {
-        &self.requested_new_node_id
+    pub const fn requested_new_node_id(&self) -> Option<&ua::NodeId> {
+        self.requested_new_node_id.as_ref()
     }
 
     #[must_use]
@@ -89,7 +89,7 @@ impl<T: Attributes> Node<T> {
 
 #[derive(Debug, Clone)]
 pub struct ObjectNode {
-    pub requested_new_node_id: ua::NodeId,
+    pub requested_new_node_id: Option<ua::NodeId>,
     pub parent_node_id: ua::NodeId,
     pub reference_type_id: ua::NodeId,
     pub browse_name: ua::QualifiedName,
@@ -99,7 +99,7 @@ pub struct ObjectNode {
 
 #[derive(Debug, Clone)]
 pub struct VariableNode {
-    pub requested_new_node_id: ua::NodeId,
+    pub requested_new_node_id: Option<ua::NodeId>,
     pub parent_node_id: ua::NodeId,
     pub reference_type_id: ua::NodeId,
     pub browse_name: ua::QualifiedName,
@@ -108,7 +108,7 @@ pub struct VariableNode {
 }
 
 pub struct MethodNode {
-    pub requested_new_node_id: ua::NodeId,
+    pub requested_new_node_id: Option<ua::NodeId>,
     pub parent_node_id: ua::NodeId,
     pub reference_type_id: ua::NodeId,
     pub browse_name: ua::QualifiedName,
