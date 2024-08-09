@@ -513,9 +513,9 @@ dependencies = [
 
 [[package]]
 name = "open62541-sys"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b75454e8ea68c910593aee3176e8368867351fe6ab6723f2d14d068dff4b4d3"
+checksum = "2b7f21b5140f3a7c415dda2701b2e9141a88d88c5f3c3b6d3ea38b547e690839"
 dependencies = [
  "bindgen",
  "cc",
