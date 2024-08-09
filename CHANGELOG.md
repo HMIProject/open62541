@@ -44,6 +44,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ua::BrowseDescription` instead of `ua::NodeId` for better control over the resulting references.
 - Breaking: Return typed variant `DataValue` instead of `ua::DataValue` from `AsyncClient` read
   operations.
+- Breaking: Adjust signatures of `Server::add_object_node()` and `Server::add_variable_node()` to
+  match the new methods, returning the inserted node IDs.
 
 ## [0.6.0-pre.5] - 2024-05-31
 
