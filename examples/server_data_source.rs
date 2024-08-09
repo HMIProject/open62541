@@ -43,17 +43,17 @@ impl DataSource for DynamicDataSource {
             .value()
             // We require that the write request holds a value.
             .ok_or(DataSourceError::from_status_code(
-                ua::StatusCode::BADINTERNALERROR,
+                ua::StatusCode::BADINVALIDARGUMENT,
             ))?
             .as_scalar::<ua::String>()
             // The incoming value to write must be a string.
             .ok_or(DataSourceError::from_status_code(
-                ua::StatusCode::BADINTERNALERROR,
+                ua::StatusCode::BADINVALIDARGUMENT,
             ))?
             .as_str()
             // The incoming string must be valid UTF-8.
             .ok_or(DataSourceError::from_status_code(
-                ua::StatusCode::BADINTERNALERROR,
+                ua::StatusCode::BADINVALIDARGUMENT,
             ))?
             .into();
         self.current_value = value;

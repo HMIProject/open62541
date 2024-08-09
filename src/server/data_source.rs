@@ -9,7 +9,7 @@ use open62541_sys::{
 };
 use thiserror::Error;
 
-use crate::{server::NodeContext, ua, DataType as _};
+use crate::{server::NodeContext, ua, DataType as _, Error};
 
 /// Result from [`DataSource`] operations.
 ///
@@ -22,8 +22,8 @@ pub enum DataSourceError {
     #[error("{0}")]
     StatusCode(ua::StatusCode),
 
-    #[error("not supported")]
-    NotSupported,
+    #[error(transparent)]
+    Error(#[from] Error),
 }
 
 impl DataSourceError {
@@ -40,7 +40,7 @@ impl DataSourceError {
     pub(crate) fn into_status_code(self) -> ua::StatusCode {
         match self {
             DataSourceError::StatusCode(status_code) => status_code,
-            DataSourceError::NotSupported => ua::StatusCode::BADNOTSUPPORTED,
+            DataSourceError::Error(err) => err.status_code(),
         }
     }
 }
@@ -81,7 +81,9 @@ pub trait DataSource {
     // TODO: Check if we can guarantee `&mut self`.
     #[allow(unused_variables)]
     fn write(&mut self, context: &mut DataSourceWriteContext) -> DataSourceResult {
-        Err(DataSourceError::NotSupported)
+        Err(DataSourceError::from_status_code(
+            ua::StatusCode::BADNOTSUPPORTED,
+        ))
     }
 }
 

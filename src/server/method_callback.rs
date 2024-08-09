@@ -9,7 +9,7 @@ use open62541_sys::{
 };
 use thiserror::Error;
 
-use crate::{server::NodeContext, ua, DataType as _};
+use crate::{server::NodeContext, ua, DataType as _, Error};
 
 /// Result from [`MethodCallback`] operations.
 ///
@@ -22,8 +22,8 @@ pub enum MethodCallbackError {
     #[error("{0}")]
     StatusCode(ua::StatusCode),
 
-    #[error("not supported")]
-    NotSupported,
+    #[error(transparent)]
+    Error(#[from] Error),
 }
 
 impl MethodCallbackError {
@@ -37,15 +37,10 @@ impl MethodCallbackError {
         })
     }
 
-    #[must_use]
-    pub fn from_error(error: &crate::Error) -> Self {
-        Self::from_status_code(error.status_code())
-    }
-
     pub(crate) fn into_status_code(self) -> ua::StatusCode {
         match self {
             MethodCallbackError::StatusCode(status_code) => status_code,
-            MethodCallbackError::NotSupported => ua::StatusCode::BADNOTSUPPORTED,
+            MethodCallbackError::Error(err) => err.status_code(),
         }
     }
 }
