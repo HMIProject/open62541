@@ -1137,12 +1137,12 @@ impl Server {
         result.to_generic::<T::Value>()
     }
 
-    /// Writes value to variable node.
+    /// Writes node value.
     ///
     /// # Errors
     ///
-    /// This fails when the variable node cannot be written.
-    pub fn write_variable(&self, node_id: &ua::NodeId, value: &ua::Variant) -> Result<()> {
+    /// This fails when the node does not exist or its value attribute cannot be written.
+    pub fn write_value(&self, node_id: &ua::NodeId, value: &ua::Variant) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
             __UA_Server_write(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
@@ -1155,32 +1155,6 @@ impl Server {
             )
         });
         Error::verify_good(&status_code)
-    }
-
-    /// Writes string value to variable node.
-    ///
-    /// This is a shortcut and roughly equivalent to the following:
-    ///
-    /// ```
-    /// # use open62541::{ua, DataType as _, Server};
-    /// #
-    /// # fn write_variable_string(
-    /// #     server: &mut Server,
-    /// #     node_id: &ua::NodeId,
-    /// #     value: &str,
-    /// # ) -> anyhow::Result<()> {
-    /// let value = ua::Variant::scalar(ua::String::new(value)?);
-    /// server.write_variable(node_id, &value)?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// This fails when the variable node cannot be written.
-    pub fn write_variable_string(&self, node_id: &ua::NodeId, value: &str) -> Result<()> {
-        let ua_variant = ua::Variant::scalar(ua::String::new(value)?);
-        self.write_variable(node_id, &ua_variant)
     }
 
     /// Reads object property.
