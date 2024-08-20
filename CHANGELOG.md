@@ -48,7 +48,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Remove `ua::ArrayValue` for now (until we have a better interface).
 - Breaking: Return output arguments without `Option` from `AsyncClient::call_method()` (#79).
 - Breaking: Remove misleading `FromStr` trait implementation and offer `ua::String::new()` instead.
-- Breaking: Upgrade to open62541 version 1.4 (#82). This affects the API of this crate as follows:
+- Breaking: Upgrade to open62541 version 1.4.4 (#82). This affects the API of this crate as follows:
   - Automatically unwrap `ua::ExtensionObject` arrays inside `ua::Variant`.
 - Breaking: Remove `cycle_time` parameter from `AsyncClient`'s interface (#91). The relevance of
   this parameter has been reduced by the upgrade to open62541 version 1.4.
@@ -56,7 +56,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ua::AttributedId::value()`. Use uppercase constants `ua::AttributedId::VALUE` instead.
 - Breaking: Split `Server::new()` and `ServerBuilder::build()` result type into `Server` and
   `ServerRunner` to allow interacting with server's data tree while server is running.
-- Upgrade to open62541 version 1.4.4.
 - Coerce _empty_ arrays of `ua::ExtensionObject` into the requested data type. This mirrors the
   auto-unwrapping behavior of open62541 version 1.4.
 - Include appropriate trait bounds in return type of `AsyncMonitoredItem::into_stream()`.
