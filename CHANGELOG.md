@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.6.0-pre.6] - 2024-08-20
 
 ### Added
 
@@ -52,8 +52,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.6.0-pre.5] - 2024-05-31
 
-[0.6.0-pre.5]: https://github.com/HMIProject/open62541/compare/v0.6.0-pre.4...v0.6.0-pre.5
-
 ### Changed
 
 - Upgrade to open62541 released version 1.4.1. This removes the workaround introduced in
@@ -61,16 +59,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.6.0-pre.4] - 2024-05-22
 
-[0.6.0-pre.4]: https://github.com/HMIProject/open62541/compare/v0.6.0-pre.3...v0.6.0-pre.4
-
 ### Changed
 
 - Coerce _empty_ arrays of `ua::ExtensionObject` into the requested data type. This mirrors the
   auto-unwrapping behavior of open62541 version 1.4.
 
 ## [0.6.0-pre.3] - 2024-05-18
-
-[0.6.0-pre.3]: https://github.com/HMIProject/open62541/compare/v0.6.0-pre.2...v0.6.0-pre.3
 
 ### Added
 
@@ -96,15 +90,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.6.0-pre.2] - 2024-04-12
 
-[0.6.0-pre.2]: https://github.com/HMIProject/open62541/compare/v0.6.0-pre.1...v0.6.0-pre.2
-
 ### Added
 
 - Add basic support for creating OPC UA server with static nodes (#89).
 
 ## [0.6.0-pre.1] - 2024-04-05
-
-[0.6.0-pre.1]: https://github.com/HMIProject/open62541/compare/v0.5.0...v0.6.0-pre.1
 
 ### Added
 
@@ -145,8 +135,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.5.0] - 2024-03-01
 
-[0.5.0]: https://github.com/HMIProject/open62541/compare/v0.4.0...v0.5.0
-
 ### Added
 
 - Allow reading node attributes with `AsyncClient::read_attribute()` and `read_attributes()`.
@@ -164,8 +152,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.4.0] - 2024-02-12
 
-[0.4.0]: https://github.com/HMIProject/open62541/compare/v0.3.0...v0.4.0
-
 ### Added
 
 - Fallible conversion from `time::OffsetDateTime` to `ua::DateTime`.
@@ -176,8 +162,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Use RFC 3339 variant of ISO 8601 for `ua::DateTime` serialization.
 
 ## [0.3.0] - 2024-01-23
-
-[0.3.0]: https://github.com/HMIProject/open62541/compare/v0.2.2...v0.3.0
 
 ### Added
 
@@ -196,16 +180,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.2.2] - 2024-01-12
 
-[0.2.2]: https://github.com/HMIProject/open62541/compare/v0.2.1...v0.2.2
-
 ### Changed
 
 - Fix typo in README file and changelog.
 
 ## [0.2.1] - 2024-01-12
 
-[0.2.1]: https://github.com/HMIProject/open62541/releases/tag/v0.2.1
-
 ### Added
 
 - First public release.
+
+[0.6.0-pre.6]: https://github.com/HMIProject/open62541/compare/v0.6.0-pre.5...v0.6.0-pre.6
+[0.6.0-pre.5]: https://github.com/HMIProject/open62541/compare/v0.6.0-pre.4...v0.6.0-pre.5
+[0.6.0-pre.4]: https://github.com/HMIProject/open62541/compare/v0.6.0-pre.3...v0.6.0-pre.4
+[0.6.0-pre.3]: https://github.com/HMIProject/open62541/compare/v0.6.0-pre.2...v0.6.0-pre.3
+[0.6.0-pre.2]: https://github.com/HMIProject/open62541/compare/v0.6.0-pre.1...v0.6.0-pre.2
+[0.6.0-pre.1]: https://github.com/HMIProject/open62541/compare/v0.5.0...v0.6.0-pre.1
+[0.5.0]: https://github.com/HMIProject/open62541/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/HMIProject/open62541/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/HMIProject/open62541/compare/v0.2.2...v0.3.0
+[0.2.2]: https://github.com/HMIProject/open62541/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/HMIProject/open62541/releases/tag/v0.2.1
