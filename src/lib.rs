@@ -133,7 +133,7 @@
 //!         .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING)),
 //! })?;
 //!
-//! server.write_variable(
+//! server.write_value(
 //!     &variable_node_id,
 //!     &ua::Variant::scalar(ua::String::new("Lorem Ipsum")?),
 //! )?;
