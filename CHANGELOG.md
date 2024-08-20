@@ -5,6 +5,80 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2024-08-20
+
+### Added
+
+- Add support for creating OPC UA server (#89), including callback-driven variable nodes, adding and
+  removing nodes from the server namespace, querying the server namespace, adding and removing
+  references, reading and writing object properties, creating and triggering events, browsing the
+  server namespace, reading attributes, implementing callback-driven method nodes.
+- Add `ua::StatusCode::is_uncertain()`, `is_bad()` for checking status code severity (#63).
+- Add `ua::StatusCode::name()` to get human-readable representation of status code (#93).
+- Add support for `ua::Argument` data type and basic support for `ua::ExtensionObject` (#71).
+- Add `Debug` implementation for `ua::Array<T>` data types.
+- Add `ValueType` enum to check `ua::Variant` without unwrapping (also `ua::Argument`).
+- Add tracing log messages when processing service requests and responses (#80).
+- Add methods to `ClientBuilder` to set response timeout, client description, and connectivity check
+  interval (#81).
+- Add logical OR combinator for `ua::BrowseResultMask` and `ua::NodeClassMask`.
+- Add const `ua::NodeClassMask` variants to initialize masks.
+- Add `serde` serialization for `ua::Array` and `ua::Variant` with array value.
+- Add constructors `ua::Variant::scalar()` and `ua::Variant::array()`.
+- Add constructor `ua::DataValue::new()`.
+- Add helper method `ua::Array::into_array()` for conversion into native Rust array.
+- Add known enum variants to `ua::StatusCode`.
+- Add method `ua::ExpandedNodeId::numeric()` to create numeric expanded node IDs.
+- Add types `ua::RelativePath`, `ua::RelativePathElement`, `ua::BrowsePath`, `ua::BrowsePathResult`,
+  `ua::BrowsePathTarget`.
+- Add `ua::NodeAttributes` and subtypes `ua::ObjectAttributes`, `ua::VariableAttributes`,
+  `ua::MethodAttributes`, `ua::ObjectTypeAttributes`, `ua::VariableTypeAttributes`,
+  `ua::ReferenceTypeAttributes`, `ua::DataTypeAttributes`, `ua::ViewAttributes`.
+- Add method `Error::status_code()` to get original OPC UA status code that caused the error.
+- Add method `ua::NodeId::into_expanded_node_id()`.
+- Implement `Index` and `IndexMut` for `ua::Array` to allow direct element access.
+- Add methods to `ua::DataValue` to get source/server timestamps.
+
+### Changed
+
+- Breaking: Return `Result` instead of `Option` for references in `AsyncClient::browse_many()` and
+  `browse_next()` (#59, #60).
+- Breaking: Return `Result` wrapping `ua::DataValue` from `AsyncClient::read_attributes()` (#61).
+- Breaking: Move `ua::VariantValue` and `ua::ScalarValue` to top-level export outside `ua`.
+- Breaking: Remove `ua::ArrayValue` for now (until we have a better interface).
+- Breaking: Return output arguments without `Option` from `AsyncClient::call_method()` (#79).
+- Breaking: Remove misleading `FromStr` trait implementation and offer `ua::String::new()` instead.
+- Breaking: Upgrade to open62541 version 1.4 (#82). This affects the API of this crate as follows:
+  - Automatically unwrap `ua::ExtensionObject` arrays inside `ua::Variant`.
+- Breaking: Remove `cycle_time` parameter from `AsyncClient`'s interface (#91). The relevance of
+  this parameter has been reduced by the upgrade to open62541 version 1.4.
+- Breaking: Remove associated functions for enum data types deprecated in 0.5.0, e.g.
+  `ua::AttributedId::value()`. Use uppercase constants `ua::AttributedId::VALUE` instead.
+- Breaking: Split `Server::new()` and `ServerBuilder::build()` result type into `Server` and
+  `ServerRunner` to allow interacting with server's data tree while server is running.
+- Upgrade to open62541 version 1.4.4.
+- Coerce _empty_ arrays of `ua::ExtensionObject` into the requested data type. This mirrors the
+  auto-unwrapping behavior of open62541 version 1.4.
+- Include appropriate trait bounds in return type of `AsyncMonitoredItem::into_stream()`.
+- Breaking: Add prefix `with_` in `ua::BrowseNextRequest::with_release_continuation_points()`.
+- Breaking: Change signatures of `AsyncClient::browse()` and `AsyncClient::browse_many()` to accept
+  `ua::BrowseDescription` instead of `ua::NodeId` for better control over the resulting references.
+- Breaking: Return typed variant `DataValue` instead of `ua::DataValue` from `AsyncClient` read
+  operations.
+
+### Fixed
+
+- Return browsing error instead of empty references list from `AsyncClient::browse()` (#60).
+- Return reading error instead of unset `ua::DataValue` from `AsyncClient::read_value()` and
+  `read_attribute()` (#61).
+- Check only severity in `ua::StatusCode::is_good()` (#63). Previously this would be an exact
+  comparison to `ua::StatusCode::GOOD`.
+- No longer panic when unwrapping `ua::Variant` with array value.
+- Treat invalid references array as empty in `ua::BrowseResult` on successful request (#77).
+- Handle graceful disconnection when dropping synchronous `Client`.
+- Include subscription ID in request when deleting monitored items (#93).
+- Avoid memory leak when calling `ua::Variant::with_scalar()` multiple times on the same value.
+
 ## [0.6.0-pre.6] - 2024-08-20
 
 ### Added
@@ -39,14 +113,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Include appropriate trait bounds in return type of `AsyncMonitoredItem::into_stream()`.
 - Breaking: Add prefix `with_` in `ua::BrowseNextRequest::with_release_continuation_points()`.
-- Upgrade to open62541 version 1.4.3.
+- Upgrade to open62541 version 1.4.4.
 - Breaking: Change signatures of `AsyncClient::browse()` and `AsyncClient::browse_many()` to accept
   `ua::BrowseDescription` instead of `ua::NodeId` for better control over the resulting references.
 - Breaking: Return typed variant `DataValue` instead of `ua::DataValue` from `AsyncClient` read
   operations.
 - Breaking: Adjust signatures of `Server::add_object_node()` and `Server::add_variable_node()` to
   match the new methods, returning the inserted node IDs.
-- Upgrade to open62541 version 1.4.4.
 - Breaking: Rename `Server::write_variable()` to `Server::write_value()` to better match client
   interface.
 - Breaking: Remove special-cased helper method `Server::write_variable_string()`.
@@ -191,6 +264,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
+[0.6.0]: https://github.com/HMIProject/open62541/compare/v0.5.0...v0.6.0
 [0.6.0-pre.6]: https://github.com/HMIProject/open62541/compare/v0.6.0-pre.5...v0.6.0-pre.6
 [0.6.0-pre.5]: https://github.com/HMIProject/open62541/compare/v0.6.0-pre.4...v0.6.0-pre.5
 [0.6.0-pre.4]: https://github.com/HMIProject/open62541/compare/v0.6.0-pre.3...v0.6.0-pre.4
