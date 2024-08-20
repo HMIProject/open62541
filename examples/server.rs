@@ -38,7 +38,10 @@ fn main() -> anyhow::Result<()> {
     };
     let variable_node_id = server.add_variable_node(variable_node)?;
 
-    server.write_variable_string(&variable_node_id, "foobar")?;
+    server.write_value(
+        &variable_node_id,
+        &ua::Variant::scalar(ua::String::new("foobar")?),
+    )?;
 
     read_attribute(&server, &variable_node_id, ua::AttributeId::NODEID_T)?;
     read_attribute(&server, &variable_node_id, ua::AttributeId::NODECLASS_T)?;
@@ -63,7 +66,10 @@ fn main() -> anyhow::Result<()> {
                     }
                     Err(RecvTimeoutError::Disconnected) => panic!("main task should be running"),
                 }
-                server.write_variable_string(&variable_node_id, value)?;
+                server.write_value(
+                    &variable_node_id,
+                    &ua::Variant::scalar(ua::String::new(value)?),
+                )?;
             }
         }
     });

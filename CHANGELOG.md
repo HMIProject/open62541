@@ -46,6 +46,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   operations.
 - Breaking: Adjust signatures of `Server::add_object_node()` and `Server::add_variable_node()` to
   match the new methods, returning the inserted node IDs.
+- Breaking: Rename `Server::write_variable()` to `Server::write_value()` to better match client
+  interface.
+- Breaking: Remove special-cased helper method `Server::write_variable_string()`.
 
 ## [0.6.0-pre.5] - 2024-05-31
 
