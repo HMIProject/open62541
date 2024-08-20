@@ -39,13 +39,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Include appropriate trait bounds in return type of `AsyncMonitoredItem::into_stream()`.
 - Breaking: Add prefix `with_` in `ua::BrowseNextRequest::with_release_continuation_points()`.
-- Upgrade to open62541 released version 1.4.3.
+- Upgrade to open62541 version 1.4.3.
 - Breaking: Change signatures of `AsyncClient::browse()` and `AsyncClient::browse_many()` to accept
   `ua::BrowseDescription` instead of `ua::NodeId` for better control over the resulting references.
 - Breaking: Return typed variant `DataValue` instead of `ua::DataValue` from `AsyncClient` read
   operations.
 - Breaking: Adjust signatures of `Server::add_object_node()` and `Server::add_variable_node()` to
   match the new methods, returning the inserted node IDs.
+- Upgrade to open62541 version 1.4.4.
 - Breaking: Rename `Server::write_variable()` to `Server::write_value()` to better match client
   interface.
 - Breaking: Remove special-cased helper method `Server::write_variable_string()`.
@@ -54,8 +55,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Upgrade to open62541 released version 1.4.1. This removes the workaround introduced in
-  0.6.0-pre.3, it is no longer necessary.
+- Upgrade to open62541 version 1.4.1. This removes the workaround introduced in 0.6.0-pre.3, it is
+  no longer necessary.
 
 ## [0.6.0-pre.4] - 2024-05-22
 
@@ -81,7 +82,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ua::AttributedId::value()`. Use uppercase constants `ua::AttributedId::VALUE` instead.
 - Breaking: Split `Server::new()` and `ServerBuilder::build()` result type into `Server` and
   `ServerRunner` to allow interacting with server's data tree while server is running.
-- Upgrade to open62541 released version 1.4.0.
+- Upgrade to open62541 version 1.4.0.
 - Reintroduce internal mutex in `AsyncClient` to work around issue in open62541 version 1.4.
 
 ### Fixed
