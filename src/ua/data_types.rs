@@ -1,5 +1,6 @@
 //! Thin wrappers for OPC UA data types from [`open62541_sys`].
 
+mod anonymous_identity_token;
 mod application_description;
 mod application_type;
 mod argument;
@@ -48,12 +49,14 @@ mod relative_path_element;
 mod status_code;
 mod string;
 mod timestamps_to_return;
+mod user_name_identity_token;
 mod variant;
 mod write_request;
 mod write_response;
 mod write_value;
 
 pub use self::{
+    anonymous_identity_token::AnonymousIdentityToken,
     application_description::ApplicationDescription,
     application_type::ApplicationType,
     argument::Argument,
@@ -106,6 +109,7 @@ pub use self::{
     status_code::StatusCode,
     string::String,
     timestamps_to_return::TimestampsToReturn,
+    user_name_identity_token::UserNameIdentityToken,
     variant::Variant,
     write_request::WriteRequest,
     write_response::WriteResponse,
