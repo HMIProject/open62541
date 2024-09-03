@@ -51,6 +51,15 @@ impl ClientBuilder {
         self
     }
 
+    /// Sets user identity token.
+    #[must_use]
+    pub fn user_identity_token(mut self, user_identity_token: &ua::UserIdentityToken) -> Self {
+        user_identity_token
+            .to_extension_object()
+            .move_into_raw(&mut self.config_mut().userIdentityToken);
+        self
+    }
+
     /// Sets secure channel life time.
     ///
     /// After this life time, the channel needs to be renewed.

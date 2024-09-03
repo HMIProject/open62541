@@ -1,10 +1,30 @@
-use open62541_sys::UA_ExtensionObjectEncoding;
+use std::ffi::c_void;
+
+use open62541_sys::{UA_ExtensionObjectEncoding, UA_ExtensionObject_setValueCopy};
 
 use crate::{ua, DataType};
 
 crate::data_type!(ExtensionObject);
 
 impl ExtensionObject {
+    /// Creates extension object from value.
+    #[must_use]
+    pub fn new<T: DataType>(value: &T) -> Self {
+        let mut extension_object = Self::init();
+        // We cannot call `UA_ExtensionObject_setValue()`. This would avoid the copy but it would
+        // not work on stack-based values because the deallocation happens with `UA_free()`.
+        unsafe {
+            UA_ExtensionObject_setValueCopy(
+                extension_object.as_mut_ptr(),
+                // SAFETY: `UA_ExtensionObject_setValueCopy()` expects `*mut c_void` but does not
+                // actually mutate the value, it only calls `UA_copy()` internally.
+                value.as_ptr().cast::<c_void>().cast_mut(),
+                T::data_type(),
+            );
+        }
+        extension_object
+    }
+
     /// Gets encoded byte string content.
     #[must_use]
     pub fn encoded_content_bytestring(&self) -> Option<(&ua::NodeId, &ua::ByteString)> {
