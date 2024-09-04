@@ -38,6 +38,7 @@ use crate::Userdata;
 /// // Value has been received.
 /// assert_eq!(cell.get(), 123);
 /// ```
+#[derive(Debug)]
 pub struct CallbackOnce<T>(PhantomData<T>);
 
 // TODO: Use inherent associated type to define this directly on `CallbackOnce`. At the moment, this
@@ -112,6 +113,7 @@ impl<T> CallbackOnce<T> {
 /// assert_eq!(block_on(rx.recv()), Some(3));
 /// assert_eq!(block_on(rx.recv()), None);
 /// ```
+#[derive(Debug)]
 pub struct CallbackStream<T>(PhantomData<T>);
 
 // TODO: Use inherent associated type to define this directly on `CallbackOnce`. At the moment, this

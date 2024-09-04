@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::{ua, Attributes, DataType};
 
 use crate::server::NodeContext;
@@ -87,6 +89,29 @@ impl<T: Attributes> Node<T> {
     }
 }
 
+impl<T: Attributes> fmt::Debug for Node<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            requested_new_node_id,
+            parent_node_id,
+            reference_type_id,
+            browse_name,
+            type_definition,
+            attributes,
+            context: _,
+        } = self;
+
+        f.debug_struct("Node")
+            .field("requested_new_node_id", requested_new_node_id)
+            .field("parent_node_id", parent_node_id)
+            .field("reference_type_id", reference_type_id)
+            .field("browse_name", browse_name)
+            .field("type_definition", type_definition)
+            .field("attributes", attributes)
+            .finish_non_exhaustive()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ObjectNode {
     pub requested_new_node_id: Option<ua::NodeId>,
@@ -107,6 +132,7 @@ pub struct VariableNode {
     pub attributes: ua::VariableAttributes,
 }
 
+#[derive(Debug, Clone)]
 pub struct MethodNode {
     pub requested_new_node_id: Option<ua::NodeId>,
     pub parent_node_id: ua::NodeId,

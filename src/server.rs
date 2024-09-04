@@ -20,7 +20,7 @@ use open62541_sys::{
     __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
-use crate::{ua, Attribute, Attributes, DataType, DataValue, Error, Result};
+use crate::{ua, Attribute, Attributes, BrowseResult, DataType, DataValue, Error, Result};
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
@@ -53,7 +53,7 @@ pub use self::{
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct ServerBuilder(ua::ServerConfig);
 
 impl ServerBuilder {
@@ -145,7 +145,7 @@ impl ServerBuilder {
 ///
 /// Note: The server must be started with [`ServerRunner::run()`] before it can accept connections
 /// from clients.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Server(Arc<ua::Server>);
 
 impl Server {
@@ -1296,6 +1296,7 @@ impl Server {
     }
 }
 
+#[derive(Debug)]
 pub struct ServerRunner(Arc<ua::Server>);
 
 impl ServerRunner {
@@ -1320,9 +1321,6 @@ impl ServerRunner {
         Error::verify_good(&status_code)
     }
 }
-
-/// Result type for browsing.
-pub type BrowseResult = Result<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>;
 
 /// Converts [`ua::BrowseResult`] to our public result type.
 fn to_browse_result(result: &ua::BrowseResult) -> BrowseResult {

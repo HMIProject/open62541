@@ -16,8 +16,8 @@ use open62541_sys::{
 use tokio::{sync::oneshot, task, time::Instant};
 
 use crate::{
-    ua, AsyncSubscription, Attribute, CallbackOnce, DataType, DataValue, Error, Result,
-    ServiceRequest, ServiceResponse,
+    ua, AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataValue, Error,
+    Result, ServiceRequest, ServiceResponse,
 };
 
 /// Timeout for `UA_Client_run_iterate()`.
@@ -39,6 +39,7 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 /// while being dropped. In most cases, this is not the desired behavior.
 ///
 /// See [Client](crate::Client) for more details.
+#[derive(Debug)]
 pub struct AsyncClient {
     client: Arc<ua::Client>,
     background_canceled: Arc<AtomicBool>,
@@ -615,9 +616,6 @@ async fn service_request<R: ServiceRequest>(
     rx.await
         .unwrap_or(Err(Error::internal("callback should send result")))
 }
-
-/// Result type for browsing.
-pub type BrowseResult = Result<(Vec<ua::ReferenceDescription>, Option<ua::ContinuationPoint>)>;
 
 /// Converts [`ua::BrowseResult`] to our public result type.
 fn to_browse_result(result: &ua::BrowseResult, node_id: Option<&ua::NodeId>) -> BrowseResult {

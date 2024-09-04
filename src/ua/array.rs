@@ -430,12 +430,12 @@ impl<T: DataType> Drop for Array<T> {
     }
 }
 
-// TODO
-// impl<T: DataType> Clone for Array<T> {
-//     fn clone(&self) -> Self {
-//         todo!()
-//     }
-// }
+impl<T: DataType> Clone for Array<T> {
+    fn clone(&self) -> Self {
+        // TODO: Use more efficient implementation that uses `UA_Array_copy()` directly.
+        Self::from_slice(self.as_slice())
+    }
+}
 
 impl<T: DataType> fmt::Debug for Array<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -446,12 +446,14 @@ impl<T: DataType> fmt::Debug for Array<T> {
 impl<T: DataType> ops::Index<usize> for Array<T> {
     type Output = T;
 
+    #[allow(clippy::indexing_slicing)] // We forward the underlying panic.
     fn index(&self, index: usize) -> &Self::Output {
         &self.as_slice()[index]
     }
 }
 
 impl<T: DataType> ops::IndexMut<usize> for Array<T> {
+    #[allow(clippy::indexing_slicing)] // We forward the underlying panic.
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.as_slice_mut()[index]
     }

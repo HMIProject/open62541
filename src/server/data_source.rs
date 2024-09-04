@@ -88,6 +88,7 @@ pub trait DataSource {
 }
 
 /// Context when [`DataSource`] is being read from.
+#[derive(Debug)]
 pub struct DataSourceReadContext {
     /// Outgoing value to be read.
     ///
@@ -131,6 +132,7 @@ impl DataSourceReadContext {
 }
 
 /// Context when [`DataSource`] is being written to.
+#[derive(Debug)]
 pub struct DataSourceWriteContext {
     /// Incoming value to be written.
     ///

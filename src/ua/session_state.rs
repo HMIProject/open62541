@@ -1,6 +1,7 @@
 use open62541_sys::UA_SessionState;
 
 /// Wrapper for [`UA_SessionState`] from [`open62541_sys`].
+#[derive(Debug)]
 pub struct SessionState(UA_SessionState);
 
 impl SessionState {

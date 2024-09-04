@@ -24,7 +24,7 @@ use crate::{ua, DataType as _, Error, Result};
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct ClientBuilder(ua::ClientConfig);
 
 impl ClientBuilder {
@@ -150,6 +150,7 @@ impl ClientBuilder {
 ///
 /// To disconnect, prefer method [`disconnect()`](Self::disconnect) over simply dropping the client:
 /// disconnection involves server communication and might take a short amount of time.
+#[derive(Debug)]
 pub struct Client(
     #[allow(dead_code)] // --no-default-features
     ua::Client,

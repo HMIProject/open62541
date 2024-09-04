@@ -8,6 +8,7 @@ use crate::{ua, Error};
 ///
 /// This owns the wrapped data type. When the wrapper is dropped, its inner value is cleaned up with
 /// [`UA_Server_delete()`].
+#[derive(Debug)]
 pub struct Server(NonNull<UA_Server>);
 
 // SAFETY: We know that the underlying `UA_Server` allows access from different threads, i.e. it may

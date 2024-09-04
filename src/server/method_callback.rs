@@ -68,6 +68,7 @@ pub trait MethodCallback {
 }
 
 /// Context when [`MethodCallback`] is being called.
+#[derive(Debug)]
 pub struct MethodCallbackContext {
     object_id: NonNull<UA_NodeId>,
     input_size: usize,
