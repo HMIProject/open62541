@@ -70,7 +70,9 @@ unused = { level = "warn", priority = -1 }
 warnings = "warn"
 
 [lints.clippy]
-absolute_paths = "warn"
+# We use absolute paths where we require some item only once. Most often, these
+# share a name with another item in scope and we don't want to import an alias.
+absolute_paths = "allow"
 allow_attributes = "warn"
 allow_attributes_without_reason = "warn"
 as_conversions = "warn"
@@ -81,7 +83,8 @@ clone_on_ref_ptr = "warn"
 default_trait_access = "warn"
 enum_variant_names = "warn"
 error_impl_error = "warn"
-expect_used = "warn"
+# We panic in certain less likely situations. In each case, this is documented.
+expect_used = "allow"
 fallible_impl_from = "warn"
 format_push_string = "warn"
 get_unwrap = "warn"
@@ -90,21 +93,27 @@ indexing_slicing = "warn"
 manual_assert = "warn"
 match_on_vec_items = "warn"
 match_wild_err_arm = "warn"
-missing_assert_message = "warn"
+# TODO: Add assert messages.
+missing_assert_message = "allow"
 missing_const_for_fn = "warn"
 missing_errors_doc = "warn"
 mod_module_files = "warn"
-module_name_repetitions = "warn"
-panic = "warn"
+# We export most types from the top module, allow prefixes to distinguish them.
+module_name_repetitions = "allow"
+# We panic in certain less likely situations. In each case, this is documented.
+panic = "allow"
 panic_in_result_fn = "warn"
 pedantic = { level = "warn", priority = -1 }
 should_panic_without_expect = "warn"
 string_slice = "warn"
 unimplemented = "warn"
 unnecessary_self_imports = "warn"
-unreachable = "warn"
-unwrap_in_result = "warn"
-unwrap_used = "warn"
+# We panic in certain less likely situations. In each case, this is documented.
+unreachable = "allow"
+# We panic in certain less likely situations. In each case, this is documented.
+unwrap_in_result = "allow"
+# TODO: Use `expect()` instead.
+unwrap_used = "allow"
 verbose_file_reads = "warn"
 
 [[example]]

@@ -446,12 +446,14 @@ impl<T: DataType> fmt::Debug for Array<T> {
 impl<T: DataType> ops::Index<usize> for Array<T> {
     type Output = T;
 
+    #[allow(clippy::indexing_slicing)] // We forward the underlying panic.
     fn index(&self, index: usize) -> &Self::Output {
         &self.as_slice()[index]
     }
 }
 
 impl<T: DataType> ops::IndexMut<usize> for Array<T> {
+    #[allow(clippy::indexing_slicing)] // We forward the underlying panic.
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.as_slice_mut()[index]
     }

@@ -110,6 +110,7 @@ async fn browse_hierarchy(
 ///
 /// This consumes any continuation points that might be returned from browsing, ensuring that all
 /// references are returned eventually.
+#[allow(clippy::indexing_slicing)] // Allow panicking index for simplicity.
 async fn browse_many_contd(
     client: &AsyncClient,
     node_ids: &[ua::NodeId],
