@@ -10,6 +10,7 @@ use crate::{ua, DataType as _, Error};
 /// Combined state for [`Client`] and [`AsyncClient`].
 ///
 /// [`AsyncClient`]: crate::AsyncClient
+#[derive(Debug)]
 pub struct ClientState {
     pub channel_state: ua::SecureChannelState,
     pub session_state: ua::SessionState,
@@ -23,6 +24,7 @@ pub struct ClientState {
 ///
 /// This owns the wrapped data type. When the wrapper is dropped, its inner value is cleaned up with
 /// [`UA_Client_delete()`].
+#[derive(Debug)]
 pub struct Client(NonNull<UA_Client>);
 
 // SAFETY: We know that the underlying `UA_Client` allows access from different threads, i.e. it may

@@ -1,5 +1,6 @@
 use crate::ua;
 
+#[derive(Debug)]
 pub enum UserIdentityToken {
     Anonymous(ua::AnonymousIdentityToken),
     UserName(ua::UserNameIdentityToken),

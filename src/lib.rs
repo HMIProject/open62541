@@ -222,6 +222,7 @@ mod async_monitored_item;
 #[cfg(feature = "tokio")]
 mod async_subscription;
 mod attributes;
+mod browse_result;
 #[cfg(feature = "tokio")]
 mod callback;
 mod data_value;
@@ -231,6 +232,7 @@ mod userdata;
 mod value;
 
 pub use self::{
+    browse_result::BrowseResult,
     client::{Client, ClientBuilder},
     data_type::DataType,
     data_value::DataValue,

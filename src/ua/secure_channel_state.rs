@@ -1,6 +1,7 @@
 use open62541_sys::UA_SecureChannelState;
 
 /// Wrapper for [`UA_SecureChannelState`] from [`open62541_sys`].
+#[derive(Debug)]
 pub struct SecureChannelState(UA_SecureChannelState);
 
 impl SecureChannelState {

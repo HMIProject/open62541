@@ -44,6 +44,7 @@ use std::{ffi::c_void, marker::PhantomData};
 /// // Got user data. `raw_data` is no longer valid.
 /// assert_eq!(userdata, 123);
 /// ```
+#[derive(Debug)]
 pub struct Userdata<T>(PhantomData<T>);
 
 impl<T> Userdata<T> {

@@ -1,4 +1,4 @@
-use std::mem::MaybeUninit;
+use std::{fmt, mem::MaybeUninit};
 
 use open62541_sys::{UA_ServerConfig, UA_ServerConfig_clean, UA_ServerConfig_setDefault};
 
@@ -76,6 +76,12 @@ impl Drop for ServerConfig {
         if let Some(mut inner) = self.0.take() {
             unsafe { UA_ServerConfig_clean(&mut inner) }
         }
+    }
+}
+
+impl fmt::Debug for ServerConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ServerConfig").finish_non_exhaustive()
     }
 }
 

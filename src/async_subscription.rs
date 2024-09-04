@@ -13,6 +13,7 @@ use open62541_sys::{
 use crate::{ua, AsyncMonitoredItem, CallbackOnce, DataType as _, Error, Result};
 
 /// Subscription (with asynchronous API).
+#[derive(Debug)]
 pub struct AsyncSubscription {
     client: Weak<ua::Client>,
     subscription_id: ua::SubscriptionId,

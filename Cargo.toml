@@ -50,32 +50,62 @@ time = ["dep:time"]
 tokio = ["dep:tokio"]
 
 [lints.rust]
-future_incompatible = "warn"
-let_underscore = "warn"
-nonstandard_style = "warn"
-rust_2018_compatibility = "warn"
-rust_2018_idioms = "warn"
-rust_2021_compatibility = "warn"
+future_incompatible = { level = "warn", priority = -1 }
+keyword_idents = { level = "warn", priority = -1 }
+let_underscore = { level = "warn", priority = -1 }
+missing_debug_implementations = "warn"
+nonstandard_style = { level = "warn", priority = -1 }
+refining_impl_trait = { level = "warn", priority = -1 }
+rust_2018_compatibility = { level = "warn", priority = -1 }
+rust_2018_idioms = { level = "warn", priority = -1 }
+rust_2021_compatibility = { level = "warn", priority = -1 }
+rust_2024_compatibility = { level = "warn", priority = -1 }
 trivial_casts = "warn"
 trivial_numeric_casts = "warn"
+unreachable_pub = "warn"
+# Writing unsafe code is a necessity for FFI wrappers.
+unsafe_code = "allow"
 unsafe_op_in_unsafe_fn = "warn"
-unused = "warn"
+unused = { level = "warn", priority = -1 }
 warnings = "warn"
 
 [lints.clippy]
+absolute_paths = "warn"
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
 as_conversions = "warn"
 as_ptr_cast_mut = "warn"
 as_underscore = "warn"
+cast_possible_truncation = "warn"
 clone_on_ref_ptr = "warn"
+default_trait_access = "warn"
+enum_variant_names = "warn"
+error_impl_error = "warn"
+expect_used = "warn"
+fallible_impl_from = "warn"
+format_push_string = "warn"
+get_unwrap = "warn"
+index_refutable_slice = "warn"
+indexing_slicing = "warn"
+manual_assert = "warn"
+match_on_vec_items = "warn"
+match_wild_err_arm = "warn"
+missing_assert_message = "warn"
 missing_const_for_fn = "warn"
+missing_errors_doc = "warn"
 mod_module_files = "warn"
-module_name_repetitions = "allow"
-pedantic = "warn"
-
-# This warns even when lint group and lint have the same level (`warn`). This is
-# very misleading and results in lots of false positives. See
-# https://github.com/rust-lang/rust-clippy/issues/12270
-lint_groups_priority = "allow"
+module_name_repetitions = "warn"
+panic = "warn"
+panic_in_result_fn = "warn"
+pedantic = { level = "warn", priority = -1 }
+should_panic_without_expect = "warn"
+string_slice = "warn"
+unimplemented = "warn"
+unnecessary_self_imports = "warn"
+unreachable = "warn"
+unwrap_in_result = "warn"
+unwrap_used = "warn"
+verbose_file_reads = "warn"
 
 [[example]]
 name = "async_browse"

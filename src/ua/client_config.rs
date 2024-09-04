@@ -1,4 +1,4 @@
-use std::mem::MaybeUninit;
+use std::{fmt, mem::MaybeUninit};
 
 use open62541_sys::{UA_ClientConfig, UA_ClientConfig_clear, UA_ClientConfig_setDefault};
 
@@ -76,6 +76,12 @@ impl Drop for ClientConfig {
         if let Some(mut inner) = self.0.take() {
             unsafe { UA_ClientConfig_clear(&mut inner) }
         }
+    }
+}
+
+impl fmt::Debug for ClientConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ClientConfig").finish_non_exhaustive()
     }
 }
 

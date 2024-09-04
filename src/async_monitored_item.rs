@@ -19,6 +19,7 @@ use tokio::sync::mpsc;
 use crate::{ua, CallbackOnce, CallbackStream, DataType as _, Error, Result};
 
 /// Monitored item (with asynchronous API).
+#[derive(Debug)]
 pub struct AsyncMonitoredItem {
     client: Weak<ua::Client>,
     subscription_id: ua::SubscriptionId,
