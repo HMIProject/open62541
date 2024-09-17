@@ -1,4 +1,5 @@
 use std::{
+    cmp,
     ffi::c_void,
     fmt, mem,
     num::NonZeroUsize,
@@ -459,6 +460,29 @@ impl<T: DataType> ops::IndexMut<usize> for Array<T> {
     }
 }
 
+impl<T: DataType + PartialEq> PartialEq for Array<T> {
+    fn eq(&self, other: &Self) -> bool {
+        // Define relation on underlying list of elements.
+        self.as_slice().eq(other.as_slice())
+    }
+}
+
+impl<T: DataType + Eq> Eq for Array<T> {}
+
+impl<T: DataType + PartialOrd> PartialOrd for Array<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        // Define relation on underlying list of elements.
+        self.as_slice().partial_cmp(other.as_slice())
+    }
+}
+
+impl<T: DataType + Ord> Ord for Array<T> {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        // Define relation on underlying list of elements.
+        self.as_slice().cmp(other.as_slice())
+    }
+}
+
 #[cfg(feature = "serde")]
 impl<T: DataType + serde::Serialize> serde::Serialize for Array<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -471,7 +495,7 @@ impl<T: DataType + serde::Serialize> serde::Serialize for Array<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::ffi::CString;
+    use std::{collections::BTreeSet, ffi::CString};
 
     use open62541_sys::UA_NODEID_STRING_ALLOC;
 
@@ -548,5 +572,42 @@ mod tests {
         );
         // String contents are automatically escaped, courtesy of `UA_print()`.
         assert_eq!(r#"["lorem", "ip\"sum"]"#, format!("{array:?}"));
+    }
+
+    #[test]
+    fn compare_array() {
+        // Comparison works as expected, sorting arrays by their elements.
+        //
+        let array_1 = ua::Array::from_slice(&[1, 2, 3].map(ua::Byte::new));
+        let array_2 = ua::Array::from_slice(&[2, 3, 4].map(ua::Byte::new));
+        let array_3 = ua::Array::from_slice(&[2, 3, 4].map(ua::Byte::new));
+
+        assert_eq!(array_1, array_1);
+        assert_ne!(array_1, array_2);
+        assert_eq!(array_2, array_3);
+
+        assert!(array_1 < array_2);
+        assert!(array_2 > array_1);
+        assert!(array_1 <= array_1);
+        assert!(array_2 >= array_2);
+        assert!(array_2 <= array_3);
+        assert!(array_3 <= array_2);
+
+        // Array can be put into sorted set and retrieved in sorted order.
+        //
+        let mut set = BTreeSet::new();
+        set.insert(ua::Array::from_slice(&[2, 3, 1].map(ua::Int32::new)));
+        set.insert(ua::Array::from_slice(&[1, 2, 3].map(ua::Int32::new)));
+        set.insert(ua::Array::from_slice(&[3, 1, 2].map(ua::Int32::new)));
+        set.insert(ua::Array::from_slice(&[1, 2, 3].map(ua::Int32::new)));
+
+        assert_eq!(
+            set.into_iter().collect::<Vec<_>>(),
+            vec![
+                ua::Array::from_slice(&[1, 2, 3].map(ua::Int32::new)),
+                ua::Array::from_slice(&[2, 3, 1].map(ua::Int32::new)),
+                ua::Array::from_slice(&[3, 1, 2].map(ua::Int32::new)),
+            ]
+        );
     }
 }
