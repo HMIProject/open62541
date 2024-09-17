@@ -323,6 +323,46 @@ mod tests {
         );
     }
 
+    #[test]
+    fn compare_variant() {
+        // Variants of same type compare as expected.
+        //
+        let variant_1 = ua::Variant::scalar(ua::Byte::new(123));
+        let variant_2 = ua::Variant::scalar(ua::Byte::new(23));
+        let variant_3 = ua::Variant::scalar(ua::Byte::new(23));
+
+        assert_eq!(variant_1, variant_1);
+        assert_ne!(variant_1, variant_2);
+        assert_eq!(variant_2, variant_3);
+
+        // Variants of different type are never equal.
+        //
+        let variant_1 = ua::Variant::scalar(ua::Int16::new(123));
+        let variant_2 = ua::Variant::scalar(ua::Int32::new(123));
+
+        assert_ne!(variant_1, variant_2);
+
+        // Array variants compare their inner elements.
+        //
+        let array_1 = ua::Array::from_slice(&[1, 2, 3].map(ua::Byte::new));
+        let variant_1 = ua::Variant::array(array_1);
+        let array_2 = ua::Array::from_slice(&[2, 3, 4].map(ua::Byte::new));
+        let variant_2 = ua::Variant::array(array_2);
+        let array_3 = ua::Array::from_slice(&[2, 3, 4].map(ua::Byte::new));
+        let variant_3 = ua::Variant::array(array_3);
+
+        assert_eq!(variant_1, variant_1);
+        assert_ne!(variant_1, variant_2);
+        assert_eq!(variant_2, variant_3);
+
+        let array_1 = ua::Array::from_slice(&[1, 2, 3].map(ua::Int16::new));
+        let variant_1 = ua::Variant::array(array_1);
+        let array_2 = ua::Array::from_slice(&[1, 2, 3].map(ua::Int32::new));
+        let variant_2 = ua::Variant::array(array_2);
+
+        assert_ne!(variant_1, variant_2);
+    }
+
     #[cfg(feature = "serde")]
     mod serde {
         use crate::ua;
