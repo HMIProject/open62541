@@ -24,19 +24,19 @@ impl BrowseDescription {
     }
 
     #[must_use]
-    pub fn with_include_subtypes(mut self, include_subtypes: bool) -> Self {
+    pub const fn with_include_subtypes(mut self, include_subtypes: bool) -> Self {
         self.0.includeSubtypes = include_subtypes;
         self
     }
 
     #[must_use]
-    pub fn with_node_class_mask(mut self, node_class_mask: &ua::NodeClassMask) -> Self {
+    pub const fn with_node_class_mask(mut self, node_class_mask: &ua::NodeClassMask) -> Self {
         self.0.nodeClassMask = node_class_mask.as_u32();
         self
     }
 
     #[must_use]
-    pub fn with_result_mask(mut self, result_mask: &ua::BrowseResultMask) -> Self {
+    pub const fn with_result_mask(mut self, result_mask: &ua::BrowseResultMask) -> Self {
         self.0.resultMask = result_mask.as_u32();
         self
     }
