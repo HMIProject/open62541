@@ -11,7 +11,7 @@ impl BrowseRequest {
     }
 
     #[must_use]
-    pub fn with_requested_max_references_per_node(
+    pub const fn with_requested_max_references_per_node(
         mut self,
         requested_max_references_per_node: u32,
     ) -> Self {

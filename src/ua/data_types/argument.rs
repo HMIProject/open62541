@@ -16,7 +16,7 @@ impl Argument {
     }
 
     #[must_use]
-    pub fn with_value_rank(mut self, value_rank: i32) -> Self {
+    pub const fn with_value_rank(mut self, value_rank: i32) -> Self {
         self.0.valueRank = value_rank;
         self
     }

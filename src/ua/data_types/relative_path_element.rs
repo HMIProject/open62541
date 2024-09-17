@@ -10,13 +10,13 @@ impl RelativePathElement {
     }
 
     #[must_use]
-    pub fn with_is_inverse(mut self, is_inverse: bool) -> Self {
+    pub const fn with_is_inverse(mut self, is_inverse: bool) -> Self {
         self.0.isInverse = is_inverse;
         self
     }
 
     #[must_use]
-    pub fn with_include_subtypes(mut self, include_subtypes: bool) -> Self {
+    pub const fn with_include_subtypes(mut self, include_subtypes: bool) -> Self {
         self.0.includeSubtypes = include_subtypes;
         self
     }
