@@ -4,6 +4,7 @@ use std::{
     time::Duration,
 };
 
+use anyhow::bail;
 use open62541::{ua, Attribute, ObjectNode, Server, VariableNode};
 use open62541_sys::{
     UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,
@@ -64,7 +65,7 @@ fn main() -> anyhow::Result<()> {
                     Err(RecvTimeoutError::Timeout) => {
                         // Continue and simulate next updated value below, then repeat loop.
                     }
-                    Err(RecvTimeoutError::Disconnected) => panic!("main task should be running"),
+                    Err(RecvTimeoutError::Disconnected) => bail!("main task should be running"),
                 }
                 server.write_value(
                     &variable_node_id,
