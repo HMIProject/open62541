@@ -74,6 +74,12 @@ impl NodeId {
         ua::NodeIdType::raw_ref(&self.0.identifierType)
     }
 
+    /// Gets the namespace index.
+    #[must_use]
+    pub const fn namespace_index(&self) -> u16 {
+        self.0.namespaceIndex
+    }
+
     /// Gets identifier of numeric node ID in namespace 0.
     ///
     /// Namespace 0 is always the UA namespace `http://opcfoundation.org/UA/` itself and is used for
