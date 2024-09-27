@@ -68,7 +68,7 @@ impl NodeId {
         Self::clone_raw(unsafe { &UA_NODEID_NULL })
     }
 
-    /// Gets the namespace index.
+    /// Gets namespace index.
     #[must_use]
     pub const fn namespace_index(&self) -> u16 {
         self.0.namespaceIndex
