@@ -68,16 +68,16 @@ impl NodeId {
         Self::clone_raw(unsafe { &UA_NODEID_NULL })
     }
 
-    /// Gets node ID type.
-    #[must_use]
-    pub fn identifier_type(&self) -> &ua::NodeIdType {
-        ua::NodeIdType::raw_ref(&self.0.identifierType)
-    }
-
     /// Gets the namespace index.
     #[must_use]
     pub const fn namespace_index(&self) -> u16 {
         self.0.namespaceIndex
+    }
+
+    /// Gets node ID type.
+    #[must_use]
+    pub fn identifier_type(&self) -> &ua::NodeIdType {
+        ua::NodeIdType::raw_ref(&self.0.identifierType)
     }
 
     /// Gets identifier of numeric node ID in namespace 0.
