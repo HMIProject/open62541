@@ -10,6 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Implement relations `PartialEq`, `Eq`, `PartialOrd`, `Ord` for `ua::Array` type.
+- Add `ua::NodeId::namespace_index()` to get node ID's namespace index.
 
 ## [0.6.1] - 2024-09-04
 
