@@ -513,13 +513,14 @@ dependencies = [
 
 [[package]]
 name = "open62541-sys"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf501aa3e05d2822660740af47d88ff64b2f9e107b90ec7eb4642fc3ae352c2d"
+checksum = "d849eadecda6a8f046eae6ef793e6dbb322e6f24f77c608a5b5b1f5829b2e3dc"
 dependencies = [
  "bindgen",
  "cc",
  "cmake",
+ "version_check",
 ]
 
 [[package]]
@@ -818,6 +819,12 @@ name = "utf8parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
+
+[[package]]
+name = "version_check"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "wasi"
