@@ -9,7 +9,8 @@ config:
   # The same headline in different nested sections is okay (and necessary for
   # CHANGELOG.md).
   no-duplicate-heading:
-    allow_different_nesting: true
+    # https://github.com/DavidAnson/markdownlint/blob/main/doc/md024.md
+    siblings_only: true
 
 # Fix any fixable errors.
 fix: true
