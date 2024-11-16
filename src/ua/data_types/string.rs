@@ -107,7 +107,7 @@ impl fmt::Display for String {
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Display invalid strings as empty strings.
-        f.write_str(self.as_str().unwrap_or(""))
+        f.pad(self.as_str().unwrap_or(""))
     }
 }
 
@@ -141,5 +141,13 @@ mod tests {
         let str = ua::String::new("").expect("should parse empty string");
         assert_eq!(str.as_str().expect("should display empty string"), "");
         assert_eq!(str.to_string(), "");
+    }
+
+    #[test]
+    fn pad_string() {
+        let str = ua::String::new("hello").unwrap();
+        assert_eq!(format!("{str:>11}"), "      hello");
+        assert_eq!(format!("{str:-<11}"), "hello------");
+        assert_eq!(format!("{str:+^11}"), "+++hello+++");
     }
 }
