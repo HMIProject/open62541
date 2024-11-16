@@ -32,48 +32,21 @@ jobs:
         # Keep list of targets in sync with `test.yaml`.
         include:
           - target: aarch64-apple-darwin
-            # M1 runner on macos-14
-            runner_os: macos-14
-            default_target: true
-            runnable: true
+            runner_os: macos-latest
           - target: armv7-unknown-linux-gnueabihf
             runner_os: ubuntu-latest
-            default_target: false
-            runnable: false
           - target: x86_64-apple-darwin
             runner_os: macos-latest
-            default_target: true
-            runnable: true
           - target: x86_64-pc-windows-msvc
             runner_os: windows-latest
-            default_target: true
-            runnable: true
           - target: x86_64-unknown-linux-gnu
             runner_os: ubuntu-latest
-            default_target: true
-            runnable: true
           - target: x86_64-unknown-linux-musl
             runner_os: ubuntu-latest
-            default_target: false
-            runnable: true
 
     runs-on: ${{ matrix.runner_os }}
 
     steps:
-      - name: Install build tools for musl libc
-        if: endsWith(matrix.target, '-musl')
-        # To avoid HTTP 404 when package index has been updated, we run `update` first.
-        run: >-
-          sudo apt -y update &&
-          sudo apt -y install musl-tools
-
-      - name: Install build tools for ARMv7
-        if: startsWith(matrix.target, 'armv7-')
-        # To avoid HTTP 404 when package index has been updated, we run `update` first.
-        run: >-
-          sudo apt -y update &&
-          sudo apt -y install gcc-arm-linux-gnueabihf
-
       - name: Adjust build settings for Windows
         if: contains(matrix.target, '-windows-')
         # Required for Windows builds: for version numbers with pre-release part
@@ -84,10 +57,11 @@ jobs:
       - name: Install Rust toolchain
         # Use latest stable Rust version.
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cross-compilation tools
+        uses: taiki-e/setup-cross-toolchain-action@v1
         with:
-          # This target also needs to be specified explicitly in every build step!
-          # Otherwise the default toolchain might be used unintentionally.
-          targets: ${{ matrix.target }}
+          target: ${{ matrix.target }}
 
       - name: Install Cargo helpers
         run: >-
@@ -115,13 +89,10 @@ jobs:
       - name: Build with feature combinations
         run: >-
           cargo hack --each-feature build --locked
-          --target ${{ matrix.target }}
 
       - name: Run tests (bins/lib/tests/examples) with feature combinations
-        if: matrix.runnable
         run: >-
           cargo hack --each-feature test --locked
-          --target ${{ matrix.target }}
           --bins --lib --tests --examples
 
       # Compile and run doctests, which have been excluded in the previous
@@ -130,17 +101,7 @@ jobs:
       # Doctests may use any features and there is no easy way to activate
       # certain features only for some doctests, so we run them without
       # `cargo-hack`.
-      #
-      # When cross-compiling the doctests are skipped silently, even with the
-      # default target options that should include them!
-      #
-      # See https://github.com/rust-lang/cargo/issues/7040 for an (unstable)
-      # feature flag that should one day allow us to cross-compile doctests.
-      #
-      # For now, we cannot cross-compile doctests and must always run them on
-      # the runner's native platform.
       - name: Run doctests with all features enabled
-        if: matrix.default_target
         run: >-
           cargo test --locked --all-features
           --doc
@@ -149,4 +110,3 @@ jobs:
         # We allow dirty state here because it is only expected after update.
         run: >-
           cargo package --locked --all-features --allow-dirty
-          --target ${{ matrix.target }}
