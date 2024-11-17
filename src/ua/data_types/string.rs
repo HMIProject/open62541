@@ -107,7 +107,7 @@ impl fmt::Display for String {
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Display invalid strings as empty strings.
-        f.pad(self.as_str().unwrap_or(""))
+        self.as_str().unwrap_or("").fmt(f)
     }
 }
 

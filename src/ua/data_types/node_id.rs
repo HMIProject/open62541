@@ -164,7 +164,7 @@ impl fmt::Display for NodeId {
         });
         Error::verify_good(status_code).map_err(|_| fmt::Error)?;
 
-        f.pad(output.as_str().unwrap_or(""))
+        output.as_str().unwrap_or("").fmt(f)
     }
 }
 
@@ -197,8 +197,8 @@ mod serde {
     impl<'de> serde::de::Visitor<'de> for NodeIdVisitor {
         type Value = NodeId;
 
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.pad("an OPC UA node ID")
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            std::fmt::Display::fmt("an OPC UA node ID", f)
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>

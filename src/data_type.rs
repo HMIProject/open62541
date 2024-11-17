@@ -423,7 +423,7 @@ macro_rules! data_type {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 let output = <Self as $crate::DataType>::print(self);
                 let string = output.as_ref().and_then(|output| output.as_str());
-                f.pad(string.unwrap_or(stringify!($name)))
+                string.unwrap_or(stringify!($name)).fmt(f)
             }
         }
 
@@ -505,7 +505,7 @@ macro_rules! enum_variants {
                     _ => return self.as_u32().fmt(f),
                 };
 
-                f.pad(str)
+                str.fmt(f)
             }
         }
     };
