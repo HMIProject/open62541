@@ -152,6 +152,6 @@ mod tests {
 
         // Verify that format flags in the `ua::String` itself are not interpreted.
         let str = ua::String::new("{str:+^11}").unwrap();
-        assert_eq!(Some(str.to_string().as_str()), str.as_str());
+        assert_eq!(str.to_string().as_str(), "{str:+^11}");
     }
 }
