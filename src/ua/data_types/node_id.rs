@@ -197,8 +197,8 @@ mod serde {
     impl<'de> serde::de::Visitor<'de> for NodeIdVisitor {
         type Value = NodeId;
 
-        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            std::fmt::Display::fmt("an OPC UA node ID", f)
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.pad("an OPC UA node ID")
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
