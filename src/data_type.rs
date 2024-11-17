@@ -502,7 +502,7 @@ macro_rules! enum_variants {
                         },
                     )*
 
-                    _ => return write!(f, "{}", self.as_u32()),
+                    _ => return self.as_u32().fmt(f),
                 };
 
                 f.pad(str)
