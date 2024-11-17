@@ -77,7 +77,7 @@ impl StatusCode {
 
 impl fmt::Display for StatusCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.name())
+        f.pad(self.name())
     }
 }
 
