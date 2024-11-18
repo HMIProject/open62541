@@ -57,13 +57,19 @@ pub use self::{
 pub struct ServerBuilder(ua::ServerConfig);
 
 impl ServerBuilder {
-    /// Sets server port.
+    /// Creates builder from minimal server config.
+    #[must_use]
+    pub fn minimal(port_number: u16, certificate: Option<&[u8]>) -> Self {
+        Self(ua::ServerConfig::minimal(port_number, certificate))
+    }
+
+    /// Sets server port number.
     ///
     /// This is a shortcut for setting the corresponding server URL `opc.tcp://:<port>` and thus may
     /// overwrite any previously set server URLs from [`server_urls()`](Self::server_urls).
     #[must_use]
-    pub fn port(self, port: u16) -> Self {
-        self.server_urls(&[&format!("opc.tcp://:{port}")])
+    pub fn port(self, port_number: u16) -> Self {
+        self.server_urls(&[&format!("opc.tcp://:{port_number}")])
     }
 
     /// Sets server URLs.
