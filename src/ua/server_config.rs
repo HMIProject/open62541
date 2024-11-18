@@ -1,8 +1,13 @@
 use std::{fmt, mem::MaybeUninit, ptr};
 
 use open62541_sys::{UA_ServerConfig, UA_ServerConfig_clean, UA_ServerConfig_setMinimal};
+#[cfg(feature = "mbedtls")]
+use open62541_sys::{
+    UA_ServerConfig_setDefaultWithSecureSecurityPolicies,
+    UA_ServerConfig_setDefaultWithSecurityPolicies,
+};
 
-use crate::{ua, DataType as _, Error, Result, DEFAULT_PORT_NUMBER};
+use crate::{ua, DataType as _, Error, DEFAULT_PORT_NUMBER};
 
 pub(crate) struct ServerConfig(Option<UA_ServerConfig>);
 
@@ -47,6 +52,66 @@ impl ServerConfig {
         Error::verify_good(&status_code).expect("should set minimal server config");
 
         config
+    }
+
+    /// Creates a default server config with security policies.
+    #[cfg(feature = "mbedtls")]
+    pub(crate) fn default_with_security_policies(
+        port_number: u16,
+        certificate: &[u8],
+        private_key: &[u8],
+    ) -> Result<Self, crate::Error> {
+        let mut config = Self::new();
+
+        // Set remaining attributes to their desired values. This also copies the logger as laid out
+        // above to other attributes inside `config` (cleaned up by `UA_ServerConfig_clean()`).
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_ServerConfig_setDefaultWithSecurityPolicies(
+                config.as_mut_ptr(),
+                port_number,
+                ua::ByteString::new(certificate).as_ptr(),
+                ua::ByteString::new(private_key).as_ptr(),
+                ptr::null(),
+                0,
+                ptr::null(),
+                0,
+                ptr::null(),
+                0,
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        Ok(config)
+    }
+
+    /// Creates a default server config with secure security policies.
+    #[cfg(feature = "mbedtls")]
+    pub(crate) fn default_with_secure_security_policies(
+        port_number: u16,
+        certificate: &[u8],
+        private_key: &[u8],
+    ) -> Result<Self, crate::Error> {
+        let mut config = Self::new();
+
+        // Set remaining attributes to their desired values. This also copies the logger as laid out
+        // above to other attributes inside `config` (cleaned up by `UA_ServerConfig_clean()`).
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_ServerConfig_setDefaultWithSecureSecurityPolicies(
+                config.as_mut_ptr(),
+                port_number,
+                ua::ByteString::new(certificate).as_ptr(),
+                ua::ByteString::new(private_key).as_ptr(),
+                ptr::null(),
+                0,
+                ptr::null(),
+                0,
+                ptr::null(),
+                0,
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        Ok(config)
     }
 
     /// Creates wrapper by taking ownership of value.

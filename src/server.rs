@@ -10,12 +10,12 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse,
-    UA_Server_browseNext, UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath,
-    UA_Server_createEvent, UA_Server_deleteNode, UA_Server_deleteReference,
-    UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName, UA_Server_read,
-    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
+    UA_CertificateVerification_AcceptAll, UA_NodeId, UA_Server, UA_ServerConfig,
+    UA_Server_addDataSourceVariableNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
+    UA_Server_addReference, UA_Server_browse, UA_Server_browseNext, UA_Server_browseRecursive,
+    UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
+    UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
+    UA_Server_read, UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
     UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeObjectProperty,
     __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
@@ -61,6 +61,96 @@ impl ServerBuilder {
     #[must_use]
     pub fn minimal(port_number: u16, certificate: Option<&[u8]>) -> Self {
         Self(ua::ServerConfig::minimal(port_number, certificate))
+    }
+
+    /// Creates builder from default server config with security policies.
+    ///
+    /// This enables both secure and non-secure (i.e. unencrypted) security policies. If only secure
+    /// security policies should be activated, use [`Self::default_with_secure_security_policies()`]
+    /// instead.
+    ///
+    /// This requires certificate and associated private key data in binary format. For convenience,
+    /// consider reading those from PEM text files using the [pem] crate or other suitable crates:
+    ///
+    /// [pem]: https://crates.io/crates/pem
+    ///
+    /// ```
+    /// use open62541::{DEFAULT_PORT_NUMBER, ServerBuilder};
+    ///
+    /// const CERTIFICATE: &'static str = "-----BEGIN CERTIFICATE-----
+    /// MIIBPQIBAAJBAOsfi5AGYhdRs/x6q5H7kScxA0Kzzqe6WI6gf6+tc6IvKQJo5rQc
+    /// dWWSQ0nRGt2hOPDO+35NKhQEjBQxPh/v7n0CAwEAAQJBAOGaBAyuw0ICyENy5NsO
+    /// 2gkT00AWTSzM9Zns0HedY31yEabkuFvrMCHjscEF7u3Y6PB7An3IzooBHchsFDei
+    /// AAECIQD/JahddzR5K3A6rzTidmAf1PBtqi7296EnWv8WvpfAAQIhAOvowIXZI4Un
+    /// DXjgZ9ekuUjZN+GUQRAVlkEEohGLVy59AiEA90VtqDdQuWWpvJX0cM08V10tLXrT
+    /// TTGsEtITid1ogAECIQDAaFl90ZgS5cMrL3wCeatVKzVUmuJmB/VAmlLFFGzK0QIh
+    /// ANJGc7AFk4fyFD/OezhwGHbWmo/S+bfeAiIh2Ss2FxKJ
+    /// -----END CERTIFICATE-----
+    /// ";
+    ///
+    /// const PRIVATE_KEY: &'static str = "-----BEGIN RSA PRIVATE KEY-----
+    /// MIIBPQIBAAJBAOsfi5AGYhdRs/x6q5H7kScxA0Kzzqe6WI6gf6+tc6IvKQJo5rQc
+    /// dWWSQ0nRGt2hOPDO+35NKhQEjBQxPh/v7n0CAwEAAQJBAOGaBAyuw0ICyENy5NsO
+    /// 2gkT00AWTSzM9Zns0HedY31yEabkuFvrMCHjscEF7u3Y6PB7An3IzooBHchsFDei
+    /// AAECIQD/JahddzR5K3A6rzTidmAf1PBtqi7296EnWv8WvpfAAQIhAOvowIXZI4Un
+    /// DXjgZ9ekuUjZN+GUQRAVlkEEohGLVy59AiEA90VtqDdQuWWpvJX0cM08V10tLXrT
+    /// TTGsEtITid1ogAECIQDAaFl90ZgS5cMrL3wCeatVKzVUmuJmB/VAmlLFFGzK0QIh
+    /// ANJGc7AFk4fyFD/OezhwGHbWmo/S+bfeAiIh2Ss2FxKJ
+    /// -----END RSA PRIVATE KEY-----
+    /// ";
+    ///
+    /// let certificate = pem::parse(CERTIFICATE).expect("should parse PEM certificate");
+    /// let private_key = pem::parse(PRIVATE_KEY).expect("should parse PEM private key");
+    ///
+    /// let server = ServerBuilder::default_with_security_policies(
+    ///     DEFAULT_PORT_NUMBER,
+    ///     certificate.contents(),
+    ///     private_key.contents(),
+    /// )
+    /// .expect("should add all security policies")
+    /// .build();
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// This fails when the private key cannot be decrypted (it has been protected by password).
+    #[cfg(feature = "mbedtls")]
+    #[must_use]
+    pub fn default_with_security_policies(
+        port_number: u16,
+        certificate: &[u8],
+        private_key: &[u8],
+    ) -> Result<Self> {
+        Ok(Self(ua::ServerConfig::default_with_security_policies(
+            port_number,
+            certificate,
+            private_key,
+        )?))
+    }
+
+    /// Creates builder from default server config with secure security policies.
+    ///
+    /// This enables only secure (i.e. encrypted) security policies.
+    ///
+    /// See also [`Self::default_with_security_policies()`].
+    ///
+    /// # Errors
+    ///
+    /// This fails when the private key cannot be decrypted (it has been protected by password).
+    #[cfg(feature = "mbedtls")]
+    #[must_use]
+    pub fn default_with_secure_security_policies(
+        port_number: u16,
+        certificate: &[u8],
+        private_key: &[u8],
+    ) -> Result<Self> {
+        Ok(Self(
+            ua::ServerConfig::default_with_secure_security_policies(
+                port_number,
+                certificate,
+                private_key,
+            )?,
+        ))
     }
 
     /// Sets server port number.
