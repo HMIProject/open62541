@@ -21,7 +21,7 @@ futures-channel = "0.3.30"
 futures-core = { version = "0.3.30", default-features = false }
 futures-util = { version = "0.3.30", default-features = false }
 log = "0.4.20"
-open62541-sys = "0.4.4"
+open62541-sys = { version = "0.4.4", git = "https://github.com/HMIProject/open62541-sys.git", rev = "efa30b5e937a817ce43efbd4e48b364297404872" }
 paste = "1.0.14"
 serde = { version = "1.0.194", optional = true }
 serde_json = { version = "1.0.111", optional = true }
@@ -45,6 +45,7 @@ tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
 
 [features]
 default = ["serde", "time", "tokio"]
+mbedtls = ["open62541-sys/mbedtls"]
 serde = ["dep:serde", "dep:serde_json", "time?/formatting", "time?/serde"]
 time = ["dep:time"]
 tokio = ["dep:tokio"]
