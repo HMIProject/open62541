@@ -198,7 +198,7 @@ mod serde {
         type Value = NodeId;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.pad("an OPC UA node ID")
+            formatter.write_str("an OPC UA node ID")
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
