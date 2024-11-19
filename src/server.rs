@@ -34,11 +34,6 @@ pub use self::{
     node_types::{MethodNode, Node, ObjectNode, VariableNode},
 };
 
-#[cfg(feature = "tokio")]
-use tokio_util::sync::CancellationToken;
-#[cfg(feature = "tokio")]
-use tokio_util::task::TaskTracker;
-
 /// Builder for [`Server`].
 ///
 /// Use this to specify additional options when building an OPC UA server.
@@ -1301,7 +1296,7 @@ impl Server {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ServerRunner(Arc<ua::Server>);
 
 impl ServerRunner {
@@ -1337,8 +1332,8 @@ impl ServerRunner {
     #[cfg(feature = "tokio")]
     pub async fn run_with_cancellation_token(
         self,
-        task_tracker: TaskTracker,
-        cancellation_token: CancellationToken,
+        task_tracker: tokio_util::task::TaskTracker,
+        cancellation_token: tokio_util::sync::CancellationToken,
     ) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
             // The prologue part of UA_Server_run.
@@ -1352,37 +1347,50 @@ impl ServerRunner {
         });
         Error::verify_good(&status_code)?;
 
-        let server_cloned = self.clone();
-        let _jh = task_tracker
-            .spawn_blocking(move || {
-                while !cancellation_token.is_cancelled() {
-                    unsafe {
-                        // Executes a single iteration of the server's main loop.
-                        let _ = open62541_sys::UA_Server_run_iterate(
-                            // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE` but we make
-                            // sure that it can only be invoked a single time (ownership of `ServerRunner`). The
-                            // examples in `open62541` demonstrate that running the server in its own thread and
-                            // interacting with it as we do through `Server` is okay.
-                            server_cloned.0.as_ptr().cast_mut(),
-                            true,
-                        );
-                    }
+        let cancellation_token_clone = cancellation_token.clone();
+        let jh_run_iterate = task_tracker.spawn_blocking(move || {
+            while !cancellation_token.is_cancelled() {
+                unsafe {
+                    // Executes a single iteration of the server's main loop.
+                    let _ = open62541_sys::UA_Server_run_iterate(
+                        // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE` but we make
+                        // sure that it can only be invoked a single time (ownership of `ServerRunner`). The
+                        // examples in `open62541` demonstrate that running the server in its own thread and
+                        // interacting with it as we do through `Server` is okay.
+                        self.0.as_ptr().cast_mut(),
+                        true,
+                    );
                 }
-            })
-            .await;
+            }
 
-        let status_code = ua::StatusCode::new(unsafe {
-            // The epilogue part of UA_Server_run.
-            open62541_sys::UA_Server_run_shutdown(
-                // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE` but we make
-                // sure that it can only be invoked a single time (ownership of `ServerRunner`). The
-                // examples in `open62541` demonstrate that running the server in its own thread and
-                // interacting with it as we do through `Server` is okay.
-                self.0.as_ptr().cast_mut(),
-            )
+            let status_code = ua::StatusCode::new(unsafe {
+                // The epilogue part of UA_Server_run.
+                open62541_sys::UA_Server_run_shutdown(
+                    // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE` but we make
+                    // sure that it can only be invoked a single time (ownership of `ServerRunner`). The
+                    // examples in `open62541` demonstrate that running the server in its own thread and
+                    // interacting with it as we do through `Server` is okay.
+                    self.0.as_ptr().cast_mut(),
+                )
+            });
+            log::debug!("UA_Server_run_shutdown status {} ", status_code);
+            Error::verify_good(&status_code)
         });
-        log::debug!("UA_Server_run_shutdown status {} ", status_code);
-        Error::verify_good(&status_code)
+
+        let result = tokio::select! {
+            () = cancellation_token_clone.cancelled() => {
+                // NOTE: We don't call `UA_Server_run_shutdown` in this flow as `ServerRunner` is not cloneable.
+                Ok(())
+            }
+            o = jh_run_iterate => {
+                match o {
+                    Ok(Ok(())) => Ok(()),
+                    _ => Err(Error::new(ua::StatusCode::BADUNEXPECTEDERROR))
+                }
+            }
+        };
+
+        result
     }
 }
 
