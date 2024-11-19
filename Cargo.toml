@@ -32,6 +32,7 @@ tokio = { version = "1.35.1", optional = true, features = [
   "sync",
   "time",
 ] }
+tokio-util = { version = "0.7.12", optional = true, features = ["time", "rt"] }
 
 [dev-dependencies]
 anyhow = "1.0.79"
@@ -47,7 +48,7 @@ tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
 default = ["serde", "time", "tokio"]
 serde = ["dep:serde", "dep:serde_json", "time?/formatting", "time?/serde"]
 time = ["dep:time"]
-tokio = ["dep:tokio"]
+tokio = ["dep:tokio", "dep:tokio-util"]
 
 [lints.rust]
 future_incompatible = { level = "warn", priority = -1 }
@@ -171,3 +172,8 @@ path = "examples/server_builder.rs"
 [[example]]
 name = "server_data_source"
 path = "examples/server_data_source.rs"
+
+[[example]]
+name = "cancellable_server"
+path = "examples/cancellable_server.rs"
+required-features = ["time", "tokio"]
