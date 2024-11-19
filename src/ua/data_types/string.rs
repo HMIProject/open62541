@@ -107,7 +107,7 @@ impl fmt::Display for String {
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Display invalid strings as empty strings.
-        f.pad(self.as_str().unwrap_or(""))
+        self.as_str().unwrap_or("").fmt(f)
     }
 }
 
@@ -149,5 +149,9 @@ mod tests {
         assert_eq!(format!("{str:>11}"), "      hello");
         assert_eq!(format!("{str:-<11}"), "hello------");
         assert_eq!(format!("{str:+^11}"), "+++hello+++");
+
+        // Verify that format flags in the `ua::String` itself are not interpreted.
+        let str = ua::String::new("{str:+^11}").unwrap();
+        assert_eq!(str.to_string().as_str(), "{str:+^11}");
     }
 }
