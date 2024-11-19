@@ -51,7 +51,7 @@ impl fmt::Display for QualifiedName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let namespace_index = self.namespace_index();
         if namespace_index == 0 {
-            return write!(f, "{}", self.name());
+            return self.name().fmt(f);
         }
         write!(f, "{namespace_index}:{}", self.name())
     }

@@ -19,7 +19,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Upgrade to open62541 version [1.4.7](https://github.com/open62541/open62541/releases/tag/v1.4.7).
-- Respect fill/alignment formatting parameters when printing `ua::String` (#166).
+- Respect fill/alignment formatting parameters when printing `ua::String` (#166), as well as types
+  `ua::NodeId`, `ua::QualifiedName`, `ua::StatusCode` (#167).
 
 ## [0.6.3] - 2024-10-14
 

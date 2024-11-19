@@ -164,7 +164,7 @@ impl fmt::Display for NodeId {
         });
         Error::verify_good(status_code).map_err(|_| fmt::Error)?;
 
-        f.write_str(output.as_str().unwrap_or(""))
+        output.as_str().unwrap_or("").fmt(f)
     }
 }
 
