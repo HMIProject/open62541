@@ -20,7 +20,10 @@ use open62541_sys::{
     __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
-use crate::{ua, Attribute, Attributes, BrowseResult, DataType, DataValue, Error, Result};
+use crate::{
+    ua, Attribute, Attributes, BrowseResult, DataType, DataValue, Error, Result,
+    DEFAULT_PORT_NUMBER,
+};
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
@@ -53,7 +56,7 @@ pub use self::{
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ServerBuilder(ua::ServerConfig);
 
 impl ServerBuilder {
@@ -180,7 +183,8 @@ impl ServerBuilder {
 
     /// Disables client certificate checks.
     ///
-    /// Note that this disables all certificate verification for client certificates.
+    /// Note that this disables all certificate verification of client communications. Use only when
+    /// clients can be identified in some other way, or identity is not relevant.
     pub fn accept_all(mut self) -> Self {
         let config = self.config_mut();
         unsafe {
@@ -244,6 +248,12 @@ impl ServerBuilder {
     fn config_mut(&mut self) -> &mut UA_ServerConfig {
         // SAFETY: Ownership is not given away.
         unsafe { self.0.as_mut() }
+    }
+}
+
+impl Default for ServerBuilder {
+    fn default() -> Self {
+        Self::minimal(DEFAULT_PORT_NUMBER, None)
     }
 }
 

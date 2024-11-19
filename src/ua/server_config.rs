@@ -7,11 +7,12 @@ use open62541_sys::{
     UA_ServerConfig_setDefaultWithSecurityPolicies,
 };
 
-use crate::{ua, DataType as _, Error, DEFAULT_PORT_NUMBER};
+use crate::{ua, DataType as _, Error};
 
 pub(crate) struct ServerConfig(Option<UA_ServerConfig>);
 
 impl ServerConfig {
+    #[must_use]
     fn new() -> Self {
         let mut config = Self::init();
 
@@ -34,6 +35,7 @@ impl ServerConfig {
     }
 
     /// Creates minimal server config.
+    #[must_use]
     pub(crate) fn minimal(port_number: u16, certificate: Option<&[u8]>) -> Self {
         let mut config = Self::new();
 
@@ -189,12 +191,5 @@ impl Drop for ServerConfig {
 impl fmt::Debug for ServerConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ServerConfig").finish_non_exhaustive()
-    }
-}
-
-impl Default for ServerConfig {
-    /// Creates a server config on the default port 4840 with no server certificate.
-    fn default() -> Self {
-        Self::minimal(DEFAULT_PORT_NUMBER, None)
     }
 }
