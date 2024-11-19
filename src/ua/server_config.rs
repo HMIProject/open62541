@@ -1,11 +1,6 @@
 use std::{fmt, mem::MaybeUninit, ptr};
 
 use open62541_sys::{UA_ServerConfig, UA_ServerConfig_clean, UA_ServerConfig_setMinimal};
-#[cfg(feature = "mbedtls")]
-use open62541_sys::{
-    UA_ServerConfig_setDefaultWithSecureSecurityPolicies,
-    UA_ServerConfig_setDefaultWithSecurityPolicies,
-};
 
 use crate::{ua, DataType as _, Error};
 
@@ -63,6 +58,8 @@ impl ServerConfig {
         certificate: &[u8],
         private_key: &[u8],
     ) -> Result<Self, crate::Error> {
+        use open62541_sys::UA_ServerConfig_setDefaultWithSecurityPolicies;
+
         let mut config = Self::new();
 
         // Set remaining attributes to their desired values. This also copies the logger as laid out
@@ -93,6 +90,8 @@ impl ServerConfig {
         certificate: &[u8],
         private_key: &[u8],
     ) -> Result<Self, crate::Error> {
+        use open62541_sys::UA_ServerConfig_setDefaultWithSecureSecurityPolicies;
+
         let mut config = Self::new();
 
         // Set remaining attributes to their desired values. This also copies the logger as laid out

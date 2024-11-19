@@ -1,13 +1,7 @@
-#[cfg(feature = "mbedtls")]
-use std::ptr;
 use std::{fmt, mem::MaybeUninit};
 
-#[cfg(feature = "mbedtls")]
-use open62541_sys::UA_ClientConfig_setDefaultEncryption;
 use open62541_sys::{UA_ClientConfig, UA_ClientConfig_clear, UA_ClientConfig_setDefault};
 
-#[cfg(feature = "mbedtls")]
-use crate::DataType;
 use crate::{ua, Error};
 
 pub(crate) struct ClientConfig(Option<UA_ClientConfig>);
@@ -54,6 +48,8 @@ impl ClientConfig {
         certificate: &[u8],
         private_key: &[u8],
     ) -> Result<Self, crate::Error> {
+        use {crate::DataType, open62541_sys::UA_ClientConfig_setDefaultEncryption, std::ptr};
+
         let mut config = Self::new();
 
         // Set remaining attributes to their desired values. This also copies the logger as laid out
