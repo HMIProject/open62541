@@ -80,37 +80,18 @@ impl ServerBuilder {
     /// ```
     /// use open62541::{DEFAULT_PORT_NUMBER, ServerBuilder};
     ///
-    /// const CERTIFICATE: &'static str = "-----BEGIN CERTIFICATE-----
-    /// MIIBPQIBAAJBAOsfi5AGYhdRs/x6q5H7kScxA0Kzzqe6WI6gf6+tc6IvKQJo5rQc
-    /// dWWSQ0nRGt2hOPDO+35NKhQEjBQxPh/v7n0CAwEAAQJBAOGaBAyuw0ICyENy5NsO
-    /// 2gkT00AWTSzM9Zns0HedY31yEabkuFvrMCHjscEF7u3Y6PB7An3IzooBHchsFDei
-    /// AAECIQD/JahddzR5K3A6rzTidmAf1PBtqi7296EnWv8WvpfAAQIhAOvowIXZI4Un
-    /// DXjgZ9ekuUjZN+GUQRAVlkEEohGLVy59AiEA90VtqDdQuWWpvJX0cM08V10tLXrT
-    /// TTGsEtITid1ogAECIQDAaFl90ZgS5cMrL3wCeatVKzVUmuJmB/VAmlLFFGzK0QIh
-    /// ANJGc7AFk4fyFD/OezhwGHbWmo/S+bfeAiIh2Ss2FxKJ
-    /// -----END CERTIFICATE-----
-    /// ";
+    /// const CERTIFICATE_PEM: &'static str = include_str!("../examples/server_certificate.pem");
+    /// const PRIVATE_KEY_PEM: &'static str = include_str!("../examples/server_private_key.pem");
     ///
-    /// const PRIVATE_KEY: &'static str = "-----BEGIN RSA PRIVATE KEY-----
-    /// MIIBPQIBAAJBAOsfi5AGYhdRs/x6q5H7kScxA0Kzzqe6WI6gf6+tc6IvKQJo5rQc
-    /// dWWSQ0nRGt2hOPDO+35NKhQEjBQxPh/v7n0CAwEAAQJBAOGaBAyuw0ICyENy5NsO
-    /// 2gkT00AWTSzM9Zns0HedY31yEabkuFvrMCHjscEF7u3Y6PB7An3IzooBHchsFDei
-    /// AAECIQD/JahddzR5K3A6rzTidmAf1PBtqi7296EnWv8WvpfAAQIhAOvowIXZI4Un
-    /// DXjgZ9ekuUjZN+GUQRAVlkEEohGLVy59AiEA90VtqDdQuWWpvJX0cM08V10tLXrT
-    /// TTGsEtITid1ogAECIQDAaFl90ZgS5cMrL3wCeatVKzVUmuJmB/VAmlLFFGzK0QIh
-    /// ANJGc7AFk4fyFD/OezhwGHbWmo/S+bfeAiIh2Ss2FxKJ
-    /// -----END RSA PRIVATE KEY-----
-    /// ";
-    ///
-    /// let certificate = pem::parse(CERTIFICATE).expect("should parse PEM certificate");
-    /// let private_key = pem::parse(PRIVATE_KEY).expect("should parse PEM private key");
+    /// let certificate = pem::parse(CERTIFICATE_PEM).expect("should parse PEM certificate");
+    /// let private_key = pem::parse(PRIVATE_KEY_PEM).expect("should parse PEM private key");
     ///
     /// let server = ServerBuilder::default_with_security_policies(
     ///     DEFAULT_PORT_NUMBER,
     ///     certificate.contents(),
     ///     private_key.contents(),
     /// )
-    /// .expect("should add all security policies")
+    /// .expect("should create builder with security policies")
     /// .build();
     /// ```
     ///
