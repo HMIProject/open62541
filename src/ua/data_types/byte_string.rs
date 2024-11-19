@@ -14,7 +14,8 @@ crate::data_type!(ByteString);
 // OPC UA treats arrays (which also distinguishes between empty and invalid instances).
 impl ByteString {
     /// Creates byte string from data.
-    pub fn new(s: &[u8]) -> Self {
+    #[must_use]
+    pub(crate) fn new(s: &[u8]) -> Self {
         let mut dst = Self::init();
         let src = UA_String {
             length: s.len(),

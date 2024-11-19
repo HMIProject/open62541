@@ -116,9 +116,9 @@ impl ServerBuilder {
     ///
     /// # Errors
     ///
-    /// This fails when the private key cannot be decrypted (it has been protected by password).
+    /// This fails when the certificate is invalid or the private key cannot be decrypted (e.g. when
+    /// it has been protected by a password).
     #[cfg(feature = "mbedtls")]
-    #[must_use]
     pub fn default_with_security_policies(
         port_number: u16,
         certificate: &[u8],
@@ -139,9 +139,9 @@ impl ServerBuilder {
     ///
     /// # Errors
     ///
-    /// This fails when the private key cannot be decrypted (it has been protected by password).
+    /// This fails when the certificate is invalid or the private key cannot be decrypted (e.g. when
+    /// it has been protected by a password).
     #[cfg(feature = "mbedtls")]
-    #[must_use]
     pub fn default_with_secure_security_policies(
         port_number: u16,
         certificate: &[u8],
@@ -185,6 +185,7 @@ impl ServerBuilder {
     ///
     /// Note that this disables all certificate verification of client communications. Use only when
     /// clients can be identified in some other way, or identity is not relevant.
+    #[must_use]
     pub fn accept_all(mut self) -> Self {
         let config = self.config_mut();
         unsafe {

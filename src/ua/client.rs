@@ -122,7 +122,6 @@ impl Drop for Client {
 }
 
 impl Default for Client {
-    /// Creates wrapper initialized with defaults.
     fn default() -> Self {
         // `UA_Client_new()` matches `UA_Client_delete()`.
         let inner = NonNull::new(unsafe { UA_Client_new() }).expect("create UA_Client");

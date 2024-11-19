@@ -30,13 +30,17 @@ pub struct ClientBuilder(ua::ClientConfig);
 impl ClientBuilder {
     /// Creates builder from default client config.
     #[must_use]
-    pub fn default() -> Self {
+    fn default() -> Self {
         Self(ua::ClientConfig::default())
     }
 
     /// Creates builder from default client config with encryption.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the certificate is invalid or the private key cannot be decrypted (e.g. when
+    /// it has been protected by a password).
     #[cfg(feature = "mbedtls")]
-    #[must_use]
     pub fn default_encryption(certificate: &[u8], private_key: &[u8]) -> Result<Self> {
         Ok(Self(ua::ClientConfig::default_encryption(
             certificate,
@@ -129,6 +133,7 @@ impl ClientBuilder {
     ///
     /// Note that this disables all certificate verification of server communications. Use only when
     /// servers can be identified in some other way, or identity is not relevant.
+    #[must_use]
     pub fn accept_all(mut self) -> Self {
         let config = self.config_mut();
         unsafe {

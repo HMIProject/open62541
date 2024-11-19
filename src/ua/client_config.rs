@@ -1,11 +1,14 @@
-use std::{fmt, mem::MaybeUninit, ptr};
+#[cfg(feature = "mbedtls")]
+use std::ptr;
+use std::{fmt, mem::MaybeUninit};
 
-use open62541_sys::{
-    UA_ClientConfig, UA_ClientConfig_clear, UA_ClientConfig_setDefault,
-    UA_ClientConfig_setDefaultEncryption,
-};
+#[cfg(feature = "mbedtls")]
+use open62541_sys::UA_ClientConfig_setDefaultEncryption;
+use open62541_sys::{UA_ClientConfig, UA_ClientConfig_clear, UA_ClientConfig_setDefault};
 
-use crate::{ua, DataType, Error};
+#[cfg(feature = "mbedtls")]
+use crate::DataType;
+use crate::{ua, Error};
 
 pub(crate) struct ClientConfig(Option<UA_ClientConfig>);
 
@@ -47,7 +50,6 @@ impl ClientConfig {
     }
 
     #[cfg(feature = "mbedtls")]
-    #[must_use]
     pub(crate) fn default_encryption(
         certificate: &[u8],
         private_key: &[u8],
