@@ -6,16 +6,9 @@ fn main() -> anyhow::Result<()> {
 
     println!("Building server");
 
-    // These files have been created with OpenSSL:
-    //
-    // ```
-    // openssl req -x509 -newkey rsa:4096 \
-    //     -keyout server_test.key -out server_test.crt -sha256 -days 3650 -nodes \
-    //     -subj "/C=DE/O=open62541/CN=open62541@localhost" \
-    //     -addext "subjectAltName=DNS:localhost,URI:urn:open62541.server.application"
-    // ```
-    let certificate_pem = include_str!("server_test.crt");
-    let private_key_pem = include_str!("server_test.key");
+    // These files have been created with `server_ssl.sh`.
+    let certificate_pem = include_str!("server_certificate.pem");
+    let private_key_pem = include_str!("server_private_key.pem");
 
     let certificate = pem::parse(certificate_pem).context("parse PEM certificate")?;
     let private_key = pem::parse(private_key_pem).context("parse PEM private key")?;
@@ -26,6 +19,7 @@ fn main() -> anyhow::Result<()> {
         private_key.contents(),
     )
     .context("get server builder")?
+    .accept_all()
     .build();
 
     println!("Running server");

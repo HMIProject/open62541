@@ -178,6 +178,18 @@ impl ServerBuilder {
         self
     }
 
+    /// Disables client certificate checks.
+    ///
+    /// Note that this disables all certificate verification for client certificates.
+    pub fn accept_all(mut self) -> Self {
+        let config = self.config_mut();
+        unsafe {
+            UA_CertificateVerification_AcceptAll(&mut config.secureChannelPKI);
+            UA_CertificateVerification_AcceptAll(&mut config.sessionPKI);
+        }
+        self
+    }
+
     /// Builds OPC UA server.
     #[must_use]
     pub fn build(mut self) -> (Server, ServerRunner) {
