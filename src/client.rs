@@ -1,6 +1,6 @@
 use std::{ffi::CString, time::Duration};
 
-use open62541_sys::{UA_ClientConfig, UA_Client_connect};
+use open62541_sys::{UA_CertificateVerification_AcceptAll, UA_ClientConfig, UA_Client_connect};
 
 use crate::{ua, DataType as _, Error, Result};
 
@@ -24,10 +24,32 @@ use crate::{ua, DataType as _, Error, Result};
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ClientBuilder(ua::ClientConfig);
 
 impl ClientBuilder {
+    /// Creates builder from default client config.
+    // Method name refers to call of `UA_ClientConfig_setDefault()`.
+    #[must_use]
+    fn default() -> Self {
+        Self(ua::ClientConfig::default())
+    }
+
+    /// Creates builder from default client config with encryption.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the certificate is invalid or the private key cannot be decrypted (e.g. when
+    /// it has been protected by a password).
+    // Method name refers to call of `UA_ClientConfig_setDefaultEncryption()`.
+    #[cfg(feature = "mbedtls")]
+    pub fn default_encryption(certificate: &[u8], private_key: &[u8]) -> Result<Self> {
+        Ok(Self(ua::ClientConfig::default_encryption(
+            certificate,
+            private_key,
+        )?))
+    }
+
     /// Sets (response) timeout.
     ///
     /// # Panics
@@ -109,6 +131,19 @@ impl ClientBuilder {
         self
     }
 
+    /// Disables server certificate checks.
+    ///
+    /// Note that this disables all certificate verification of server communications. Use only when
+    /// servers can be identified in some other way, or identity is not relevant.
+    #[must_use]
+    pub fn accept_all(mut self) -> Self {
+        let config = self.config_mut();
+        unsafe {
+            UA_CertificateVerification_AcceptAll(&mut config.certificateVerification);
+        }
+        self
+    }
+
     /// Connects to OPC UA endpoint and returns [`Client`].
     ///
     /// # Errors
@@ -134,6 +169,12 @@ impl ClientBuilder {
     fn config_mut(&mut self) -> &mut UA_ClientConfig {
         // SAFETY: Ownership is not given away.
         unsafe { self.0.as_mut() }
+    }
+}
+
+impl Default for ClientBuilder {
+    fn default() -> Self {
+        Self::default()
     }
 }
 

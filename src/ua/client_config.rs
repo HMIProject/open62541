@@ -7,6 +7,74 @@ use crate::{ua, Error};
 pub(crate) struct ClientConfig(Option<UA_ClientConfig>);
 
 impl ClientConfig {
+    #[must_use]
+    fn new() -> Self {
+        let mut config = Self::init();
+
+        // Set custom logger first. This is necessary because the same logger instance is used as-is
+        // inside derived attributes such as `eventLoop`, `certificateVerification`, etc.
+        {
+            let config = unsafe { config.as_mut() };
+            // We assign a logger only on default-initialized config objects: we cannot know whether
+            // an existing configuration is still referenced in another attribute or structure, thus
+            // we could not (safely) free it anyway.
+            debug_assert!(config.logging.is_null());
+            // Create logger configuration. Ownership of the `UA_Logger` instance passes to `config`
+            // at this point.
+            config.logging = crate::logger();
+        }
+
+        // Next, we must finish initialization by calling `UA_ClientConfig_set...()` as appropriate.
+        // This happens in the caller.
+        config
+    }
+
+    /// Creates default client config.
+    // Method name refers to call of `UA_ClientConfig_setDefault()`.
+    #[must_use]
+    pub(crate) fn default() -> Self {
+        let mut config = Self::new();
+
+        // Set remaining attributes to their desired values. This also copies the logger as laid out
+        // above to other attributes inside `config` (cleaned up by `UA_ClientConfig_clear()`).
+        let status_code =
+            ua::StatusCode::new(unsafe { UA_ClientConfig_setDefault(config.as_mut_ptr()) });
+        // PANIC: The only possible errors here are out-of-memory.
+        Error::verify_good(&status_code).expect("should set default client config");
+
+        config
+    }
+
+    /// Creates default client config with encryption.
+    // Method name refers to call of `UA_ClientConfig_setDefaultEncryption()`.
+    #[cfg(feature = "mbedtls")]
+    pub(crate) fn default_encryption(
+        certificate: &[u8],
+        private_key: &[u8],
+    ) -> Result<Self, crate::Error> {
+        use {crate::DataType, open62541_sys::UA_ClientConfig_setDefaultEncryption, std::ptr};
+
+        let mut config = Self::new();
+
+        // Set remaining attributes to their desired values. This also copies the logger as laid out
+        // above to other attributes inside `config` (cleaned up by `UA_ClientConfig_clear()`).
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_ClientConfig_setDefaultEncryption(
+                config.as_mut_ptr(),
+                // SAFETY: Function expects struct instead of pointer, despite not taking ownership.
+                DataType::to_raw_copy(&ua::ByteString::new(certificate)),
+                DataType::to_raw_copy(&ua::ByteString::new(private_key)),
+                ptr::null(),
+                0,
+                ptr::null(),
+                0,
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        Ok(config)
+    }
+
     /// Creates wrapper by taking ownership of value.
     ///
     /// When `Self` is dropped, allocations held by the inner type are cleaned up.
@@ -82,33 +150,5 @@ impl Drop for ClientConfig {
 impl fmt::Debug for ClientConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ClientConfig").finish_non_exhaustive()
-    }
-}
-
-impl Default for ClientConfig {
-    fn default() -> Self {
-        let mut config = Self::init();
-
-        // Set custom logger first. This is necessary because the same logger instance is used as-is
-        // inside derived attributes such as `eventLoop`, `certificateVerification`, etc.
-        {
-            let config = unsafe { config.as_mut() };
-            // We assign a logger only on default-initialized config objects: we cannot know whether
-            // an existing configuration is still referenced in another attribute or structure, thus
-            // we could not (safely) free it anyway.
-            debug_assert!(config.logging.is_null());
-            // Create logger configuration. Ownership of the `UA_Logger` instance passes to `config`
-            // at this point.
-            config.logging = crate::logger();
-        }
-
-        // Set remaining attributes to their default values. This also copies the logger as laid out
-        // above to other attributes inside `config` (cleaned up by `UA_ClientConfig_clear()`).
-        let status_code =
-            ua::StatusCode::new(unsafe { UA_ClientConfig_setDefault(config.as_mut_ptr()) });
-        // PANIC: The only possible errors here are out-of-memory.
-        Error::verify_good(&status_code).expect("should set default client config");
-
-        config
     }
 }
