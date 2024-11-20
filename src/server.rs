@@ -1426,8 +1426,8 @@ impl ServerRunner {
 
     /// Runs the server until it is cancelled.
     ///
-    /// The server is shut down cleanly upon receiving a cancellation token (could be due `SIGINT` or
-    /// `SIGTERM`) at which point the method returns.
+    /// The server is shut down cleanly when `is_cancelled` returns true at which point the method
+    ///  returns.
     ///
     /// # Errors
     ///
