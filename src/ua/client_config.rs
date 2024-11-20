@@ -29,6 +29,7 @@ impl ClientConfig {
         config
     }
 
+    /// Creates default client config.
     // Method name refers to call of `UA_ClientConfig_setDefault()`.
     #[must_use]
     pub(crate) fn default() -> Self {
@@ -44,6 +45,7 @@ impl ClientConfig {
         config
     }
 
+    /// Creates default client config with encryption.
     // Method name refers to call of `UA_ClientConfig_setDefaultEncryption()`.
     #[cfg(feature = "mbedtls")]
     pub(crate) fn default_encryption(
