@@ -61,6 +61,7 @@ pub struct ServerBuilder(ua::ServerConfig);
 
 impl ServerBuilder {
     /// Creates builder from minimal server config.
+    // Method name refers to call of `UA_ServerConfig_setMinimal()`.
     #[must_use]
     pub fn minimal(port_number: u16, certificate: Option<&[u8]>) -> Self {
         Self(ua::ServerConfig::minimal(port_number, certificate))
@@ -99,6 +100,7 @@ impl ServerBuilder {
     ///
     /// This fails when the certificate is invalid or the private key cannot be decrypted (e.g. when
     /// it has been protected by a password).
+    // Method name refers to call of `UA_ServerConfig_setDefaultWithSecurityPolicies()`.
     #[cfg(feature = "mbedtls")]
     pub fn default_with_security_policies(
         port_number: u16,
@@ -122,6 +124,7 @@ impl ServerBuilder {
     ///
     /// This fails when the certificate is invalid or the private key cannot be decrypted (e.g. when
     /// it has been protected by a password).
+    // Method name refers to call of `UA_ServerConfig_setDefaultWithSecureSecurityPolicies()`.
     #[cfg(feature = "mbedtls")]
     pub fn default_with_secure_security_policies(
         port_number: u16,

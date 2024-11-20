@@ -29,6 +29,7 @@ pub struct ClientBuilder(ua::ClientConfig);
 
 impl ClientBuilder {
     /// Creates builder from default client config.
+    // Method name refers to call of `UA_ClientConfig_setDefault()`.
     #[must_use]
     fn default() -> Self {
         Self(ua::ClientConfig::default())
@@ -40,6 +41,7 @@ impl ClientBuilder {
     ///
     /// This fails when the certificate is invalid or the private key cannot be decrypted (e.g. when
     /// it has been protected by a password).
+    // Method name refers to call of `UA_ClientConfig_setDefaultEncryption()`.
     #[cfg(feature = "mbedtls")]
     pub fn default_encryption(certificate: &[u8], private_key: &[u8]) -> Result<Self> {
         Ok(Self(ua::ClientConfig::default_encryption(

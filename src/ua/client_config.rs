@@ -29,6 +29,7 @@ impl ClientConfig {
         config
     }
 
+    // Method name refers to call of `UA_ClientConfig_setDefault()`.
     #[must_use]
     pub(crate) fn default() -> Self {
         let mut config = Self::new();
@@ -43,6 +44,7 @@ impl ClientConfig {
         config
     }
 
+    // Method name refers to call of `UA_ClientConfig_setDefaultEncryption()`.
     #[cfg(feature = "mbedtls")]
     pub(crate) fn default_encryption(
         certificate: &[u8],

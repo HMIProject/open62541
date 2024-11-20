@@ -30,6 +30,7 @@ impl ServerConfig {
     }
 
     /// Creates minimal server config.
+    // Method name refers to call of `UA_ServerConfig_setMinimal()`.
     #[must_use]
     pub(crate) fn minimal(port_number: u16, certificate: Option<&[u8]>) -> Self {
         let mut config = Self::new();
@@ -52,6 +53,7 @@ impl ServerConfig {
     }
 
     /// Creates a default server config with security policies.
+    // Method name refers to call of `UA_ServerConfig_setDefaultWithSecurityPolicies()`.
     #[cfg(feature = "mbedtls")]
     pub(crate) fn default_with_security_policies(
         port_number: u16,
@@ -84,6 +86,7 @@ impl ServerConfig {
     }
 
     /// Creates a default server config with secure security policies.
+    // Method name refers to call of `UA_ServerConfig_setDefaultWithSecureSecurityPolicies()`.
     #[cfg(feature = "mbedtls")]
     pub(crate) fn default_with_secure_security_policies(
         port_number: u16,
