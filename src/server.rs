@@ -1448,6 +1448,10 @@ impl ServerRunner {
         while !is_cancelled() {
             unsafe {
                 // Executes a single iteration of the server's main loop.
+                // We discard the returned value i.e. how long we can wait until the next scheduled
+                // callback as `UA_Server_run_iterate` does the required waiting. See
+                // https://github.com/open62541/open62541/blob/master/include/open62541/server.h#L485-L499
+                // for more information.
                 let _ = open62541_sys::UA_Server_run_iterate(
                     // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE` but we make
                     // sure that it can only be invoked a single time (ownership of `ServerRunner`). The
