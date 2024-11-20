@@ -1296,7 +1296,7 @@ impl Server {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ServerRunner(Arc<ua::Server>);
 
 impl ServerRunner {
