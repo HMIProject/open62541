@@ -1431,7 +1431,7 @@ impl ServerRunner {
     ///
     /// # Errors
     ///
-    /// This fails when the server cannot be started.
+    /// This method could fail at any stage, i.e. while starting, running, or shutting down the server.
     pub fn run_until_cancelled(self, is_cancelled: &mut impl FnMut() -> bool) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
             // The prologue part of UA_Server_run.
