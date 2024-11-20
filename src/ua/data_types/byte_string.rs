@@ -1,6 +1,8 @@
 use std::slice;
 
-use crate::ArrayValue;
+use open62541_sys::{UA_ByteString_copy, UA_String};
+
+use crate::{ua, ArrayValue, DataType};
 
 // Technically, `open62541_sys::ByteString` is an alias for `open62541_sys::String`. But we treat it
 // as a distinct type to improve type safety. The difference is that `String` contains valid Unicode
@@ -11,6 +13,27 @@ crate::data_type!(ByteString);
 // strings of `length` 0. It may also be `ptr::null()` for "invalid" strings. This is similar to how
 // OPC UA treats arrays (which also distinguishes between empty and invalid instances).
 impl ByteString {
+    /// Creates byte string from data.
+    #[must_use]
+    pub(crate) fn new(s: &[u8]) -> Self {
+        let mut dst = Self::init();
+        let src = UA_String {
+            length: s.len(),
+            // SAFETY: `UA_String` needs `*mut UA_Byte`. But the call to `UA_ByteString_copy()` does
+            // not actually mutate the value, it only reads from it.
+            data: s.as_ptr().cast_mut(),
+        };
+        // We let `UA_ByteString_copy()` do the heavy lifting of allocating memory and copying data.
+        let status_code =
+            ua::StatusCode::new(unsafe { UA_ByteString_copy(&src, dst.as_mut_ptr()) });
+        // PANIC: The only possible errors here are out-of-memory.
+        assert!(
+            status_code.is_good(),
+            "byte string should have been created"
+        );
+        dst
+    }
+
     /// Checks if byte string is invalid.
     ///
     /// The invalid state is defined by OPC UA. It is a third state which is distinct from empty and

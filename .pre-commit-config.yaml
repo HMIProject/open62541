@@ -16,6 +16,8 @@ repos:
       - id: check-yaml
       - id: destroyed-symlinks
       - id: detect-private-key
+        # We use provided files for our examples.
+        exclude: "^examples/(client|server)_private_key.pem$"
       - id: end-of-file-fixer
       - id: fix-byte-order-marker
       - id: forbid-new-submodules
