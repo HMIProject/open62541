@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- Add feature flag `mbedtls` to build with encryption support by using bundled Mbed TLS version
+  [3.6.2](https://github.com/Mbed-TLS/mbedtls/releases/tag/mbedtls-3.6.2).
+- Add method for client encryption by using `ClientBuilder::default_encryption()`.
+- Add methods for server encryption by using `ServerBuilder::default_with_security_policies()`,
+  `ServerBuilder::default_with_secure_security_policies()`.
+- Add `ClientBuilder::accept_all()` and `ServerBuilder::accept_all()` to skip certificate checks.
+
 ### Changed
 
 - Upgrade to open62541 version [1.4.7](https://github.com/open62541/open62541/releases/tag/v1.4.7).

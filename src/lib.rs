@@ -261,3 +261,6 @@ pub use self::{
     async_subscription::AsyncSubscription,
     callback::{CallbackOnce, CallbackStream},
 };
+
+/// IANA-assigned OPC UA port number.
+pub const DEFAULT_PORT_NUMBER: u16 = 4840;

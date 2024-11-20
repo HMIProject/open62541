@@ -1,12 +1,123 @@
-use std::{fmt, mem::MaybeUninit};
+use std::{fmt, mem::MaybeUninit, ptr};
 
-use open62541_sys::{UA_ServerConfig, UA_ServerConfig_clean, UA_ServerConfig_setDefault};
+use open62541_sys::{UA_ServerConfig, UA_ServerConfig_clean, UA_ServerConfig_setMinimal};
 
-use crate::{ua, Error};
+use crate::{ua, DataType as _, Error};
 
 pub(crate) struct ServerConfig(Option<UA_ServerConfig>);
 
 impl ServerConfig {
+    #[must_use]
+    fn new() -> Self {
+        let mut config = Self::init();
+
+        // Set custom logger first. This is necessary because the same logger instance is used as-is
+        // inside derived attributes such as `eventLoop`, `certificateVerification`, etc.
+        {
+            let config = unsafe { config.as_mut() };
+            // We assign a logger only on default-initialized config objects: we cannot know whether
+            // an existing configuration is still referenced in another attribute or structure, thus
+            // we could not (safely) free it anyway.
+            debug_assert!(config.logging.is_null());
+            // Create logger configuration. Ownership of the `UA_Logger` instance passes to `config`
+            // at this point.
+            config.logging = crate::logger();
+        }
+
+        // Next, we must finish initialization by calling `UA_ServerConfig_set...()` as appropriate.
+        // This happens in the caller.
+        config
+    }
+
+    /// Creates minimal server config.
+    // Method name refers to call of `UA_ServerConfig_setMinimal()`.
+    #[must_use]
+    pub(crate) fn minimal(port_number: u16, certificate: Option<&[u8]>) -> Self {
+        let mut config = Self::new();
+
+        // Set remaining attributes to their desired values. This also copies the logger as laid out
+        // above to other attributes inside `config` (cleaned up by `UA_ServerConfig_clean()`).
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_ServerConfig_setMinimal(
+                config.as_mut_ptr(),
+                port_number,
+                certificate.map_or(ptr::null(), |certificate| {
+                    ua::ByteString::new(certificate).as_ptr()
+                }),
+            )
+        });
+        // PANIC: The only possible errors here are out-of-memory.
+        Error::verify_good(&status_code).expect("should set minimal server config");
+
+        config
+    }
+
+    /// Creates a default server config with security policies.
+    // Method name refers to call of `UA_ServerConfig_setDefaultWithSecurityPolicies()`.
+    #[cfg(feature = "mbedtls")]
+    pub(crate) fn default_with_security_policies(
+        port_number: u16,
+        certificate: &[u8],
+        private_key: &[u8],
+    ) -> Result<Self, crate::Error> {
+        use open62541_sys::UA_ServerConfig_setDefaultWithSecurityPolicies;
+
+        let mut config = Self::new();
+
+        // Set remaining attributes to their desired values. This also copies the logger as laid out
+        // above to other attributes inside `config` (cleaned up by `UA_ServerConfig_clean()`).
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_ServerConfig_setDefaultWithSecurityPolicies(
+                config.as_mut_ptr(),
+                port_number,
+                ua::ByteString::new(certificate).as_ptr(),
+                ua::ByteString::new(private_key).as_ptr(),
+                ptr::null(),
+                0,
+                ptr::null(),
+                0,
+                ptr::null(),
+                0,
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        Ok(config)
+    }
+
+    /// Creates a default server config with secure security policies.
+    // Method name refers to call of `UA_ServerConfig_setDefaultWithSecureSecurityPolicies()`.
+    #[cfg(feature = "mbedtls")]
+    pub(crate) fn default_with_secure_security_policies(
+        port_number: u16,
+        certificate: &[u8],
+        private_key: &[u8],
+    ) -> Result<Self, crate::Error> {
+        use open62541_sys::UA_ServerConfig_setDefaultWithSecureSecurityPolicies;
+
+        let mut config = Self::new();
+
+        // Set remaining attributes to their desired values. This also copies the logger as laid out
+        // above to other attributes inside `config` (cleaned up by `UA_ServerConfig_clean()`).
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_ServerConfig_setDefaultWithSecureSecurityPolicies(
+                config.as_mut_ptr(),
+                port_number,
+                ua::ByteString::new(certificate).as_ptr(),
+                ua::ByteString::new(private_key).as_ptr(),
+                ptr::null(),
+                0,
+                ptr::null(),
+                0,
+                ptr::null(),
+                0,
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        Ok(config)
+    }
+
     /// Creates wrapper by taking ownership of value.
     ///
     /// When `Self` is dropped, allocations held by the inner type are cleaned up.
@@ -82,34 +193,5 @@ impl Drop for ServerConfig {
 impl fmt::Debug for ServerConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ServerConfig").finish_non_exhaustive()
-    }
-}
-
-impl Default for ServerConfig {
-    /// Creates a server config on the default port 4840 with no server certificate.
-    fn default() -> Self {
-        let mut config = Self::init();
-
-        // Set custom logger first. This is necessary because the same logger instance is used as-is
-        // inside derived attributes such as `eventLoop`, `certificateVerification`, etc.
-        {
-            let config = unsafe { config.as_mut() };
-            // We assign a logger only on default-initialized config objects: we cannot know whether
-            // an existing configuration is still referenced in another attribute or structure, thus
-            // we could not (safely) free it anyway.
-            debug_assert!(config.logging.is_null());
-            // Create logger configuration. Ownership of the `UA_Logger` instance passes to `config`
-            // at this point.
-            config.logging = crate::logger();
-        }
-
-        // Set remaining attributes to their default values. This also copies the logger as laid out
-        // above to other attributes inside `config` (cleaned up by `UA_ServerConfig_clean()`).
-        let status_code =
-            ua::StatusCode::new(unsafe { UA_ServerConfig_setDefault(config.as_mut_ptr()) });
-        // PANIC: The only possible errors here are out-of-memory.
-        Error::verify_good(&status_code).expect("should set default server config");
-
-        config
     }
 }

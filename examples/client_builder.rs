@@ -4,6 +4,8 @@ use open62541::{ua, ClientBuilder, DataType as _};
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
+    println!("Building client");
+
     let client_description = ua::ApplicationDescription::init()
         .with_application_uri("https://crates.io/crates/open62541")
         .with_product_uri("https://crates.io/crates/open62541")

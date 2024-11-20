@@ -21,7 +21,7 @@ futures-channel = "0.3.30"
 futures-core = { version = "0.3.30", default-features = false }
 futures-util = { version = "0.3.30", default-features = false }
 log = "0.4.20"
-open62541-sys = "0.4.4"
+open62541-sys = "0.4.5"
 paste = "1.0.14"
 serde = { version = "1.0.194", optional = true }
 serde_json = { version = "1.0.111", optional = true }
@@ -37,6 +37,7 @@ tokio = { version = "1.35.1", optional = true, features = [
 anyhow = "1.0.79"
 futures = "0.3.30"
 env_logger = "0.11.1"
+pem = "3.0.4"
 rand = "0.8.5"
 time = { version = "0.3.31", features = ["macros"] }
 # Enable multi-threaded runtime in examples to increase the chances of finding
@@ -45,6 +46,7 @@ tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
 
 [features]
 default = ["serde", "time", "tokio"]
+mbedtls = ["open62541-sys/mbedtls"]
 serde = ["dep:serde", "dep:serde_json", "time?/formatting", "time?/serde"]
 time = ["dep:time"]
 tokio = ["dep:tokio"]
@@ -161,6 +163,11 @@ name = "client_builder"
 path = "examples/client_builder.rs"
 
 [[example]]
+name = "client_encryption"
+path = "examples/client_encryption.rs"
+required-features = ["mbedtls"]
+
+[[example]]
 name = "server"
 path = "examples/server.rs"
 
@@ -171,3 +178,12 @@ path = "examples/server_builder.rs"
 [[example]]
 name = "server_data_source"
 path = "examples/server_data_source.rs"
+
+[[example]]
+name = "server_encryption"
+path = "examples/server_encryption.rs"
+required-features = ["mbedtls"]
+
+[[example]]
+name = "server_method_callback"
+path = "examples/server_method_callback.rs"

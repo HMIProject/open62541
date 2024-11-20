@@ -10,17 +10,20 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_NodeId, UA_Server, UA_ServerConfig, UA_Server_addDataSourceVariableNode,
-    UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse,
-    UA_Server_browseNext, UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath,
-    UA_Server_createEvent, UA_Server_deleteNode, UA_Server_deleteReference,
-    UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName, UA_Server_read,
-    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
+    UA_CertificateVerification_AcceptAll, UA_NodeId, UA_Server, UA_ServerConfig,
+    UA_Server_addDataSourceVariableNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
+    UA_Server_addReference, UA_Server_browse, UA_Server_browseNext, UA_Server_browseRecursive,
+    UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
+    UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
+    UA_Server_read, UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
     UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeObjectProperty,
     __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
 };
 
-use crate::{ua, Attribute, Attributes, BrowseResult, DataType, DataValue, Error, Result};
+use crate::{
+    ua, Attribute, Attributes, BrowseResult, DataType, DataValue, Error, Result,
+    DEFAULT_PORT_NUMBER,
+};
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
@@ -53,17 +56,97 @@ pub use self::{
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ServerBuilder(ua::ServerConfig);
 
 impl ServerBuilder {
-    /// Sets server port.
+    /// Creates builder from minimal server config.
+    // Method name refers to call of `UA_ServerConfig_setMinimal()`.
+    #[must_use]
+    pub fn minimal(port_number: u16, certificate: Option<&[u8]>) -> Self {
+        Self(ua::ServerConfig::minimal(port_number, certificate))
+    }
+
+    /// Creates builder from default server config with security policies.
+    ///
+    /// This enables both secure and non-secure (i.e. unencrypted) security policies. If only secure
+    /// security policies should be activated, use [`Self::default_with_secure_security_policies()`]
+    /// instead.
+    ///
+    /// This requires certificate and associated private key data in binary format. For convenience,
+    /// consider reading those from PEM text files using the [pem] crate or other suitable crates:
+    ///
+    /// [pem]: https://crates.io/crates/pem
+    ///
+    /// ```
+    /// use open62541::{DEFAULT_PORT_NUMBER, ServerBuilder};
+    ///
+    /// const CERTIFICATE_PEM: &'static str = include_str!("../examples/server_certificate.pem");
+    /// const PRIVATE_KEY_PEM: &'static str = include_str!("../examples/server_private_key.pem");
+    ///
+    /// let certificate = pem::parse(CERTIFICATE_PEM).expect("should parse PEM certificate");
+    /// let private_key = pem::parse(PRIVATE_KEY_PEM).expect("should parse PEM private key");
+    ///
+    /// let server = ServerBuilder::default_with_security_policies(
+    ///     DEFAULT_PORT_NUMBER,
+    ///     certificate.contents(),
+    ///     private_key.contents(),
+    /// )
+    /// .expect("should create builder with security policies")
+    /// .build();
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// This fails when the certificate is invalid or the private key cannot be decrypted (e.g. when
+    /// it has been protected by a password).
+    // Method name refers to call of `UA_ServerConfig_setDefaultWithSecurityPolicies()`.
+    #[cfg(feature = "mbedtls")]
+    pub fn default_with_security_policies(
+        port_number: u16,
+        certificate: &[u8],
+        private_key: &[u8],
+    ) -> Result<Self> {
+        Ok(Self(ua::ServerConfig::default_with_security_policies(
+            port_number,
+            certificate,
+            private_key,
+        )?))
+    }
+
+    /// Creates builder from default server config with secure security policies.
+    ///
+    /// This enables only secure (i.e. encrypted) security policies.
+    ///
+    /// See also [`Self::default_with_security_policies()`].
+    ///
+    /// # Errors
+    ///
+    /// This fails when the certificate is invalid or the private key cannot be decrypted (e.g. when
+    /// it has been protected by a password).
+    // Method name refers to call of `UA_ServerConfig_setDefaultWithSecureSecurityPolicies()`.
+    #[cfg(feature = "mbedtls")]
+    pub fn default_with_secure_security_policies(
+        port_number: u16,
+        certificate: &[u8],
+        private_key: &[u8],
+    ) -> Result<Self> {
+        Ok(Self(
+            ua::ServerConfig::default_with_secure_security_policies(
+                port_number,
+                certificate,
+                private_key,
+            )?,
+        ))
+    }
+
+    /// Sets server port number.
     ///
     /// This is a shortcut for setting the corresponding server URL `opc.tcp://:<port>` and thus may
     /// overwrite any previously set server URLs from [`server_urls()`](Self::server_urls).
     #[must_use]
-    pub fn port(self, port: u16) -> Self {
-        self.server_urls(&[&format!("opc.tcp://:{port}")])
+    pub fn port(self, port_number: u16) -> Self {
+        self.server_urls(&[&format!("opc.tcp://:{port_number}")])
     }
 
     /// Sets server URLs.
@@ -79,6 +162,20 @@ impl ServerBuilder {
             .map(|server_url| ua::String::new(server_url).unwrap());
         ua::Array::from_iter(server_urls)
             .move_into_raw(&mut config.serverUrlsSize, &mut config.serverUrls);
+        self
+    }
+
+    /// Disables client certificate checks.
+    ///
+    /// Note that this disables all certificate verification of client communications. Use only when
+    /// clients can be identified in some other way, or identity is not relevant.
+    #[must_use]
+    pub fn accept_all(mut self) -> Self {
+        let config = self.config_mut();
+        unsafe {
+            UA_CertificateVerification_AcceptAll(&mut config.secureChannelPKI);
+            UA_CertificateVerification_AcceptAll(&mut config.sessionPKI);
+        }
         self
     }
 
@@ -136,6 +233,12 @@ impl ServerBuilder {
     fn config_mut(&mut self) -> &mut UA_ServerConfig {
         // SAFETY: Ownership is not given away.
         unsafe { self.0.as_mut() }
+    }
+}
+
+impl Default for ServerBuilder {
+    fn default() -> Self {
+        Self::minimal(DEFAULT_PORT_NUMBER, None)
     }
 }
 

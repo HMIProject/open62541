@@ -177,7 +177,6 @@ impl AsyncClient {
     /// This fails when the node does not exist or the attribute cannot be read.
     ///
     /// [`read_value()`]: Self::read_value
-    #[allow(clippy::missing_panics_doc)]
     pub async fn read_attribute<T: Attribute>(
         &self,
         node_id: &ua::NodeId,
@@ -188,7 +187,9 @@ impl AsyncClient {
         // ERROR: We give a slice with one item to `read_attributes()` and expect a single result
         // value.
         debug_assert_eq!(values.len(), 1);
-        let value = values.pop().expect("should contain exactly one attribute");
+        let Some(value) = values.pop() else {
+            return Err(Error::internal("should contain exactly one attribute"));
+        };
 
         value.and_then(DataValue::into_scalar::<T::Value>)
     }
