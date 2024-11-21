@@ -202,7 +202,7 @@ impl ServerBuilder {
     ///
     /// # Errors
     ///
-    /// This fails when the access control cannot be applied.
+    /// This fails when the access control instance cannot be applied.
     pub fn access_control(mut self, access_control: impl AccessControl) -> Result<Self> {
         let config = self.config_mut();
 

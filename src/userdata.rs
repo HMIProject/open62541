@@ -127,7 +127,9 @@ impl<T> Userdata<T> {
 #[derive(Debug)]
 pub struct UserdataSentinel<T>(*mut c_void, PhantomData<T>);
 
-// SAFETY: When T can be sent, the sentinel can be as well.
+// SAFETY: When `T` can be sent to another thread, the sentinel can be as well. (Despite the pointer
+// inside, the sentinel is not a Rust reference but rather the owner of the data itself. To drop it,
+// we move it out of its `Box` when consuming the `Userdata`.)
 unsafe impl<T: Send> Send for UserdataSentinel<T> {}
 
 impl<T> Drop for UserdataSentinel<T> {

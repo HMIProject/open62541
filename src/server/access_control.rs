@@ -220,6 +220,9 @@ where
         });
         Error::verify_good(&status_code)?;
 
+        // Compile-time assertion to make sure that the strings were still alive at this point.
+        drop((username, password));
+
         // SAFETY: We do not call `consume()` and only create a single sentinel.
         let sentinel = unsafe { Userdata::<F>::sentinel(login_callback) };
 
