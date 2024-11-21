@@ -23,8 +23,8 @@ use crate::{
 /// Timeout for `UA_Client_run_iterate()`.
 ///
 /// This is the maximum amount of time that `UA_Client_run_iterate()` will block for. It is relevant
-/// primarily when canceling the background task, i.e. when we need to interrupt the loop and cancel
-/// before the next invocation of `UA_Client_run_iterate()`.
+/// primarily when cancelling the background task, i.e. when we interrupt the loop and cancel before
+/// the next invocation of `UA_Client_run_iterate()`.
 ///
 /// Since this is also the timeout we must block for when dropping the client without `disconnect()`
 /// first, the value should not be too large. On the other hand, it should not be too small to avoid
@@ -104,7 +104,7 @@ impl AsyncClient {
         };
 
         if cancel {
-            log::info!("Canceling background task");
+            log::info!("Cancelling background task");
             self.background_cancelled.store(true, Ordering::Relaxed);
         }
 
