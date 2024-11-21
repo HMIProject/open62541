@@ -29,7 +29,7 @@ use crate::{
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
-    access_control::{AccessControl, DefaultAccessControl},
+    access_control::{AccessControl, DefaultAccessControl, DefaultAccessControlWithLoginCallback},
     data_source::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext,

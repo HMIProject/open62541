@@ -177,6 +177,11 @@ path = "examples/server_access_control.rs"
 required-features = ["mbedtls"]
 
 [[example]]
+name = "server_access_control_callback"
+path = "examples/server_access_control_callback.rs"
+required-features = ["mbedtls"]
+
+[[example]]
 name = "server_builder"
 path = "examples/server_builder.rs"
 
