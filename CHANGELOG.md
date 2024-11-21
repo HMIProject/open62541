@@ -15,6 +15,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add methods for server encryption by using `ServerBuilder::default_with_security_policies()`,
   `ServerBuilder::default_with_secure_security_policies()`.
 - Add `ClientBuilder::accept_all()` and `ServerBuilder::accept_all()` to skip certificate checks.
+- Add method `ServerRunner::run_until_cancelled()` to allow gracefully shutting down server (#169).
 
 ### Changed
 
