@@ -7,6 +7,7 @@ use std::{
 };
 
 use open62541::Server;
+use tokio::time;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -29,7 +30,7 @@ async fn main() -> anyhow::Result<()> {
         result
     });
 
-    tokio::time::sleep(Duration::from_secs(15)).await;
+    time::sleep(Duration::from_secs(15)).await;
 
     println!("Cancelling server");
 
