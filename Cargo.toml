@@ -178,7 +178,7 @@ path = "examples/server_builder.rs"
 [[example]]
 name = "server_cancellable"
 path = "examples/server_cancellable.rs"
-required-features = ["time", "tokio"]
+required-features = ["tokio"]
 
 [[example]]
 name = "server_data_source"
