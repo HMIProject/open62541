@@ -3,6 +3,13 @@ mod method_callback;
 mod node_context;
 mod node_types;
 
+use std::{
+    ffi::{c_void, CString},
+    ptr,
+    sync::Arc,
+    time::Instant,
+};
+
 use open62541_sys::{
     UA_CertificateVerification_AcceptAll, UA_NodeId, UA_Server, UA_ServerConfig,
     UA_Server_addDataSourceVariableNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
@@ -12,12 +19,6 @@ use open62541_sys::{
     UA_Server_read, UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
     UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeObjectProperty,
     __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
-};
-use std::time::Instant;
-use std::{
-    ffi::{c_void, CString},
-    ptr,
-    sync::Arc,
 };
 
 use crate::{
