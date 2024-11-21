@@ -42,7 +42,7 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 #[derive(Debug)]
 pub struct AsyncClient {
     client: Arc<ua::Client>,
-    background_canceled: Arc<AtomicBool>,
+    background_cancelled: Arc<AtomicBool>,
     background_handle: Option<JoinHandle<()>>,
 }
 
@@ -70,7 +70,7 @@ impl AsyncClient {
     pub(crate) fn from_sync(client: ua::Client) -> Self {
         let client = Arc::new(client);
 
-        let background_canceled = Arc::new(AtomicBool::new(false));
+        let background_cancelled = Arc::new(AtomicBool::new(false));
 
         // Run the event loop concurrently. We do so on a thread where we may block: we need to call
         // `UA_Client_run_iterate()` and this method blocks for up to `RUN_ITERATE_TIMEOUT`.
@@ -80,13 +80,13 @@ impl AsyncClient {
         // risk deadlocking on single-threaded tokio runners).
         let background_handle = {
             let client = Arc::clone(&client);
-            let canceled = Arc::clone(&background_canceled);
-            thread::spawn(move || background_task(&client, &canceled))
+            let cancelled = Arc::clone(&background_cancelled);
+            thread::spawn(move || background_task(&client, &cancelled))
         };
 
         Self {
             client,
-            background_canceled,
+            background_cancelled,
             background_handle: Some(background_handle),
         }
     }
@@ -105,7 +105,7 @@ impl AsyncClient {
 
         if cancel {
             log::info!("Canceling background task");
-            self.background_canceled.store(true, Ordering::Relaxed);
+            self.background_cancelled.store(true, Ordering::Relaxed);
         }
 
         // TODO: Use `tracing` and span to group log messages.
@@ -490,15 +490,15 @@ impl Drop for AsyncClient {
 /// each iteration. In case the loop does not finish by itself (which happens in case of disconnects
 /// and for final connection failures), the cancellation token `cancel` can be used to stop the task
 /// from the outside before the next loop iteration.
-fn background_task(client: &ua::Client, canceled: &AtomicBool) {
+fn background_task(client: &ua::Client, cancelled: &AtomicBool) {
     log::info!("Starting background task");
 
     // `UA_Client_run_iterate()` expects the timeout to be given in milliseconds.
     let timeout_millis = u32::try_from(RUN_ITERATE_TIMEOUT.as_millis()).unwrap_or(u32::MAX);
 
-    // Run until canceled. The only other way to exit is when `UA_Client_run_iterate()` itself fails
-    // (which happens when the connection is broken and the client instance cannot be used anymore).
-    while !canceled.load(Ordering::Relaxed) {
+    // Run until cancelled. The only other way to exit is when `UA_Client_run_iterate()` fails which
+    // happens when the connection is broken and the client instance cannot be used anymore.
+    while !cancelled.load(Ordering::Relaxed) {
         // Track time of iteration start to report iteration times below.
         let start_of_iteration = Instant::now();
 
@@ -539,7 +539,7 @@ fn background_task(client: &ua::Client, canceled: &AtomicBool) {
         log::trace!("Iterate run took {time_taken:?}");
     }
 
-    log::info!("Terminating canceled background task");
+    log::info!("Terminating cancelled background task");
 }
 
 async fn service_request<R: ServiceRequest>(
@@ -583,7 +583,7 @@ async fn service_request<R: ServiceRequest>(
     let callback = |result: std::result::Result<R::Response, _>| {
         // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
         // care if that succeeds though: the receiver might already have gone out of scope (when its
-        // future has been canceled) and we must not panic in FFI callbacks.
+        // future has been cancelled) and we must not panic in FFI callbacks.
         let _unused = tx.send(result.map_err(Error::new));
     };
 
