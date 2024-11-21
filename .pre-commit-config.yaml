@@ -31,7 +31,6 @@ repos:
     rev: v2.3.0
     hooks:
       - id: codespell
-        args: [--ignore-words=.codespellignore]
   - repo: https://github.com/sirosen/check-jsonschema
     rev: 0.29.4
     hooks:

@@ -184,7 +184,7 @@ async fn create_monitored_items(
     let callback = |result: std::result::Result<ua::CreateMonitoredItemsResponse, _>| {
         // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
         // care if that succeeds though: the receiver might already have gone out of scope (when its
-        // future has been canceled) and we must not panic in FFI callbacks.
+        // future has been cancelled) and we must not panic in FFI callbacks.
         let _unused = tx.send(result.map_err(Error::new));
     };
 

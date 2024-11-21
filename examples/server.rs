@@ -94,7 +94,7 @@ fn main() -> anyhow::Result<()> {
 
     cancel_tx.send(()).expect("server task should be running");
 
-    // Wait for simulation task to shut down after canceling.
+    // Wait for simulation task to shut down after cancelling.
     if let Err(err) = server_task_handle
         .join()
         .expect("server task should not panic")

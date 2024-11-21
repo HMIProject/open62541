@@ -1,0 +1,3 @@
+[codespell]
+dictionary = .codespelldictionary,-
+ignore-words = .codespellignore
