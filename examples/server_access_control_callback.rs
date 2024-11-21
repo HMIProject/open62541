@@ -1,4 +1,8 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
+};
 
 use anyhow::Context as _;
 use open62541::{ua, DefaultAccessControlWithLoginCallback, ServerBuilder, DEFAULT_PORT_NUMBER};
@@ -22,19 +26,38 @@ fn main() -> anyhow::Result<()> {
 
     println!("Building server");
 
-    // These files have been created with `server_ssl.sh`.
-    let certificate_pem = include_str!("server_certificate.pem");
-    let private_key_pem = include_str!("server_private_key.pem");
-
-    let certificate = pem::parse(certificate_pem).context("parse PEM certificate")?;
-    let private_key = pem::parse(private_key_pem).context("parse PEM private key")?;
-
     let credentials = Arc::new(Mutex::new(vec![
         Credentials::new("lorem", "lorem123"),
         Credentials::new("ipsum", "ipsum123"),
     ]));
 
-    let login_callback =
+    // As an example for concurrent access in the closure below, we clear the credentials after some
+    // time. Future attempts at logging in will then be rejected.
+    //
+    thread::spawn({
+        let credentials = Arc::downgrade(&credentials);
+
+        move || {
+            thread::sleep(Duration::from_secs(15));
+
+            let Some(credentials) = credentials.upgrade() else {
+                return;
+            };
+            let Ok(mut credentials) = credentials.lock() else {
+                return;
+            };
+
+            println!("Clearing credentials");
+
+            credentials.clear();
+        }
+    });
+
+    // For each login, we look into the current set of `credentials`.
+    //
+    let login_callback = {
+        let credentials = Arc::clone(&credentials);
+
         move |user_name: &ua::String, password: &ua::ByteString| -> ua::StatusCode {
             let Some(user_name) = user_name.as_str() else {
                 return ua::StatusCode::BADINTERNALERROR;
@@ -42,10 +65,11 @@ fn main() -> anyhow::Result<()> {
             let Some(password) = password.as_bytes() else {
                 return ua::StatusCode::BADINTERNALERROR;
             };
-
             let Ok(credentials) = credentials.lock() else {
                 return ua::StatusCode::BADINTERNALERROR;
             };
+
+            println!("Checking credentials for {user_name:?}");
 
             if credentials.iter().any(|credentials| {
                 credentials.user_name == user_name && credentials.password.as_bytes() == password
@@ -54,7 +78,15 @@ fn main() -> anyhow::Result<()> {
             } else {
                 ua::StatusCode::BADUSERACCESSDENIED
             }
-        };
+        }
+    };
+
+    // These files have been created with `server_ssl.sh`.
+    let certificate_pem = include_str!("server_certificate.pem");
+    let private_key_pem = include_str!("server_private_key.pem");
+
+    let certificate = pem::parse(certificate_pem).context("parse PEM certificate")?;
+    let private_key = pem::parse(private_key_pem).context("parse PEM private key")?;
 
     let (_, runner) = ServerBuilder::default_with_security_policies(
         DEFAULT_PORT_NUMBER,
