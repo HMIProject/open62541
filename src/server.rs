@@ -3,12 +3,6 @@ mod method_callback;
 mod node_context;
 mod node_types;
 
-use std::{
-    ffi::{c_void, CString},
-    ptr,
-    sync::Arc,
-};
-
 use open62541_sys::{
     UA_CertificateVerification_AcceptAll, UA_NodeId, UA_Server, UA_ServerConfig,
     UA_Server_addDataSourceVariableNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
@@ -18,6 +12,12 @@ use open62541_sys::{
     UA_Server_read, UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
     UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeObjectProperty,
     __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
+};
+use std::time::Instant;
+use std::{
+    ffi::{c_void, CString},
+    ptr,
+    sync::Arc,
 };
 
 use crate::{
@@ -1427,12 +1427,13 @@ impl ServerRunner {
     /// Runs the server until it is cancelled.
     ///
     /// The server is shut down cleanly when `is_cancelled` returns true at which point the method
-    ///  returns.
+    /// returns.
     ///
     /// # Errors
     ///
     /// This method could fail at any stage, i.e. while starting, running, or shutting down the server.
     pub fn run_until_cancelled(self, is_cancelled: &mut impl FnMut() -> bool) -> Result<()> {
+        log::trace!("Starting the server");
         let status_code = ua::StatusCode::new(unsafe {
             // The prologue part of UA_Server_run.
             open62541_sys::UA_Server_run_startup(
@@ -1446,11 +1447,14 @@ impl ServerRunner {
         Error::verify_good(&status_code)?;
 
         while !is_cancelled() {
+            log::trace!("Running iterate");
+            // Track time of iteration start to report iteration times below.
+            let start_of_iteration = Instant::now();
             unsafe {
                 // Executes a single iteration of the server's main loop.
                 // We discard the returned value i.e. how long we can wait until the next scheduled
                 // callback as `UA_Server_run_iterate` does the required waiting. See
-                // https://github.com/open62541/open62541/blob/master/include/open62541/server.h#L485-L499
+                // <https://github.com/open62541/open62541/blob/d4c5aaa2a755d846d8517f96995d318a66742d42/include/open62541/server.h#L474-L483>
                 // for more information.
                 let _ = open62541_sys::UA_Server_run_iterate(
                     // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE` but we make
@@ -1461,6 +1465,8 @@ impl ServerRunner {
                     true,
                 );
             }
+            let time_taken = start_of_iteration.elapsed();
+            log::trace!("Iterate run took {time_taken:?}");
         }
 
         let status_code = ua::StatusCode::new(unsafe {
@@ -1473,7 +1479,7 @@ impl ServerRunner {
                 self.0.as_ptr().cast_mut(),
             )
         });
-        log::debug!("UA_Server_run_shutdown status {} ", status_code);
+        log::debug!("Terminating server with status {status_code}");
         Error::verify_good(&status_code)
     }
 }
