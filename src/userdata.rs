@@ -88,10 +88,11 @@ impl<T> Userdata<T> {
     /// # Safety
     ///
     /// The given pointer must have been returned from [`prepare()`], using the same value type `T`.
-    /// It must not have been given to [`consume()`] yet.
+    /// It must not have been given to [`consume()`] nor [`sentinel()`] yet.
     ///
     /// [`prepare()`]: Self::prepare
     /// [`consume()`]: Self::consume
+    /// [`sentinel()`]: Self::sentinel
     #[must_use]
     pub unsafe fn consume(data: *mut c_void) -> T {
         let ptr: *mut T = data.cast::<T>();
@@ -100,5 +101,38 @@ impl<T> Userdata<T> {
         // TODO: Prefer `Box::into_inner()` when it becomes stable.
         // https://github.com/rust-lang/rust/issues/80437
         *userdata
+    }
+
+    /// Creates sentinel that consumes data when dropped.
+    ///
+    /// This works just like [`consume()`] but simply drops the owned data to clean it up. Care must
+    /// be taken to not create two sentinels nor to call [`consume()`] when sentinel already exists.
+    ///
+    /// # Safety
+    ///
+    /// The given pointer must have been returned from [`prepare()`], using the same value type `T`.
+    /// It must not have been given to [`consume()`] nor [`sentinel()`] yet.
+    ///
+    /// [`prepare()`]: Self::prepare
+    /// [`consume()`]: Self::consume
+    /// [`sentinel()`]: Self::sentinel
+    pub const unsafe fn sentinel(data: *mut c_void) -> UserdataSentinel<T> {
+        UserdataSentinel(data, PhantomData)
+    }
+}
+
+/// Sentinel for type-erased user data.
+///
+/// This consumes the user data when dropped.
+#[derive(Debug)]
+pub struct UserdataSentinel<T>(*mut c_void, PhantomData<T>);
+
+// SAFETY: When T can be sent, the sentinel can be as well.
+unsafe impl<T: Send> Send for UserdataSentinel<T> {}
+
+impl<T> Drop for UserdataSentinel<T> {
+    fn drop(&mut self) {
+        let userdata = unsafe { Userdata::<T>::consume(self.0) };
+        drop(userdata);
     }
 }

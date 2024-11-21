@@ -6,16 +6,39 @@ use open62541_sys::{
     UA_STATUSCODE_BADINTERNALERROR,
 };
 
-use crate::{ua, DataType, Error, Result, Userdata};
+use crate::{ua, userdata::UserdataSentinel, DataType, Error, Result, Userdata};
 
 /// Server access control.
-pub trait AccessControl {
+///
+/// # Safety
+///
+/// The implementation of [`apply()`] must make sure that existing access control settings in config
+/// have been completely replaced or otherwise cleaned up when it returns without an error.
+///
+/// This is needed to allow dropping sentinel values received from previous calls to [`apply()`] (by
+/// different implementations of the trait, possibly) in case [`ServerBuilder::access_control()`] is
+/// called twice.
+///
+/// [`apply()`]: Self::apply
+/// [`ServerBuilder::access_control()`]: crate::ServerBuilder::access_control
+pub unsafe trait AccessControl {
+    /// Sentinel value returned from [`Self::apply()`].
+    ///
+    /// This allows cleaning up data associated with this instance _after_ the server has shut down,
+    /// releasing the access control and not making use of it again.
+    type Sentinel: Send + 'static;
+
     /// Consumes instance and applies it to config.
     ///
     /// # Errors
     ///
     /// This fails when the access control cannot be applied.
-    fn apply(self, config: &mut UA_ServerConfig) -> Result<()>;
+    ///
+    /// # Safety
+    ///
+    /// The caller must keep the sentinel value around (not drop it) for as long as the config which
+    /// had this access control applied to is still active, i.e. the server has not been shut down.
+    unsafe fn apply(self, config: &mut UA_ServerConfig) -> Result<Self::Sentinel>;
 }
 
 /// Default server access control.
@@ -50,8 +73,11 @@ impl<'a> DefaultAccessControl<'a> {
     }
 }
 
-impl<'a> AccessControl for DefaultAccessControl<'a> {
-    fn apply(self, config: &mut UA_ServerConfig) -> Result<()> {
+// SAFETY: `UA_AccessControl_default()` replaces previously set config.
+unsafe impl<'a> AccessControl for DefaultAccessControl<'a> {
+    type Sentinel = ();
+
+    unsafe fn apply(self, config: &mut UA_ServerConfig) -> Result<Self::Sentinel> {
         let Self {
             allow_anonymous,
             username_password_login,
@@ -103,13 +129,7 @@ pub struct DefaultAccessControlWithLoginCallback<F> {
     login_callback: F,
 }
 
-impl<F> DefaultAccessControlWithLoginCallback<F>
-where
-    // Note the lifetime constraint `'static` here. It is required to prevent accepting closures and
-    // moving them into the server config that do not live long enough for the (unknown) lifetime of
-    // the `Server` instance that gets eventually built from that config.
-    F: Fn(&ua::String, &ua::ByteString) -> ua::StatusCode + 'static,
-{
+impl<F> DefaultAccessControlWithLoginCallback<F> {
     pub const fn new(allow_anonymous: bool, login_callback: F) -> Self {
         Self {
             allow_anonymous,
@@ -118,11 +138,17 @@ where
     }
 }
 
-impl<F> AccessControl for DefaultAccessControlWithLoginCallback<F>
+// SAFETY: `UA_AccessControl_defaultWithLoginCallback()` replaces previously set config.
+unsafe impl<F> AccessControl for DefaultAccessControlWithLoginCallback<F>
 where
-    F: Fn(&ua::String, &ua::ByteString) -> ua::StatusCode + 'static,
+    // Note the lifetime constraint `'static` here. It is required to prevent accepting closures and
+    // moving them into the server config that do not live long enough for the (unknown) lifetime of
+    // the `Server` instance that gets eventually built from that config.
+    F: Fn(&ua::String, &ua::ByteString) -> ua::StatusCode + Send + 'static,
 {
-    fn apply(self, config: &mut UA_ServerConfig) -> Result<()> {
+    type Sentinel = UserdataSentinel<F>;
+
+    unsafe fn apply(self, config: &mut UA_ServerConfig) -> Result<Self::Sentinel> {
         unsafe extern "C" fn login_callback_c<F>(
             user_name: *const UA_String,
             password: *const UA_ByteString,
@@ -132,7 +158,7 @@ where
             login_context: *mut c_void,
         ) -> UA_StatusCode
         where
-            F: Fn(&ua::String, &ua::ByteString) -> ua::StatusCode + 'static,
+            F: Fn(&ua::String, &ua::ByteString) -> ua::StatusCode,
         {
             let Some(user_name) = (unsafe { user_name.as_ref() }) else {
                 return UA_STATUSCODE_BADINTERNALERROR;
@@ -168,12 +194,14 @@ where
         // SAFETY: `UA_AccessControl_defaultWithLoginCallback()` does not take ownership of strings,
         // it uses them only to make internal copies. But the strings must only be dropped after the
         // function has returned, so we use the variables above.
-        let username_password_login = vec![unsafe {
+        let username_password_login = [unsafe {
             UA_UsernamePasswordLogin {
                 username: DataType::to_raw_copy(&username),
                 password: DataType::to_raw_copy(&password),
             }
         }];
+
+        let login_callback = Userdata::<F>::prepare(login_callback);
 
         let status_code = ua::StatusCode::new(unsafe {
             UA_AccessControl_defaultWithLoginCallback(
@@ -187,12 +215,14 @@ where
                 username_password_login.len(),
                 username_password_login.as_ptr(),
                 Some(login_callback_c::<F>),
-                Userdata::<F>::prepare(login_callback),
+                login_callback,
             )
         });
-        Error::verify_good(&status_code)
+        Error::verify_good(&status_code)?;
 
-        // TODO: We need to consume the `Userdata` created above eventually. Until then, we may leak
-        // memore here.
+        // SAFETY: We do not call `consume()` and only create a single sentinel.
+        let sentinel = unsafe { Userdata::<F>::sentinel(login_callback) };
+
+        Ok(sentinel)
     }
 }

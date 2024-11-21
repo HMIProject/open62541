@@ -5,6 +5,7 @@ mod node_context;
 mod node_types;
 
 use std::{
+    any::Any,
     ffi::{c_void, CString},
     ptr,
     sync::Arc,
@@ -60,14 +61,27 @@ pub use self::{
 /// # }
 /// ```
 #[derive(Debug)]
-pub struct ServerBuilder(ua::ServerConfig);
+pub struct ServerBuilder {
+    config: ua::ServerConfig,
+
+    /// [`AccessControl`] instances may hold additional data that must be kept alive until server is
+    /// shut down. The sentinel value cleans this up when it is dropped.
+    access_control_sentinel: Option<Box<dyn Any + Send>>,
+}
 
 impl ServerBuilder {
+    fn new(config: ua::ServerConfig) -> Self {
+        Self {
+            config,
+            access_control_sentinel: None,
+        }
+    }
+
     /// Creates builder from minimal server config.
     // Method name refers to call of `UA_ServerConfig_setMinimal()`.
     #[must_use]
     pub fn minimal(port_number: u16, certificate: Option<&[u8]>) -> Self {
-        Self(ua::ServerConfig::minimal(port_number, certificate))
+        Self::new(ua::ServerConfig::minimal(port_number, certificate))
     }
 
     /// Creates builder from default server config with security policies.
@@ -110,7 +124,7 @@ impl ServerBuilder {
         certificate: &[u8],
         private_key: &[u8],
     ) -> Result<Self> {
-        Ok(Self(ua::ServerConfig::default_with_security_policies(
+        Ok(Self::new(ua::ServerConfig::default_with_security_policies(
             port_number,
             certificate,
             private_key,
@@ -134,7 +148,7 @@ impl ServerBuilder {
         certificate: &[u8],
         private_key: &[u8],
     ) -> Result<Self> {
-        Ok(Self(
+        Ok(Self::new(
             ua::ServerConfig::default_with_secure_security_policies(
                 port_number,
                 certificate,
@@ -191,7 +205,17 @@ impl ServerBuilder {
     /// This fails when the access control cannot be applied.
     pub fn access_control(mut self, access_control: impl AccessControl) -> Result<Self> {
         let config = self.config_mut();
-        access_control.apply(config)?;
+
+        // SAFETY: We keep track of the returned sentinel value and drop it only when the server (to
+        // be created from this config) is shut down and does not access this data anymore. If we do
+        // not create a server from this config, the data can be released when dropping the builder.
+        let sentinel = unsafe { access_control.apply(config) }?;
+
+        // This may replace previously tracked sentinels. This is okay because `apply()` always must
+        // replace the entire access control config. Thus, dropping the sentinel and cleaning up any
+        // _previously_ set access control instance is okay.
+        self.access_control_sentinel = Some(Box::new(sentinel));
+
         Ok(self)
     }
 
@@ -238,9 +262,14 @@ impl ServerBuilder {
         debug_assert!(config.nodeLifecycle.destructor.is_none());
         config.nodeLifecycle.destructor = Some(destructor_c);
 
-        let server = Arc::new(ua::Server::new_with_config(self.0));
+        let Self {
+            config,
+            access_control_sentinel,
+        } = self;
 
-        let runner = ServerRunner(Arc::clone(&server));
+        let server = Arc::new(ua::Server::new_with_config(config));
+
+        let runner = ServerRunner::new(&server, access_control_sentinel);
         let server = Server(server);
         (server, runner)
     }
@@ -248,7 +277,7 @@ impl ServerBuilder {
     /// Access server configuration.
     fn config_mut(&mut self) -> &mut UA_ServerConfig {
         // SAFETY: Ownership is not given away.
-        unsafe { self.0.as_mut() }
+        unsafe { self.config.as_mut() }
     }
 }
 
@@ -1416,9 +1445,23 @@ impl Server {
 }
 
 #[derive(Debug)]
-pub struct ServerRunner(Arc<ua::Server>);
+pub struct ServerRunner {
+    server: Arc<ua::Server>,
+
+    /// [`AccessControl`] instances may hold additional data that must be kept alive until server is
+    /// shut down. The sentinel value cleans this up when it is dropped.
+    access_control_sentinel: Option<Box<dyn Any + Send>>,
+}
 
 impl ServerRunner {
+    #[must_use]
+    fn new(server: &Arc<ua::Server>, access_control_sentinel: Option<Box<dyn Any + Send>>) -> Self {
+        Self {
+            server: Arc::clone(server),
+            access_control_sentinel,
+        }
+    }
+
     /// Runs the server until interrupted.
     ///
     /// The server is shut down cleanly upon receiving the `SIGINT` signal at which point the method
@@ -1428,16 +1471,26 @@ impl ServerRunner {
     ///
     /// This fails when the server cannot be started.
     pub fn run(self) -> Result<()> {
+        let Self {
+            server,
+            access_control_sentinel,
+        } = self;
+
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_runUntilInterrupt(
                 // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE` but we make
                 // sure that it can only be invoked a single time (ownership of `ServerRunner`). The
                 // examples in `open62541` demonstrate that running the server in its own thread and
                 // interacting with it as we do through `Server` is okay.
-                self.0.as_ptr().cast_mut(),
+                server.as_ptr().cast_mut(),
             )
         });
-        Error::verify_good(&status_code)
+        Error::verify_good(&status_code)?;
+
+        // Only when the server has finished shutting down, we are allowed to drop sentinel values.
+        drop(access_control_sentinel);
+
+        Ok(())
     }
 
     /// Runs the server until it is cancelled.
@@ -1449,6 +1502,11 @@ impl ServerRunner {
     ///
     /// This fails when the server cannot be started.
     pub fn run_until_cancelled(self, is_cancelled: &mut impl FnMut() -> bool) -> Result<()> {
+        let Self {
+            server,
+            access_control_sentinel,
+        } = self;
+
         log::info!("Starting up server");
 
         let status_code = ua::StatusCode::new(unsafe {
@@ -1458,7 +1516,7 @@ impl ServerRunner {
                 // sure that it can only be invoked a single time (ownership of `ServerRunner`). The
                 // examples in `open62541` demonstrate that running the server in its own thread and
                 // interacting with it as we do through `Server` is okay.
-                self.0.as_ptr().cast_mut(),
+                server.as_ptr().cast_mut(),
             )
         });
         Error::verify_good(&status_code)?;
@@ -1478,7 +1536,7 @@ impl ServerRunner {
                 // for more information.
                 let _ = open62541_sys::UA_Server_run_iterate(
                     // SAFETY: Cast to `mut` pointer. This is safe despite missing `UA_THREADSAFE`.
-                    self.0.as_ptr().cast_mut(),
+                    server.as_ptr().cast_mut(),
                     true,
                 );
             }
@@ -1493,7 +1551,7 @@ impl ServerRunner {
             // The epilogue part of `UA_Server_run()`.
             open62541_sys::UA_Server_run_shutdown(
                 // SAFETY: Cast to `mut` pointer. This is safe despite missing `UA_THREADSAFE`.
-                self.0.as_ptr().cast_mut(),
+                server.as_ptr().cast_mut(),
             )
         });
         if let Err(error) = Error::verify_good(&status_code) {
@@ -1503,6 +1561,9 @@ impl ServerRunner {
             // during startup are handled and returned above.
             return Ok(());
         }
+
+        // Only when the server has finished shutting down, we are allowed to drop sentinel values.
+        drop(access_control_sentinel);
 
         Ok(())
     }
