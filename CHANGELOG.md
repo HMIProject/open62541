@@ -16,6 +16,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ServerBuilder::default_with_secure_security_policies()`.
 - Add `ClientBuilder::accept_all()` and `ServerBuilder::accept_all()` to skip certificate checks.
 - Add method `ServerRunner::run_until_cancelled()` to allow gracefully shutting down server (#169).
+- Add method `ServerRunner::access_control()` and related trait `AccessControl` with implementation
+  `DefaultAccessControl` to allow custom authentication and authorization of clients in the server.
+- Add method `ua::ByteString::new()` to create new OPC UA byte strings.
 
 ### Changed
 

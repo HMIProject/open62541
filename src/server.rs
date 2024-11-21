@@ -1,3 +1,4 @@
+mod access_control;
 mod data_source;
 mod method_callback;
 mod node_context;
@@ -28,6 +29,7 @@ use crate::{
 
 pub(crate) use self::node_context::NodeContext;
 pub use self::{
+    access_control::{AccessControl, DefaultAccessControl},
     data_source::{
         DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext,
@@ -178,6 +180,19 @@ impl ServerBuilder {
             UA_CertificateVerification_AcceptAll(&mut config.sessionPKI);
         }
         self
+    }
+
+    /// Applies access control.
+    ///
+    /// See [`AccessControl`] for available implementations.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the access control cannot be applied.
+    pub fn access_control(mut self, access_control: impl AccessControl) -> Result<Self> {
+        let config = self.config_mut();
+        access_control.apply(config)?;
+        Ok(self)
     }
 
     /// Builds OPC UA server.
