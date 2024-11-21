@@ -7,6 +7,7 @@ use std::{
     ffi::{c_void, CString},
     ptr,
     sync::Arc,
+    time::Instant,
 };
 
 use open62541_sys::{
@@ -1422,6 +1423,73 @@ impl ServerRunner {
             )
         });
         Error::verify_good(&status_code)
+    }
+
+    /// Runs the server until it is cancelled.
+    ///
+    /// The server is shut down cleanly when `is_cancelled` returns true at which point the method
+    /// returns.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the server cannot be started.
+    pub fn run_until_cancelled(self, is_cancelled: &mut impl FnMut() -> bool) -> Result<()> {
+        log::info!("Starting up server");
+
+        let status_code = ua::StatusCode::new(unsafe {
+            // The prologue part of `UA_Server_run()`.
+            open62541_sys::UA_Server_run_startup(
+                // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE` but we make
+                // sure that it can only be invoked a single time (ownership of `ServerRunner`). The
+                // examples in `open62541` demonstrate that running the server in its own thread and
+                // interacting with it as we do through `Server` is okay.
+                self.0.as_ptr().cast_mut(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        while !is_cancelled() {
+            // Track time of iteration start to report iteration times below.
+            let start_of_iteration = Instant::now();
+
+            log::trace!("Running iterate");
+
+            unsafe {
+                // Execute a single iteration of the server's main loop.
+                //
+                // We discard the returned value, i.e. how long we can wait until the next scheduled
+                // callback, as `UA_Server_run_iterate()` does the required waiting. See
+                // <https://github.com/open62541/open62541/blob/d4c5aaa2a755d846d8517f96995d318a66742d42/include/open62541/server.h#L474-L483>
+                // for more information.
+                let _ = open62541_sys::UA_Server_run_iterate(
+                    // SAFETY: Cast to `mut` pointer. This is safe despite missing `UA_THREADSAFE`.
+                    self.0.as_ptr().cast_mut(),
+                    true,
+                );
+            }
+
+            let time_taken = start_of_iteration.elapsed();
+            log::trace!("Iterate run took {time_taken:?}");
+        }
+
+        log::info!("Shutting down cancelled server");
+
+        let status_code = ua::StatusCode::new(unsafe {
+            // The epilogue part of `UA_Server_run()`.
+            open62541_sys::UA_Server_run_shutdown(
+                // SAFETY: Cast to `mut` pointer. This is safe despite missing `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+            )
+        });
+        if let Err(error) = Error::verify_good(&status_code) {
+            // Unexpected error.
+            log::error!("Shutdown of cancelled server failed with {error}");
+            // We do not forward the error to the caller because it happened during shutdown. Errors
+            // during startup are handled and returned above.
+            return Ok(());
+        }
+
+        Ok(())
     }
 }
 

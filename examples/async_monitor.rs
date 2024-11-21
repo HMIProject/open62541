@@ -6,7 +6,7 @@ use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
 };
 use rand::Rng as _;
-use tokio::time::error::Elapsed;
+use tokio::time::{self, error::Elapsed};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -91,7 +91,7 @@ async fn monitor_background(
 async fn write_background(client: Arc<AsyncClient>, node_id: ua::NodeId) -> anyhow::Result<()> {
     let value = rand::thread_rng().gen_range(0.0..100.0);
 
-    tokio::time::sleep(Duration::from_secs(1)).await;
+    time::sleep(Duration::from_secs(1)).await;
 
     println!("Writing {value} to node {node_id}");
 
