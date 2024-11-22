@@ -45,7 +45,7 @@ use std::{ffi::c_void, marker::PhantomData};
 /// assert_eq!(userdata, 123);
 /// ```
 #[derive(Debug)]
-pub struct Userdata<T>(PhantomData<T>);
+pub struct Userdata<T: 'static>(PhantomData<T>);
 
 impl<T> Userdata<T> {
     /// Wraps user data.
@@ -125,7 +125,7 @@ impl<T> Userdata<T> {
 ///
 /// This consumes the user data when dropped.
 #[derive(Debug)]
-pub struct UserdataSentinel<T>(*mut c_void, PhantomData<T>);
+pub struct UserdataSentinel<T: 'static>(*mut c_void, PhantomData<T>);
 
 impl<T> UserdataSentinel<T> {
     /// Gets underlying pointer from sentinel.

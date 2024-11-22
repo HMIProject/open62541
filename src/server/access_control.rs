@@ -158,7 +158,7 @@ where
             login_context: *mut c_void,
         ) -> UA_StatusCode
         where
-            F: Fn(&ua::String, &ua::ByteString) -> ua::StatusCode,
+            F: Fn(&ua::String, &ua::ByteString) -> ua::StatusCode + 'static,
         {
             let Some(user_name) = (unsafe { user_name.as_ref() }) else {
                 return UA_STATUSCODE_BADINTERNALERROR;
