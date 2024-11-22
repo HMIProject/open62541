@@ -201,7 +201,10 @@ where
             }
         }];
 
-        let login_callback = Userdata::<F>::prepare(login_callback);
+        // Create sentinel that owns the callback closure. This is either returned to the caller (in
+        // case everything works as expected) or cleaned up when exiting with `?` below (in case the
+        // function call is not successful).
+        let login_callback_sentinel = Userdata::<F>::prepare_sentinel(login_callback);
 
         let status_code = ua::StatusCode::new(unsafe {
             UA_AccessControl_defaultWithLoginCallback(
@@ -215,20 +218,15 @@ where
                 username_password_login.len(),
                 username_password_login.as_ptr(),
                 Some(login_callback_c::<F>),
-                login_callback,
+                login_callback_sentinel.as_ptr(),
             )
         });
-        // Create sentinel right after calling `UA_AccessControl_defaultWithLoginCallback()` to make
-        // sure that we clean up when exiting the function through `?` below. In all other cases, we
-        // return the sentinel to the caller as documented.
-        //
-        // SAFETY: We do not call `consume()` and only create a single sentinel.
-        let sentinel = unsafe { Userdata::<F>::sentinel(login_callback) };
         Error::verify_good(&status_code)?;
 
-        // Compile-time assertion to make sure that the strings were still alive at this point.
+        // Compile-time assertion to make sure that the strings were still alive at this point. This
+        // includes the branch above when exiting early with `?`.
         drop((username, password));
 
-        Ok(sentinel)
+        Ok(login_callback_sentinel)
     }
 }
