@@ -84,7 +84,8 @@ impl<T> Userdata<T> {
     /// It must not have been given to [`consume()`] yet.
     ///
     /// The lifetime of the returned reference is not allowed to extend past the next call to either
-    /// [`peek_at()`] or [`consume()`] and must not outlive the lifetime of `T` itself.
+    /// [`peek_at()`] or [`consume()`] and must not outlive the lifetime of `T` itself. (In case the
+    /// user data has been wrapped into a [`UserdataSentinel`], the sentinel must still be alive.)
     ///
     /// [`prepare()`]: Self::prepare
     /// [`peek_at()`]: Self::peek_at
@@ -103,7 +104,8 @@ impl<T> Userdata<T> {
     /// # Safety
     ///
     /// The given pointer must have been returned from [`prepare()`], using the same value type `T`.
-    /// It must not have been given to [`consume()`] yet.
+    /// It must not have been given to [`consume()`] yet, nor wrapped in a [`UserdataSentinel`] (the
+    /// user data is consumed automatically when the sentinel is being dropped).
     ///
     /// [`prepare()`]: Self::prepare
     /// [`consume()`]: Self::consume
@@ -114,7 +116,7 @@ impl<T> Userdata<T> {
         // Reconstruct heap-allocated `userdata` back into its `Box`.
         let userdata = unsafe { Box::from_raw(ptr) };
         // TODO: Prefer `Box::into_inner()` when it becomes stable.
-        // https://github.com/rust-lang/rust/issues/80437
+        // <https://github.com/rust-lang/rust/issues/80437>
         *userdata
     }
 }
