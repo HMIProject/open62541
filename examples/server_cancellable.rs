@@ -3,14 +3,13 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
+    thread,
     time::Duration,
 };
 
 use open62541::Server;
-use tokio::time;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let (_, runner) = Server::new();
@@ -23,19 +22,24 @@ async fn main() -> anyhow::Result<()> {
         move || cancel_runner.load(Ordering::Relaxed)
     };
 
-    let runner_handle = tokio::task::spawn_blocking(move || {
+    let runner_task_handle = thread::spawn(move || {
         println!("Server started");
         let result = runner.run_until_cancelled(&mut is_runner_cancelled);
         println!("Server cancelled");
         result
     });
 
-    time::sleep(Duration::from_secs(15)).await;
+    thread::sleep(Duration::from_secs(15));
 
     println!("Cancelling server");
 
     cancel_runner.store(true, Ordering::Relaxed);
-    runner_handle.await.unwrap().unwrap();
+    if let Err(err) = runner_task_handle
+        .join()
+        .expect("runner task should not panic")
+    {
+        println!("Runner task failed: {err}");
+    }
 
     println!("Exiting");
 
