@@ -44,6 +44,8 @@ use std::{ffi::c_void, marker::PhantomData};
 /// // Got user data. `raw_data` is no longer valid.
 /// assert_eq!(userdata, 123);
 /// ```
+// We allow only types with static lifetime (i.e. without references that would not be valid for the
+// rest of the program) to allow leaking their values safely onto the heap to reclaim them later.
 #[derive(Debug)]
 pub struct Userdata<T: 'static>(PhantomData<T>);
 
