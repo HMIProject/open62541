@@ -9,7 +9,7 @@ use std::{
 
 use open62541::Server;
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     env_logger::init();
 
     let (_, runner) = Server::new();
@@ -42,6 +42,4 @@ fn main() -> anyhow::Result<()> {
     }
 
     println!("Exiting");
-
-    Ok(())
 }
