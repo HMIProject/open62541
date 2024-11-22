@@ -136,7 +136,8 @@ impl<T> UserdataSentinel<T> {
     ///
     /// The sentinel remains the owner of the data. Care must be taken to not access the data in any
     /// way past the lifetime of the sentinel.
-    pub unsafe fn as_ptr(&self) -> *mut c_void {
+    #[must_use]
+    pub const unsafe fn as_ptr(&self) -> *mut c_void {
         self.0
     }
 }
