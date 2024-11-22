@@ -1487,7 +1487,9 @@ impl ServerRunner {
         });
         Error::verify_good(&status_code)?;
 
-        // Only when the server has finished shutting down, we are allowed to drop sentinel values.
+        // Compile-time assertion to make sure that the sentinel value was still around for the call
+        // above (including any branches that exit early with `?` or `return`): only when the server
+        // has finished shutting down, we are allowed to drop sentinel values.
         drop(access_control_sentinel);
 
         Ok(())
@@ -1562,7 +1564,9 @@ impl ServerRunner {
             return Ok(());
         }
 
-        // Only when the server has finished shutting down, we are allowed to drop sentinel values.
+        // Compile-time assertion to make sure that the sentinel value was still around for the call
+        // above (including any branches that exit early with `?` or `return`): only when the server
+        // has finished shutting down, we are allowed to drop sentinel values.
         drop(access_control_sentinel);
 
         Ok(())
