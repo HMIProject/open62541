@@ -44,8 +44,10 @@ use std::{ffi::c_void, marker::PhantomData};
 /// // Got user data. `raw_data` is no longer valid.
 /// assert_eq!(userdata, 123);
 /// ```
+// We allow only types with static lifetime (i.e. without references that would not be valid for the
+// rest of the program) to allow leaking their values safely onto the heap to reclaim them later.
 #[derive(Debug)]
-pub struct Userdata<T>(PhantomData<T>);
+pub struct Userdata<T: 'static>(PhantomData<T>);
 
 impl<T> Userdata<T> {
     /// Wraps user data.
@@ -61,6 +63,21 @@ impl<T> Userdata<T> {
         ptr.cast::<c_void>()
     }
 
+    /// Wraps user data and returns sentinel.
+    ///
+    /// This uses [`prepare()`] but wraps the resulting pointer in [`UserdataSentinel`] to make sure
+    /// that it is cleaned up when the sentinel is dropped. This is useful when the recipient of the
+    /// raw pointer does not become the owner, i.e. does not clean up the user data by itself.
+    ///
+    /// Use [`UserdataSentinel::as_ptr()`] to get the pointer from the sentinel.
+    ///
+    /// [`prepare()`]: Self::prepare
+    /// [`sentinel()`]: Self::sentinel
+    pub fn prepare_sentinel(userdata: T) -> UserdataSentinel<T> {
+        let data = Self::prepare(userdata);
+        UserdataSentinel(data, PhantomData)
+    }
+
     /// Unwraps [`c_void`] pointer to access data.
     ///
     /// # Safety
@@ -69,7 +86,8 @@ impl<T> Userdata<T> {
     /// It must not have been given to [`consume()`] yet.
     ///
     /// The lifetime of the returned reference is not allowed to extend past the next call to either
-    /// [`peek_at()`] or [`consume()`] and must not outlive the lifetime of `T` itself.
+    /// [`peek_at()`] or [`consume()`] and must not outlive the lifetime of `T` itself. (In case the
+    /// user data has been wrapped into a [`UserdataSentinel`], the sentinel must still be alive.)
     ///
     /// [`prepare()`]: Self::prepare
     /// [`peek_at()`]: Self::peek_at
@@ -88,7 +106,8 @@ impl<T> Userdata<T> {
     /// # Safety
     ///
     /// The given pointer must have been returned from [`prepare()`], using the same value type `T`.
-    /// It must not have been given to [`consume()`] nor [`sentinel()`] yet.
+    /// It must not have been given to [`consume()`] yet, nor wrapped in a [`UserdataSentinel`] (the
+    /// user data is consumed automatically when the sentinel is being dropped).
     ///
     /// [`prepare()`]: Self::prepare
     /// [`consume()`]: Self::consume
@@ -99,25 +118,8 @@ impl<T> Userdata<T> {
         // Reconstruct heap-allocated `userdata` back into its `Box`.
         let userdata = unsafe { Box::from_raw(ptr) };
         // TODO: Prefer `Box::into_inner()` when it becomes stable.
-        // https://github.com/rust-lang/rust/issues/80437
+        // <https://github.com/rust-lang/rust/issues/80437>
         *userdata
-    }
-
-    /// Creates sentinel that consumes data when dropped.
-    ///
-    /// This works just like [`consume()`] but simply drops the owned data to clean it up. Care must
-    /// be taken to not create two sentinels nor to call [`consume()`] when sentinel already exists.
-    ///
-    /// # Safety
-    ///
-    /// The given pointer must have been returned from [`prepare()`], using the same value type `T`.
-    /// It must not have been given to [`consume()`] nor [`sentinel()`] yet.
-    ///
-    /// [`prepare()`]: Self::prepare
-    /// [`consume()`]: Self::consume
-    /// [`sentinel()`]: Self::sentinel
-    pub const unsafe fn sentinel(data: *mut c_void) -> UserdataSentinel<T> {
-        UserdataSentinel(data, PhantomData)
     }
 }
 
@@ -125,7 +127,24 @@ impl<T> Userdata<T> {
 ///
 /// This consumes the user data when dropped.
 #[derive(Debug)]
-pub struct UserdataSentinel<T>(*mut c_void, PhantomData<T>);
+pub struct UserdataSentinel<T: 'static>(*mut c_void, PhantomData<T>);
+
+impl<T> UserdataSentinel<T> {
+    /// Gets underlying pointer from sentinel.
+    ///
+    /// This pointer can be passed to [`Userdata::peek_at()`] to get the user data. Usually, this is
+    /// not done directly but through indirection (through the third-party library that required the
+    /// use of pointers for raw context data in the first place).
+    ///
+    /// # Safety
+    ///
+    /// The sentinel remains the owner of the data. Care must be taken to not access the data in any
+    /// way past the lifetime of the sentinel.
+    #[must_use]
+    pub const unsafe fn as_ptr(&self) -> *mut c_void {
+        self.0
+    }
+}
 
 // SAFETY: When `T` can be sent to another thread, the sentinel can be as well. (Despite the pointer
 // inside, the sentinel is not a Rust reference but rather the owner of the data itself. To drop it,

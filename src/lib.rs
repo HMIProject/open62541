@@ -244,7 +244,7 @@ pub use self::{
         MethodNode, Node, ObjectNode, Server, ServerBuilder, ServerRunner, VariableNode,
     },
     traits::{Attribute, Attributes},
-    userdata::Userdata,
+    userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},
 };
 pub(crate) use self::{
