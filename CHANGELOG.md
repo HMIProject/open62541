@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+
+- Upgrade to open62541 version [1.4.8](https://github.com/open62541/open62541/releases/tag/v1.4.8).
+
 ## [0.6.4] - 2024-11-23
 
 ### Added
