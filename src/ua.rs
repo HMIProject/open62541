@@ -8,6 +8,7 @@ mod client_config;
 mod continuation_point;
 mod data_types;
 mod event_id;
+mod logger;
 mod monitored_item_id;
 mod node_class_mask;
 mod secure_channel_state;
@@ -35,4 +36,4 @@ pub use self::{
     subscription_id::SubscriptionId,
     user_identity_token::UserIdentityToken,
 };
-pub(crate) use self::{client_config::ClientConfig, server_config::ServerConfig};
+pub(crate) use self::{client_config::ClientConfig, logger::Logger, server_config::ServerConfig};

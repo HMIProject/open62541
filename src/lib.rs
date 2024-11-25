@@ -226,7 +226,6 @@ mod browse_result;
 #[cfg(feature = "tokio")]
 mod callback;
 mod data_value;
-mod logger;
 mod traits;
 mod userdata;
 mod value;
@@ -249,7 +248,6 @@ pub use self::{
 };
 pub(crate) use self::{
     data_type::{bitmask_ops, data_type, enum_variants},
-    logger::logger,
     service::{ServiceRequest, ServiceResponse},
     value::{ArrayValue, NonScalarValue},
 };
