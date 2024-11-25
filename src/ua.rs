@@ -3,6 +3,8 @@
 mod access_level;
 mod array;
 mod browse_result_mask;
+#[cfg(feature = "mbedtls")]
+mod certificate_format;
 mod client;
 mod client_config;
 mod continuation_point;
@@ -19,6 +21,8 @@ mod specified_attributes;
 mod subscription_id;
 mod user_identity_token;
 
+#[cfg(feature = "mbedtls")]
+pub use self::certificate_format::CertificateFormat;
 pub use self::{
     access_level::AccessLevel,
     array::Array,
