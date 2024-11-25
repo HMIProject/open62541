@@ -201,3 +201,8 @@ required-features = ["mbedtls"]
 [[example]]
 name = "server_method_callback"
 path = "examples/server_method_callback.rs"
+
+[[example]]
+name = "ssl_certificate"
+path = "examples/ssl_certificate.rs"
+required-features = ["mbedtls"]

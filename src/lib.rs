@@ -226,10 +226,21 @@ mod browse_result;
 #[cfg(feature = "tokio")]
 mod callback;
 mod data_value;
+#[cfg(feature = "mbedtls")]
+mod ssl;
 mod traits;
 mod userdata;
 mod value;
 
+#[cfg(feature = "mbedtls")]
+pub use self::ssl::{create_certificate, Certificate};
+#[cfg(feature = "tokio")]
+pub use self::{
+    async_client::AsyncClient,
+    async_monitored_item::AsyncMonitoredItem,
+    async_subscription::AsyncSubscription,
+    callback::{CallbackOnce, CallbackStream},
+};
 pub use self::{
     browse_result::BrowseResult,
     client::{Client, ClientBuilder},
@@ -250,14 +261,6 @@ pub(crate) use self::{
     data_type::{bitmask_ops, data_type, enum_variants},
     service::{ServiceRequest, ServiceResponse},
     value::{ArrayValue, NonScalarValue},
-};
-
-#[cfg(feature = "tokio")]
-pub use self::{
-    async_client::AsyncClient,
-    async_monitored_item::AsyncMonitoredItem,
-    async_subscription::AsyncSubscription,
-    callback::{CallbackOnce, CallbackStream},
 };
 
 /// IANA-assigned OPC UA port number.
