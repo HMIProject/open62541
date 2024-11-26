@@ -29,6 +29,7 @@ impl QualifiedName {
     ///
     /// Namespace 0 is always the UA namespace `http://opcfoundation.org/UA/` itself and is used for
     /// fixed definitions as laid out in the OPC UA specification.
+    #[must_use]
     pub fn ns0(name: &str) -> Self {
         Self::new(0, name)
     }

@@ -31,7 +31,7 @@ impl Logger {
     }
 
     /// Gives up ownership and returns value.
-    pub(crate) fn into_raw(self) -> *mut UA_Logger {
+    pub(crate) const fn into_raw(self) -> *mut UA_Logger {
         let logger = self.0.as_ptr();
         // Make sure that `drop()` is not called anymore.
         mem::forget(self);
@@ -44,6 +44,7 @@ impl Logger {
     ///
     /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
+    #[allow(dead_code)] // --features mbedtls
     pub(crate) unsafe fn as_mut_ptr(&mut self) -> *mut UA_Logger {
         self.0.as_ptr()
     }

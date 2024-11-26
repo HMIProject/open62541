@@ -89,6 +89,7 @@ impl String {
     ///
     /// This is lossless because the underlying types of OPC UA strings and byte strings are exactly
     /// the same, only with different semantics.
+    #[must_use]
     pub fn into_byte_string(self) -> ua::ByteString {
         let string = self.into_raw();
         // SAFETY: We still own this string.

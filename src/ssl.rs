@@ -31,8 +31,12 @@ pub struct Certificate {
 ///
 /// The argument `params` may overwrite the default values of these parameters:
 ///
-/// - `key-size-bits` (UInt16)
-/// - `expires-in-days` (UInt16)
+/// - `key-size-bits` (`UInt16`)
+/// - `expires-in-days` (`UInt16`)
+///
+/// # Errors
+///
+/// This fails when certificate cannot be generated (invalid arguments or internal error).
 ///
 /// [`ClientBuilder`]: crate::ClientBuilder
 /// [`ServerBuilder`]: crate::ServerBuilder

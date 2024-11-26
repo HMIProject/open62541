@@ -13,6 +13,7 @@ pub struct KeyValueMap(NonNull<UA_KeyValueMap>);
 
 impl KeyValueMap {
     /// Creates wrapper initialized with defaults.
+    #[must_use]
     pub(crate) fn init() -> Self {
         // PANIC: The only possible errors here are out-of-memory.
         let key_value_map =
@@ -29,6 +30,7 @@ impl KeyValueMap {
     /// # Panics
     ///
     /// Enough memory must be available to allocate map.
+    #[must_use]
     pub fn from_slice(slice: &[(&ua::QualifiedName, &ua::Variant)]) -> Self {
         let mut key_value_map = Self::init();
 
@@ -40,6 +42,7 @@ impl KeyValueMap {
     }
 
     /// Checks whether map has key.
+    #[must_use]
     pub fn contains(&self, key: &ua::QualifiedName) -> bool {
         unsafe {
             UA_KeyValueMap_contains(
@@ -51,6 +54,7 @@ impl KeyValueMap {
     }
 
     /// Gets key's value from map.
+    #[must_use]
     pub fn get(&self, key: &ua::QualifiedName) -> Option<&ua::Variant> {
         let variant = unsafe {
             UA_KeyValueMap_get(
@@ -62,7 +66,7 @@ impl KeyValueMap {
 
         // SAFETY: Pointer is either null or a valid reference (to a variant value with the lifetime
         // of `self`).
-        unsafe { variant.as_ref() }.map(|variant| ua::Variant::raw_ref(variant))
+        unsafe { variant.as_ref() }.map(ua::Variant::raw_ref)
     }
 
     /// Sets key's value in map.
@@ -72,7 +76,7 @@ impl KeyValueMap {
     /// # Panics
     ///
     /// Enough memory must be available to add value to map.
-    pub fn set(&mut self, key: &ua::QualifiedName, value: &ua::Variant) -> () {
+    pub fn set(&mut self, key: &ua::QualifiedName, value: &ua::Variant) {
         let status_code = ua::StatusCode::new(unsafe {
             UA_KeyValueMap_set(
                 self.as_mut_ptr(),
@@ -111,7 +115,8 @@ impl KeyValueMap {
     }
 
     /// Gives up ownership and returns value.
-    pub(crate) fn into_inner(self) -> *mut UA_KeyValueMap {
+    #[allow(dead_code)] // This is unused for now.
+    pub(crate) const fn into_inner(self) -> *mut UA_KeyValueMap {
         let key_value_map = self.0.as_ptr();
         // Make sure that `drop()` is not called anymore.
         mem::forget(self);
@@ -125,7 +130,7 @@ impl KeyValueMap {
     /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
-    pub(crate) unsafe fn as_ptr(&self) -> *const UA_KeyValueMap {
+    pub(crate) const unsafe fn as_ptr(&self) -> *const UA_KeyValueMap {
         self.0.as_ptr()
     }
 
