@@ -1,4 +1,4 @@
-use std::{fs::File, io::Write};
+use std::io::{self, Write};
 
 use anyhow::Context as _;
 use open62541::ua;
@@ -31,19 +31,18 @@ fn main() -> anyhow::Result<()> {
     let certificate = open62541::create_certificate(
         &subject,
         &subject_alt_name,
-        &ua::CertificateFormat::DER,
+        &ua::CertificateFormat::PEM,
         Some(&params),
     )
     .context("create certificate")?;
 
-    File::create("private_key.der")
-        .unwrap()
-        .write_all(certificate.private_key.as_bytes().unwrap())
-        .unwrap();
-    File::create("certificate.der")
-        .unwrap()
-        .write_all(certificate.certificate.as_bytes().unwrap())
-        .unwrap();
+    let certificate_pem = certificate
+        .certificate
+        .as_bytes()
+        .context("get certificate")?;
+    io::stdout()
+        .write_all(certificate_pem)
+        .context("write certificate")?;
 
     Ok(())
 }
