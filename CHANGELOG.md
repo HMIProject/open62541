@@ -12,6 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add ability to create SSL certificates using Mbed TLS with `create_certificate()`.
 - Allow converting `ua::String` into `ua::ByteString` with method `ua::String::into_byte_string()`.
 - Add type `ua::KeyValueMap`.
+- Add method `ua::QualifiedName::ns0()` for creating qualified names in namespace 0.
 
 ### Changed
 
