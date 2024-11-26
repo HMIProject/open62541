@@ -18,7 +18,7 @@ fn main() -> anyhow::Result<()> {
     ];
 
     let certificate =
-        open62541::create_certificate(subject, subject_alt_name, ua::CertificateFormat::DER)
+        open62541::create_certificate(subject, subject_alt_name, ua::CertificateFormat::DER, None)
             .context("create certificate")?;
 
     File::create("private_key.der")
