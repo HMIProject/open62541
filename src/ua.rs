@@ -10,6 +10,7 @@ mod client_config;
 mod continuation_point;
 mod data_types;
 mod event_id;
+mod key_value_map;
 mod logger;
 mod monitored_item_id;
 mod node_class_mask;
@@ -31,6 +32,7 @@ pub use self::{
     continuation_point::ContinuationPoint,
     data_types::*,
     event_id::EventId,
+    key_value_map::KeyValueMap,
     monitored_item_id::MonitoredItemId,
     node_class_mask::NodeClassMask,
     secure_channel_state::SecureChannelState,
