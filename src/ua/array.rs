@@ -91,7 +91,7 @@ impl<T: DataType> Array<T> {
     /// Enough memory must be available to allocate array.
     pub(crate) fn from_iter<I: Iterator<Item = T>>(iter: I) -> Self {
         // This creates a temporary copy by first collecting all elements into a `Vec` and then once
-        // more copying elements from the `Vec` into the new array from `UA_Array_new()`.
+        // more by copying elements from the `Vec` into the new array from `UA_Array_new()`.
         //
         // TODO: Avoid temporary copy. How to deal with unknown size of iterator when initializing a
         // new array to hold its elements?

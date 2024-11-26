@@ -37,17 +37,14 @@ pub struct Certificate {
 /// [`ClientBuilder`]: crate::ClientBuilder
 /// [`ServerBuilder`]: crate::ServerBuilder
 pub fn create_certificate(
-    subject: impl IntoIterator<Item = ua::String>,
-    subject_alt_name: impl IntoIterator<Item = ua::String>,
-    cert_format: ua::CertificateFormat,
-    mut params: Option<ua::KeyValueMap>,
+    subject: &ua::Array<ua::String>,
+    subject_alt_name: &ua::Array<ua::String>,
+    cert_format: &ua::CertificateFormat,
+    params: Option<&ua::KeyValueMap>,
 ) -> Result<Certificate> {
     // Create logger that forwards to Rust `log`. It is only used for the function call below and it
     // will be cleaned up at the end of the function.
     let mut logger = ua::Logger::rust_log();
-
-    let subject = ua::Array::from_iter(subject.into_iter());
-    let subject_alt_name = ua::Array::from_iter(subject_alt_name.into_iter());
 
     // These are out arguments for the function call and need not be initialized.
     let mut private_key = ua::String::invalid();
@@ -66,13 +63,9 @@ pub fn create_certificate(
             subject_size,
             subject_alt_name_ptr,
             subject_alt_name_size,
-            // SAFETY: The underlying value is trivial (`u32`), so the ownership is irrelevant here.
-            cert_format.into_raw(),
-            // We require `as_mut()` here to avoid dropping `ua::KeyValueMap` too early (because the
-            // raw pointer carries no lifetime, we must track this fact ourselves).
-            params
-                .as_mut()
-                .map_or_else(ptr::null_mut, |params| params.as_mut_ptr()),
+            ua::CertificateFormat::to_raw_copy(cert_format),
+            // SAFETY: Function only reads from value, so casting to non-const pointer is safe here.
+            params.map_or_else(ptr::null_mut, |params| params.as_ptr().cast_mut()),
             // SAFETY: The function does not become the owner of these out arguments but it puts the
             // results into them.
             private_key.as_mut_ptr(),

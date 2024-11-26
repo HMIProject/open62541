@@ -15,8 +15,10 @@ impl CertificateFormat {
     /// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
     pub const PEM: Self = Self(UA_CertificateFormat::UA_CERTIFICATEFORMAT_PEM);
 
-    /// Gives up ownership and returns value.
-    pub(crate) fn into_raw(self) -> UA_CertificateFormat {
-        self.0
+    /// Creates copy without giving up ownership.
+    #[must_use]
+    pub(crate) fn to_raw_copy(this: &Self) -> UA_CertificateFormat {
+        // This is safe because the underlying type is trivial (`c_uint`).
+        this.0.clone()
     }
 }
