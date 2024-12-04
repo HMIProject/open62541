@@ -366,7 +366,7 @@ macro_rules! data_type {
         // allocated.
         unsafe impl Send for $name {}
 
-        // SAFETY: References to [`DataType`] may be sent across thread. The inner types would not
+        // SAFETY: References to [`DataType`] may be sent across threads. The inner types would not
         // allow this (because pointers are used to pass ownership) but we must unwrap our wrapper
         // types in this case which is only implemented for owned values.
         unsafe impl Sync for $name {}
@@ -540,3 +540,29 @@ macro_rules! bitmask_ops {
 }
 
 pub(crate) use bitmask_ops;
+
+#[cfg(test)]
+mod tests {
+    use std::thread;
+
+    use super::*;
+
+    #[test]
+    fn send_sync_string() {
+        let string = ua::String::new("Lorem Ipsum").expect("create string");
+
+        // References to string can be accessed in different threads.
+        thread::scope(|scope| {
+            scope.spawn(|| {
+                let _ = &string;
+            });
+        });
+
+        // Ownership of string can be passed to different thread.
+        thread::spawn(move || {
+            drop(string);
+        })
+        .join()
+        .expect("join thread");
+    }
+}
