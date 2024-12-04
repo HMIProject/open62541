@@ -2,7 +2,7 @@ use std::{ffi::CString, fmt, ptr, slice, str};
 
 use open62541_sys::UA_String_fromChars;
 
-use crate::{ArrayValue, Error};
+use crate::{ua, ArrayValue, DataType as _, Error};
 
 crate::data_type!(String);
 
@@ -83,6 +83,17 @@ impl String {
     #[must_use]
     pub fn as_str(&self) -> Option<&str> {
         self.as_bytes().and_then(|slice| str::from_utf8(slice).ok())
+    }
+
+    /// Converts string into byte string.
+    ///
+    /// This is lossless because the underlying types of OPC UA strings and byte strings are exactly
+    /// the same, only with different semantics.
+    #[must_use]
+    pub fn into_byte_string(self) -> ua::ByteString {
+        let string = self.into_raw();
+        // SAFETY: We still own this string.
+        unsafe { ua::ByteString::from_raw(string) }
     }
 
     fn array_value(&self) -> ArrayValue<u8> {

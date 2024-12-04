@@ -5,17 +5,15 @@ use std::{
 
 use open62541_sys::{vsnprintf_va_copy, vsnprintf_va_end, UA_LogCategory, UA_LogLevel, UA_Logger};
 
+use crate::ua;
+
 const LOG_TARGET: &str = "open62541_sys";
 
 /// Creates logger that forwards to the `log` crate.
 ///
 /// We can use this to prevent `open62541` from installing its own default logger (which outputs any
 /// logs to stdout/stderr directly).
-///
-/// Note that this leaks memory unless the returned pointer is assigned to `UA_ClientConfig` (and/or
-/// `UA_Client` in turn), eventually calling `UA_Logger::clear()` with this `UA_Logger` instance, or
-/// to `UA_ServerConfig` (and/or `UA_Server` in turn), respectively.
-pub(crate) fn logger() -> *mut UA_Logger {
+pub(crate) fn logger() -> ua::Logger {
     unsafe extern "C" fn log_c(
         _log_context: *mut c_void,
         level: UA_LogLevel,
@@ -76,11 +74,14 @@ pub(crate) fn logger() -> *mut UA_Logger {
 
     // Create logger configuration. We leak the memory which is cleaned up eventually when `clear()`
     // is called (which is `clear_c()` above).
-    Box::leak(Box::new(UA_Logger {
+    let logger = Box::leak(Box::new(UA_Logger {
         log: Some(log_c),
         context: ptr::null_mut(),
         clear: Some(clear_c),
-    }))
+    }));
+
+    // SAFETY: We created the logger instance.
+    unsafe { ua::Logger::from_raw(logger) }
 }
 
 /// Initial buffer size when formatting messages.

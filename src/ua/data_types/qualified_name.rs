@@ -25,6 +25,15 @@ impl QualifiedName {
         Self(inner)
     }
 
+    /// Creates qualified name in namespace 0.
+    ///
+    /// Namespace 0 is always the UA namespace `http://opcfoundation.org/UA/` itself and is used for
+    /// fixed definitions as laid out in the OPC UA specification.
+    #[must_use]
+    pub fn ns0(name: &str) -> Self {
+        Self::new(0, name)
+    }
+
     /// Gets namespace index.
     #[must_use]
     pub const fn namespace_index(&self) -> u16 {

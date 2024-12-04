@@ -11,6 +11,8 @@ impl ClientConfig {
     fn new() -> Self {
         let mut config = Self::init();
 
+        let logger = ua::Logger::rust_log();
+
         // Set custom logger first. This is necessary because the same logger instance is used as-is
         // inside derived attributes such as `eventLoop`, `certificateVerification`, etc.
         {
@@ -21,7 +23,7 @@ impl ClientConfig {
             debug_assert!(config.logging.is_null());
             // Create logger configuration. Ownership of the `UA_Logger` instance passes to `config`
             // at this point.
-            config.logging = crate::logger();
+            config.logging = logger.into_raw();
         }
 
         // Next, we must finish initialization by calling `UA_ClientConfig_set...()` as appropriate.

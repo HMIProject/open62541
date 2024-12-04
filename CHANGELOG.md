@@ -7,6 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- Add ability to create SSL certificates using Mbed TLS with `create_certificate()`.
+- Allow converting `ua::String` into `ua::ByteString` with method `ua::String::into_byte_string()`.
+- Add type `ua::KeyValueMap`.
+- Add method `ua::QualifiedName::ns0()` for creating qualified names in namespace 0.
+
 ### Changed
 
 - Upgrade to open62541 version [1.4.8](https://github.com/open62541/open62541/releases/tag/v1.4.8).
