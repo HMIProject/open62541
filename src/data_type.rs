@@ -393,8 +393,13 @@ macro_rules! data_type {
                 // PANIC: Value must fit into `usize` to allow indexing.
                 let index = usize::try_from(open62541_sys::$index).unwrap();
                 // SAFETY: We use this static variable only read-only.
+                // This was unsafe only before Rust 1.82.
+                // <https://blog.rust-lang.org/2024/10/17/Rust-1.82.0.html#safely-addressing-unsafe-statics>
+                #[allow(unused_unsafe)]
+                let ua_types = unsafe { std::ptr::addr_of!(open62541_sys::UA_TYPES) };
+                // SAFETY: Pointer is non-zero, aligned, correct type.
                 // PANIC: The given index is valid within `UA_TYPES`.
-                unsafe { open62541_sys::UA_TYPES.get(index) }.unwrap()
+                unsafe { (*ua_types).get(index) }.unwrap()
             }
 
             #[must_use]

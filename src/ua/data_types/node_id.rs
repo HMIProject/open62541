@@ -194,7 +194,7 @@ mod serde {
 
     struct NodeIdVisitor;
 
-    impl<'de> serde::de::Visitor<'de> for NodeIdVisitor {
+    impl serde::de::Visitor<'_> for NodeIdVisitor {
         type Value = NodeId;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
