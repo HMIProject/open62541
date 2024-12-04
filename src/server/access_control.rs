@@ -74,7 +74,7 @@ impl<'a> DefaultAccessControl<'a> {
 }
 
 // SAFETY: `UA_AccessControl_default()` replaces previously set config.
-unsafe impl<'a> AccessControl for DefaultAccessControl<'a> {
+unsafe impl AccessControl for DefaultAccessControl<'_> {
     type Sentinel = ();
 
     unsafe fn apply(self, config: &mut UA_ServerConfig) -> Result<Self::Sentinel> {
