@@ -413,6 +413,13 @@ impl<T: DataType> Array<T> {
     }
 }
 
+// SAFETY: Arrays in `open62541` can be sent across thread boundaries: they may be dropped in other
+// threads as long as their items are `Send`.
+unsafe impl<T: DataType + Send> Send for Array<T> {}
+
+// SAFETY: References to [`Array`] may be sent across threads. There is nothing that prevents this.
+unsafe impl<T: DataType + Sync> Sync for Array<T> {}
+
 impl<T: DataType> Drop for Array<T> {
     fn drop(&mut self) {
         match self.0 {
@@ -495,7 +502,7 @@ impl<T: DataType + serde::Serialize> serde::Serialize for Array<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::BTreeSet, ffi::CString};
+    use std::{collections::BTreeSet, ffi::CString, thread};
 
     use open62541_sys::UA_NODEID_STRING_ALLOC;
 
@@ -609,5 +616,24 @@ mod tests {
                 ua::Array::from_slice(&[3, 1, 2].map(ua::Int32::new)),
             ]
         );
+    }
+
+    #[test]
+    fn send_sync_array() {
+        let array = ua::Array::from_slice(&[ua::UInt16::new(123)]);
+
+        // References to array can be accessed in different threads.
+        thread::scope(|scope| {
+            scope.spawn(|| {
+                let _ = &array;
+            });
+        });
+
+        // Ownership of array can be passed to different thread.
+        thread::spawn(move || {
+            drop(array);
+        })
+        .join()
+        .expect("join thread");
     }
 }

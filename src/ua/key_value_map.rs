@@ -146,6 +146,13 @@ impl KeyValueMap {
     }
 }
 
+// SAFETY: Key-value maps in `open62541` can be sent across thread boundaries.
+unsafe impl Send for KeyValueMap {}
+
+// SAFETY: References to [`KeyValueMap`] may be sent across threads. There is nothing that prevents
+// this.
+unsafe impl Sync for KeyValueMap {}
+
 impl Drop for KeyValueMap {
     fn drop(&mut self) {
         unsafe { UA_KeyValueMap_delete(self.0.as_mut()) };
@@ -154,6 +161,8 @@ impl Drop for KeyValueMap {
 
 #[cfg(test)]
 mod tests {
+    use std::thread;
+
     use super::*;
 
     #[test]
@@ -269,5 +278,27 @@ mod tests {
                 .as_scalar(),
             Some(&ua::Double::new(3.21))
         );
+    }
+
+    #[test]
+    fn send_sync_key_value_map() {
+        let key_value_map = ua::KeyValueMap::from_slice(&[(
+            &ua::QualifiedName::ns0("key"),
+            &ua::Variant::scalar(ua::Double::new(1.23)),
+        )]);
+
+        // References to key-value map can be accessed in different threads.
+        thread::scope(|scope| {
+            scope.spawn(|| {
+                let _ = &key_value_map;
+            });
+        });
+
+        // Ownership of key-value map can be passed to different thread.
+        thread::spawn(move || {
+            drop(key_value_map);
+        })
+        .join()
+        .expect("join thread");
     }
 }
