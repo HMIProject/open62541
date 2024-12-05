@@ -1,4 +1,4 @@
-use std::{ffi::CString, time::Duration};
+use std::{ffi::CString, mem, time::Duration};
 
 use open62541_sys::{UA_CertificateVerification_AcceptAll, UA_ClientConfig, UA_Client_connect};
 
@@ -161,12 +161,32 @@ impl ClientBuilder {
     ///
     /// Note that this disables all certificate verification of server communications. Use only when
     /// servers can be identified in some other way, or identity is not relevant.
+    ///
+    /// This is a shortcut for using [`certificate_verification()`](Self::certificate_verification)
+    /// with [`ua::CertificateVerification::accept_all()`].
     #[must_use]
     pub fn accept_all(mut self) -> Self {
         let config = self.config_mut();
         unsafe {
             UA_CertificateVerification_AcceptAll(&mut config.certificateVerification);
         }
+        self
+    }
+
+    /// Sets certificate verification.
+    #[must_use]
+    pub fn certificate_verification(
+        mut self,
+        certificate_verification: ua::CertificateVerification,
+    ) -> Self {
+        let config = self.config_mut();
+        // Move certificate verification into config, transferring ownership.
+        let certificate_verification = mem::replace(
+            &mut config.certificateVerification,
+            certificate_verification.into_raw(),
+        );
+        // Take ownership of previously set certificate verification in order to drop it.
+        let _unused = unsafe { ua::CertificateVerification::from_raw(certificate_verification) };
         self
     }
 

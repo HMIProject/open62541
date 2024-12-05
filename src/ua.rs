@@ -5,6 +5,7 @@ mod array;
 mod browse_result_mask;
 #[cfg(feature = "mbedtls")]
 mod certificate_format;
+mod certificate_verification;
 mod client;
 mod client_config;
 mod continuation_point;
@@ -28,6 +29,7 @@ pub use self::{
     access_level::AccessLevel,
     array::Array,
     browse_result_mask::BrowseResultMask,
+    certificate_verification::CertificateVerification,
     client::{Client, ClientState},
     continuation_point::ContinuationPoint,
     data_types::*,
