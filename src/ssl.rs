@@ -1,8 +1,8 @@
-use std::{fmt, ptr};
+use std::{cell::RefCell, fmt, ptr, rc::Rc};
 
 use open62541_sys::UA_CreateCertificate;
 
-use crate::{ua, DataType, Error, Result};
+use crate::{ua, ClientBuilder, CustomCertificateVerification, DataType, Error, Result};
 
 /// Certificate in [DER] or [PEM] format.
 ///
@@ -155,4 +155,65 @@ pub fn create_certificate(
     let private_key = unsafe { PrivateKey::from_string_unchecked(private_key) };
 
     Ok((certificate, private_key))
+}
+
+/// Connects to remote server and fetches certificate
+///
+/// # Errors
+///
+/// This fails when the connection cannot be established at all or the server does not offer secure
+/// communication.
+pub fn fetch_server_certificate(
+    local_certificate: &Certificate,
+    private_key: &PrivateKey,
+    endpoint_url: &str,
+) -> Result<Certificate> {
+    let (fetch_server_certificate_verification, certificate) =
+        FetchServerCertificateVerification::new();
+
+    let certificate_verification =
+        ua::CertificateVerification::custom(fetch_server_certificate_verification);
+
+    let _unused = ClientBuilder::default_encryption(local_certificate, private_key)?
+        .certificate_verification(certificate_verification)
+        .connect(endpoint_url)?;
+
+    certificate
+        .take()
+        .ok_or(Error::internal("did not receive certificate"))
+}
+
+#[derive(Debug)]
+struct FetchServerCertificateVerification {
+    certificate: Rc<RefCell<Option<Certificate>>>,
+}
+
+impl FetchServerCertificateVerification {
+    fn new() -> (Self, Rc<RefCell<Option<Certificate>>>) {
+        let certificate = Rc::new(RefCell::new(None));
+
+        (
+            Self {
+                certificate: Rc::clone(&certificate),
+            },
+            certificate,
+        )
+    }
+}
+
+impl CustomCertificateVerification for FetchServerCertificateVerification {
+    fn verify_certificate(&self, certificate: &ua::ByteString) -> ua::StatusCode {
+        self.certificate
+            .replace(Certificate::from_byte_string(certificate.clone()));
+
+        ua::StatusCode::GOOD
+    }
+
+    fn verify_application_uri(
+        &self,
+        _certificate: &ua::ByteString,
+        _application_uri: &ua::String,
+    ) -> ua::StatusCode {
+        ua::StatusCode::GOOD
+    }
 }

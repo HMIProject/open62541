@@ -10,6 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Add type `PrivateKey` to wrap private keys when using Mbed TLS.
+- Add ability to fetch remote server certificate with `fetch_server_certificate()`.
 
 ### Changed
 

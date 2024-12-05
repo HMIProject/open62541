@@ -1,49 +1,21 @@
 use anyhow::Context as _;
-use open62541::{ua, ClientBuilder, CustomCertificateVerification};
+use open62541::{Certificate, PrivateKey};
+
+// These files have been created with `client_ssl.sh`.
+const CERTIFICATE_PEM: &[u8] = include_bytes!("client_certificate.pem");
+const PRIVATE_KEY_PEM: &[u8] = include_bytes!("client_private_key.pem");
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    println!("Building client");
+    let certificate = Certificate::from_bytes(CERTIFICATE_PEM);
+    let private_key = PrivateKey::from_bytes(PRIVATE_KEY_PEM);
 
-    // These files have been created with `client_ssl.sh`.
-    let certificate_pem = include_str!("client_certificate.pem");
-    let private_key_pem = include_str!("client_private_key.pem");
+    let certificate =
+        open62541::fetch_server_certificate(&certificate, &private_key, "opc.tcp://localhost")
+            .context("fetch certificate")?;
 
-    let certificate = pem::parse(certificate_pem).context("parse PEM certificate")?;
-    let private_key = pem::parse(private_key_pem).context("parse PEM private key")?;
-
-    let client = ClientBuilder::default_encryption(certificate.contents(), private_key.contents())
-        .context("get client builder")?
-        .certificate_verification(ua::CertificateVerification::custom(FetchCertificate))
-        .connect("opc.tcp://localhost")
-        .context("connect")?;
-
-    println!("Connected successfully");
-
-    println!("Disconnecting client");
-
-    client.disconnect();
-
-    println!("Exiting");
+    println!("Certificate: {certificate:?}");
 
     Ok(())
-}
-
-struct FetchCertificate;
-
-impl CustomCertificateVerification for FetchCertificate {
-    fn verify_certificate(&self, certificate: &ua::ByteString) -> ua::StatusCode {
-        println!("Certificate: {certificate:?}");
-        ua::StatusCode::GOOD
-    }
-
-    fn verify_application_uri(
-        &self,
-        _certificate: &ua::ByteString,
-        application_uri: &ua::String,
-    ) -> ua::StatusCode {
-        println!("Application URI: {application_uri:?}");
-        ua::StatusCode::GOOD
-    }
 }
