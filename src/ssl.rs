@@ -4,7 +4,7 @@ use open62541_sys::UA_CreateCertificate;
 
 use crate::{ua, DataType, Error, Result};
 
-/// Certificate, in [DER] or [PEM] format.
+/// Certificate in [DER] or [PEM] format.
 ///
 /// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
 /// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
@@ -20,11 +20,16 @@ impl Certificate {
         Self::from_byte_string(string.into_byte_string()).expect("certificate should be set")
     }
 
+    /// Wraps certificate data.
+    ///
+    /// This does not validate the data. When passing the instance to another method, that method
+    /// may still fail if the certificate is not valid.
     #[must_use]
     pub fn from_bytes(bytes: &[u8]) -> Self {
         Self(ua::ByteString::new(bytes))
     }
 
+    /// Gets certificate data.
     #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         // SAFETY: We always initialize inner value.
@@ -36,7 +41,7 @@ impl Certificate {
     }
 }
 
-/// Private key, in [DER] or [PEM] format.
+/// Private key in [DER] or [PEM] format.
 ///
 /// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
 /// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
@@ -52,11 +57,16 @@ impl PrivateKey {
         Self::from_byte_string(string.into_byte_string()).expect("private key should be set")
     }
 
+    /// Wraps private key data.
+    ///
+    /// This does not validate the data. When passing the instance to another method, that method
+    /// may still fail if the private key is not valid.
     #[must_use]
     pub fn from_bytes(bytes: &[u8]) -> Self {
         Self(ua::ByteString::new(bytes))
     }
 
+    /// Gets certificate data.
     #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         // SAFETY: We always initialize inner value.
