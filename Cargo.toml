@@ -3,9 +3,9 @@ name = "open62541"
 version = "0.6.6"
 authors = ["HMI Project"]
 edition = "2021"
-# Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.77 since
-# we want to use C-string literals.
-rust-version = "1.77"
+# Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.80 since
+# we want to conveniently exclude examples from published crate.
+rust-version = "1.80"
 description = "High-level, safe bindings for the C99 library open62541, an open source and free implementation of OPC UA (OPC Unified Architecture)."
 documentation = "https://docs.rs/open62541"
 readme = "README.md"
