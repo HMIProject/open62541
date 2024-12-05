@@ -28,7 +28,7 @@ fn main() -> anyhow::Result<()> {
         ),
     ]);
 
-    let certificate = open62541::create_certificate(
+    let (certificate, _private_key) = open62541::create_certificate(
         &subject,
         &subject_alt_name,
         &ua::CertificateFormat::PEM,
@@ -36,10 +36,7 @@ fn main() -> anyhow::Result<()> {
     )
     .context("create certificate")?;
 
-    let certificate_pem = certificate
-        .certificate
-        .as_bytes()
-        .context("get certificate")?;
+    let certificate_pem = certificate.as_bytes();
     io::stdout()
         .write_all(certificate_pem)
         .context("write certificate")?;

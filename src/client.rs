@@ -37,15 +37,41 @@ impl ClientBuilder {
 
     /// Creates builder from default client config with encryption.
     ///
+    /// This requires certificate and associated private key data in [DER] or [PEM] format. Data may
+    /// be read from local files or created with [`crate::create_certificate()`].
+    ///
+    /// ```
+    /// use open62541::{Certificate, ClientBuilder, PrivateKey};
+    ///
+    /// const CERTIFICATE_PEM: &[u8] = include_bytes!("../examples/client_certificate.pem");
+    /// const PRIVATE_KEY_PEM: &[u8] = include_bytes!("../examples/client_private_key.pem");
+    ///
+    /// let certificate = Certificate::from_bytes(CERTIFICATE_PEM);
+    /// let private_key = PrivateKey::from_bytes(PRIVATE_KEY_PEM);
+    ///
+    /// # let _ = move || -> open62541::Result<()> {
+    /// let client = ClientBuilder::default_encryption(&certificate, &private_key)
+    ///     .expect("should create builder with encryption")
+    ///     .connect("opc.tcp://localhost")?;
+    /// # Ok(())
+    /// # };
+    /// ```
+    ///
     /// # Errors
     ///
     /// This fails when the certificate is invalid or the private key cannot be decrypted (e.g. when
     /// it has been protected by a password).
+    ///
+    /// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
+    /// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
     // Method name refers to call of `UA_ClientConfig_setDefaultEncryption()`.
     #[cfg(feature = "mbedtls")]
-    pub fn default_encryption(certificate: &[u8], private_key: &[u8]) -> Result<Self> {
+    pub fn default_encryption(
+        local_certificate: &crate::Certificate,
+        private_key: &crate::PrivateKey,
+    ) -> Result<Self> {
         Ok(Self(ua::ClientConfig::default_encryption(
-            certificate,
+            local_certificate,
             private_key,
         )?))
     }

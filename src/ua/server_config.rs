@@ -59,8 +59,8 @@ impl ServerConfig {
     #[cfg(feature = "mbedtls")]
     pub(crate) fn default_with_security_policies(
         port_number: u16,
-        certificate: &[u8],
-        private_key: &[u8],
+        certificate: &crate::Certificate,
+        private_key: &crate::PrivateKey,
     ) -> Result<Self, crate::Error> {
         use open62541_sys::UA_ServerConfig_setDefaultWithSecurityPolicies;
 
@@ -72,8 +72,8 @@ impl ServerConfig {
             UA_ServerConfig_setDefaultWithSecurityPolicies(
                 config.as_mut_ptr(),
                 port_number,
-                ua::ByteString::new(certificate).as_ptr(),
-                ua::ByteString::new(private_key).as_ptr(),
+                certificate.as_byte_string().as_ptr(),
+                private_key.as_byte_string().as_ptr(),
                 ptr::null(),
                 0,
                 ptr::null(),
