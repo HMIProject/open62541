@@ -8,7 +8,7 @@ use crate::{ua, DataType, Error, Result};
 ///
 /// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
 /// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Certificate(ua::ByteString);
 
 impl Certificate {
@@ -40,6 +40,7 @@ impl Certificate {
 ///
 /// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
 /// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
+#[derive(Clone)]
 pub struct PrivateKey(ua::ByteString);
 
 impl PrivateKey {
