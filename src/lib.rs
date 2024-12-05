@@ -208,13 +208,6 @@
 //! # }
 //! ```
 
-mod client;
-mod data_type;
-mod error;
-mod server;
-mod service;
-pub mod ua;
-
 #[cfg(feature = "tokio")]
 mod async_client;
 #[cfg(feature = "tokio")]
@@ -225,10 +218,17 @@ mod attributes;
 mod browse_result;
 #[cfg(feature = "tokio")]
 mod callback;
+mod certificate_verification;
+mod client;
+mod data_type;
 mod data_value;
+mod error;
+mod server;
+mod service;
 #[cfg(feature = "mbedtls")]
 mod ssl;
 mod traits;
+pub mod ua;
 mod userdata;
 mod value;
 
@@ -243,6 +243,7 @@ pub use self::{
 };
 pub use self::{
     browse_result::BrowseResult,
+    certificate_verification::CustomCertificateVerification,
     client::{Client, ClientBuilder},
     data_type::DataType,
     data_value::DataValue,
