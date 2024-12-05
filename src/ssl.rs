@@ -1,16 +1,73 @@
-use std::ptr;
+use std::{fmt, ptr};
 
 use open62541_sys::UA_CreateCertificate;
 
 use crate::{ua, DataType, Error, Result};
 
+/// Certificate, in [DER] or [PEM] format.
+///
+/// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
+/// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
 #[derive(Debug)]
-pub struct Certificate {
-    /// Private key, always in DER format.
-    pub private_key: ua::ByteString,
+pub struct Certificate(ua::ByteString);
 
-    /// Certificate, format as given by [`ua::CertificateFormat`].
-    pub certificate: ua::ByteString,
+impl Certificate {
+    pub(crate) fn from_byte_string(byte_string: ua::ByteString) -> Option<Self> {
+        (!byte_string.is_invalid()).then(|| Self(byte_string))
+    }
+
+    pub(crate) fn from_string(string: ua::String) -> Option<Self> {
+        Self::from_byte_string(string.into_byte_string())
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        Self(ua::ByteString::new(bytes))
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        // PANIC: We always initialize inner value.
+        self.0.as_bytes().expect("valid byte string")
+    }
+
+    pub(crate) fn as_byte_string(&self) -> &ua::ByteString {
+        &self.0
+    }
+}
+
+/// Private key, in [DER] or [PEM] format.
+///
+/// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
+/// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
+pub struct PrivateKey(ua::ByteString);
+
+impl PrivateKey {
+    pub(crate) fn from_byte_string(byte_string: ua::ByteString) -> Option<Self> {
+        (!byte_string.is_invalid()).then(|| Self(byte_string))
+    }
+
+    pub(crate) fn from_string(string: ua::String) -> Option<Self> {
+        Self::from_byte_string(string.into_byte_string())
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        Self(ua::ByteString::new(bytes))
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        // PANIC: We always initialize inner value.
+        self.0.as_bytes().expect("valid byte string")
+    }
+
+    pub(crate) fn as_byte_string(&self) -> &ua::ByteString {
+        &self.0
+    }
+}
+
+impl fmt::Debug for PrivateKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Omit display of private key to not leak secrets.
+        f.debug_tuple("PrivateKey").finish_non_exhaustive()
+    }
 }
 
 /// Creates SSL certificate.
@@ -45,7 +102,7 @@ pub fn create_certificate(
     subject_alt_name: &ua::Array<ua::String>,
     cert_format: &ua::CertificateFormat,
     params: Option<&ua::KeyValueMap>,
-) -> Result<Certificate> {
+) -> Result<(Certificate, PrivateKey)> {
     // Create logger that forwards to Rust `log`. It is only used for the function call below and it
     // will be cleaned up at the end of the function.
     let mut logger = ua::Logger::rust_log();
@@ -78,8 +135,9 @@ pub fn create_certificate(
     });
     Error::verify_good(&status_code)?;
 
-    Ok(Certificate {
-        private_key: private_key.into_byte_string(),
-        certificate: certificate.into_byte_string(),
-    })
+    // PANIC: The function is expected to return valid strings in its output arguments.
+    let certificate = Certificate::from_string(certificate).expect("certificate should be set");
+    let private_key = PrivateKey::from_string(private_key).expect("private key should be set");
+
+    Ok((certificate, private_key))
 }

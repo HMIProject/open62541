@@ -121,8 +121,8 @@ impl ServerBuilder {
     #[cfg(feature = "mbedtls")]
     pub fn default_with_security_policies(
         port_number: u16,
-        certificate: &[u8],
-        private_key: &[u8],
+        certificate: &crate::Certificate,
+        private_key: &crate::PrivateKey,
     ) -> Result<Self> {
         Ok(Self::new(ua::ServerConfig::default_with_security_policies(
             port_number,

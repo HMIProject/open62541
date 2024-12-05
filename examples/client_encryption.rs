@@ -1,5 +1,5 @@
 use anyhow::Context as _;
-use open62541::ClientBuilder;
+use open62541::{Certificate, ClientBuilder, PrivateKey};
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -13,7 +13,10 @@ fn main() -> anyhow::Result<()> {
     let certificate = pem::parse(certificate_pem).context("parse PEM certificate")?;
     let private_key = pem::parse(private_key_pem).context("parse PEM private key")?;
 
-    let client = ClientBuilder::default_encryption(certificate.contents(), private_key.contents())
+    let certificate = Certificate::from_bytes(certificate.contents());
+    let private_key = PrivateKey::from_bytes(private_key.contents());
+
+    let client = ClientBuilder::default_encryption(&certificate, &private_key)
         .context("get client builder")?
         .accept_all()
         .connect("opc.tcp://localhost")

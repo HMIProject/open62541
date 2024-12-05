@@ -1,5 +1,7 @@
 use anyhow::Context as _;
-use open62541::{ua, DefaultAccessControl, ServerBuilder, DEFAULT_PORT_NUMBER};
+use open62541::{
+    ua, Certificate, DefaultAccessControl, PrivateKey, ServerBuilder, DEFAULT_PORT_NUMBER,
+};
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -13,10 +15,13 @@ fn main() -> anyhow::Result<()> {
     let certificate = pem::parse(certificate_pem).context("parse PEM certificate")?;
     let private_key = pem::parse(private_key_pem).context("parse PEM private key")?;
 
+    let certificate = Certificate::from_bytes(certificate.contents());
+    let private_key = PrivateKey::from_bytes(private_key.contents());
+
     let (_, runner) = ServerBuilder::default_with_security_policies(
         DEFAULT_PORT_NUMBER,
-        certificate.contents(),
-        private_key.contents(),
+        &certificate,
+        &private_key,
     )
     .context("get server builder")?
     .access_control(DefaultAccessControl::new(

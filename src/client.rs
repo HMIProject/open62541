@@ -43,9 +43,12 @@ impl ClientBuilder {
     /// it has been protected by a password).
     // Method name refers to call of `UA_ClientConfig_setDefaultEncryption()`.
     #[cfg(feature = "mbedtls")]
-    pub fn default_encryption(certificate: &[u8], private_key: &[u8]) -> Result<Self> {
+    pub fn default_encryption(
+        local_certificate: &crate::Certificate,
+        private_key: &crate::PrivateKey,
+    ) -> Result<Self> {
         Ok(Self(ua::ClientConfig::default_encryption(
-            certificate,
+            local_certificate,
             private_key,
         )?))
     }
