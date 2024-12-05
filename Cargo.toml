@@ -185,5 +185,5 @@ required-features = ["mbedtls"]
 name = "server_method_callback"
 
 [[example]]
-name = "ssl_certificate"
+name = "ssl_create_certificate"
 required-features = ["mbedtls"]
