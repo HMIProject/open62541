@@ -129,6 +129,26 @@ impl CertificateVerification {
         unsafe { Self::from_raw(inner) }
     }
 
+    /// Moves value into `dst`, giving up ownership.
+    ///
+    /// Existing data in `dst` is cleared before moving the value; it is safe to use this operation
+    /// on already initialized target values.
+    ///
+    /// The logging reference will be transferred from the old to the new certificate verification.
+    ///
+    /// After this, it is the responsibility of `dst` to eventually clean up the data.
+    pub(crate) fn move_into_raw(self, dst: &mut UA_CertificateVerification) {
+        // Move certificate verification into target, transferring ownership.
+        let orig = mem::replace(dst, self.into_raw());
+        // Take ownership of previously set certificate verification in order to drop it.
+        let mut orig = unsafe { Self::from_raw(orig) };
+        // Before dropping, transfer previously set logging to new certificate verification. We do
+        // this because certificate verifications do not own the logging reference. For instance,
+        // after creating a new config, the config's owned logger is copied (!) here. Refer to
+        // comments in `ClientConfig::new()` for more info.
+        mem::swap(&mut dst.logging, &mut unsafe { orig.as_mut() }.logging);
+    }
+
     /// Returns exclusive reference to value.
     ///
     /// # Safety

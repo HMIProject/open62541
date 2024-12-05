@@ -1,4 +1,4 @@
-use std::{ffi::CString, mem, time::Duration};
+use std::{ffi::CString, time::Duration};
 
 use open62541_sys::{UA_CertificateVerification_AcceptAll, UA_ClientConfig, UA_Client_connect};
 
@@ -180,13 +180,7 @@ impl ClientBuilder {
         certificate_verification: ua::CertificateVerification,
     ) -> Self {
         let config = self.config_mut();
-        // Move certificate verification into config, transferring ownership.
-        let certificate_verification = mem::replace(
-            &mut config.certificateVerification,
-            certificate_verification.into_raw(),
-        );
-        // Take ownership of previously set certificate verification in order to drop it.
-        let _unused = unsafe { ua::CertificateVerification::from_raw(certificate_verification) };
+        certificate_verification.move_into_raw(&mut config.certificateVerification);
         self
     }
 
