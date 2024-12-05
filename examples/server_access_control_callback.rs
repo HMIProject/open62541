@@ -24,6 +24,10 @@ impl Credentials {
     }
 }
 
+// These files have been created with `server_ssl.sh`.
+const CERTIFICATE_PEM: &[u8] = include_bytes!("server_certificate.pem");
+const PRIVATE_KEY_PEM: &[u8] = include_bytes!("server_private_key.pem");
+
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
@@ -84,15 +88,8 @@ fn main() -> anyhow::Result<()> {
         }
     };
 
-    // These files have been created with `server_ssl.sh`.
-    let certificate_pem = include_str!("server_certificate.pem");
-    let private_key_pem = include_str!("server_private_key.pem");
-
-    let certificate = pem::parse(certificate_pem).context("parse PEM certificate")?;
-    let private_key = pem::parse(private_key_pem).context("parse PEM private key")?;
-
-    let certificate = Certificate::from_bytes(certificate.contents());
-    let private_key = PrivateKey::from_bytes(private_key.contents());
+    let certificate = Certificate::from_bytes(CERTIFICATE_PEM);
+    let private_key = PrivateKey::from_bytes(PRIVATE_KEY_PEM);
 
     let (_, runner) = ServerBuilder::default_with_security_policies(
         DEFAULT_PORT_NUMBER,

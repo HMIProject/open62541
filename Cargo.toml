@@ -37,7 +37,6 @@ tokio = { version = "1.35.1", optional = true, features = [
 anyhow = "1.0.79"
 futures = "0.3.30"
 env_logger = "0.11.1"
-pem = "3.0.4"
 rand = "0.8.5"
 time = { version = "0.3.31", features = ["macros"] }
 # Enable multi-threaded runtime in examples to increase the chances of finding
