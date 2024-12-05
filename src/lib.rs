@@ -218,7 +218,6 @@ mod attributes;
 mod browse_result;
 #[cfg(feature = "tokio")]
 mod callback;
-mod certificate_verification;
 mod client;
 mod data_type;
 mod data_value;
@@ -243,7 +242,6 @@ pub use self::{
 };
 pub use self::{
     browse_result::BrowseResult,
-    certificate_verification::CustomCertificateVerification,
     client::{Client, ClientBuilder},
     data_type::DataType,
     data_value::DataValue,
@@ -254,7 +252,7 @@ pub use self::{
         MethodCallback, MethodCallbackContext, MethodCallbackError, MethodCallbackResult,
         MethodNode, Node, ObjectNode, Server, ServerBuilder, ServerRunner, VariableNode,
     },
-    traits::{Attribute, Attributes},
+    traits::{Attribute, Attributes, CustomCertificateVerification},
     userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},
 };

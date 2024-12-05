@@ -15,7 +15,7 @@ use crate::{ua, CustomCertificateVerification, DataType, Userdata};
 pub struct CertificateVerification(UA_CertificateVerification);
 
 impl CertificateVerification {
-    /// Certificate verification with all checks disabled.
+    /// Creates certificate verification with all checks disabled.
     ///
     /// Note that this disables certificate verification entirely. Use only when the other end can
     /// be identified in some other way, or identity is not relevant.
@@ -29,6 +29,7 @@ impl CertificateVerification {
         certificate_verification
     }
 
+    /// Creates certificate verification with custom callbacks.
     pub fn custom(certificate_verification: impl CustomCertificateVerification + 'static) -> Self {
         type Ud = Userdata<Box<dyn CustomCertificateVerification>>;
 
