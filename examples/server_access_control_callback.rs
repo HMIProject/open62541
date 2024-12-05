@@ -6,7 +6,8 @@ use std::{
 
 use anyhow::Context as _;
 use open62541::{
-    ua, Certificate, DefaultAccessControlWithLoginCallback, PrivateKey, ServerBuilder, DEFAULT_PORT_NUMBER
+    ua, Certificate, DefaultAccessControlWithLoginCallback, PrivateKey, ServerBuilder,
+    DEFAULT_PORT_NUMBER,
 };
 
 struct Credentials {

@@ -16,20 +16,22 @@ impl Certificate {
         (!byte_string.is_invalid()).then(|| Self(byte_string))
     }
 
-    pub(crate) fn from_string(string: ua::String) -> Option<Self> {
-        Self::from_byte_string(string.into_byte_string())
+    pub(crate) unsafe fn from_string_unchecked(string: ua::String) -> Self {
+        Self::from_byte_string(string.into_byte_string()).expect("certificate should be set")
     }
 
+    #[must_use]
     pub fn from_bytes(bytes: &[u8]) -> Self {
         Self(ua::ByteString::new(bytes))
     }
 
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
-        // PANIC: We always initialize inner value.
-        self.0.as_bytes().expect("valid byte string")
+        // SAFETY: We always initialize inner value.
+        unsafe { self.0.as_bytes_unchecked() }
     }
 
-    pub(crate) fn as_byte_string(&self) -> &ua::ByteString {
+    pub(crate) const fn as_byte_string(&self) -> &ua::ByteString {
         &self.0
     }
 }
@@ -45,20 +47,22 @@ impl PrivateKey {
         (!byte_string.is_invalid()).then(|| Self(byte_string))
     }
 
-    pub(crate) fn from_string(string: ua::String) -> Option<Self> {
-        Self::from_byte_string(string.into_byte_string())
+    pub(crate) unsafe fn from_string_unchecked(string: ua::String) -> Self {
+        Self::from_byte_string(string.into_byte_string()).expect("private key should be set")
     }
 
+    #[must_use]
     pub fn from_bytes(bytes: &[u8]) -> Self {
         Self(ua::ByteString::new(bytes))
     }
 
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
-        // PANIC: We always initialize inner value.
-        self.0.as_bytes().expect("valid byte string")
+        // SAFETY: We always initialize inner value.
+        unsafe { self.0.as_bytes_unchecked() }
     }
 
-    pub(crate) fn as_byte_string(&self) -> &ua::ByteString {
+    pub(crate) const fn as_byte_string(&self) -> &ua::ByteString {
         &self.0
     }
 }
@@ -66,7 +70,7 @@ impl PrivateKey {
 impl fmt::Debug for PrivateKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Omit display of private key to not leak secrets.
-        f.debug_tuple("PrivateKey").finish_non_exhaustive()
+        f.debug_tuple("PrivateKey").finish()
     }
 }
 
@@ -135,9 +139,9 @@ pub fn create_certificate(
     });
     Error::verify_good(&status_code)?;
 
-    // PANIC: The function is expected to return valid strings in its output arguments.
-    let certificate = Certificate::from_string(certificate).expect("certificate should be set");
-    let private_key = PrivateKey::from_string(private_key).expect("private key should be set");
+    // SAFETY: The function is expected to return valid strings in its output arguments.
+    let certificate = unsafe { Certificate::from_string_unchecked(certificate) };
+    let private_key = unsafe { PrivateKey::from_string_unchecked(private_key) };
 
     Ok((certificate, private_key))
 }
