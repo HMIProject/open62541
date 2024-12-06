@@ -70,6 +70,16 @@ impl ByteString {
         }
     }
 
+    /// Returns byte string contents as slice, without checking for validity.
+    ///
+    /// # Panic
+    ///
+    /// The byte string itself must not be invalid (as defined by OPC UA).
+    #[allow(dead_code)] // --no-default-features
+    pub(crate) unsafe fn as_bytes_unchecked(&self) -> &[u8] {
+        unsafe { self.as_bytes().unwrap_unchecked() }
+    }
+
     fn array_value(&self) -> ArrayValue<u8> {
         // Internally, `open62541` represents strings as `Byte` array and has the same special cases
         // as regular arrays, i.e. empty and invalid states.

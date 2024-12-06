@@ -1,16 +1,109 @@
-use std::ptr;
+use std::{fmt, ptr};
 
 use open62541_sys::UA_CreateCertificate;
 
-use crate::{ua, DataType, Error, Result};
+use crate::{ua, DataType, Error};
 
-#[derive(Debug)]
-pub struct Certificate {
-    /// Private key, always in DER format.
-    pub private_key: ua::ByteString,
+/// Certificate in [DER] or [PEM] format.
+///
+/// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
+/// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
+#[derive(Debug, Clone)]
+pub struct Certificate(ua::ByteString);
 
-    /// Certificate, format as given by [`ua::CertificateFormat`].
-    pub certificate: ua::ByteString,
+impl Certificate {
+    pub(crate) fn from_byte_string(byte_string: ua::ByteString) -> Option<Self> {
+        (!byte_string.is_invalid()).then(|| Self(byte_string))
+    }
+
+    pub(crate) unsafe fn from_string_unchecked(string: ua::String) -> Self {
+        Self::from_byte_string(string.into_byte_string()).expect("certificate should be set")
+    }
+
+    /// Wraps certificate data.
+    ///
+    /// This does not validate the data. When passing the instance to another method, that method
+    /// may still fail if the certificate is not valid.
+    #[must_use]
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        Self(ua::ByteString::new(bytes))
+    }
+
+    /// Gets certificate data.
+    #[must_use]
+    pub fn as_bytes(&self) -> &[u8] {
+        // SAFETY: We always initialize inner value.
+        unsafe { self.0.as_bytes_unchecked() }
+    }
+
+    /// Parses certificate.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the certificate cannot be parsed or is invalid.
+    #[cfg(feature = "x509")]
+    pub fn into_x509(
+        self,
+    ) -> Result<x509_certificate::X509Certificate, x509_certificate::X509CertificateError> {
+        use x509_certificate::{X509Certificate, X509CertificateError};
+
+        // Apply heuristic to get certificates from both DER and PEM format. Try PEM first because
+        // the implementation first extracts DER data from PEM and can tell us whether this failed
+        // (or the certificate itself was invalid).
+        match X509Certificate::from_pem(self.as_bytes()) {
+            Ok(certificate) => Ok(certificate),
+            Err(X509CertificateError::PemDecode(_)) => X509Certificate::from_der(self.as_bytes()),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub(crate) const fn as_byte_string(&self) -> &ua::ByteString {
+        &self.0
+    }
+}
+
+/// Private key in [DER] or [PEM] format.
+///
+/// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
+/// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
+#[derive(Clone)]
+pub struct PrivateKey(ua::ByteString);
+
+impl PrivateKey {
+    pub(crate) fn from_byte_string(byte_string: ua::ByteString) -> Option<Self> {
+        (!byte_string.is_invalid()).then(|| Self(byte_string))
+    }
+
+    pub(crate) unsafe fn from_string_unchecked(string: ua::String) -> Self {
+        Self::from_byte_string(string.into_byte_string()).expect("private key should be set")
+    }
+
+    /// Wraps private key data.
+    ///
+    /// This does not validate the data. When passing the instance to another method, that method
+    /// may still fail if the private key is not valid.
+    #[must_use]
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        Self(ua::ByteString::new(bytes))
+    }
+
+    /// Gets certificate data.
+    #[must_use]
+    pub fn as_bytes(&self) -> &[u8] {
+        // SAFETY: We always initialize inner value.
+        unsafe { self.0.as_bytes_unchecked() }
+    }
+
+    pub(crate) const fn as_byte_string(&self) -> &ua::ByteString {
+        &self.0
+    }
+}
+
+impl fmt::Debug for PrivateKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Omit display of private key to not leak secrets.
+        f.debug_tuple("PrivateKey").finish()
+    }
 }
 
 /// Creates SSL certificate.
@@ -45,7 +138,7 @@ pub fn create_certificate(
     subject_alt_name: &ua::Array<ua::String>,
     cert_format: &ua::CertificateFormat,
     params: Option<&ua::KeyValueMap>,
-) -> Result<Certificate> {
+) -> crate::Result<(Certificate, PrivateKey)> {
     // Create logger that forwards to Rust `log`. It is only used for the function call below and it
     // will be cleaned up at the end of the function.
     let mut logger = ua::Logger::rust_log();
@@ -78,8 +171,9 @@ pub fn create_certificate(
     });
     Error::verify_good(&status_code)?;
 
-    Ok(Certificate {
-        private_key: private_key.into_byte_string(),
-        certificate: certificate.into_byte_string(),
-    })
+    // SAFETY: The function is expected to return valid strings in its output arguments.
+    let certificate = unsafe { Certificate::from_string_unchecked(certificate) };
+    let private_key = unsafe { PrivateKey::from_string_unchecked(private_key) };
+
+    Ok((certificate, private_key))
 }

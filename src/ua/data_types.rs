@@ -30,9 +30,11 @@ mod delete_monitored_items_request;
 mod delete_monitored_items_response;
 mod delete_subscriptions_request;
 mod delete_subscriptions_response;
+mod endpoint_description;
 mod expanded_node_id;
 mod extension_object;
 mod localized_text;
+mod message_security_mode;
 mod monitored_item_create_request;
 mod monitored_item_create_result;
 mod node_attributes;
@@ -86,9 +88,11 @@ pub use self::{
     delete_monitored_items_response::DeleteMonitoredItemsResponse,
     delete_subscriptions_request::DeleteSubscriptionsRequest,
     delete_subscriptions_response::DeleteSubscriptionsResponse,
+    endpoint_description::EndpointDescription,
     expanded_node_id::ExpandedNodeId,
     extension_object::ExtensionObject,
     localized_text::LocalizedText,
+    message_security_mode::MessageSecurityMode,
     monitored_item_create_request::MonitoredItemCreateRequest,
     monitored_item_create_result::MonitoredItemCreateResult,
     node_attributes::{

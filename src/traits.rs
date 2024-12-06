@@ -41,3 +41,16 @@ pub trait Attributes: DataType {
     /// Gets generic [`ua::NodeAttributes`] type.
     fn as_node_attributes(&self) -> &ua::NodeAttributes;
 }
+
+/// Custom certificate verification.
+///
+/// This is used to implement custom callbacks in [`ua::CertificateVerification::custom()`].
+pub trait CustomCertificateVerification {
+    fn verify_certificate(&self, certificate: &ua::ByteString) -> ua::StatusCode;
+
+    fn verify_application_uri(
+        &self,
+        certificate: &ua::ByteString,
+        application_uri: &ua::String,
+    ) -> ua::StatusCode;
+}

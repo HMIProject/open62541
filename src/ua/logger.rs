@@ -1,6 +1,6 @@
 mod rust_log;
 
-use std::{mem, ptr::NonNull};
+use std::{mem::ManuallyDrop, ptr::NonNull};
 
 use open62541_sys::UA_Logger;
 
@@ -31,11 +31,12 @@ impl Logger {
     }
 
     /// Gives up ownership and returns value.
-    pub(crate) const fn into_raw(self) -> *mut UA_Logger {
-        let logger = self.0.as_ptr();
-        // Make sure that `drop()` is not called anymore.
-        mem::forget(self);
-        logger
+    pub(crate) fn into_raw(self) -> *mut UA_Logger {
+        // Use `ManuallyDrop` to avoid double-free even when added code might cause panic. See
+        // documentation of `mem::forget()` for details.
+        let this = ManuallyDrop::new(self);
+        // Return pointer to caller who becomes the owner of the object.
+        this.0.as_ptr()
     }
 
     /// Returns mutable pointer to value.

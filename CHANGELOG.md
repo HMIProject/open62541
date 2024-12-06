@@ -7,6 +7,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add type `PrivateKey` to wrap private keys when using Mbed TLS.
+- Add types `ua::SecurityLevel`, `ua::EndpointDescription`, `ua::MessageSecurityMode`.
+- Add ability to get remote server endpoints with `ua::ClientBuilder::get_endpoints()`.
+
+### Changed
+
+- Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.80.
+- Breaking: Change type `Certificate` to hold certificate without private key.
+- Breaking: Use new types `Certificate` and `PrivateKey` instead of raw `&[u8]` in
+  `ua::ClientBuilder::default_encryption()`, `ua::ServerBuilder::default_with_security_policies()`.
+
 ## [0.6.6] - 2024-12-04
 
 ### Added

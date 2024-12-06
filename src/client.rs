@@ -1,6 +1,9 @@
-use std::{ffi::CString, time::Duration};
+use std::{ffi::CString, ptr, time::Duration};
 
-use open62541_sys::{UA_CertificateVerification_AcceptAll, UA_ClientConfig, UA_Client_connect};
+use open62541_sys::{
+    UA_CertificateVerification_AcceptAll, UA_ClientConfig, UA_Client_connect,
+    UA_Client_getEndpoints,
+};
 
 use crate::{ua, DataType as _, Error, Result};
 
@@ -37,15 +40,41 @@ impl ClientBuilder {
 
     /// Creates builder from default client config with encryption.
     ///
+    /// This requires certificate and associated private key data in [DER] or [PEM] format. Data may
+    /// be read from local files or created with [`crate::create_certificate()`].
+    ///
+    /// ```
+    /// use open62541::{Certificate, ClientBuilder, PrivateKey};
+    ///
+    /// const CERTIFICATE_PEM: &[u8] = include_bytes!("../examples/client_certificate.pem");
+    /// const PRIVATE_KEY_PEM: &[u8] = include_bytes!("../examples/client_private_key.pem");
+    ///
+    /// let certificate = Certificate::from_bytes(CERTIFICATE_PEM);
+    /// let private_key = PrivateKey::from_bytes(PRIVATE_KEY_PEM);
+    ///
+    /// # let _ = move || -> open62541::Result<()> {
+    /// let client = ClientBuilder::default_encryption(&certificate, &private_key)
+    ///     .expect("should create builder with encryption")
+    ///     .connect("opc.tcp://localhost")?;
+    /// # Ok(())
+    /// # };
+    /// ```
+    ///
     /// # Errors
     ///
     /// This fails when the certificate is invalid or the private key cannot be decrypted (e.g. when
     /// it has been protected by a password).
+    ///
+    /// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
+    /// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
     // Method name refers to call of `UA_ClientConfig_setDefaultEncryption()`.
     #[cfg(feature = "mbedtls")]
-    pub fn default_encryption(certificate: &[u8], private_key: &[u8]) -> Result<Self> {
+    pub fn default_encryption(
+        local_certificate: &crate::Certificate,
+        private_key: &crate::PrivateKey,
+    ) -> Result<Self> {
         Ok(Self(ua::ClientConfig::default_encryption(
-            certificate,
+            local_certificate,
             private_key,
         )?))
     }
@@ -135,12 +164,26 @@ impl ClientBuilder {
     ///
     /// Note that this disables all certificate verification of server communications. Use only when
     /// servers can be identified in some other way, or identity is not relevant.
+    ///
+    /// This is a shortcut for using [`certificate_verification()`](Self::certificate_verification)
+    /// with [`ua::CertificateVerification::accept_all()`].
     #[must_use]
     pub fn accept_all(mut self) -> Self {
         let config = self.config_mut();
         unsafe {
             UA_CertificateVerification_AcceptAll(&mut config.certificateVerification);
         }
+        self
+    }
+
+    /// Sets certificate verification.
+    #[must_use]
+    pub fn certificate_verification(
+        mut self,
+        certificate_verification: ua::CertificateVerification,
+    ) -> Self {
+        let config = self.config_mut();
+        certificate_verification.move_into_raw(&mut config.certificateVerification);
         self
     }
 
@@ -157,6 +200,51 @@ impl ClientBuilder {
         let mut client = self.build();
         client.connect(endpoint_url)?;
         Ok(client)
+    }
+
+    /// Connects to OPC UA server and returns endpoints.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the target server is not reachable.
+    ///
+    /// # Panics
+    ///
+    /// The server URL must not contain any NUL bytes.
+    pub fn get_endpoints(self, server_url: &str) -> Result<ua::Array<ua::EndpointDescription>> {
+        log::info!("Getting endpoints of server {server_url}");
+
+        let server_url = CString::new(server_url).expect("server URL does not contain NUL bytes");
+
+        let mut client = self.build();
+        let endpoint_descriptions: Option<ua::Array<ua::EndpointDescription>>;
+
+        let status_code = ua::StatusCode::new({
+            let mut endpoint_descriptions_size = 0;
+            let mut endpoint_descriptions_ptr = ptr::null_mut();
+            let result = unsafe {
+                UA_Client_getEndpoints(
+                    client.0.as_mut_ptr(),
+                    server_url.as_ptr(),
+                    &mut endpoint_descriptions_size,
+                    &mut endpoint_descriptions_ptr,
+                )
+            };
+            // Wrap array result immediately to not leak memory when leaving function early as with
+            // `?` below.
+            endpoint_descriptions = ua::Array::<ua::EndpointDescription>::from_raw_parts(
+                endpoint_descriptions_size,
+                endpoint_descriptions_ptr,
+            );
+            result
+        });
+        Error::verify_good(&status_code)?;
+
+        let Some(endpoint_descriptions) = endpoint_descriptions else {
+            return Err(Error::internal("expected array of endpoint descriptions"));
+        };
+
+        Ok(endpoint_descriptions)
     }
 
     /// Builds OPC UA client.
