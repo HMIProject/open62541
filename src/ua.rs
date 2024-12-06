@@ -16,6 +16,7 @@ mod logger;
 mod monitored_item_id;
 mod node_class_mask;
 mod secure_channel_state;
+mod security_level;
 mod server;
 mod server_config;
 mod session_state;
@@ -38,6 +39,7 @@ pub use self::{
     monitored_item_id::MonitoredItemId,
     node_class_mask::NodeClassMask,
     secure_channel_state::SecureChannelState,
+    security_level::SecurityLevel,
     server::Server,
     session_state::SessionState,
     specified_attributes::SpecifiedAttributes,
