@@ -1,5 +1,5 @@
 use std::{
-    mem::{self, MaybeUninit},
+    mem::{self, ManuallyDrop, MaybeUninit},
     ptr,
 };
 
@@ -110,12 +110,12 @@ impl CertificateVerification {
     /// [`from_raw()`]: Self::from_raw
     /// [`UA_Client`]: open62541_sys::UA_Client
     #[must_use]
-    pub(crate) const fn into_raw(self) -> UA_CertificateVerification {
-        // SAFETY: The inner object is valid, we do not drop it.
-        let inner = unsafe { ptr::read(&self.0) };
-        // Do not call `drop()`. Value now lives in `inner`.
-        mem::forget(self);
-        inner
+    pub(crate) fn into_raw(self) -> UA_CertificateVerification {
+        // Use `ManuallyDrop` to avoid double-free even when added code might cause panic. See
+        // documentation of `mem::forget()` for details.
+        let this = ManuallyDrop::new(self);
+        // SAFETY: Aliasing memory temporarily is safe because destructor will not be called.
+        unsafe { ptr::read(ptr::addr_of!(this.0)) }
     }
 
     /// Creates wrapper initialized with defaults.

@@ -409,12 +409,12 @@ macro_rules! data_type {
 
             #[must_use]
             fn into_raw(self) -> Self::Inner {
-                // SAFETY: Move value out of `self` despite it not being `Copy`. We consume `self`
-                // and forget it below, so that `Drop` is not called on the original value.
-                let inner = unsafe { std::ptr::read(std::ptr::addr_of!(self.0)) };
-                // Make sure that `drop()` is not called anymore.
-                std::mem::forget(self);
-                inner
+                // Use `ManuallyDrop` to avoid double-free even when added code might cause panic.
+                // See documentation of `mem::forget()` for details.
+                let this = std::mem::ManuallyDrop::new(self);
+                // SAFETY: Aliasing memory temporarily is safe because destructor will not be
+                // called.
+                unsafe { std::ptr::read(std::ptr::addr_of!(this.0)) }
             }
         }
 

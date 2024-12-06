@@ -1,4 +1,4 @@
-use std::{mem, ptr::NonNull};
+use std::{mem::ManuallyDrop, ptr::NonNull};
 
 use open62541_sys::{
     UA_KeyValueMap, UA_KeyValueMap_contains, UA_KeyValueMap_delete, UA_KeyValueMap_get,
@@ -116,11 +116,12 @@ impl KeyValueMap {
 
     /// Gives up ownership and returns value.
     #[allow(dead_code)] // This is unused for now.
-    pub(crate) const fn into_inner(self) -> *mut UA_KeyValueMap {
-        let key_value_map = self.0.as_ptr();
-        // Make sure that `drop()` is not called anymore.
-        mem::forget(self);
-        key_value_map
+    pub(crate) fn into_raw(self) -> *mut UA_KeyValueMap {
+        // Use `ManuallyDrop` to avoid double-free even when added code might cause panic. See
+        // documentation of `mem::forget()` for details.
+        let this = ManuallyDrop::new(self);
+        // Return pointer to caller who becomes the owner of the object.
+        this.0.as_ptr()
     }
 
     /// Returns const pointer to value.
