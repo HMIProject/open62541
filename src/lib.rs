@@ -232,7 +232,7 @@ mod userdata;
 mod value;
 
 #[cfg(feature = "mbedtls")]
-pub use self::ssl::{create_certificate, fetch_server_certificate, Certificate, PrivateKey};
+pub use self::ssl::{create_certificate, Certificate, PrivateKey};
 #[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,

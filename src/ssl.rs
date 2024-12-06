@@ -1,8 +1,8 @@
-use std::{cell::RefCell, fmt, ptr, rc::Rc};
+use std::{fmt, ptr};
 
 use open62541_sys::UA_CreateCertificate;
 
-use crate::{ua, ClientBuilder, CustomCertificateVerification, DataType, Error, Result};
+use crate::{ua, DataType, Error};
 
 /// Certificate in [DER] or [PEM] format.
 ///
@@ -34,6 +34,27 @@ impl Certificate {
     pub fn as_bytes(&self) -> &[u8] {
         // SAFETY: We always initialize inner value.
         unsafe { self.0.as_bytes_unchecked() }
+    }
+
+    /// Parses certificate.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the certificate cannot be parsed or is invalid.
+    #[cfg(feature = "x509")]
+    pub fn into_x509(
+        self,
+    ) -> Result<x509_certificate::X509Certificate, x509_certificate::X509CertificateError> {
+        use x509_certificate::{X509Certificate, X509CertificateError};
+
+        // Apply heuristic to get certificates from both DER and PEM format. Try PEM first because
+        // the implementation first extracts DER data from PEM and can tell us whether this failed
+        // (or the certificate itself was invalid).
+        match X509Certificate::from_pem(self.as_bytes()) {
+            Ok(certificate) => Ok(certificate),
+            Err(X509CertificateError::PemDecode(_)) => X509Certificate::from_der(self.as_bytes()),
+            Err(err) => Err(err),
+        }
     }
 
     pub(crate) const fn as_byte_string(&self) -> &ua::ByteString {
@@ -117,7 +138,7 @@ pub fn create_certificate(
     subject_alt_name: &ua::Array<ua::String>,
     cert_format: &ua::CertificateFormat,
     params: Option<&ua::KeyValueMap>,
-) -> Result<(Certificate, PrivateKey)> {
+) -> crate::Result<(Certificate, PrivateKey)> {
     // Create logger that forwards to Rust `log`. It is only used for the function call below and it
     // will be cleaned up at the end of the function.
     let mut logger = ua::Logger::rust_log();
@@ -155,65 +176,4 @@ pub fn create_certificate(
     let private_key = unsafe { PrivateKey::from_string_unchecked(private_key) };
 
     Ok((certificate, private_key))
-}
-
-/// Connects to remote server and fetches certificate
-///
-/// # Errors
-///
-/// This fails when the connection cannot be established at all or the server does not offer secure
-/// communication.
-pub fn fetch_server_certificate(
-    local_certificate: &Certificate,
-    private_key: &PrivateKey,
-    endpoint_url: &str,
-) -> Result<Certificate> {
-    let (fetch_server_certificate_verification, certificate) =
-        FetchServerCertificateVerification::new();
-
-    let certificate_verification =
-        ua::CertificateVerification::custom(fetch_server_certificate_verification);
-
-    let _unused = ClientBuilder::default_encryption(local_certificate, private_key)?
-        .certificate_verification(certificate_verification)
-        .connect(endpoint_url)?;
-
-    certificate
-        .take()
-        .ok_or(Error::internal("did not receive certificate"))
-}
-
-#[derive(Debug)]
-struct FetchServerCertificateVerification {
-    certificate: Rc<RefCell<Option<Certificate>>>,
-}
-
-impl FetchServerCertificateVerification {
-    fn new() -> (Self, Rc<RefCell<Option<Certificate>>>) {
-        let certificate = Rc::new(RefCell::new(None));
-
-        (
-            Self {
-                certificate: Rc::clone(&certificate),
-            },
-            certificate,
-        )
-    }
-}
-
-impl CustomCertificateVerification for FetchServerCertificateVerification {
-    fn verify_certificate(&self, certificate: &ua::ByteString) -> ua::StatusCode {
-        self.certificate
-            .replace(Certificate::from_byte_string(certificate.clone()));
-
-        ua::StatusCode::GOOD
-    }
-
-    fn verify_application_uri(
-        &self,
-        _certificate: &ua::ByteString,
-        _application_uri: &ua::String,
-    ) -> ua::StatusCode {
-        ua::StatusCode::GOOD
-    }
 }

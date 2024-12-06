@@ -34,7 +34,39 @@ fn main() -> anyhow::Result<()> {
     )
     .context("create certificate")?;
 
-    println!("Certificate: {certificate:?}");
+    let certificate = certificate.into_x509().context("parse certificate")?;
+
+    println!(
+        "Subject common name: {:?}",
+        certificate.subject_common_name()
+    );
+    println!("Key algorithm: {:?}", certificate.key_algorithm());
+    println!(
+        "Signature algorithm: {:?}",
+        certificate.signature_algorithm()
+    );
+    println!(
+        "Validity not before: {:?}",
+        certificate.validity_not_before()
+    );
+    println!("Validity not after: {:?}", certificate.validity_not_after());
+    println!(
+        "Fingerprint (SHA-1): {:?}",
+        certificate
+            .sha1_fingerprint()
+            .context("SHA-1 fingerprint")?
+    );
+    println!(
+        "Fingerprint (SHA-256): {:?}",
+        certificate
+            .sha256_fingerprint()
+            .context("SHA-256 fingerprint")?
+    );
+    println!();
+    println!(
+        "{}",
+        certificate.encode_pem().context("encode certificate")?
+    );
 
     Ok(())
 }

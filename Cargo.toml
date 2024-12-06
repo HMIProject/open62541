@@ -32,6 +32,7 @@ tokio = { version = "1.35.1", optional = true, features = [
   "sync",
   "time",
 ] }
+x509-certificate = { version = "0.24.0", optional = true }
 
 [dev-dependencies]
 anyhow = "1.0.79"
@@ -42,6 +43,7 @@ time = { version = "0.3.31", features = ["macros"] }
 # Enable multi-threaded runtime in examples to increase the chances of finding
 # problems with our use of open62541.
 tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
+itertools = "0.13.0"
 
 [features]
 default = ["serde", "time", "tokio"]
@@ -49,6 +51,7 @@ mbedtls = ["open62541-sys/mbedtls"]
 serde = ["dep:serde", "dep:serde_json", "time?/formatting", "time?/serde"]
 time = ["dep:time"]
 tokio = ["dep:tokio"]
+x509 = ["dep:x509-certificate"]
 
 [lints.rust]
 future_incompatible = { level = "warn", priority = -1 }
@@ -185,8 +188,8 @@ name = "server_method_callback"
 
 [[example]]
 name = "ssl_create_certificate"
-required-features = ["mbedtls"]
+required-features = ["mbedtls", "x509"]
 
 [[example]]
 name = "ssl_fetch_certificate"
-required-features = ["mbedtls"]
+required-features = ["mbedtls", "x509"]
