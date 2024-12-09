@@ -50,11 +50,10 @@ impl Certificate {
         // Apply heuristic to get certificates from both DER and PEM format. Try PEM first because
         // the implementation first extracts DER data from PEM and can tell us whether this failed
         // (or the certificate itself was invalid).
-        match X509Certificate::from_pem(self.as_bytes()) {
-            Ok(certificate) => Ok(certificate),
-            Err(X509CertificateError::PemDecode(_)) => X509Certificate::from_der(self.as_bytes()),
-            Err(err) => Err(err),
-        }
+        X509Certificate::from_pem(self.as_bytes()).or_else(|err| match err {
+            X509CertificateError::PemDecode(_) => X509Certificate::from_der(self.as_bytes()),
+            err => Err(err),
+        })
     }
 
     pub(crate) const fn as_byte_string(&self) -> &ua::ByteString {
