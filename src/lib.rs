@@ -208,13 +208,6 @@
 //! # }
 //! ```
 
-mod client;
-mod data_type;
-mod error;
-mod server;
-mod service;
-pub mod ua;
-
 #[cfg(feature = "tokio")]
 mod async_client;
 #[cfg(feature = "tokio")]
@@ -225,10 +218,16 @@ mod attributes;
 mod browse_result;
 #[cfg(feature = "tokio")]
 mod callback;
+mod client;
+mod data_type;
 mod data_value;
+mod error;
+mod server;
+mod service;
 #[cfg(feature = "mbedtls")]
 mod ssl;
 mod traits;
+pub mod ua;
 mod userdata;
 mod value;
 
@@ -253,7 +252,7 @@ pub use self::{
         MethodCallback, MethodCallbackContext, MethodCallbackError, MethodCallbackResult,
         MethodNode, Node, ObjectNode, Server, ServerBuilder, ServerRunner, VariableNode,
     },
-    traits::{Attribute, Attributes},
+    traits::{Attribute, Attributes, CustomCertificateVerification},
     userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},
 };

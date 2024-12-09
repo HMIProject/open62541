@@ -1,7 +1,8 @@
 use std::{
     cmp,
     ffi::c_void,
-    fmt, mem,
+    fmt,
+    mem::{self, ManuallyDrop},
     num::NonZeroUsize,
     ops,
     ptr::{self, NonNull},
@@ -340,12 +341,11 @@ impl<T: DataType> Array<T> {
     /// memory. Alternatively, they may be re-wrapped by [`from_raw_parts()`](Self::from_raw_parts).
     #[must_use]
     pub(crate) fn into_raw_parts(self) -> (usize, *mut T::Inner) {
-        // SAFETY: This gets the raw parts but we make sure to forget about `self` below, to prevent
-        // it from being released. This leaks the data until it is captured again.
-        let (size, ptr) = unsafe { self.as_raw_parts() };
-
-        // Make sure that `drop()` is not called anymore.
-        mem::forget(self);
+        // Use `ManuallyDrop` to avoid double-free even when added code might cause panic. See
+        // documentation of `mem::forget()` for details.
+        let this = ManuallyDrop::new(self);
+        // SAFETY: This gets the raw parts but we made sure that the destructor is not called again.
+        let (size, ptr) = unsafe { this.as_raw_parts() };
         // Cast to `*mut T::Inner` because we no longer own the data. This is the only pointer to it
         // in existence.
         (size, ptr.cast_mut())

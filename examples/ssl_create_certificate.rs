@@ -1,5 +1,3 @@
-use std::io::{self, Write};
-
 use anyhow::Context as _;
 use open62541::ua;
 
@@ -31,15 +29,44 @@ fn main() -> anyhow::Result<()> {
     let (certificate, _private_key) = open62541::create_certificate(
         &subject,
         &subject_alt_name,
-        &ua::CertificateFormat::PEM,
+        &ua::CertificateFormat::DER,
         Some(&params),
     )
     .context("create certificate")?;
 
-    let certificate_pem = certificate.as_bytes();
-    io::stdout()
-        .write_all(certificate_pem)
-        .context("write certificate")?;
+    let certificate = certificate.into_x509().context("parse certificate")?;
+
+    println!(
+        "Subject common name: {:?}",
+        certificate.subject_common_name()
+    );
+    println!("Key algorithm: {:?}", certificate.key_algorithm());
+    println!(
+        "Signature algorithm: {:?}",
+        certificate.signature_algorithm()
+    );
+    println!(
+        "Validity not before: {:?}",
+        certificate.validity_not_before()
+    );
+    println!("Validity not after: {:?}", certificate.validity_not_after());
+    println!(
+        "Fingerprint (SHA-1): {:?}",
+        certificate
+            .sha1_fingerprint()
+            .context("SHA-1 fingerprint")?
+    );
+    println!(
+        "Fingerprint (SHA-256): {:?}",
+        certificate
+            .sha256_fingerprint()
+            .context("SHA-256 fingerprint")?
+    );
+    println!();
+    println!(
+        "{}",
+        certificate.encode_pem().context("encode certificate")?
+    );
 
     Ok(())
 }

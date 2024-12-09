@@ -93,4 +93,39 @@ impl ApplicationDescription {
             .move_into_raw(&mut self.0.discoveryUrlsSize, &mut self.0.discoveryUrls);
         self
     }
+
+    #[must_use]
+    pub fn application_uri(&self) -> &ua::String {
+        ua::String::raw_ref(&self.0.applicationUri)
+    }
+
+    #[must_use]
+    pub fn product_uri(&self) -> &ua::String {
+        ua::String::raw_ref(&self.0.productUri)
+    }
+
+    #[must_use]
+    pub fn application_name(&self) -> &ua::LocalizedText {
+        ua::LocalizedText::raw_ref(&self.0.applicationName)
+    }
+
+    #[must_use]
+    pub fn application_type(&self) -> &ua::ApplicationType {
+        ua::ApplicationType::raw_ref(&self.0.applicationType)
+    }
+
+    #[must_use]
+    pub fn gateway_server_uri(&self) -> &ua::String {
+        ua::String::raw_ref(&self.0.gatewayServerUri)
+    }
+
+    #[must_use]
+    pub fn discovery_profile_uri(&self) -> &ua::String {
+        ua::String::raw_ref(&self.0.discoveryProfileUri)
+    }
+
+    #[must_use]
+    pub fn discovery_urls(&self) -> Option<&[ua::String]> {
+        unsafe { ua::Array::slice_from_raw_parts(self.0.discoveryUrlsSize, self.0.discoveryUrls) }
+    }
 }
