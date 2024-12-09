@@ -3,9 +3,9 @@ name = "open62541"
 version = "0.6.6"
 authors = ["HMI Project"]
 edition = "2021"
-# Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.77 since
-# we want to use C-string literals.
-rust-version = "1.77"
+# Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.80 since
+# we want to conveniently exclude examples from published crate.
+rust-version = "1.80"
 description = "High-level, safe bindings for the C99 library open62541, an open source and free implementation of OPC UA (OPC Unified Architecture)."
 documentation = "https://docs.rs/open62541"
 readme = "README.md"
@@ -37,7 +37,6 @@ tokio = { version = "1.35.1", optional = true, features = [
 anyhow = "1.0.79"
 futures = "0.3.30"
 env_logger = "0.11.1"
-pem = "3.0.4"
 rand = "0.8.5"
 time = { version = "0.3.31", features = ["macros"] }
 # Enable multi-threaded runtime in examples to increase the chances of finding
@@ -120,89 +119,70 @@ verbose_file_reads = "warn"
 
 [[example]]
 name = "async_browse"
-path = "examples/async_browse.rs"
 required-features = ["tokio"]
 
 [[example]]
 name = "async_call"
-path = "examples/async_call.rs"
 required-features = ["tokio"]
 
 [[example]]
 name = "async_client"
-path = "examples/async_client.rs"
 required-features = ["tokio"]
 
 [[example]]
 name = "async_client_builder"
-path = "examples/async_client_builder.rs"
 required-features = ["tokio"]
 
 [[example]]
 name = "async_concurrent"
-path = "examples/async_concurrent.rs"
 required-features = ["tokio"]
 
 [[example]]
 name = "async_monitor"
-path = "examples/async_monitor.rs"
 required-features = ["tokio"]
 
 [[example]]
 name = "async_read_write"
-path = "examples/async_read_write.rs"
 required-features = ["tokio"]
 
 [[example]]
 name = "async_send_sync"
-path = "examples/async_send_sync.rs"
 required-features = ["time", "tokio"]
 
 [[example]]
 name = "client_builder"
-path = "examples/client_builder.rs"
 
 [[example]]
 name = "client_encryption"
-path = "examples/client_encryption.rs"
 required-features = ["mbedtls"]
 
 [[example]]
 name = "server"
-path = "examples/server.rs"
 
 [[example]]
 name = "server_access_control"
-path = "examples/server_access_control.rs"
 required-features = ["mbedtls"]
 
 [[example]]
 name = "server_access_control_callback"
-path = "examples/server_access_control_callback.rs"
 required-features = ["mbedtls"]
 
 [[example]]
 name = "server_builder"
-path = "examples/server_builder.rs"
 
 [[example]]
 name = "server_cancellable"
-path = "examples/server_cancellable.rs"
 
 [[example]]
 name = "server_data_source"
-path = "examples/server_data_source.rs"
 
 [[example]]
 name = "server_encryption"
-path = "examples/server_encryption.rs"
 required-features = ["mbedtls"]
 
 [[example]]
 name = "server_method_callback"
-path = "examples/server_method_callback.rs"
 
 [[example]]
-name = "ssl_certificate"
-path = "examples/ssl_certificate.rs"
+name = "ssl_create_certificate"
 required-features = ["mbedtls"]

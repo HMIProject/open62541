@@ -51,8 +51,8 @@ impl ClientConfig {
     // Method name refers to call of `UA_ClientConfig_setDefaultEncryption()`.
     #[cfg(feature = "mbedtls")]
     pub(crate) fn default_encryption(
-        certificate: &[u8],
-        private_key: &[u8],
+        local_certificate: &crate::Certificate,
+        private_key: &crate::PrivateKey,
     ) -> Result<Self, crate::Error> {
         use {crate::DataType, open62541_sys::UA_ClientConfig_setDefaultEncryption, std::ptr};
 
@@ -64,8 +64,8 @@ impl ClientConfig {
             UA_ClientConfig_setDefaultEncryption(
                 config.as_mut_ptr(),
                 // SAFETY: Function expects struct instead of pointer, despite not taking ownership.
-                DataType::to_raw_copy(&ua::ByteString::new(certificate)),
-                DataType::to_raw_copy(&ua::ByteString::new(private_key)),
+                DataType::to_raw_copy(local_certificate.as_byte_string()),
+                DataType::to_raw_copy(private_key.as_byte_string()),
                 ptr::null(),
                 0,
                 ptr::null(),

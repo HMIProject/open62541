@@ -54,7 +54,7 @@ jobs:
       - name: Install Rust toolchain
         # Use specific Rust version that is the minimum supported `rust-version`
         # (MSRV) from `Cargo.toml`.
-        uses: dtolnay/rust-toolchain@1.77
+        uses: dtolnay/rust-toolchain@1.80
 
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1

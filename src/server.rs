@@ -90,24 +90,22 @@ impl ServerBuilder {
     /// security policies should be activated, use [`Self::default_with_secure_security_policies()`]
     /// instead.
     ///
-    /// This requires certificate and associated private key data in binary format. For convenience,
-    /// consider reading those from PEM text files using the [pem] crate or other suitable crates:
-    ///
-    /// [pem]: https://crates.io/crates/pem
+    /// This requires certificate and associated private key data in [DER] or [PEM] format. Data may
+    /// be read from local files or created with [`crate::create_certificate()`].
     ///
     /// ```
-    /// use open62541::{DEFAULT_PORT_NUMBER, ServerBuilder};
+    /// use open62541::{Certificate, DEFAULT_PORT_NUMBER, PrivateKey, ServerBuilder};
     ///
-    /// const CERTIFICATE_PEM: &'static str = include_str!("../examples/server_certificate.pem");
-    /// const PRIVATE_KEY_PEM: &'static str = include_str!("../examples/server_private_key.pem");
+    /// const CERTIFICATE_PEM: &[u8] = include_bytes!("../examples/server_certificate.pem");
+    /// const PRIVATE_KEY_PEM: &[u8] = include_bytes!("../examples/server_private_key.pem");
     ///
-    /// let certificate = pem::parse(CERTIFICATE_PEM).expect("should parse PEM certificate");
-    /// let private_key = pem::parse(PRIVATE_KEY_PEM).expect("should parse PEM private key");
+    /// let certificate = Certificate::from_bytes(CERTIFICATE_PEM);
+    /// let private_key = PrivateKey::from_bytes(PRIVATE_KEY_PEM);
     ///
     /// let server = ServerBuilder::default_with_security_policies(
     ///     DEFAULT_PORT_NUMBER,
-    ///     certificate.contents(),
-    ///     private_key.contents(),
+    ///     &certificate,
+    ///     &private_key,
     /// )
     /// .expect("should create builder with security policies")
     /// .build();
@@ -117,12 +115,15 @@ impl ServerBuilder {
     ///
     /// This fails when the certificate is invalid or the private key cannot be decrypted (e.g. when
     /// it has been protected by a password).
+    ///
+    /// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
+    /// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
     // Method name refers to call of `UA_ServerConfig_setDefaultWithSecurityPolicies()`.
     #[cfg(feature = "mbedtls")]
     pub fn default_with_security_policies(
         port_number: u16,
-        certificate: &[u8],
-        private_key: &[u8],
+        certificate: &crate::Certificate,
+        private_key: &crate::PrivateKey,
     ) -> Result<Self> {
         Ok(Self::new(ua::ServerConfig::default_with_security_policies(
             port_number,
