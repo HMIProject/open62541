@@ -21,7 +21,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.80.
 - Breaking: Change type `Certificate` to hold certificate without private key.
 - Breaking: Use new types `Certificate` and `PrivateKey` instead of raw `&[u8]` in
-  `ClientBuilder::default_encryption()`, `ServerBuilder::default_with_security_policies()`.
+  `ClientBuilder::default_encryption()`, `ServerBuilder::default_with_security_policies()`, and
+  `ServerBuilder::default_with_secure_security_policies()`.
 
 ## [0.6.6] - 2024-12-04
 
