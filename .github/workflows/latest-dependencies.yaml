@@ -27,9 +27,11 @@ env:
 jobs:
   run:
     strategy:
-      fail-fast: false # don't give up on the whole matrix if one variant fails
+      # Don't give up on the whole matrix if one variant fails.
+      fail-fast: false
       matrix:
-        # Keep list of targets in sync with `test.yaml`.
+        # Keep target archs in sync with `test.yaml`. Use latest versions of
+        # runner OS here and supported ones in `test.yaml`.
         include:
           - target: aarch64-apple-darwin
             runner_os: macos-latest
@@ -76,7 +78,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           # The cache should not be shared between different workflows, jobs, and targets.
-          shared-key: ${{ github.workflow }}-${{ github.job }}-${{ matrix.target }}
+          shared-key: ${{ github.workflow }}-${{ github.job }}-${{ matrix.target }}-${{ matrix.runner_os }}
 
       - name: Update Rust to latest version
         run: >-
