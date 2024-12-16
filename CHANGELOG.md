@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Zeroize memory held by `PrivateKey` when dropped.
+
 ## [0.7.0] - 2024-12-13
 
 ### Added

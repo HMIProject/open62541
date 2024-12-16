@@ -1,6 +1,6 @@
 use std::slice;
 
-use open62541_sys::{UA_ByteString_copy, UA_String};
+use open62541_sys::{UA_ByteString_clear, UA_ByteString_copy, UA_ByteString_memZero, UA_String};
 
 use crate::{ua, ArrayValue, DataType};
 
@@ -36,6 +36,24 @@ impl ByteString {
             "byte string should have been created"
         );
         dst
+    }
+
+    #[allow(dead_code)] // --no-default-features
+    fn clear(&mut self) {
+        unsafe {
+            // Clearing frees the referenced heap memory and resets length and data pointer to all
+            // zeroes, i.e. the string becomes an "invalid" string (as defined by OPC UA).
+            UA_ByteString_clear(self.as_mut_ptr());
+        }
+    }
+
+    #[allow(dead_code)] // --no-default-features
+    fn mem_zero(&mut self) {
+        unsafe {
+            // This zeroizes the string contents, i.e. characters, leaving the string object itself
+            // intact. The string has the same length as before but is all `\0`.
+            UA_ByteString_memZero(self.as_mut_ptr());
+        }
     }
 
     /// Checks if byte string is invalid.
@@ -96,5 +114,46 @@ impl serde::Serialize for ByteString {
         self.as_bytes()
             .ok_or(serde::ser::Error::custom("String should be valid"))
             .and_then(|bytes| serializer.serialize_bytes(bytes))
+    }
+}
+
+#[cfg(feature = "mbedtls")]
+impl zeroize::Zeroize for ua::ByteString {
+    fn zeroize(&mut self) {
+        // Clear the heap memory of the string characters.
+        self.mem_zero();
+        // Clear the string data structure, i.e. length.
+        self.clear();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn zeroizing() {
+        let mut string = ua::ByteString::new("SECRET".as_bytes());
+        let data_ptr = string.as_bytes().unwrap().as_ptr();
+        let object_ptr = unsafe { string.as_ptr() };
+
+        let data = unsafe { slice::from_raw_parts(data_ptr, 6) };
+        assert_eq!(data, "SECRET".as_bytes());
+        let object = unsafe { std::ptr::read(object_ptr) };
+        assert!(!object.data.is_null());
+        assert_eq!(object.length, 6);
+
+        string.mem_zero();
+
+        // SAFETY: Memory has been zeroized but is still allocated.
+        let data = unsafe { slice::from_raw_parts(data_ptr, 6) };
+        assert_eq!(data, "\0\0\0\0\0\0".as_bytes());
+
+        string.clear();
+
+        // SAFETY: Object has been reset but is still allocated.
+        let object = unsafe { std::ptr::read(object_ptr) };
+        assert!(object.data.is_null());
+        assert_eq!(object.length, 0);
     }
 }
