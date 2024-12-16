@@ -602,6 +602,7 @@ dependencies = [
  "time",
  "tokio",
  "x509-certificate",
+ "zeroize",
 ]
 
 [[package]]

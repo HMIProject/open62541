@@ -1,6 +1,7 @@
 use std::{fmt, ptr};
 
 use open62541_sys::UA_CreateCertificate;
+use zeroize::Zeroizing;
 
 use crate::{ua, DataType, Error};
 
@@ -63,14 +64,17 @@ impl Certificate {
 
 /// Private key in [DER] or [PEM] format.
 ///
+/// The wrapped memory is [zeroized] when dropped.
+///
 /// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
 /// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
+/// [zeroized]: https://crates.io/crates/zeroize
 #[derive(Clone)]
-pub struct PrivateKey(ua::ByteString);
+pub struct PrivateKey(Zeroizing<ua::ByteString>);
 
 impl PrivateKey {
     pub(crate) fn from_byte_string(byte_string: ua::ByteString) -> Option<Self> {
-        (!byte_string.is_invalid()).then(|| Self(byte_string))
+        (!byte_string.is_invalid()).then(|| Self(Zeroizing::new(byte_string)))
     }
 
     pub(crate) unsafe fn from_string_unchecked(string: ua::String) -> Self {
@@ -81,9 +85,12 @@ impl PrivateKey {
     ///
     /// This does not validate the data. When passing the instance to another method, that method
     /// may still fail if the private key is not valid.
+    ///
+    /// As this takes only a slice and returns an owned copy, the original data should be zeroized
+    /// independently as soon as it is no longer needed.
     #[must_use]
     pub fn from_bytes(bytes: &[u8]) -> Self {
-        Self(ua::ByteString::new(bytes))
+        Self(Zeroizing::new(ua::ByteString::new(bytes)))
     }
 
     /// Gets certificate data.
@@ -93,7 +100,7 @@ impl PrivateKey {
         unsafe { self.0.as_bytes_unchecked() }
     }
 
-    pub(crate) const fn as_byte_string(&self) -> &ua::ByteString {
+    pub(crate) fn as_byte_string(&self) -> &ua::ByteString {
         &self.0
     }
 }
