@@ -14,7 +14,7 @@ impl<T: DataType> DataValue<T> {
     pub(crate) fn new(data_value: &ua::DataValue) -> Result<Self> {
         // Verify that data value is valid before accessing value. The OPC UA specification requires
         // us to do so. The status code may be omitted, in which case it is treated as valid data.
-        Error::verify_good(&data_value.status_code().unwrap_or(ua::StatusCode::GOOD))?;
+        Error::verify_good(&data_value.status().unwrap_or(ua::StatusCode::GOOD))?;
 
         // When the status code indicates a good data value, the value is expected to be set.
         let value = data_value
