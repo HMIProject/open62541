@@ -13,6 +13,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add methods `ua::DataValue::with_source_timestamp()`, `ua::DataValue::with_server_timestamp()`,
   `ua::DataValue::with_source_picoseconds()`, `ua::DataValue::with_server_picoseconds()`.
 
+## Changed
+
+- Rename methods `ua::DataValue::status_code()` to `status()`, `ua::DataValue::with_status_code()`
+  to `with_status()`. Deprecate the former methods.
+
 ## [0.7.0] - 2024-12-13
 
 ### Added
