@@ -90,8 +90,10 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Install Cargo helpers
+        # Fall back to installing with locked dependencies when installed rustc
+        # is too old.
         run: >-
-          cargo install cargo-hack
+          cargo install cargo-hack || cargo install --locked cargo-hack
 
       # Check out the repository before the remaining steps that depend on it.
       # All preceding steps are independent of the repository contents.
