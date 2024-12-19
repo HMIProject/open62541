@@ -10,6 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Zeroize memory held by `PrivateKey` when dropped.
+- Add methods `ua::DataValue::with_source_timestamp()`, `ua::DataValue::with_server_timestamp()`,
+  `ua::DataValue::with_source_picoseconds()`, `ua::DataValue::with_server_picoseconds()`.
 
 ## [0.7.0] - 2024-12-13
 

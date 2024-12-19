@@ -24,6 +24,41 @@ impl DataValue {
     }
 
     #[must_use]
+    pub fn with_source_timestamp(mut self, source_timestamp: &ua::DateTime) -> Self {
+        source_timestamp.clone_into_raw(&mut self.0.sourceTimestamp);
+        self.0.set_hasSourceTimestamp(true);
+        self
+    }
+
+    #[must_use]
+    pub fn with_server_timestamp(mut self, server_timestamp: &ua::DateTime) -> Self {
+        server_timestamp.clone_into_raw(&mut self.0.serverTimestamp);
+        self.0.set_hasServerTimestamp(true);
+        self
+    }
+
+    #[must_use]
+    pub fn with_source_picoseconds(mut self, source_picoseconds: u16) -> Self {
+        self.0.sourcePicoseconds = source_picoseconds;
+        self.0.set_hasSourcePicoseconds(true);
+        self
+    }
+
+    #[must_use]
+    pub fn with_server_picoseconds(mut self, server_picoseconds: u16) -> Self {
+        self.0.serverPicoseconds = server_picoseconds;
+        self.0.set_hasServerPicoseconds(true);
+        self
+    }
+
+    #[must_use]
+    pub fn with_status(mut self, status: &ua::StatusCode) -> Self {
+        status.clone_into_raw(&mut self.0.status);
+        self.0.set_hasStatus(true);
+        self
+    }
+
+    #[must_use]
     pub fn with_status_code(mut self, status_code: &ua::StatusCode) -> Self {
         status_code.clone_into_raw(&mut self.0.status);
         self.0.set_hasStatus(true);
