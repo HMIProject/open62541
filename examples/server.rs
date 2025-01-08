@@ -54,10 +54,8 @@ fn main() -> anyhow::Result<()> {
         attributes: ua::VariableAttributes::default()
             .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING)),
     };
+    
     let data_value_variable_node_id = server.add_variable_node(data_value_variable_node)?;
-
-    //let ua_datetime = ua::DateTime::init();
-
     let ua_datetime: ua::DateTime = datetime!(2024-02-09 12:34:56 UTC).try_into().unwrap();
 
     server.write_data_value(
