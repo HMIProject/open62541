@@ -10,6 +10,7 @@ use open62541_sys::{
     UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,
     UA_NS0ID_STRING,
 };
+use time::macros::datetime;
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -42,6 +43,27 @@ fn main() -> anyhow::Result<()> {
     server.write_value(
         &variable_node_id,
         &ua::Variant::scalar(ua::String::new("foobar")?),
+    )?;
+
+    let data_value_variable_node = VariableNode {
+        requested_new_node_id: Some(ua::NodeId::string(1, "the.answer.data.value")),
+        parent_node_id: object_node_id.clone(),
+        reference_type_id: ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
+        browse_name: ua::QualifiedName::new(1, "the answer.data.value"),
+        type_definition: ua::NodeId::ns0(UA_NS0ID_BASEDATAVARIABLETYPE),
+        attributes: ua::VariableAttributes::default()
+            .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING)),
+    };
+    let data_value_variable_node_id = server.add_variable_node(data_value_variable_node)?;
+
+    //let ua_datetime = ua::DateTime::init();
+
+    let ua_datetime: ua::DateTime = datetime!(2024-02-09 12:34:56 UTC).try_into().unwrap();
+
+    server.write_data_value(
+        &data_value_variable_node_id,
+        &ua::DataValue::new(ua::Variant::scalar(ua::String::new("foobar")?))
+            .with_source_timestamp(&ua_datetime),
     )?;
 
     read_attribute(&server, &variable_node_id, ua::AttributeId::NODEID_T)?;

@@ -162,6 +162,7 @@ required-features = ["mbedtls"]
 
 [[example]]
 name = "server"
+required-features = ["time"]
 
 [[example]]
 name = "server_access_control"

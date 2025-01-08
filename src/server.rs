@@ -19,8 +19,9 @@ use open62541_sys::{
     UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
     UA_Server_read, UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
-    UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeObjectProperty,
-    __UA_Server_addNode, __UA_Server_write, UA_STATUSCODE_BADNOTFOUND,
+    UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeDataValue,
+    UA_Server_writeObjectProperty, __UA_Server_addNode, __UA_Server_write,
+    UA_STATUSCODE_BADNOTFOUND,
 };
 
 use crate::{
@@ -1301,6 +1302,23 @@ impl Server {
                 ua::AttributeId::VALUE.into_raw(),
                 ua::Variant::data_type(),
                 value.as_ptr().cast::<c_void>(),
+            )
+        });
+        Error::verify_good(&status_code)
+    }
+
+    /// Writes a `DataValue` to a node.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or its value attribute cannot be written.
+    pub fn write_data_value(&self, node_id: &ua::NodeId, data_value: &ua::DataValue) -> Result<()> {
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_writeDataValue(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+                DataType::to_raw_copy(node_id),
+                DataType::to_raw_copy(data_value),
             )
         });
         Error::verify_good(&status_code)
