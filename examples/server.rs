@@ -17,7 +17,7 @@ fn main() -> anyhow::Result<()> {
 
     let (server, runner) = Server::new();
 
-    println!("Adding server nodes");
+    println!("Adding server value nodes");
 
     let object_node = ObjectNode {
         requested_new_node_id: Some(ua::NodeId::string(1, "the.folder")),
@@ -29,7 +29,7 @@ fn main() -> anyhow::Result<()> {
     };
     let object_node_id = server.add_object_node(object_node)?;
 
-    let variable_node = VariableNode {
+    let value_node = VariableNode {
         requested_new_node_id: Some(ua::NodeId::string(1, "the.answer")),
         parent_node_id: object_node_id.clone(),
         reference_type_id: ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
@@ -38,14 +38,25 @@ fn main() -> anyhow::Result<()> {
         attributes: ua::VariableAttributes::default()
             .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING)),
     };
-    let variable_node_id = server.add_variable_node(variable_node)?;
+    let value_node_id = server.add_variable_node(value_node)?;
 
     server.write_value(
-        &variable_node_id,
+        &value_node_id,
         &ua::Variant::scalar(ua::String::new("foobar")?),
     )?;
 
-    let data_value_variable_node = VariableNode {
+    read_attribute(&server, &value_node_id, ua::AttributeId::NODEID_T)?;
+    read_attribute(&server, &value_node_id, ua::AttributeId::NODECLASS_T)?;
+    read_attribute(&server, &value_node_id, ua::AttributeId::BROWSENAME_T)?;
+    read_attribute(&server, &value_node_id, ua::AttributeId::DISPLAYNAME_T)?;
+
+    for attribute in [ua::AttributeId::DESCRIPTION, ua::AttributeId::WRITEMASK] {
+        read_attribute(&server, &value_node_id, &attribute)?;
+    }
+
+    println!("Adding server data value nodes");
+
+    let data_value_node = VariableNode {
         requested_new_node_id: Some(ua::NodeId::string(1, "the.answer.data.value")),
         parent_node_id: object_node_id.clone(),
         reference_type_id: ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
@@ -55,23 +66,16 @@ fn main() -> anyhow::Result<()> {
             .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING)),
     };
 
-    let data_value_variable_node_id = server.add_variable_node(data_value_variable_node)?;
-    let ua_datetime: ua::DateTime = datetime!(2024-02-09 12:34:56 UTC).try_into().unwrap();
+    let data_value_node_id = server.add_variable_node(data_value_node)?;
 
     server.write_data_value(
-        &data_value_variable_node_id,
+        &data_value_node_id,
         &ua::DataValue::new(ua::Variant::scalar(ua::String::new("foobar")?))
-            .with_source_timestamp(&ua_datetime),
+            .with_source_timestamp(&datetime!(2024-02-09 12:34:56 UTC).try_into()?),
     )?;
 
-    read_attribute(&server, &variable_node_id, ua::AttributeId::NODEID_T)?;
-    read_attribute(&server, &variable_node_id, ua::AttributeId::NODECLASS_T)?;
-    read_attribute(&server, &variable_node_id, ua::AttributeId::BROWSENAME_T)?;
-    read_attribute(&server, &variable_node_id, ua::AttributeId::DISPLAYNAME_T)?;
-
-    for attribute in [ua::AttributeId::DESCRIPTION, ua::AttributeId::WRITEMASK] {
-        read_attribute(&server, &variable_node_id, &attribute)?;
-    }
+    read_attribute(&server, &data_value_node_id, ua::AttributeId::NODEID_T)?;
+    read_attribute(&server, &data_value_node_id, &ua::AttributeId::VALUE)?;
 
     let (cancel_tx, cancel_rx) = mpsc::channel();
 
@@ -88,7 +92,7 @@ fn main() -> anyhow::Result<()> {
                     Err(RecvTimeoutError::Disconnected) => bail!("main task should be running"),
                 }
                 server.write_value(
-                    &variable_node_id,
+                    &value_node_id,
                     &ua::Variant::scalar(ua::String::new(value)?),
                 )?;
             }
