@@ -20,7 +20,7 @@ use open62541_sys::{
     UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
     UA_Server_read, UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
     UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeDataValue,
-    UA_Server_writeObjectProperty, __UA_Server_addNode, __UA_Server_write,
+    UA_Server_writeObjectProperty, UA_Server_writeValue, __UA_Server_addNode,
     UA_STATUSCODE_BADNOTFOUND,
 };
 
@@ -1294,14 +1294,13 @@ impl Server {
     /// This fails when the node does not exist or its value attribute cannot be written.
     pub fn write_value(&self, node_id: &ua::NodeId, value: &ua::Variant) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
-            __UA_Server_write(
+            UA_Server_writeValue(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
-                node_id.as_ptr(),
-                // Passing ownership is trivial with primitive value (`u32`).
-                ua::AttributeId::VALUE.into_raw(),
-                ua::Variant::data_type(),
-                value.as_ptr().cast::<c_void>(),
+                // SAFETY: The function expects copies but does not take ownership. It is a wrapper
+                // that internally delegates to `__UA_Server_write()` by pointer.
+                DataType::to_raw_copy(node_id),
+                DataType::to_raw_copy(value),
             )
         });
         Error::verify_good(&status_code)
