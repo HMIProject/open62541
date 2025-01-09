@@ -1281,7 +1281,9 @@ impl Server {
             ua::DataValue::from_raw(UA_Server_read(
                 self.0.as_ptr().cast_mut(),
                 item.as_ptr(),
-                ua::TimestampsToReturn::NEITHER.into_raw(),
+                // TODO: Add method argument for this? We return timestamps in `DataValue` and they
+                // should not end up always being `None` by default.
+                ua::TimestampsToReturn::BOTH.into_raw(),
             ))
         };
         result.to_generic::<T::Value>()
