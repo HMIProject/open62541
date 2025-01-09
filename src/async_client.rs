@@ -249,8 +249,9 @@ impl AsyncClient {
             .collect();
 
         let request = ua::ReadRequest::init()
-            // We don't return and thus don't have to fetch timestamps.
-            .with_timestamps_to_return(&ua::TimestampsToReturn::NEITHER)
+            // TODO: Add method argument for this? We return timestamps in `DataValue` and they
+            // should not end up always being `None` by default.
+            .with_timestamps_to_return(&ua::TimestampsToReturn::BOTH)
             .with_nodes_to_read(&nodes_to_read);
 
         let response = service_request(&self.client, request).await?;
