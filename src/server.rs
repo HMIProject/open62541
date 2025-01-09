@@ -1312,13 +1312,15 @@ impl Server {
     /// # Errors
     ///
     /// This fails when the node does not exist or its value attribute cannot be written.
-    pub fn write_data_value(&self, node_id: &ua::NodeId, data_value: &ua::DataValue) -> Result<()> {
+    pub fn write_data_value(&self, node_id: &ua::NodeId, value: &ua::DataValue) -> Result<()> {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_writeDataValue(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
+                // SAFETY: The function expects copies but does not take ownership. It is a wrapper
+                // that internally delegates to `__UA_Server_write()` by pointer.
                 DataType::to_raw_copy(node_id),
-                DataType::to_raw_copy(data_value),
+                DataType::to_raw_copy(value),
             )
         });
         Error::verify_good(&status_code)
