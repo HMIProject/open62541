@@ -7,6 +7,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add method `Server::write_data_value()` to allow setting variable value with timestamps (#190).
+
+### Changed
+
+- Return source and server timestamps when reading attributes through `Server::read_attribute()`.
+- Return source and server timestamps when reading attributes with `AsyncClient::read_value()`,
+  `AsyncClient::read_attribute()` and related methods that return `DataValue`.
+
 ## [0.7.1] - 2024-12-19
 
 ### Added
