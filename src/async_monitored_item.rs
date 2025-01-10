@@ -102,18 +102,31 @@ impl MonitoredItemBuilder {
         };
         let subscription_id = subscription.subscription_id();
 
-        let (response, rxs) =
-            create_monitored_items(client, &self.into_request(subscription_id)).await?;
+        let request = self.into_request(subscription_id);
+        let result_count = request.items_to_create().map_or(0, <[_]>::len);
+        let (response, rxs) = create_monitored_items(client, &request).await?;
 
         let Some(mut results) = response.into_results() else {
             return Err(Error::internal("expected monitoring item results"));
         };
 
-        // PANIC: We expect exactly one result for each monitored item we requested above.
-        //
-        // TODO: Do not panic but try to recover gracefully. Make sure to clean up monitored items
-        // that are returned.
-        debug_assert_eq!(results.len(), rxs.len());
+        if results.len() != result_count || rxs.len() != result_count {
+            // This should not happen. In any case, we cannot associate returned items with their
+            // incoming node IDs. Clean up the items that we received to not leave them dangling.
+            //
+            let monitored_item_ids = results
+                .iter()
+                .filter(|result| result.status_code().is_good())
+                .map(ua::MonitoredItemCreateResult::monitored_item_id)
+                .collect::<Vec<_>>();
+            let request = ua::DeleteMonitoredItemsRequest::init()
+                .with_subscription_id(subscription_id)
+                .with_monitored_item_ids(&monitored_item_ids);
+            // This request is processed asynchronously. Errors are logged asynchronously too.
+            delete_monitored_items(client, &request);
+
+            return Err(Error::internal("unexpected number of monitored items"));
+        }
 
         let results = results
             .drain_all()
