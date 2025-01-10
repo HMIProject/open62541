@@ -19,6 +19,30 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Connected successfully");
 
+    subscribe_node(&client).await?;
+
+    time::sleep(Duration::from_millis(500)).await;
+
+    read_nodes(&client).await?;
+
+    time::sleep(Duration::from_millis(500)).await;
+
+    browse_node(&client).await?;
+
+    time::sleep(Duration::from_millis(500)).await;
+
+    println!("Disconnecting client");
+
+    client.disconnect().await;
+
+    time::sleep(Duration::from_millis(500)).await;
+
+    println!("Exiting");
+
+    Ok(())
+}
+
+async fn subscribe_node(client: &AsyncClient) -> anyhow::Result<()> {
     println!("Creating subscription");
 
     let subscription = client
@@ -47,8 +71,10 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Subscription dropped");
 
-    time::sleep(Duration::from_millis(500)).await;
+    Ok(())
+}
 
+async fn read_nodes(client: &AsyncClient) -> anyhow::Result<()> {
     println!("Reading some items");
 
     let builddate = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE);
@@ -69,8 +95,10 @@ async fn main() -> anyhow::Result<()> {
 
     println!("{results:?}");
 
-    time::sleep(Duration::from_millis(500)).await;
+    Ok(())
+}
 
+async fn browse_node(client: &AsyncClient) -> anyhow::Result<()> {
     println!("Browsing node");
 
     let (references, _) = client
@@ -82,16 +110,6 @@ async fn main() -> anyhow::Result<()> {
         .context("browse node")?;
 
     println!("{references:?}");
-
-    time::sleep(Duration::from_millis(500)).await;
-
-    println!("Disconnecting client");
-
-    client.disconnect().await;
-
-    time::sleep(Duration::from_millis(500)).await;
-
-    println!("Exiting");
 
     Ok(())
 }
