@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use anyhow::Context as _;
+use anyhow::{bail, Context as _};
 use futures::future;
-use open62541::{ua, AsyncClient};
+use open62541::{ua, AsyncClient, MonitoredItemBuilder, SubscriptionBuilder};
 use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME,
@@ -20,6 +20,10 @@ async fn main() -> anyhow::Result<()> {
     println!("Connected successfully");
 
     subscribe_node(&client).await?;
+
+    time::sleep(Duration::from_millis(500)).await;
+
+    subscribe_node_with_options(&client).await?;
 
     time::sleep(Duration::from_millis(500)).await;
 
@@ -70,6 +74,46 @@ async fn subscribe_node(client: &AsyncClient) -> anyhow::Result<()> {
     drop(subscription);
 
     println!("Subscription dropped");
+
+    Ok(())
+}
+
+async fn subscribe_node_with_options(client: &AsyncClient) -> anyhow::Result<()> {
+    println!("Creating subscription with options");
+
+    let subscription = SubscriptionBuilder::default()
+        .requested_publishing_interval(Duration::from_millis(100))
+        .max_notifications_per_publish(0)
+        .create(&client)
+        .await
+        .context("create subscription with options")?;
+
+    let node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
+
+    let monitored_items = MonitoredItemBuilder::default()
+        .sampling_interval(Some(Duration::from_millis(100)))
+        .node_ids(&[node_id])
+        .create(&subscription)
+        .await
+        .context("monitor items")?;
+
+    let Some(mut monitored_item) = monitored_items.into_iter().next() else {
+        bail!("expected monitored item");
+    };
+
+    tokio::spawn(async move {
+        println!("Watching for monitored item values");
+        while let Some(value) = monitored_item.next().await {
+            println!("{value:?}");
+        }
+        println!("Closed monitored item subscription");
+    });
+
+    time::sleep(Duration::from_secs(2)).await;
+
+    drop(subscription);
+
+    println!("Subscription with options dropped");
 
     Ok(())
 }
