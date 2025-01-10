@@ -10,6 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Add method `Server::write_data_value()` to allow setting variable value with timestamps (#190).
+- Add `SubscriptionBuilder` and `MonitoredItemBuilder` to create subscription and monitored items
+  with additional control over request options.
 
 ### Changed
 
