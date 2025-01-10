@@ -5,11 +5,13 @@ use crate::{ua, Error, Result};
 crate::data_type!(MonitoredItemCreateResult);
 
 impl MonitoredItemCreateResult {
+    #[allow(dead_code)] // --no-default-features
     #[must_use]
     pub(crate) const fn status_code(&self) -> ua::StatusCode {
         ua::StatusCode::new(self.0.statusCode)
     }
 
+    #[allow(dead_code)] // --no-default-features
     #[must_use]
     pub(crate) const fn monitored_item_id(&self) -> ua::MonitoredItemId {
         ua::MonitoredItemId::new(self.0.monitoredItemId)

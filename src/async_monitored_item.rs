@@ -54,7 +54,7 @@ impl MonitoredItemBuilder {
 
     /// Sets sampling interval.
     ///
-    /// Default value is 250.0 [ms].
+    /// Default value is 250.0 ms.
     ///
     /// See [`ua::MonitoringParameters::with_sampling_interval()`].
     #[must_use]

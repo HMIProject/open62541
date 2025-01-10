@@ -11,7 +11,7 @@ impl MonitoringParameters {
     /// The value `None` (-1) indicates that the default sampling interval defined by the publishing
     /// interval of the subscription is requested.
     #[must_use]
-    pub const fn with_sampling_interval(mut self, sampling_interval: Option<Duration>) -> Self {
+    pub fn with_sampling_interval(mut self, sampling_interval: Option<Duration>) -> Self {
         self.0.samplingInterval = if let Some(sampling_interval) = sampling_interval {
             sampling_interval.as_secs_f64() * 1e3
         } else {

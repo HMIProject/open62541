@@ -19,6 +19,7 @@ impl CreateMonitoredItemsRequest {
         self
     }
 
+    #[allow(dead_code)] // --no-default-features
     #[must_use]
     pub(crate) fn items_to_create(&self) -> Option<&[ua::MonitoredItemCreateRequest]> {
         unsafe { ua::Array::slice_from_raw_parts(self.0.itemsToCreateSize, self.0.itemsToCreate) }

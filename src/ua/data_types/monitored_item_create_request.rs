@@ -53,7 +53,7 @@ impl MonitoredItemCreateRequest {
     ///
     /// See [`ua::MonitoringParameters::with_sampling_interval()`].
     #[must_use]
-    pub const fn with_sampling_interval(mut self, sampling_interval: Option<Duration>) -> Self {
+    pub fn with_sampling_interval(mut self, sampling_interval: Option<Duration>) -> Self {
         self.0.requestedParameters.samplingInterval =
             if let Some(sampling_interval) = sampling_interval {
                 sampling_interval.as_secs_f64() * 1e3

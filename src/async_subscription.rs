@@ -34,7 +34,7 @@ pub struct SubscriptionBuilder {
 impl SubscriptionBuilder {
     /// Sets requested publishing interval.
     ///
-    /// Default value is 500.0 [ms].
+    /// Default value is 500.0 ms.
     ///
     /// See [`ua::CreateSubscriptionRequest::with_requested_publishing_interval()`].
     #[must_use]
