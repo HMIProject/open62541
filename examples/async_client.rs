@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{num::NonZero, time::Duration};
 
 use anyhow::{bail, Context as _};
 use futures::future;
@@ -82,8 +82,12 @@ async fn subscribe_node_with_options(client: &AsyncClient) -> anyhow::Result<()>
     println!("Creating subscription with options");
 
     let subscription = SubscriptionBuilder::default()
-        .requested_publishing_interval(Duration::from_millis(100))
-        .max_notifications_per_publish(0)
+        .requested_publishing_interval(Some(Duration::from_millis(100)))
+        .requested_lifetime_count(5)
+        .requested_max_keep_alive_count(Some(NonZero::new(1).context("non-zero value")?))
+        .max_notifications_per_publish(Some(NonZero::new(3).context("non-zero value")?))
+        .publishing_enabled(true)
+        .priority(127)
         .create(client)
         .await
         .context("create subscription with options")?;
@@ -91,7 +95,10 @@ async fn subscribe_node_with_options(client: &AsyncClient) -> anyhow::Result<()>
     let node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
 
     let monitored_items = MonitoredItemBuilder::new([node_id])
+        .monitoring_mode(ua::MonitoringMode::REPORTING)
         .sampling_interval(Some(Duration::from_millis(100)))
+        .queue_size(3)
+        .discard_oldest(true)
         .create(&subscription)
         .await
         .context("monitor items")?;

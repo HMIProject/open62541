@@ -1,5 +1,6 @@
 use std::{
     ffi::c_void,
+    num::NonZeroU32,
     ptr,
     sync::{Arc, Weak},
     time::Duration,
@@ -18,28 +19,36 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub struct SubscriptionBuilder {
-    requested_publishing_interval: Option<Duration>,
+    #[allow(clippy::option_option)]
+    requested_publishing_interval: Option<Option<Duration>>,
     requested_lifetime_count: Option<u32>,
-    requested_max_keep_alive_count: Option<u32>,
-    max_notifications_per_publish: Option<u32>,
+    #[allow(clippy::option_option)]
+    requested_max_keep_alive_count: Option<Option<NonZeroU32>>,
+    #[allow(clippy::option_option)]
+    max_notifications_per_publish: Option<Option<NonZeroU32>>,
     publishing_enabled: Option<bool>,
     priority: Option<u8>,
 }
 
+// Note: The default values in the docs below come from `UA_CreateSubscriptionRequest_default()`.
 impl SubscriptionBuilder {
     /// Sets requested publishing interval.
+    ///
+    /// Default value is 500.0 [ms].
     ///
     /// See [`ua::CreateSubscriptionRequest::with_requested_publishing_interval()`].
     #[must_use]
     pub const fn requested_publishing_interval(
         mut self,
-        requested_publishing_interval: Duration,
+        requested_publishing_interval: Option<Duration>,
     ) -> Self {
         self.requested_publishing_interval = Some(requested_publishing_interval);
         self
     }
 
     /// Sets requested lifetime count.
+    ///
+    /// Default value is 10000.
     ///
     /// See [`ua::CreateSubscriptionRequest::with_requested_lifetime_count()`].
     #[must_use]
@@ -50,11 +59,13 @@ impl SubscriptionBuilder {
 
     /// Sets requested maximum keep-alive count.
     ///
+    /// Default value is 10.
+    ///
     /// See [`ua::CreateSubscriptionRequest::with_requested_max_keep_alive_count()`].
     #[must_use]
     pub const fn requested_max_keep_alive_count(
         mut self,
-        requested_max_keep_alive_count: u32,
+        requested_max_keep_alive_count: Option<NonZeroU32>,
     ) -> Self {
         self.requested_max_keep_alive_count = Some(requested_max_keep_alive_count);
         self
@@ -63,17 +74,21 @@ impl SubscriptionBuilder {
     /// Sets maximum number of notifications that the client wishes to receive in a single publish
     /// response.
     ///
+    /// Default value is `None` (unlimited).
+    ///
     /// See [`ua::CreateSubscriptionRequest::with_max_notifications_per_publish()`].
     #[must_use]
     pub const fn max_notifications_per_publish(
         mut self,
-        max_notifications_per_publish: u32,
+        max_notifications_per_publish: Option<NonZeroU32>,
     ) -> Self {
         self.max_notifications_per_publish = Some(max_notifications_per_publish);
         self
     }
 
     /// Enables or disables publishing.
+    ///
+    /// Default value is `true`.
     ///
     /// See [`ua::CreateSubscriptionRequest::with_publishing_enabled()`].
     #[must_use]
@@ -83,6 +98,8 @@ impl SubscriptionBuilder {
     }
 
     /// Sets relative priority of the subscription.
+    ///
+    /// Default value is 0.
     ///
     /// See [`ua::CreateSubscriptionRequest::with_priority()`].
     #[must_use]

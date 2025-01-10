@@ -29,6 +29,7 @@ pub struct MonitoredItemBuilder {
     discard_oldest: Option<bool>,
 }
 
+// Note: The default values in the docs below come from `UA_MonitoredItemCreateRequest_default()`.
 impl MonitoredItemBuilder {
     pub fn new(node_ids: impl IntoIterator<Item = ua::NodeId>) -> Self {
         Self {
@@ -42,6 +43,8 @@ impl MonitoredItemBuilder {
 
     /// Sets monitoring mode.
     ///
+    /// Default value is [`ua::MonitoringMode::REPORTING`].
+    ///
     /// See [`ua::MonitoredItemCreateRequest::with_monitoring_mode()`].
     #[must_use]
     pub fn monitoring_mode(mut self, monitoring_mode: ua::MonitoringMode) -> Self {
@@ -50,6 +53,8 @@ impl MonitoredItemBuilder {
     }
 
     /// Sets sampling interval.
+    ///
+    /// Default value is 250.0 [ms].
     ///
     /// See [`ua::MonitoringParameters::with_sampling_interval()`].
     #[must_use]
@@ -60,6 +65,8 @@ impl MonitoredItemBuilder {
 
     /// Set requested size of the monitored item queue.
     ///
+    /// Default value is 1.
+    ///
     /// See [`ua::MonitoringParameters::with_queue_size()`].
     #[must_use]
     pub const fn queue_size(mut self, queue_size: u32) -> Self {
@@ -68,6 +75,8 @@ impl MonitoredItemBuilder {
     }
 
     /// Set discard policy.
+    ///
+    /// Default value is `true`.
     ///
     /// See [`ua::MonitoringParameters::with_discard_oldest()`].
     #[must_use]
