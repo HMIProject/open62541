@@ -19,7 +19,7 @@ use tokio::sync::mpsc;
 
 use crate::{ua, AsyncSubscription, CallbackOnce, CallbackStream, DataType as _, Error, Result};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct MonitoredItemBuilder {
     node_ids: Vec<ua::NodeId>,
     monitoring_mode: Option<ua::MonitoringMode>,
@@ -30,11 +30,14 @@ pub struct MonitoredItemBuilder {
 }
 
 impl MonitoredItemBuilder {
-    /// Sets monitored node IDs.
-    #[must_use]
-    pub fn node_ids(mut self, node_id: &[ua::NodeId]) -> Self {
-        self.node_ids = node_id.to_vec();
-        self
+    pub fn new(node_ids: impl IntoIterator<Item = ua::NodeId>) -> Self {
+        Self {
+            node_ids: node_ids.into_iter().collect(),
+            monitoring_mode: None,
+            sampling_interval: None,
+            queue_size: None,
+            discard_oldest: None,
+        }
     }
 
     /// Sets monitoring mode.

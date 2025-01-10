@@ -84,15 +84,14 @@ async fn subscribe_node_with_options(client: &AsyncClient) -> anyhow::Result<()>
     let subscription = SubscriptionBuilder::default()
         .requested_publishing_interval(Duration::from_millis(100))
         .max_notifications_per_publish(0)
-        .create(&client)
+        .create(client)
         .await
         .context("create subscription with options")?;
 
     let node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
 
-    let monitored_items = MonitoredItemBuilder::default()
+    let monitored_items = MonitoredItemBuilder::new([node_id])
         .sampling_interval(Some(Duration::from_millis(100)))
-        .node_ids(&[node_id])
         .create(&subscription)
         .await
         .context("monitor items")?;
