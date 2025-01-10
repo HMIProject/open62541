@@ -56,6 +56,8 @@ x509 = ["dep:x509-certificate"]
 
 [lints.rust]
 future_incompatible = { level = "warn", priority = -1 }
+# Our drop implementations allow this without problem.
+if_let_rescope = { level = "allow" }
 keyword_idents = { level = "warn", priority = -1 }
 let_underscore = { level = "warn", priority = -1 }
 missing_debug_implementations = "warn"
@@ -65,6 +67,8 @@ rust_2018_compatibility = { level = "warn", priority = -1 }
 rust_2018_idioms = { level = "warn", priority = -1 }
 rust_2021_compatibility = { level = "warn", priority = -1 }
 rust_2024_compatibility = { level = "warn", priority = -1 }
+# Our drop implementations allow this change in order.
+tail_expr_drop_order = { level = "allow" }
 trivial_casts = "warn"
 trivial_numeric_casts = "warn"
 unreachable_pub = "warn"
