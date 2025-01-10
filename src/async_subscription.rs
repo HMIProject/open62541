@@ -113,15 +113,20 @@ impl SubscriptionBuilder {
     /// # Errors
     ///
     /// This fails when the client is not connected.
-    pub async fn create(self, client: &AsyncClient) -> Result<AsyncSubscription> {
+    pub async fn create(
+        self,
+        client: &AsyncClient,
+    ) -> Result<(ua::CreateSubscriptionResponse, AsyncSubscription)> {
         let client = client.client();
 
         let response = create_subscription(client, &self.into_request()).await?;
 
-        Ok(AsyncSubscription {
+        let subscription = AsyncSubscription {
             client: Arc::downgrade(client),
             subscription_id: response.subscription_id(),
-        })
+        };
+
+        Ok((response, subscription))
     }
 
     fn into_request(self) -> ua::CreateSubscriptionRequest {
@@ -175,17 +180,17 @@ impl AsyncSubscription {
     ///
     /// This fails when the node does not exist.
     pub async fn create_monitored_item(&self, node_id: &ua::NodeId) -> Result<AsyncMonitoredItem> {
-        let monitored_items = MonitoredItemBuilder::new([node_id.clone()])
+        let results = MonitoredItemBuilder::new([node_id.clone()])
             .create(self)
             .await?;
 
-        let mut monitored_items = monitored_items.into_iter();
-
         // We expect exactly one result for the single monitored item we requested above.
-        let monitored_item = match monitored_items.next() {
-            Some(monitored_item) if monitored_items.next().is_none() => monitored_item,
-            _ => return Err(Error::internal("expected exactly one monitored itom")),
+        let Ok::<[_; 1], _>([result]) = results.try_into() else {
+            return Err(Error::internal("expected exactly one monitored itom"));
         };
+
+        // Verify single item's status code and return as error.
+        let (_, monitored_item) = result?;
 
         Ok(monitored_item)
     }

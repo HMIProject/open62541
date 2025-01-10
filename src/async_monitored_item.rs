@@ -87,12 +87,16 @@ impl MonitoredItemBuilder {
 
     /// Creates monitored items.
     ///
-    /// This creates one or more new monitored items.
+    /// This creates one or more new monitored items. Returns one result for each node ID.
     ///
     /// # Errors
     ///
-    /// This fails when one of the nodes does not exist.
-    pub async fn create(self, subscription: &AsyncSubscription) -> Result<Vec<AsyncMonitoredItem>> {
+    /// This fails when the entire request is not successful. Errors for individual node IDs are
+    /// returned as error elements inside the resulting list.
+    pub async fn create(
+        self,
+        subscription: &AsyncSubscription,
+    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem)>>> {
         let Some(client) = &subscription.client().upgrade() else {
             return Err(Error::internal("client should not be dropped"));
         };
@@ -101,23 +105,34 @@ impl MonitoredItemBuilder {
         let (response, rxs) =
             create_monitored_items(client, &self.into_request(subscription_id)).await?;
 
-        let Some(monitored_item_ids) = response.monitored_item_ids() else {
-            return Err(Error::internal("expected monitored item IDs"));
+        let Some(mut results) = response.into_results() else {
+            return Err(Error::internal("expected monitoring item results"));
         };
 
         // PANIC: We expect exactly one result for each monitored item we requested above.
-        debug_assert_eq!(monitored_item_ids.len(), rxs.len());
+        //
+        // TODO: Do not panic but try to recover gracefully. Make sure to clean up monitored items
+        // that are returned.
+        debug_assert_eq!(results.len(), rxs.len());
 
-        Ok(monitored_item_ids
-            .into_iter()
+        let results = results
+            .drain_all()
             .zip(rxs)
-            .map(|(monitored_item_id, rx)| AsyncMonitoredItem {
-                client: Arc::downgrade(client),
-                subscription_id,
-                monitored_item_id,
-                rx,
+            .map(|(result, rx)| {
+                Error::verify_good(&result.status_code())?;
+
+                let monitored_item = AsyncMonitoredItem {
+                    client: Arc::downgrade(client),
+                    subscription_id,
+                    monitored_item_id: result.monitored_item_id(),
+                    rx,
+                };
+
+                Ok((result, monitored_item))
             })
-            .collect())
+            .collect();
+
+        Ok(results)
     }
 
     fn into_request(self, subscription_id: ua::SubscriptionId) -> ua::CreateMonitoredItemsRequest {

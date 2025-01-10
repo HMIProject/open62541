@@ -469,7 +469,9 @@ impl AsyncClient {
     ///
     /// This fails when the client is not connected.
     pub async fn create_subscription(&self) -> Result<AsyncSubscription> {
-        SubscriptionBuilder::default().create(self).await
+        let (_, subscription) = SubscriptionBuilder::default().create(self).await?;
+
+        Ok(subscription)
     }
 
     pub(crate) const fn client(&self) -> &Arc<ua::Client> {

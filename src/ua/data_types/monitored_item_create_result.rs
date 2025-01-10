@@ -6,12 +6,12 @@ crate::data_type!(MonitoredItemCreateResult);
 
 impl MonitoredItemCreateResult {
     #[must_use]
-    pub const fn status_code(&self) -> ua::StatusCode {
+    pub(crate) const fn status_code(&self) -> ua::StatusCode {
         ua::StatusCode::new(self.0.statusCode)
     }
 
     #[must_use]
-    pub const fn monitored_item_id(&self) -> ua::MonitoredItemId {
+    pub(crate) const fn monitored_item_id(&self) -> ua::MonitoredItemId {
         ua::MonitoredItemId::new(self.0.monitoredItemId)
     }
 
