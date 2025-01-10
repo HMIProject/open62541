@@ -16,8 +16,8 @@ use open62541_sys::{
 use tokio::{sync::oneshot, task, time::Instant};
 
 use crate::{
-    ua, AsyncSubscription, Attribute, BrowseResult, CallbackOnce, CreateSubscriptionOptions,
-    DataType, DataValue, Error, Result, ServiceRequest, ServiceResponse,
+    ua, AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataValue, Error,
+    Result, ServiceRequest, ServiceResponse, SubscriptionBuilder,
 };
 
 /// Timeout for `UA_Client_run_iterate()`.
@@ -469,22 +469,11 @@ impl AsyncClient {
     ///
     /// This fails when the client is not connected.
     pub async fn create_subscription(&self) -> Result<AsyncSubscription> {
-        self.create_subscription_with_options(CreateSubscriptionOptions::default())
-            .await
+        SubscriptionBuilder::default().create(self).await
     }
 
-    /// Creates new [subscription](AsyncSubscription) with options.
-    ///
-    /// This allows overriding the parameters used in the request.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the client is not connected.
-    pub async fn create_subscription_with_options(
-        &self,
-        options: CreateSubscriptionOptions,
-    ) -> Result<AsyncSubscription> {
-        AsyncSubscription::new(&self.client, options).await
+    pub(crate) const fn client(&self) -> &Arc<ua::Client> {
+        &self.client
     }
 }
 

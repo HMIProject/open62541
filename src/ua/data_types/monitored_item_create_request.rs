@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use open62541_sys::{UA_MonitoredItemCreateRequest_default, UA_NODEID_NUMERIC};
 
 use crate::{ua, DataType as _};
@@ -5,16 +7,28 @@ use crate::{ua, DataType as _};
 crate::data_type!(MonitoredItemCreateRequest);
 
 impl MonitoredItemCreateRequest {
+    /// Sets item to monitor.
+    #[must_use]
+    pub fn with_item_to_monitor(mut self, item_to_monitor: &ua::ReadValueId) -> Self {
+        item_to_monitor.clone_into_raw(&mut self.0.itemToMonitor);
+        self
+    }
+
+    /// Shortcut for setting node ID.
+    ///
+    /// See [`ua::ReadValueId::with_node_id()`].
     #[must_use]
     pub fn with_node_id(mut self, node_id: &ua::NodeId) -> Self {
         node_id.clone_into_raw(&mut self.0.itemToMonitor.nodeId);
         self
     }
 
-    /// Sets item to monitor.
+    /// Shortcut for setting attribute ID.
+    ///
+    /// See [`ua::ReadValueId::with_attribute_id()`].
     #[must_use]
-    pub fn with_item_to_monitor(mut self, item_to_monitor: &ua::ReadValueId) -> Self {
-        item_to_monitor.clone_into_raw(&mut self.0.itemToMonitor);
+    pub fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
+        self.0.itemToMonitor.attributeId = attribute_id.as_u32();
         self
     }
 
@@ -32,6 +46,38 @@ impl MonitoredItemCreateRequest {
         requested_parameters: &ua::MonitoringParameters,
     ) -> Self {
         requested_parameters.clone_into_raw(&mut self.0.requestedParameters);
+        self
+    }
+
+    /// Shortcut for setting sampling interval.
+    ///
+    /// See [`ua::MonitoringParameters::with_sampling_interval()`].
+    #[must_use]
+    pub const fn with_sampling_interval(mut self, sampling_interval: Option<Duration>) -> Self {
+        self.0.requestedParameters.samplingInterval =
+            if let Some(sampling_interval) = sampling_interval {
+                sampling_interval.as_secs_f64() * 1e3
+            } else {
+                -1.0
+            };
+        self
+    }
+
+    /// Shortcut for setting requested size of the monitored item queue.
+    ///
+    /// See [`ua::MonitoringParameters::with_queue_size()`].
+    #[must_use]
+    pub const fn with_queue_size(mut self, queue_size: u32) -> Self {
+        self.0.requestedParameters.queueSize = queue_size;
+        self
+    }
+
+    /// Shortcut for setting discard policy.
+    ///
+    /// See [`ua::MonitoringParameters::with_discard_oldest()`].
+    #[must_use]
+    pub const fn with_discard_oldest(mut self, discard_oldest: bool) -> Self {
+        self.0.requestedParameters.discardOldest = discard_oldest;
         self
     }
 }

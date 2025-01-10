@@ -7,8 +7,8 @@ crate::data_type!(CreateSubscriptionRequest);
 impl CreateSubscriptionRequest {
     /// Sets requested publishing interval.
     ///
-    /// The value `Some(Duration::ZERO)` indicates that the server shall revise with the fastest
-    /// supported publishing interval
+    /// The value `Duration::ZERO` indicates that the server shall revise with the fastest supported
+    /// publishing interval
     #[must_use]
     pub fn with_requested_publishing_interval(
         mut self,

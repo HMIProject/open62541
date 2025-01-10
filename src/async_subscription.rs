@@ -12,11 +12,12 @@ use open62541_sys::{
 };
 
 use crate::{
-    ua, AsyncMonitoredItem, CallbackOnce, CreateMonitoredItemOptions, DataType as _, Error, Result,
+    ua, AsyncClient, AsyncMonitoredItem, CallbackOnce, DataType as _, Error, MonitoredItemBuilder,
+    Result,
 };
 
 #[derive(Debug, Default)]
-pub struct CreateSubscriptionOptions {
+pub struct SubscriptionBuilder {
     requested_publishing_interval: Option<Duration>,
     requested_lifetime_count: Option<u32>,
     requested_max_keep_alive_count: Option<u32>,
@@ -25,7 +26,87 @@ pub struct CreateSubscriptionOptions {
     priority: Option<u8>,
 }
 
-impl CreateSubscriptionOptions {
+impl SubscriptionBuilder {
+    /// Sets requested publishing interval.
+    ///
+    /// See [`ua::CreateSubscriptionRequest::with_requested_publishing_interval()`].
+    #[must_use]
+    pub const fn requested_publishing_interval(
+        mut self,
+        requested_publishing_interval: Duration,
+    ) -> Self {
+        self.requested_publishing_interval = Some(requested_publishing_interval);
+        self
+    }
+
+    /// Sets requested lifetime count.
+    ///
+    /// See [`ua::CreateSubscriptionRequest::with_requested_lifetime_count()`].
+    #[must_use]
+    pub const fn requested_lifetime_count(mut self, requested_lifetime_count: u32) -> Self {
+        self.requested_lifetime_count = Some(requested_lifetime_count);
+        self
+    }
+
+    /// Sets requested maximum keep-alive count.
+    ///
+    /// See [`ua::CreateSubscriptionRequest::with_requested_max_keep_alive_count()`].
+    #[must_use]
+    pub const fn requested_max_keep_alive_count(
+        mut self,
+        requested_max_keep_alive_count: u32,
+    ) -> Self {
+        self.requested_max_keep_alive_count = Some(requested_max_keep_alive_count);
+        self
+    }
+
+    /// Sets maximum number of notifications that the client wishes to receive in a single publish
+    /// response.
+    ///
+    /// See [`ua::CreateSubscriptionRequest::with_max_notifications_per_publish()`].
+    #[must_use]
+    pub const fn max_notifications_per_publish(
+        mut self,
+        max_notifications_per_publish: u32,
+    ) -> Self {
+        self.max_notifications_per_publish = Some(max_notifications_per_publish);
+        self
+    }
+
+    /// Enables or disables publishing.
+    ///
+    /// See [`ua::CreateSubscriptionRequest::with_publishing_enabled()`].
+    #[must_use]
+    pub const fn publishing_enabled(mut self, publishing_enabled: bool) -> Self {
+        self.publishing_enabled = Some(publishing_enabled);
+        self
+    }
+
+    /// Sets relative priority of the subscription.
+    ///
+    /// See [`ua::CreateSubscriptionRequest::with_priority()`].
+    #[must_use]
+    pub const fn priority(mut self, priority: u8) -> Self {
+        self.priority = Some(priority);
+        self
+    }
+
+    /// Creates subscription.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the client is not connected.
+    pub async fn create(self, client: &AsyncClient) -> Result<AsyncSubscription> {
+        let client = client.client();
+
+        let response = create_subscription(client, &self.into_request()).await?;
+
+        Ok(AsyncSubscription {
+            client: Arc::downgrade(client),
+            subscription_id: response.subscription_id(),
+        })
+    }
+
     fn into_request(self) -> ua::CreateSubscriptionRequest {
         let Self {
             requested_publishing_interval,
@@ -69,20 +150,6 @@ pub struct AsyncSubscription {
 }
 
 impl AsyncSubscription {
-    pub(crate) async fn new(
-        client: &Arc<ua::Client>,
-        options: CreateSubscriptionOptions,
-    ) -> Result<Self> {
-        let request = options.into_request();
-
-        let response = create_subscription(client, &request).await?;
-
-        Ok(AsyncSubscription {
-            client: Arc::downgrade(client),
-            subscription_id: response.subscription_id(),
-        })
-    }
-
     /// Creates [monitored item](AsyncMonitoredItem).
     ///
     /// This creates a new monitored item for the given node.
@@ -91,28 +158,30 @@ impl AsyncSubscription {
     ///
     /// This fails when the node does not exist.
     pub async fn create_monitored_item(&self, node_id: &ua::NodeId) -> Result<AsyncMonitoredItem> {
-        self.create_monitored_item_with_options(node_id, CreateMonitoredItemOptions::default())
-            .await
-    }
+        let monitored_items = MonitoredItemBuilder::default()
+            .node_ids(&[node_id.clone()])
+            .create(self)
+            .await?;
 
-    /// Creates [monitored item](AsyncMonitoredItem) with options.
-    ///
-    /// This creates a new monitored item for the given node, it allows overriding the parameters
-    /// used in the request.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the node does not exist.
-    pub async fn create_monitored_item_with_options(
-        &self,
-        node_id: &ua::NodeId,
-        options: CreateMonitoredItemOptions,
-    ) -> Result<AsyncMonitoredItem> {
-        let Some(client) = self.client.upgrade() else {
-            return Err(Error::internal("client should not be dropped"));
+        let mut monitored_items = monitored_items.into_iter();
+
+        // We expect exactly one result for the single monitored item we requested above.
+        let monitored_item = match monitored_items.next() {
+            Some(monitored_item) if monitored_items.next().is_none() => monitored_item,
+            _ => return Err(Error::internal("expected exactly one monitored itom")),
         };
 
-        AsyncMonitoredItem::new(&client, self.subscription_id, node_id, options).await
+        Ok(monitored_item)
+    }
+
+    #[must_use]
+    pub(crate) const fn client(&self) -> &Weak<ua::Client> {
+        &self.client
+    }
+
+    #[must_use]
+    pub(crate) const fn subscription_id(&self) -> ua::SubscriptionId {
+        self.subscription_id
     }
 }
 
