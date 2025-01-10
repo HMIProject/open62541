@@ -37,6 +37,8 @@ mod localized_text;
 mod message_security_mode;
 mod monitored_item_create_request;
 mod monitored_item_create_result;
+mod monitoring_mode;
+mod monitoring_parameters;
 mod node_attributes;
 mod node_class;
 mod node_id;
@@ -95,6 +97,8 @@ pub use self::{
     message_security_mode::MessageSecurityMode,
     monitored_item_create_request::MonitoredItemCreateRequest,
     monitored_item_create_result::MonitoredItemCreateResult,
+    monitoring_mode::MonitoringMode,
+    monitoring_parameters::MonitoringParameters,
     node_attributes::{
         DataTypeAttributes, MethodAttributes, NodeAttributes, ObjectAttributes,
         ObjectTypeAttributes, ReferenceTypeAttributes, VariableAttributes, VariableTypeAttributes,

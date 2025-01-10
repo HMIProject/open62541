@@ -10,6 +10,30 @@ impl MonitoredItemCreateRequest {
         node_id.clone_into_raw(&mut self.0.itemToMonitor.nodeId);
         self
     }
+
+    /// Sets item to monitor.
+    #[must_use]
+    pub fn with_item_to_monitor(mut self, item_to_monitor: &ua::ReadValueId) -> Self {
+        item_to_monitor.clone_into_raw(&mut self.0.itemToMonitor);
+        self
+    }
+
+    /// Sets monitoring mode.
+    #[must_use]
+    pub fn with_monitoring_mode(mut self, monitoring_mode: &ua::MonitoringMode) -> Self {
+        monitoring_mode.clone_into_raw(&mut self.0.monitoringMode);
+        self
+    }
+
+    /// Sets requested parameters.
+    #[must_use]
+    pub fn with_requested_parameters(
+        mut self,
+        requested_parameters: &ua::MonitoringParameters,
+    ) -> Self {
+        requested_parameters.clone_into_raw(&mut self.0.requestedParameters);
+        self
+    }
 }
 
 impl Default for MonitoredItemCreateRequest {
