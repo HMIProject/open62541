@@ -331,8 +331,8 @@ async fn create_monitored_items(
         // TODO: Think about appropriate buffer size or let the caller decide.
         let (st_tx, st_rx) = mpsc::channel::<ua::DataValue>(MONITORED_ITEM_BUFFER_SIZE);
 
-        // `open62541` requires one set of notification/delete callback and context per monitor item
-        // in the request.
+        // `open62541` requires one set of notification/delete callback and context per monitored
+        // item in the request.
         let notification_callback: UA_Client_DataChangeNotificationCallback =
             Some(notification_callback_c);
         let delete_callback: UA_Client_DeleteMonitoredItemCallback = Some(delete_callback_c);
