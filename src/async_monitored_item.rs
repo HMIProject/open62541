@@ -18,6 +18,32 @@ use tokio::sync::mpsc;
 
 use crate::{ua, CallbackOnce, CallbackStream, DataType as _, Error, Result};
 
+#[derive(Debug, Default)]
+pub struct CreateMonitoredItemOptions {
+    monitoring_mode: Option<ua::MonitoringMode>,
+    requested_parameters: Option<ua::MonitoringParameters>,
+}
+
+impl CreateMonitoredItemOptions {
+    fn into_request(self, node_id: &ua::NodeId) -> ua::MonitoredItemCreateRequest {
+        let Self {
+            monitoring_mode,
+            requested_parameters,
+        } = self;
+
+        let mut request = ua::MonitoredItemCreateRequest::default().with_node_id(node_id);
+
+        if let Some(monitoring_mode) = monitoring_mode {
+            request = request.with_monitoring_mode(&monitoring_mode);
+        }
+        if let Some(requested_parameters) = requested_parameters {
+            request = request.with_requested_parameters(&requested_parameters);
+        }
+
+        request
+    }
+}
+
 /// Monitored item (with asynchronous API).
 #[derive(Debug)]
 pub struct AsyncMonitoredItem {
@@ -32,8 +58,9 @@ impl AsyncMonitoredItem {
         client: &Arc<ua::Client>,
         subscription_id: ua::SubscriptionId,
         node_id: &ua::NodeId,
+        options: CreateMonitoredItemOptions,
     ) -> Result<Self> {
-        let create_request = ua::MonitoredItemCreateRequest::default().with_node_id(node_id);
+        let create_request = options.into_request(node_id);
 
         let request = ua::CreateMonitoredItemsRequest::init()
             .with_subscription_id(subscription_id)
