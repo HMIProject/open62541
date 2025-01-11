@@ -167,6 +167,50 @@ impl<T: DataType> Array<T> {
         Some(Self::from_slice(slice))
     }
 
+    /// Creates new array by moving out of raw parts.
+    ///
+    /// When an array is returned, this leaves behind an empty array in the original position.
+    ///
+    /// # Safety
+    ///
+    /// Ownership is transferred. There must not be any aliased references to the array elements, as
+    /// they will be owned and freed when the returned value is dropped.
+    #[allow(dead_code)] // --no-default-features
+    pub(crate) unsafe fn move_from_raw_parts(
+        size: &mut usize,
+        ptr: &mut *mut T::Inner,
+    ) -> Option<Self> {
+        if *size == 0 {
+            if ptr.is_null() {
+                // This indicates an undefined array of unknown length. We do not handle this in the
+                // type but return `None` instead.
+                return None;
+            }
+            // Otherwise, we expect the sentinel value to indicate an empty array of length 0. This,
+            // we do handle and may return `Some`.
+            debug_assert_eq!(ptr.cast::<c_void>().cast_const(), unsafe {
+                UA_EMPTY_ARRAY_SENTINEL
+            });
+            return Some(Self(State::Empty));
+        }
+
+        // We require a proper pointer for safe operation (even when we do not access the pointed-to
+        // memory region at all, cf. documentation of `from_raw_parts()`).
+        debug_assert!(!ptr.is_null());
+        debug_assert_ne!(ptr.cast::<c_void>().cast_const(), unsafe {
+            UA_EMPTY_ARRAY_SENTINEL
+        });
+
+        let ptr = mem::replace(ptr, ptr::null_mut());
+        let size = mem::replace(size, 0);
+
+        // SAFETY: We checked preconditions above.
+        Some(Self(State::NonEmpty {
+            ptr: unsafe { NonNull::new_unchecked(ptr) },
+            size: unsafe { NonZeroUsize::new_unchecked(size) },
+        }))
+    }
+
     /// Creates slice from existing raw parts.
     ///
     /// # Safety

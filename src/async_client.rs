@@ -17,7 +17,7 @@ use tokio::{sync::oneshot, task, time::Instant};
 
 use crate::{
     ua, AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataValue, Error,
-    Result, ServiceRequest, ServiceResponse,
+    Result, ServiceRequest, ServiceResponse, SubscriptionBuilder,
 };
 
 /// Timeout for `UA_Client_run_iterate()`.
@@ -469,7 +469,13 @@ impl AsyncClient {
     ///
     /// This fails when the client is not connected.
     pub async fn create_subscription(&self) -> Result<AsyncSubscription> {
-        AsyncSubscription::new(&self.client).await
+        let (_, subscription) = SubscriptionBuilder::default().create(self).await?;
+
+        Ok(subscription)
+    }
+
+    pub(crate) const fn client(&self) -> &Arc<ua::Client> {
+        &self.client
     }
 }
 

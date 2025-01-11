@@ -4,6 +4,7 @@ use std::{
     ptr,
     sync::{Arc, Weak},
     task::{self, Poll},
+    time::Duration,
 };
 
 use futures_channel::oneshot;
@@ -16,7 +17,173 @@ use open62541_sys::{
 };
 use tokio::sync::mpsc;
 
-use crate::{ua, CallbackOnce, CallbackStream, DataType as _, Error, Result};
+use crate::{ua, AsyncSubscription, CallbackOnce, CallbackStream, DataType as _, Error, Result};
+
+#[derive(Debug)]
+pub struct MonitoredItemBuilder {
+    node_ids: Vec<ua::NodeId>,
+    monitoring_mode: Option<ua::MonitoringMode>,
+    #[allow(clippy::option_option)]
+    sampling_interval: Option<Option<Duration>>,
+    queue_size: Option<u32>,
+    discard_oldest: Option<bool>,
+}
+
+// Note: The default values in the docs below come from `UA_MonitoredItemCreateRequest_default()`.
+impl MonitoredItemBuilder {
+    pub fn new(node_ids: impl IntoIterator<Item = ua::NodeId>) -> Self {
+        Self {
+            node_ids: node_ids.into_iter().collect(),
+            monitoring_mode: None,
+            sampling_interval: None,
+            queue_size: None,
+            discard_oldest: None,
+        }
+    }
+
+    /// Sets monitoring mode.
+    ///
+    /// Default value is [`ua::MonitoringMode::REPORTING`].
+    ///
+    /// See [`ua::MonitoredItemCreateRequest::with_monitoring_mode()`].
+    #[must_use]
+    pub fn monitoring_mode(mut self, monitoring_mode: ua::MonitoringMode) -> Self {
+        self.monitoring_mode = Some(monitoring_mode);
+        self
+    }
+
+    /// Sets sampling interval.
+    ///
+    /// Default value is 250.0 ms.
+    ///
+    /// See [`ua::MonitoringParameters::with_sampling_interval()`].
+    #[must_use]
+    pub const fn sampling_interval(mut self, sampling_interval: Option<Duration>) -> Self {
+        self.sampling_interval = Some(sampling_interval);
+        self
+    }
+
+    /// Set requested size of the monitored item queue.
+    ///
+    /// Default value is 1.
+    ///
+    /// See [`ua::MonitoringParameters::with_queue_size()`].
+    #[must_use]
+    pub const fn queue_size(mut self, queue_size: u32) -> Self {
+        self.queue_size = Some(queue_size);
+        self
+    }
+
+    /// Set discard policy.
+    ///
+    /// Default value is `true`.
+    ///
+    /// See [`ua::MonitoringParameters::with_discard_oldest()`].
+    #[must_use]
+    pub const fn discard_oldest(mut self, discard_oldest: bool) -> Self {
+        self.discard_oldest = Some(discard_oldest);
+        self
+    }
+
+    /// Creates monitored items.
+    ///
+    /// This creates one or more new monitored items. Returns one result for each node ID.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the entire request is not successful. Errors for individual node IDs are
+    /// returned as error elements inside the resulting list.
+    pub async fn create(
+        self,
+        subscription: &AsyncSubscription,
+    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem)>>> {
+        let Some(client) = &subscription.client().upgrade() else {
+            return Err(Error::internal("client should not be dropped"));
+        };
+        let subscription_id = subscription.subscription_id();
+
+        let request = self.into_request(subscription_id);
+        let result_count = request.items_to_create().map_or(0, <[_]>::len);
+        let (response, rxs) = create_monitored_items(client, &request).await?;
+
+        let Some(mut results) = response.into_results() else {
+            return Err(Error::internal("expected monitoring item results"));
+        };
+
+        if results.len() != result_count || rxs.len() != result_count {
+            // This should not happen. In any case, we cannot associate returned items with their
+            // incoming node IDs. Clean up the items that we received to not leave them dangling.
+            //
+            let monitored_item_ids = results
+                .iter()
+                .filter(|result| result.status_code().is_good())
+                .map(ua::MonitoredItemCreateResult::monitored_item_id)
+                .collect::<Vec<_>>();
+            let request = ua::DeleteMonitoredItemsRequest::init()
+                .with_subscription_id(subscription_id)
+                .with_monitored_item_ids(&monitored_item_ids);
+            // This request is processed asynchronously. Errors are logged asynchronously too.
+            delete_monitored_items(client, &request);
+
+            return Err(Error::internal("unexpected number of monitored items"));
+        }
+
+        let results = results
+            .drain_all()
+            .zip(rxs)
+            .map(|(result, rx)| {
+                Error::verify_good(&result.status_code())?;
+
+                let monitored_item = AsyncMonitoredItem {
+                    client: Arc::downgrade(client),
+                    subscription_id,
+                    monitored_item_id: result.monitored_item_id(),
+                    rx,
+                };
+
+                Ok((result, monitored_item))
+            })
+            .collect();
+
+        Ok(results)
+    }
+
+    fn into_request(self, subscription_id: ua::SubscriptionId) -> ua::CreateMonitoredItemsRequest {
+        let Self {
+            node_ids,
+            monitoring_mode,
+            sampling_interval,
+            queue_size,
+            discard_oldest,
+        } = self;
+
+        let items_to_create = node_ids
+            .into_iter()
+            .map(|node_id| {
+                let mut request = ua::MonitoredItemCreateRequest::default().with_node_id(&node_id);
+
+                if let Some(monitoring_mode) = monitoring_mode.as_ref() {
+                    request = request.with_monitoring_mode(monitoring_mode);
+                }
+                if let Some(&sampling_interval) = sampling_interval.as_ref() {
+                    request = request.with_sampling_interval(sampling_interval);
+                }
+                if let Some(&queue_size) = queue_size.as_ref() {
+                    request = request.with_queue_size(queue_size);
+                }
+                if let Some(&discard_oldest) = discard_oldest.as_ref() {
+                    request = request.with_discard_oldest(discard_oldest);
+                }
+
+                request
+            })
+            .collect::<Vec<_>>();
+
+        ua::CreateMonitoredItemsRequest::init()
+            .with_subscription_id(subscription_id)
+            .with_items_to_create(&items_to_create)
+    }
+}
 
 /// Monitored item (with asynchronous API).
 #[derive(Debug)]
@@ -28,30 +195,6 @@ pub struct AsyncMonitoredItem {
 }
 
 impl AsyncMonitoredItem {
-    pub(crate) async fn new(
-        client: &Arc<ua::Client>,
-        subscription_id: ua::SubscriptionId,
-        node_id: &ua::NodeId,
-    ) -> Result<Self> {
-        let create_request = ua::MonitoredItemCreateRequest::default().with_node_id(node_id);
-
-        let request = ua::CreateMonitoredItemsRequest::init()
-            .with_subscription_id(subscription_id)
-            .with_items_to_create(&[create_request]);
-
-        let (response, rx) = create_monitored_items(client, &request).await?;
-
-        // PANIC: We expect exactly one result for the monitored item we requested above.
-        let monitored_item_id = *response.monitored_item_ids().unwrap().first().unwrap();
-
-        Ok(AsyncMonitoredItem {
-            client: Arc::downgrade(client),
-            subscription_id,
-            monitored_item_id,
-            rx,
-        })
-    }
-
     /// Waits for next value from server.
     ///
     /// This waits for the next value received for this monitored item. Returns `None` when item has
@@ -103,7 +246,7 @@ async fn create_monitored_items(
     request: &ua::CreateMonitoredItemsRequest,
 ) -> Result<(
     ua::CreateMonitoredItemsResponse,
-    mpsc::Receiver<ua::DataValue>,
+    Vec<mpsc::Receiver<ua::DataValue>>,
 )> {
     type St = CallbackStream<ua::DataValue>;
     type Cb = CallbackOnce<std::result::Result<ua::CreateMonitoredItemsResponse, ua::StatusCode>>;
@@ -178,8 +321,6 @@ async fn create_monitored_items(
     }
 
     let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse>>();
-    // TODO: Think about appropriate buffer size or let the caller decide.
-    let (st_tx, st_rx) = mpsc::channel::<ua::DataValue>(MONITORED_ITEM_BUFFER_SIZE);
 
     let callback = |result: std::result::Result<ua::CreateMonitoredItemsResponse, _>| {
         // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
@@ -188,11 +329,33 @@ async fn create_monitored_items(
         let _unused = tx.send(result.map_err(Error::new));
     };
 
+    let items_to_create = request
+        .items_to_create()
+        .map_or(0, <[ua::MonitoredItemCreateRequest]>::len);
+
     let mut notification_callbacks: Vec<UA_Client_DataChangeNotificationCallback> =
-        vec![Some(notification_callback_c)];
+        Vec::with_capacity(items_to_create);
     let mut delete_callbacks: Vec<UA_Client_DeleteMonitoredItemCallback> =
-        vec![Some(delete_callback_c)];
-    let mut contexts = vec![Context(St::prepare(st_tx))];
+        Vec::with_capacity(items_to_create);
+    let mut contexts = Vec::with_capacity(items_to_create);
+    let mut st_rxs = Vec::with_capacity(items_to_create);
+
+    for _ in 0..items_to_create {
+        // TODO: Think about appropriate buffer size or let the caller decide.
+        let (st_tx, st_rx) = mpsc::channel::<ua::DataValue>(MONITORED_ITEM_BUFFER_SIZE);
+
+        // `open62541` requires one set of notification/delete callback and context per monitored
+        // item in the request.
+        let notification_callback: UA_Client_DataChangeNotificationCallback =
+            Some(notification_callback_c);
+        let delete_callback: UA_Client_DeleteMonitoredItemCallback = Some(delete_callback_c);
+        let context = Context(St::prepare(st_tx));
+
+        notification_callbacks.push(notification_callback);
+        delete_callbacks.push(delete_callback);
+        contexts.push(context);
+        st_rxs.push(st_rx);
+    }
 
     let status_code = ua::StatusCode::new({
         log::debug!(
@@ -225,7 +388,7 @@ async fn create_monitored_items(
     // there.
     rx.await
         .unwrap_or(Err(Error::internal("callback should send result")))
-        .map(|response| (response, st_rx))
+        .map(|response| (response, st_rxs))
 }
 
 fn delete_monitored_items(client: &ua::Client, request: &ua::DeleteMonitoredItemsRequest) {

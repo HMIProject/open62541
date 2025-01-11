@@ -1,8 +1,8 @@
-use std::time::Duration;
+use std::{num::NonZero, time::Duration};
 
 use anyhow::Context as _;
 use futures::future;
-use open62541::{ua, AsyncClient};
+use open62541::{ua, AsyncClient, MonitoredItemBuilder, SubscriptionBuilder};
 use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME,
@@ -19,6 +19,34 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Connected successfully");
 
+    subscribe_node(&client).await?;
+
+    time::sleep(Duration::from_millis(500)).await;
+
+    subscribe_node_with_options(&client).await?;
+
+    time::sleep(Duration::from_millis(500)).await;
+
+    read_nodes(&client).await?;
+
+    time::sleep(Duration::from_millis(500)).await;
+
+    browse_node(&client).await?;
+
+    time::sleep(Duration::from_millis(500)).await;
+
+    println!("Disconnecting client");
+
+    client.disconnect().await;
+
+    time::sleep(Duration::from_millis(500)).await;
+
+    println!("Exiting");
+
+    Ok(())
+}
+
+async fn subscribe_node(client: &AsyncClient) -> anyhow::Result<()> {
     println!("Creating subscription");
 
     let subscription = client
@@ -26,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("create subscription")?;
 
-    let node_id = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
+    let node_id = ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
 
     let mut monitored_item = subscription
         .create_monitored_item(&node_id)
@@ -36,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(async move {
         println!("Watching for monitored item values");
         while let Some(value) = monitored_item.next().await {
-            println!("{value:?}");
+            println!("{node_id} -> {value:?}");
         }
         println!("Closed monitored item subscription");
     });
@@ -47,16 +75,91 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Subscription dropped");
 
-    time::sleep(Duration::from_millis(500)).await;
+    Ok(())
+}
 
+async fn subscribe_node_with_options(client: &AsyncClient) -> anyhow::Result<()> {
+    println!("Creating subscription with options");
+
+    let (response, subscription) = SubscriptionBuilder::default()
+        .requested_publishing_interval(Some(Duration::from_millis(100)))
+        .requested_lifetime_count(5)
+        .requested_max_keep_alive_count(Some(NonZero::new(1).context("non-zero value")?))
+        .max_notifications_per_publish(Some(NonZero::new(3).context("non-zero value")?))
+        .publishing_enabled(true)
+        .priority(127)
+        .create(client)
+        .await
+        .context("create subscription with options")?;
+
+    println!(
+        "Revised publishing interval: {:?}",
+        response.revised_publishing_interval()?
+    );
+    println!(
+        "Revised lifetime count: {}",
+        response.revised_lifetime_count()
+    );
+    println!(
+        "Revised maximum keep-alive count: {}",
+        response.revised_max_keep_alive_count()
+    );
+
+    let node_ids = [
+        ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME),
+        ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME),
+    ];
+
+    let results = MonitoredItemBuilder::new(node_ids.clone())
+        .monitoring_mode(ua::MonitoringMode::REPORTING)
+        .sampling_interval(Some(Duration::from_millis(100)))
+        .queue_size(3)
+        .discard_oldest(true)
+        .create(&subscription)
+        .await
+        .context("monitor items")?;
+
+    for (node_id, result) in node_ids.into_iter().zip(results) {
+        let (result, mut monitored_item) = match result {
+            Ok(result) => result,
+            Err(err) => {
+                println!("Error for {node_id}: {err:#}");
+                continue;
+            }
+        };
+
+        println!(
+            "Revised sampling interval: {:?}",
+            result.revised_sampling_interval()?
+        );
+        println!("Revised queue size: {}", result.revised_queue_size());
+
+        tokio::spawn(async move {
+            println!("Watching for monitored item values");
+            while let Some(value) = monitored_item.next().await {
+                println!("{node_id} -> {value:?}");
+            }
+            println!("Closed monitored item subscription");
+        });
+    }
+
+    time::sleep(Duration::from_secs(2)).await;
+
+    drop(subscription);
+
+    println!("Subscription with options dropped");
+
+    Ok(())
+}
+
+async fn read_nodes(client: &AsyncClient) -> anyhow::Result<()> {
     println!("Reading some items");
 
-    let builddate = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE);
-    let manufacturername =
-        ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME);
-    let productname = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME);
-    let currenttime = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
-    let starttime = ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME);
+    let builddate = ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE);
+    let manufacturername = ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME);
+    let productname = ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME);
+    let currenttime = ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
+    let starttime = ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME);
 
     let results = future::join_all(vec![
         client.read_value(&builddate),
@@ -69,29 +172,21 @@ async fn main() -> anyhow::Result<()> {
 
     println!("{results:?}");
 
-    time::sleep(Duration::from_millis(500)).await;
+    Ok(())
+}
 
+async fn browse_node(client: &AsyncClient) -> anyhow::Result<()> {
     println!("Browsing node");
 
     let (references, _) = client
         .browse(
             &ua::BrowseDescription::default()
-                .with_node_id(&ua::NodeId::numeric(0, UA_NS0ID_SERVER_SERVERSTATUS)),
+                .with_node_id(&ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS)),
         )
         .await
         .context("browse node")?;
 
     println!("{references:?}");
-
-    time::sleep(Duration::from_millis(500)).await;
-
-    println!("Disconnecting client");
-
-    client.disconnect().await;
-
-    time::sleep(Duration::from_millis(500)).await;
-
-    println!("Exiting");
 
     Ok(())
 }

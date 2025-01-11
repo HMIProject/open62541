@@ -236,8 +236,8 @@ pub use self::ssl::{create_certificate, Certificate, PrivateKey};
 #[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,
-    async_monitored_item::AsyncMonitoredItem,
-    async_subscription::AsyncSubscription,
+    async_monitored_item::{AsyncMonitoredItem, MonitoredItemBuilder},
+    async_subscription::{AsyncSubscription, SubscriptionBuilder},
     callback::{CallbackOnce, CallbackStream},
 };
 pub use self::{
