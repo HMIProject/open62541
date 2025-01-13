@@ -8,7 +8,7 @@ impl CreateSubscriptionRequest {
     /// Sets requested publishing interval.
     ///
     /// The value `None` indicates that the server shall revise with the fastest supported
-    /// publishing interval
+    /// publishing interval.
     #[must_use]
     pub fn with_requested_publishing_interval(
         mut self,
