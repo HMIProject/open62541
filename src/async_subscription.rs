@@ -186,7 +186,7 @@ impl AsyncSubscription {
 
         // We expect exactly one result for the single monitored item we requested above.
         let Ok::<[_; 1], _>([result]) = results.try_into() else {
-            return Err(Error::internal("expected exactly one monitored itom"));
+            return Err(Error::internal("expected exactly one monitored item"));
         };
 
         // Verify single item's status code and return as error.
