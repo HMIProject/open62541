@@ -22,6 +22,7 @@ use crate::{ua, AsyncSubscription, CallbackOnce, CallbackStream, DataType as _, 
 #[derive(Debug)]
 pub struct MonitoredItemBuilder {
     node_ids: Vec<ua::NodeId>,
+    attribute_id: Option<ua::AttributeId>,
     monitoring_mode: Option<ua::MonitoringMode>,
     #[allow(clippy::option_option)]
     sampling_interval: Option<Option<Duration>>,
@@ -34,11 +35,23 @@ impl MonitoredItemBuilder {
     pub fn new(node_ids: impl IntoIterator<Item = ua::NodeId>) -> Self {
         Self {
             node_ids: node_ids.into_iter().collect(),
+            attribute_id: None,
             monitoring_mode: None,
             sampling_interval: None,
             queue_size: None,
             discard_oldest: None,
         }
+    }
+
+    /// Sets attribute ID.
+    ///
+    /// Default value is [`ua::AttributeId::VALUE`].
+    ///
+    /// See [`ua::MonitoredItemCreateRequest::with_attribute_id()`].
+    #[must_use]
+    pub fn attribute_id(mut self, attribute_id: ua::AttributeId) -> Self {
+        self.attribute_id = Some(attribute_id);
+        self
     }
 
     /// Sets monitoring mode.
@@ -151,6 +164,7 @@ impl MonitoredItemBuilder {
     fn into_request(self, subscription_id: ua::SubscriptionId) -> ua::CreateMonitoredItemsRequest {
         let Self {
             node_ids,
+            attribute_id,
             monitoring_mode,
             sampling_interval,
             queue_size,
@@ -162,6 +176,9 @@ impl MonitoredItemBuilder {
             .map(|node_id| {
                 let mut request = ua::MonitoredItemCreateRequest::default().with_node_id(&node_id);
 
+                if let Some(attribute_id) = attribute_id.as_ref() {
+                    request = request.with_attribute_id(attribute_id);
+                }
                 if let Some(monitoring_mode) = monitoring_mode.as_ref() {
                     request = request.with_monitoring_mode(monitoring_mode);
                 }

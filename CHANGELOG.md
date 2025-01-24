@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add method `MonitoredItemBuilder::attribute_id()` to set a different attribute ID to monitor.
+
 ### Changed
 
 - Upgrade to open62541 version [1.4.9](https://github.com/open62541/open62541/releases/tag/v1.4.9).
