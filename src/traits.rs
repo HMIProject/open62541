@@ -54,3 +54,29 @@ pub trait CustomCertificateVerification {
         application_uri: &ua::String,
     ) -> ua::StatusCode;
 }
+
+/// Monitoring filter.
+///
+/// This is used as extensible parameter in [`ua::MonitoringParameters::with_filter()`].
+pub trait MonitoringFilter: fmt::Debug + Send + Sync + 'static {
+    fn to_extension_object(&self) -> ua::ExtensionObject;
+}
+
+impl MonitoringFilter for Box<dyn MonitoringFilter> {
+    fn to_extension_object(&self) -> ua::ExtensionObject {
+        (**self).to_extension_object()
+    }
+}
+
+/// Filter operand.
+///
+/// This is used as extensible parameter in [`ua::ContentFilterElement::with_filter_operands()`].
+pub trait FilterOperand: fmt::Debug + Send + Sync + 'static {
+    fn to_extension_object(&self) -> ua::ExtensionObject;
+}
+
+impl FilterOperand for Box<dyn FilterOperand> {
+    fn to_extension_object(&self) -> ua::ExtensionObject {
+        (**self).to_extension_object()
+    }
+}

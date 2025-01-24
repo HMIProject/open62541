@@ -1,9 +1,12 @@
 use std::{num::NonZero, time::Duration};
 
-use anyhow::Context as _;
+use anyhow::{bail, Context as _};
 use futures::future;
-use open62541::{ua, AsyncClient, MonitoredItemBuilder, SubscriptionBuilder};
+use open62541::{
+    ua, AsyncClient, ClientBuilder, DataType, MonitoredItemBuilder, SubscriptionBuilder,
+};
 use open62541_sys::{
+    UA_NS0ID_BASEEVENTTYPE, UA_NS0ID_BASEMODELCHANGEEVENTTYPE, UA_NS0ID_SERVER,
     UA_NS0ID_SERVER_SERVERSTATUS, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME,
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
@@ -15,11 +18,18 @@ use tokio::time;
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let client = AsyncClient::new("opc.tcp://opcuademo.sterfive.com:26543").context("connect")?;
+    let client = ClientBuilder::default()
+        .connect("opc.tcp://opcuademo.sterfive.com:26543")
+        .context("connect")?
+        .into_async();
 
     println!("Connected successfully");
 
-    subscribe_node(&client).await?;
+    subscribe_node_value(&client).await?;
+
+    time::sleep(Duration::from_millis(500)).await;
+
+    subscribe_node_events(&client).await?;
 
     time::sleep(Duration::from_millis(500)).await;
 
@@ -46,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn subscribe_node(client: &AsyncClient) -> anyhow::Result<()> {
+async fn subscribe_node_value(client: &AsyncClient) -> anyhow::Result<()> {
     println!("Creating subscription");
 
     let subscription = client
@@ -65,6 +75,67 @@ async fn subscribe_node(client: &AsyncClient) -> anyhow::Result<()> {
         println!("Watching for monitored item values");
         while let Some(value) = monitored_item.next().await {
             println!("{node_id} -> {value:?}");
+        }
+        println!("Closed monitored item subscription");
+    });
+
+    time::sleep(Duration::from_secs(2)).await;
+
+    drop(subscription);
+
+    println!("Subscription dropped");
+
+    Ok(())
+}
+
+async fn subscribe_node_events(client: &AsyncClient) -> anyhow::Result<()> {
+    println!("Creating subscription");
+
+    let subscription = client
+        .create_subscription()
+        .await
+        .context("create subscription")?;
+
+    let node_id = ua::NodeId::ns0(UA_NS0ID_SERVER);
+
+    let results = MonitoredItemBuilder::new([node_id.clone()])
+        .attribute_id(ua::AttributeId::EVENTNOTIFIER)
+        .filter(
+            ua::EventFilter::init()
+                .with_select_clauses(&[
+                    ua::SimpleAttributeOperand::init()
+                        .with_type_definition_id(ua::NodeId::ns0(UA_NS0ID_BASEEVENTTYPE))
+                        .with_browse_path(&[ua::QualifiedName::new(0, "Change")])
+                        .with_attribute_id(&ua::AttributeId::VALUE),
+                    ua::SimpleAttributeOperand::init()
+                        .with_type_definition_id(ua::NodeId::ns0(UA_NS0ID_BASEEVENTTYPE))
+                        .with_browse_path(&[ua::QualifiedName::new(0, "EventType")])
+                        .with_attribute_id(&ua::AttributeId::VALUE),
+                    ua::SimpleAttributeOperand::init()
+                        .with_type_definition_id(ua::NodeId::ns0(UA_NS0ID_BASEEVENTTYPE))
+                        .with_browse_path(&[ua::QualifiedName::new(0, "SourceNode")])
+                        .with_attribute_id(&ua::AttributeId::VALUE),
+                ])
+                .with_where_clause(
+                    ua::ContentFilter::init().with_elements(&[ua::ContentFilterElement::init()
+                        .with_filter_operator(ua::FilterOperator::OFTYPE)
+                        .with_filter_operands(&[ua::LiteralOperand::new(ua::Variant::scalar(
+                            ua::NodeId::ns0(UA_NS0ID_BASEMODELCHANGEEVENTTYPE),
+                        ))])]),
+                ),
+        )
+        .create(&subscription)
+        .await
+        .context("monitor item")?;
+    let Ok::<[_; 1], _>([result]) = results.try_into() else {
+        bail!("expected exactly one monitored item");
+    };
+    let (_, mut monitored_item) = result?;
+
+    tokio::spawn(async move {
+        println!("Watching for monitored item events");
+        while let Some(event) = monitored_item.next().await {
+            println!("{node_id} -> {event:?}");
         }
         println!("Closed monitored item subscription");
     });

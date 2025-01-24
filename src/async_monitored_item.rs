@@ -17,7 +17,10 @@ use open62541_sys::{
 };
 use tokio::sync::mpsc;
 
-use crate::{ua, AsyncSubscription, CallbackOnce, CallbackStream, DataType as _, Error, Result};
+use crate::{
+    ua, AsyncSubscription, CallbackOnce, CallbackStream, DataType as _, Error, MonitoringFilter,
+    Result,
+};
 
 #[derive(Debug)]
 pub struct MonitoredItemBuilder {
@@ -26,6 +29,7 @@ pub struct MonitoredItemBuilder {
     monitoring_mode: Option<ua::MonitoringMode>,
     #[allow(clippy::option_option)]
     sampling_interval: Option<Option<Duration>>,
+    filter: Option<Box<dyn MonitoringFilter>>,
     queue_size: Option<u32>,
     discard_oldest: Option<bool>,
 }
@@ -38,6 +42,7 @@ impl MonitoredItemBuilder {
             attribute_id: None,
             monitoring_mode: None,
             sampling_interval: None,
+            filter: None,
             queue_size: None,
             discard_oldest: None,
         }
@@ -76,7 +81,18 @@ impl MonitoredItemBuilder {
         self
     }
 
-    /// Set requested size of the monitored item queue.
+    /// Sets filter.
+    ///
+    /// Default value is no filter.
+    ///
+    /// See [`ua::MonitoringParameters::with_filter()`].
+    #[must_use]
+    pub fn filter(mut self, filter: impl MonitoringFilter) -> Self {
+        self.filter = Some(Box::new(filter));
+        self
+    }
+
+    /// Sets requested size of the monitored item queue.
     ///
     /// Default value is 1.
     ///
@@ -87,7 +103,7 @@ impl MonitoredItemBuilder {
         self
     }
 
-    /// Set discard policy.
+    /// Sets discard policy.
     ///
     /// Default value is `true`.
     ///
@@ -167,6 +183,7 @@ impl MonitoredItemBuilder {
             attribute_id,
             monitoring_mode,
             sampling_interval,
+            filter,
             queue_size,
             discard_oldest,
         } = self;
@@ -184,6 +201,9 @@ impl MonitoredItemBuilder {
                 }
                 if let Some(&sampling_interval) = sampling_interval.as_ref() {
                     request = request.with_sampling_interval(sampling_interval);
+                }
+                if let Some(filter) = filter.as_ref() {
+                    request = request.with_filter(filter);
                 }
                 if let Some(&queue_size) = queue_size.as_ref() {
                     request = request.with_queue_size(queue_size);

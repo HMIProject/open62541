@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use crate::{DataType as _, MonitoringFilter};
+
 crate::data_type!(MonitoringParameters);
 
 impl MonitoringParameters {
@@ -17,6 +19,15 @@ impl MonitoringParameters {
         } else {
             -1.0
         };
+        self
+    }
+
+    /// Sets filter.
+    #[must_use]
+    pub fn with_filter(mut self, filter: &impl MonitoringFilter) -> Self {
+        filter
+            .to_extension_object()
+            .move_into_raw(&mut self.0.filter);
         self
     }
 

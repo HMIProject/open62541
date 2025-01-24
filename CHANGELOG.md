@@ -10,6 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Add method `MonitoredItemBuilder::attribute_id()` to set a different attribute ID to monitor.
+- Add method `MonitoredItemBuilder::filter()` and related data types `ua::DataChangeFilter`,
+  `ua::EventFilter`, `ua::AggregateFilter` along with associated data types.
 
 ### Changed
 
