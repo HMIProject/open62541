@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Upgrade to open62541 version [1.4.9](https://github.com/open62541/open62541/releases/tag/v1.4.9).
+
 ## [0.7.2] - 2024-01-13
 
 ### Added
