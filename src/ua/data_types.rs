@@ -1,10 +1,12 @@
 //! Thin wrappers for OPC UA data types from [`open62541_sys`].
 
+mod aggregate_filter;
 mod anonymous_identity_token;
 mod application_description;
 mod application_type;
 mod argument;
 mod attribute_id;
+mod attribute_operand;
 mod browse_description;
 mod browse_direction;
 mod browse_next_request;
@@ -20,19 +22,26 @@ mod call_method_request;
 mod call_method_result;
 mod call_request;
 mod call_response;
+mod content_filter;
+mod content_filter_element;
 mod create_monitored_items_request;
 mod create_monitored_items_response;
 mod create_subscription_request;
 mod create_subscription_respones;
+mod data_change_filter;
 mod data_value;
 mod date_time;
 mod delete_monitored_items_request;
 mod delete_monitored_items_response;
 mod delete_subscriptions_request;
 mod delete_subscriptions_response;
+mod element_operand;
 mod endpoint_description;
+mod event_filter;
 mod expanded_node_id;
 mod extension_object;
+mod filter_operator;
+mod literal_operand;
 mod localized_text;
 mod message_security_mode;
 mod monitored_item_create_request;
@@ -50,6 +59,7 @@ mod read_value_id;
 mod reference_description;
 mod relative_path;
 mod relative_path_element;
+mod simple_attribute_operand;
 mod status_code;
 mod string;
 mod timestamps_to_return;
@@ -60,11 +70,13 @@ mod write_response;
 mod write_value;
 
 pub use self::{
+    aggregate_filter::AggregateFilter,
     anonymous_identity_token::AnonymousIdentityToken,
     application_description::ApplicationDescription,
     application_type::ApplicationType,
     argument::Argument,
     attribute_id::AttributeId,
+    attribute_operand::AttributeOperand,
     browse_description::BrowseDescription,
     browse_direction::BrowseDirection,
     browse_next_request::BrowseNextRequest,
@@ -80,19 +92,26 @@ pub use self::{
     call_method_result::CallMethodResult,
     call_request::CallRequest,
     call_response::CallResponse,
+    content_filter::ContentFilter,
+    content_filter_element::ContentFilterElement,
     create_monitored_items_request::CreateMonitoredItemsRequest,
     create_monitored_items_response::CreateMonitoredItemsResponse,
     create_subscription_request::CreateSubscriptionRequest,
     create_subscription_respones::CreateSubscriptionResponse,
+    data_change_filter::DataChangeFilter,
     data_value::DataValue,
     date_time::DateTime,
     delete_monitored_items_request::DeleteMonitoredItemsRequest,
     delete_monitored_items_response::DeleteMonitoredItemsResponse,
     delete_subscriptions_request::DeleteSubscriptionsRequest,
     delete_subscriptions_response::DeleteSubscriptionsResponse,
+    element_operand::ElementOperand,
     endpoint_description::EndpointDescription,
+    event_filter::EventFilter,
     expanded_node_id::ExpandedNodeId,
     extension_object::ExtensionObject,
+    filter_operator::FilterOperator,
+    literal_operand::LiteralOperand,
     localized_text::LocalizedText,
     message_security_mode::MessageSecurityMode,
     monitored_item_create_request::MonitoredItemCreateRequest,
@@ -114,6 +133,7 @@ pub use self::{
     reference_description::ReferenceDescription,
     relative_path::RelativePath,
     relative_path_element::RelativePathElement,
+    simple_attribute_operand::SimpleAttributeOperand,
     status_code::StatusCode,
     string::String,
     timestamps_to_return::TimestampsToReturn,

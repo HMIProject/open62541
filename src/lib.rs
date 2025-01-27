@@ -252,7 +252,9 @@ pub use self::{
         MethodCallback, MethodCallbackContext, MethodCallbackError, MethodCallbackResult,
         MethodNode, Node, ObjectNode, Server, ServerBuilder, ServerRunner, VariableNode,
     },
-    traits::{Attribute, Attributes, CustomCertificateVerification},
+    traits::{
+        Attribute, Attributes, CustomCertificateVerification, FilterOperand, MonitoringFilter,
+    },
     userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},
 };
