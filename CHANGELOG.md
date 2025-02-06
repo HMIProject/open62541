@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.3]
+
 ### Added
 
 - Add method `MonitoredItemBuilder::attribute_id()` to set a different attribute ID to monitor.
@@ -384,7 +386,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
-[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/HMIProject/open62541/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/HMIProject/open62541/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/HMIProject/open62541/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/HMIProject/open62541/compare/v0.6.6...v0.7.0
