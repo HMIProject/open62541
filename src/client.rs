@@ -111,6 +111,29 @@ impl ClientBuilder {
         self
     }
 
+    /// Sets security mode.
+    #[must_use]
+    pub fn security_mode(mut self, security_mode: ua::MessageSecurityMode) -> Self {
+        security_mode.move_into_raw(&mut self.config_mut().securityMode);
+        self
+    }
+
+    /// Sets security policy URI.
+    ///
+    /// The known values are as follows:
+    ///
+    /// - `http://opcfoundation.org/UA/SecurityPolicy#None`
+    /// - `http://opcfoundation.org/UA/SecurityPolicy#Basic128Rsa15` (deprecated)
+    /// - `http://opcfoundation.org/UA/SecurityPolicy#Basic256` (deprecated)
+    /// - `http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256`
+    /// - `http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_RsaOaep`
+    /// - `http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha256_RsaPss`
+    #[must_use]
+    pub fn security_policy_uri(mut self, security_policy_uri: ua::String) -> Self {
+        security_policy_uri.move_into_raw(&mut self.config_mut().securityPolicyUri);
+        self
+    }
+
     /// Sets secure channel life time.
     ///
     /// After this life time, the channel needs to be renewed.
