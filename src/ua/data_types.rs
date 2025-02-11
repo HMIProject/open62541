@@ -41,6 +41,7 @@ mod event_filter;
 mod expanded_node_id;
 mod extension_object;
 mod filter_operator;
+mod issued_identity_token;
 mod literal_operand;
 mod localized_text;
 mod message_security_mode;
@@ -68,6 +69,7 @@ mod variant;
 mod write_request;
 mod write_response;
 mod write_value;
+mod x509_identity_token;
 
 pub use self::{
     aggregate_filter::AggregateFilter,
@@ -111,6 +113,7 @@ pub use self::{
     expanded_node_id::ExpandedNodeId,
     extension_object::ExtensionObject,
     filter_operator::FilterOperator,
+    issued_identity_token::IssuedIdentityToken,
     literal_operand::LiteralOperand,
     localized_text::LocalizedText,
     message_security_mode::MessageSecurityMode,
@@ -142,6 +145,7 @@ pub use self::{
     write_request::WriteRequest,
     write_response::WriteResponse,
     write_value::WriteValue,
+    x509_identity_token::X509IdentityToken,
 };
 
 macro_rules! primitive {
