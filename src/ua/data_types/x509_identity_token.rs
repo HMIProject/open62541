@@ -1,9 +1,10 @@
-use crate::{ua, Certificate, DataType as _};
+use crate::{ua, DataType as _};
 
 crate::data_type!(X509IdentityToken);
 
 impl X509IdentityToken {
     /// Sets policy ID.
+    #[must_use]
     pub fn with_policy_id(mut self, policy_id: ua::String) -> Self {
         policy_id.move_into_raw(&mut self.0.policyId);
         self
@@ -22,11 +23,14 @@ impl X509IdentityToken {
     ///
     /// This handles certificates in both [DER] and [PEM] format.
     ///
+    /// # Errors
+    ///
+    /// This fails when the certificate cannot be parsed or is invalid.
+    ///
     /// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
     /// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
     #[cfg(feature = "x509")]
-    #[must_use]
-    pub fn with_certificate(self, certificate: Certificate) -> crate::Result<Self> {
+    pub fn with_certificate(self, certificate: crate::Certificate) -> crate::Result<Self> {
         let certificate_data = certificate
             .into_x509()
             .map_err(|_| crate::Error::internal("unable to parse PEM certificate"))?

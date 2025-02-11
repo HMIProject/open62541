@@ -18,6 +18,7 @@ impl UserNameIdentityToken {
     }
 
     /// Sets policy ID.
+    #[must_use]
     pub fn with_policy_id(mut self, policy_id: ua::String) -> Self {
         policy_id.move_into_raw(&mut self.0.policyId);
         self
@@ -38,6 +39,7 @@ impl UserNameIdentityToken {
     }
 
     /// Sets encryption algorithm.
+    #[must_use]
     pub fn with_encryption_algorithm(mut self, encryption_algorithm: ua::String) -> Self {
         encryption_algorithm.move_into_raw(&mut self.0.encryptionAlgorithm);
         self
