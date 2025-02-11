@@ -6,11 +6,15 @@ impl UserNameIdentityToken {
     /// Creates token with user name and password.
     ///
     /// This is a shortcut for calling [`Self::with_user_name()`] and [`Self::with_password()`].
+    ///
+    /// # Panics
+    ///
+    /// The user name must not contain any NUL bytes.
     #[must_use]
     pub fn new(user_name: &str, password: &str) -> Self {
         Self::init()
-            .with_user_name(user_name)
-            .with_password(password)
+            .with_user_name(ua::String::new(user_name).unwrap())
+            .with_password(ua::ByteString::new(password.as_bytes()))
     }
 
     /// Sets policy ID.
@@ -20,28 +24,16 @@ impl UserNameIdentityToken {
     }
 
     /// Sets user name.
-    ///
-    /// # Panics
-    ///
-    /// The string must not contain any NUL bytes.
     #[must_use]
-    pub fn with_user_name(mut self, user_name: &str) -> Self {
-        ua::String::new(user_name)
-            .unwrap()
-            .move_into_raw(&mut self.0.userName);
+    pub fn with_user_name(mut self, user_name: ua::String) -> Self {
+        user_name.move_into_raw(&mut self.0.userName);
         self
     }
 
     /// Sets password.
-    ///
-    /// # Panics
-    ///
-    /// The string must not contain any NUL bytes.
     #[must_use]
-    pub fn with_password(mut self, password: &str) -> Self {
-        ua::String::new(password)
-            .unwrap()
-            .move_into_raw(&mut self.0.password);
+    pub fn with_password(mut self, password: ua::ByteString) -> Self {
+        password.move_into_raw(&mut self.0.password);
         self
     }
 
