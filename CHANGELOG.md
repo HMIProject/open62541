@@ -11,8 +11,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Add method `with_policy_id()` to `ua::AnonymousIdentityToken` and `ua::UserNameIdentityToken`.
 - Add method `ua::UserNameIdentityToken::with_encryption_algorithm()`.
-- Add `ua::X509IdentityToken`.
-- Breaking: Add enum variant `UserIdentityToken::X509`.
+- Add `ua::X509IdentityToken` and `ua::IssuedIdentityToken`.
+- Breaking: Add enum variants `X509` and `Issued` to `UserIdentityToken`.
 
 ## [0.7.3]
 

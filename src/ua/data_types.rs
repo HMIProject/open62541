@@ -41,6 +41,7 @@ mod event_filter;
 mod expanded_node_id;
 mod extension_object;
 mod filter_operator;
+mod issued_identity_token;
 mod literal_operand;
 mod localized_text;
 mod message_security_mode;
@@ -112,6 +113,7 @@ pub use self::{
     expanded_node_id::ExpandedNodeId,
     extension_object::ExtensionObject,
     filter_operator::FilterOperator,
+    issued_identity_token::IssuedIdentityToken,
     literal_operand::LiteralOperand,
     localized_text::LocalizedText,
     message_security_mode::MessageSecurityMode,
