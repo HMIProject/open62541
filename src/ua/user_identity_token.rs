@@ -40,3 +40,9 @@ impl From<ua::X509IdentityToken> for UserIdentityToken {
         Self::X509(value)
     }
 }
+
+impl From<ua::IssuedIdentityToken> for UserIdentityToken {
+    fn from(value: ua::IssuedIdentityToken) -> Self {
+        Self::Issued(value)
+    }
+}
