@@ -68,6 +68,7 @@ mod variant;
 mod write_request;
 mod write_response;
 mod write_value;
+mod x509_identity_token;
 
 pub use self::{
     aggregate_filter::AggregateFilter,
@@ -142,6 +143,7 @@ pub use self::{
     write_request::WriteRequest,
     write_response::WriteResponse,
     write_value::WriteValue,
+    x509_identity_token::X509IdentityToken,
 };
 
 macro_rules! primitive {
