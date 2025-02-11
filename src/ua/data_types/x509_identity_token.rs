@@ -29,7 +29,7 @@ impl X509IdentityToken {
     ///
     /// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
     /// [PEM]: https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail
-    #[cfg(feature = "x509")]
+    #[cfg(all(feature = "mbedtls", feature = "x509"))]
     pub fn with_certificate(self, certificate: crate::Certificate) -> crate::Result<Self> {
         let certificate_data = certificate
             .into_x509()
