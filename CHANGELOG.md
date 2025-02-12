@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-02-12
+
 ### Added
 
 - Add method `with_policy_id()` to `ua::AnonymousIdentityToken` and `ua::UserNameIdentityToken`.
@@ -19,7 +21,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Expect `ua::String`, `ua::ByteString` in `ua::UserNameIdentityToken::with_user_name()`,
   `ua::UserNameIdentityToken::with_password()`.
 
-## [0.7.3]
+## [0.7.3] - 2025-02-06
 
 ### Added
 
@@ -34,7 +36,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Upgrade to open62541 version
   [1.4.10](https://github.com/open62541/open62541/releases/tag/v1.4.10).
 
-## [0.7.2] - 2024-01-13
+## [0.7.2] - 2025-01-13
 
 ### Added
 
@@ -398,7 +400,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
-[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/HMIProject/open62541/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/HMIProject/open62541/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/HMIProject/open62541/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/HMIProject/open62541/compare/v0.7.0...v0.7.1
