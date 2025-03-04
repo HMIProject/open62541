@@ -77,6 +77,9 @@ impl ClientConfig {
             config.logging = ua::Logger::rust_log().into_raw();
 
             // Initialize callback for fetching private-key password when compiling for SSL support.
+            // We always set this, even when `ClientBuilder::private_key_password_callback()` is not
+            // called, to skip the default implementation where `open62541` requests the password on
+            // the terminal (stdin), issuing an unexpected, blocking prompt.
             #[cfg(feature = "mbedtls")]
             {
                 debug_assert!(config.privateKeyPasswordCallback.is_none());
