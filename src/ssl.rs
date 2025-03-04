@@ -18,12 +18,21 @@ impl Password {
     ///
     /// As this takes only a slice and returns an owned copy, the original data should be zeroized
     /// independently as soon as it is no longer needed.
+    ///
+    /// For owned data, consider using `From`/`Into` with `Vec<u8>` or `String` instead:
+    ///
+    /// ```
+    /// # use open62541::Password;
+    /// #
+    /// let secret = Password::from(vec![0x12, 0x34, 0x56, 0x78]);
+    /// let secret: Password = String::from("secret").into();
+    /// ```
     #[must_use]
     pub fn from_bytes(bytes: &[u8]) -> Self {
         Self(Zeroizing::new(ua::ByteString::new(bytes)))
     }
 
-    /// Gets certificate data.
+    /// Gets password data.
     #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         // SAFETY: We always initialize inner value.
@@ -39,6 +48,13 @@ impl fmt::Debug for Password {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Omit display of password to not leak secrets.
         f.debug_tuple("Password").finish()
+    }
+}
+
+impl From<Vec<u8>> for Password {
+    fn from(value: Vec<u8>) -> Self {
+        let value = Zeroizing::new(value);
+        Self::from_bytes(&value)
     }
 }
 

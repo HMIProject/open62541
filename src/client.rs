@@ -212,6 +212,24 @@ impl ClientBuilder {
     }
 
     /// Sets private-key password callback.
+    ///
+    /// The trait [`PrivateKeyPasswordCallback`] is implemented for closures, so this call may be as
+    /// simple as the following (note that hard-coding secrets like this is not secure and should be
+    /// avoided):
+    ///
+    /// ```
+    /// # use open62541::{Certificate, ClientBuilder, PrivateKey};
+    /// #
+    /// # let _ = |certificate: Certificate, private_key: PrivateKey| -> open62541::Result<()> {
+    /// let client = ClientBuilder::default_encryption(&certificate, &private_key)
+    ///     .expect("should create builder with encryption")
+    ///     .private_key_password_callback(|| Ok(String::from("secret").into()))
+    ///     .connect("opc.tcp://localhost")?;
+    /// # Ok(())
+    /// # };
+    /// ```
+    ///
+    /// [`PrivateKeyPasswordCallback`]: crate::PrivateKeyPasswordCallback
     #[cfg(feature = "mbedtls")]
     #[must_use]
     pub fn private_key_password_callback(
@@ -314,7 +332,7 @@ impl Default for ClientBuilder {
 ///
 /// This is stored in the client's `clientContext` attribute and manages custom callbacks as used by
 /// [`ClientBuilder::private_key_password_callback()`].
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub(crate) struct ClientContext {
     #[cfg(feature = "mbedtls")]
     pub(crate) private_key_password_callback: Option<Box<dyn crate::PrivateKeyPasswordCallback>>,

@@ -66,13 +66,23 @@ pub trait CustomCertificateVerification {
 /// [`AsyncClient`]: crate::AsyncClient
 /// [`ClientBuilder::private_key_password_callback()`]: crate::ClientBuilder::private_key_password_callback
 #[cfg(feature = "mbedtls")]
-pub trait PrivateKeyPasswordCallback: fmt::Debug {
-    /// Provides private key password.
+pub trait PrivateKeyPasswordCallback {
+    /// Provides private-key password.
     ///
     /// # Errors
     ///
     /// This should return an appropriate error when the password cannot be provided.
     fn private_key_password(&self) -> Result<crate::Password, crate::Error>;
+}
+
+#[cfg(feature = "mbedtls")]
+impl<F> PrivateKeyPasswordCallback for F
+where
+    F: Fn() -> Result<crate::Password, crate::Error>,
+{
+    fn private_key_password(&self) -> Result<crate::Password, crate::Error> {
+        self()
+    }
 }
 
 /// Monitoring filter.
