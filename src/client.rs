@@ -35,7 +35,7 @@ impl ClientBuilder {
     // Method name refers to call of `UA_ClientConfig_setDefault()`.
     #[must_use]
     fn default() -> Self {
-        Self(ua::ClientConfig::default())
+        Self(ua::ClientConfig::default(ClientContext::default()))
     }
 
     /// Creates builder from default client config with encryption.
@@ -74,6 +74,7 @@ impl ClientBuilder {
         private_key: &crate::PrivateKey,
     ) -> Result<Self> {
         Ok(Self(ua::ClientConfig::default_encryption(
+            ClientContext::default(),
             local_certificate,
             private_key,
         )?))
@@ -210,6 +211,36 @@ impl ClientBuilder {
         self
     }
 
+    /// Sets private-key password callback.
+    ///
+    /// The trait [`PrivateKeyPasswordCallback`] is implemented for closures, so this call may be as
+    /// simple as the following (note that hard-coding secrets like this is not secure and should be
+    /// avoided):
+    ///
+    /// ```
+    /// # use open62541::{Certificate, ClientBuilder, PrivateKey};
+    /// #
+    /// # let _ = |certificate: Certificate, private_key: PrivateKey| -> open62541::Result<()> {
+    /// let client = ClientBuilder::default_encryption(&certificate, &private_key)
+    ///     .expect("should create builder with encryption")
+    ///     .private_key_password_callback(|| Ok(String::from("secret").into()))
+    ///     .connect("opc.tcp://localhost")?;
+    /// # Ok(())
+    /// # };
+    /// ```
+    ///
+    /// [`PrivateKeyPasswordCallback`]: crate::PrivateKeyPasswordCallback
+    #[cfg(feature = "mbedtls")]
+    #[must_use]
+    pub fn private_key_password_callback(
+        mut self,
+        private_key_password_callback: impl crate::PrivateKeyPasswordCallback + 'static,
+    ) -> Self {
+        self.context_mut().private_key_password_callback =
+            Some(Box::new(private_key_password_callback));
+        self
+    }
+
     /// Connects to OPC UA endpoint and returns [`Client`].
     ///
     /// # Errors
@@ -277,9 +308,17 @@ impl ClientBuilder {
     }
 
     /// Access client configuration.
+    #[must_use]
     fn config_mut(&mut self) -> &mut UA_ClientConfig {
         // SAFETY: Ownership is not given away.
         unsafe { self.0.as_mut() }
+    }
+
+    /// Access client context.
+    #[allow(dead_code)] // --no-default-features
+    #[must_use]
+    fn context_mut(&mut self) -> &mut ClientContext {
+        self.0.context_mut()
     }
 }
 
@@ -287,6 +326,16 @@ impl Default for ClientBuilder {
     fn default() -> Self {
         Self::default()
     }
+}
+
+/// Custom client context.
+///
+/// This is stored in the client's `clientContext` attribute and manages custom callbacks as used by
+/// [`ClientBuilder::private_key_password_callback()`].
+#[derive(Default)]
+pub(crate) struct ClientContext {
+    #[cfg(feature = "mbedtls")]
+    pub(crate) private_key_password_callback: Option<Box<dyn crate::PrivateKeyPasswordCallback>>,
 }
 
 /// Connected OPC UA client.

@@ -231,8 +231,6 @@ pub mod ua;
 mod userdata;
 mod value;
 
-#[cfg(feature = "mbedtls")]
-pub use self::ssl::{create_certificate, Certificate, PrivateKey};
 #[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,
@@ -259,9 +257,15 @@ pub use self::{
     value::{ScalarValue, ValueType, VariantValue},
 };
 pub(crate) use self::{
+    client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
     service::{ServiceRequest, ServiceResponse},
     value::{ArrayValue, NonScalarValue},
+};
+#[cfg(feature = "mbedtls")]
+pub use self::{
+    ssl::{create_certificate, Certificate, Password, PrivateKey},
+    traits::PrivateKeyPasswordCallback,
 };
 
 /// IANA-assigned OPC UA port number.

@@ -204,6 +204,7 @@ pub unsafe trait DataType: Debug + Clone {
     /// [`UA_delete()`] to free internal allocations and not leak memory.
     ///
     /// [`UA_delete()`]: open62541_sys::UA_delete
+    #[must_use]
     fn leak_into_raw(self) -> *mut Self::Inner {
         // Use `UA_new()` to create heap allocation that can be cleaned up with `UA_free()`.
         let dst = unsafe { UA_new(Self::data_type()) }.cast::<Self::Inner>();

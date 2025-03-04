@@ -55,6 +55,36 @@ pub trait CustomCertificateVerification {
     ) -> ua::StatusCode;
 }
 
+/// Private-key password callback.
+///
+/// This is used to fetch the password for a given client private key when establishing a connection
+/// in [`Client`] or [`AsyncClient`].
+///
+/// See [`ClientBuilder::private_key_password_callback()`] for details.
+///
+/// [`Client`]: crate::Client
+/// [`AsyncClient`]: crate::AsyncClient
+/// [`ClientBuilder::private_key_password_callback()`]: crate::ClientBuilder::private_key_password_callback
+#[cfg(feature = "mbedtls")]
+pub trait PrivateKeyPasswordCallback {
+    /// Provides private-key password.
+    ///
+    /// # Errors
+    ///
+    /// This should return an appropriate error when the password cannot be provided.
+    fn private_key_password(&self) -> Result<crate::Password, crate::Error>;
+}
+
+#[cfg(feature = "mbedtls")]
+impl<F> PrivateKeyPasswordCallback for F
+where
+    F: Fn() -> Result<crate::Password, crate::Error>,
+{
+    fn private_key_password(&self) -> Result<crate::Password, crate::Error> {
+        self()
+    }
+}
+
 /// Monitoring filter.
 ///
 /// This is used as extensible parameter in [`ua::MonitoringParameters::with_filter()`].
