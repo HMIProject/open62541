@@ -9,14 +9,64 @@ pub(crate) struct ClientConfig(Option<UA_ClientConfig>);
 impl ClientConfig {
     #[must_use]
     fn new(context: ClientContext) -> Self {
+        #[cfg(feature = "mbedtls")]
+        unsafe extern "C" fn private_key_password_callback_c(
+            cc: *mut UA_ClientConfig,
+            password: *mut open62541_sys::UA_ByteString,
+        ) -> open62541_sys::UA_StatusCode {
+            use crate::DataType as _;
+
+            // Unwrap incoming arguments. This should always work: `password` is a valid instance of
+            // `UA_ByteString` even though it is only used as out argument.
+            let Some(cc) = (unsafe { cc.as_mut() }) else {
+                return ua::StatusCode::BADINTERNALERROR.into_raw();
+            };
+            let Some(password) = (unsafe { password.as_mut() }) else {
+                return ua::StatusCode::BADINTERNALERROR.into_raw();
+            };
+
+            // We always expect to find the context as initialized by `Self::new()` further below.
+            let Some(context) = (unsafe { cc.clientContext.cast::<ClientContext>().as_mut() })
+            else {
+                return ua::StatusCode::BADINTERNALERROR.into_raw();
+            };
+
+            // The callback is only set by `ClientBuilder::private_key_password_callback()`.
+            let Some(private_key_password_callback) =
+                context.private_key_password_callback.as_ref()
+            else {
+                return ua::StatusCode::BADCONFIGURATIONERROR.into_raw();
+            };
+
+            let status_code = match private_key_password_callback.private_key_password() {
+                Ok(result_password) => {
+                    // This clones the password string. The original string from the callback method
+                    // is zeroized. The cloned string is handled by `open62541`, eventually zeroized
+                    // there as well in implementation of `UA_ClientConfig_setDefaultEncryption()`.
+                    result_password.as_byte_string().clone_into_raw(password);
+                    ua::StatusCode::GOOD
+                }
+                Err(err) => err.status_code(),
+            };
+
+            status_code.into_raw()
+        }
+
         let mut config = Self::init();
 
-        let logger = ua::Logger::rust_log();
-
-        // Set custom logger first. This is necessary because the same logger instance is used as-is
-        // inside derived attributes such as `eventLoop`, `certificateVerification`, etc.
+        // Initialize default attributes. None of these must return early to avoid leaking memory in
+        // case the config has only been half-initialized.
+        //
+        // We set the custom logger here before the caller calls `UA_ClientConfig_set...()`. This is
+        // necessary because the same logger instance will be used inside derived attributes such as
+        // `eventLoop`, `certificateVerification`, etc.
         {
             let config = unsafe { config.as_mut() };
+
+            debug_assert!(config.clientContext.is_null());
+            // Set custom client context. This leaks memory which is later reclaimed when the config
+            // or the client that was created from it is dropped.
+            config.clientContext = Box::into_raw(Box::new(context)).cast::<c_void>();
 
             // We assign a logger only on default-initialized config objects: we cannot know whether
             // an existing configuration is still referenced in another attribute or structure, thus
@@ -24,12 +74,14 @@ impl ClientConfig {
             debug_assert!(config.logging.is_null());
             // Create logger configuration. Ownership of the `UA_Logger` instance passes to `config`
             // at this point.
-            config.logging = logger.into_raw();
+            config.logging = ua::Logger::rust_log().into_raw();
 
-            debug_assert!(config.clientContext.is_null());
-            // Set custom client context. This leaks memory which is later reclaimed when the config
-            // or the client that was created from it is dropped.
-            config.clientContext = Box::into_raw(Box::new(context)).cast::<c_void>();
+            // Initialize callback for fetching private-key password when compiling for SSL support.
+            #[cfg(feature = "mbedtls")]
+            {
+                debug_assert!(config.privateKeyPasswordCallback.is_none());
+                config.privateKeyPasswordCallback = Some(private_key_password_callback_c);
+            }
         }
 
         // Next, we must finish initialization by calling `UA_ClientConfig_set...()` as appropriate.
