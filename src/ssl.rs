@@ -5,6 +5,50 @@ use zeroize::Zeroizing;
 
 use crate::{ua, DataType, Error};
 
+/// Secret password.
+///
+/// The wrapped memory is [zeroized] when dropped.
+///
+/// [zeroized]: https://crates.io/crates/zeroize
+#[derive(Clone)]
+pub struct Password(Zeroizing<ua::ByteString>);
+
+impl Password {
+    /// Wraps password data.
+    ///
+    /// As this takes only a slice and returns an owned copy, the original data should be zeroized
+    /// independently as soon as it is no longer needed.
+    #[must_use]
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        Self(Zeroizing::new(ua::ByteString::new(bytes)))
+    }
+
+    /// Gets certificate data.
+    #[must_use]
+    pub fn as_bytes(&self) -> &[u8] {
+        // SAFETY: We always initialize inner value.
+        unsafe { self.0.as_bytes_unchecked() }
+    }
+
+    pub(crate) fn as_byte_string(&self) -> &ua::ByteString {
+        &self.0
+    }
+}
+
+impl fmt::Debug for Password {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Omit display of password to not leak secrets.
+        f.debug_tuple("Password").finish()
+    }
+}
+
+impl From<String> for Password {
+    fn from(value: String) -> Self {
+        let value = Zeroizing::new(value);
+        Self::from_bytes(value.as_bytes())
+    }
+}
+
 /// Certificate in [DER] or [PEM] format.
 ///
 /// [DER]: https://en.wikipedia.org/wiki/X.690#DER_encoding
