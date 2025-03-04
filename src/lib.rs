@@ -259,6 +259,7 @@ pub use self::{
     value::{ScalarValue, ValueType, VariantValue},
 };
 pub(crate) use self::{
+    client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
     service::{ServiceRequest, ServiceResponse},
     value::{ArrayValue, NonScalarValue},

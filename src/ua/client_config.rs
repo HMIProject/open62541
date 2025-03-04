@@ -1,14 +1,14 @@
-use std::{fmt, mem::MaybeUninit};
+use std::{ffi::c_void, fmt, mem::MaybeUninit};
 
 use open62541_sys::{UA_ClientConfig, UA_ClientConfig_clear, UA_ClientConfig_setDefault};
 
-use crate::{ua, Error};
+use crate::{ua, ClientContext, Error};
 
 pub(crate) struct ClientConfig(Option<UA_ClientConfig>);
 
 impl ClientConfig {
     #[must_use]
-    fn new() -> Self {
+    fn new(context: ClientContext) -> Self {
         let mut config = Self::init();
 
         let logger = ua::Logger::rust_log();
@@ -17,6 +17,7 @@ impl ClientConfig {
         // inside derived attributes such as `eventLoop`, `certificateVerification`, etc.
         {
             let config = unsafe { config.as_mut() };
+
             // We assign a logger only on default-initialized config objects: we cannot know whether
             // an existing configuration is still referenced in another attribute or structure, thus
             // we could not (safely) free it anyway.
@@ -24,6 +25,11 @@ impl ClientConfig {
             // Create logger configuration. Ownership of the `UA_Logger` instance passes to `config`
             // at this point.
             config.logging = logger.into_raw();
+
+            debug_assert!(config.clientContext.is_null());
+            // Set custom client context. This leaks memory which is later reclaimed when the config
+            // or the client that was created from it is dropped.
+            config.clientContext = Box::into_raw(Box::new(context)).cast::<c_void>();
         }
 
         // Next, we must finish initialization by calling `UA_ClientConfig_set...()` as appropriate.
@@ -34,8 +40,8 @@ impl ClientConfig {
     /// Creates default client config.
     // Method name refers to call of `UA_ClientConfig_setDefault()`.
     #[must_use]
-    pub(crate) fn default() -> Self {
-        let mut config = Self::new();
+    pub(crate) fn default(context: ClientContext) -> Self {
+        let mut config = Self::new(context);
 
         // Set remaining attributes to their desired values. This also copies the logger as laid out
         // above to other attributes inside `config` (cleaned up by `UA_ClientConfig_clear()`).
@@ -51,12 +57,13 @@ impl ClientConfig {
     // Method name refers to call of `UA_ClientConfig_setDefaultEncryption()`.
     #[cfg(feature = "mbedtls")]
     pub(crate) fn default_encryption(
+        context: ClientContext,
         local_certificate: &crate::Certificate,
         private_key: &crate::PrivateKey,
     ) -> Result<Self, crate::Error> {
         use {crate::DataType, open62541_sys::UA_ClientConfig_setDefaultEncryption, std::ptr};
 
-        let mut config = Self::new();
+        let mut config = Self::new(context);
 
         // Set remaining attributes to their desired values. This also copies the logger as laid out
         // above to other attributes inside `config` (cleaned up by `UA_ClientConfig_clear()`).
@@ -75,6 +82,17 @@ impl ClientConfig {
         Error::verify_good(&status_code)?;
 
         Ok(config)
+    }
+
+    /// Access client context.
+    #[allow(dead_code)] // --no-default-features
+    #[must_use]
+    pub(crate) fn context_mut(&mut self) -> &mut ClientContext {
+        let context = unsafe { self.as_mut() }
+            .clientContext
+            .cast::<ClientContext>();
+        // SAFETY: `clientContext` attribute is of the expected type.
+        unsafe { context.as_mut() }.expect("client context must be set")
     }
 
     /// Creates wrapper by taking ownership of value.
@@ -144,7 +162,13 @@ impl Drop for ClientConfig {
         // Check if we still hold the client config. If not, we need not clean up: the ownership has
         // passed to the client that was created from this config.
         if let Some(mut inner) = self.0.take() {
+            // Fetch context pointer before clearing config. Free associated memory only afterwards.
+            let context = inner.clientContext.cast::<ClientContext>();
+
             unsafe { UA_ClientConfig_clear(&mut inner) }
+
+            // Reclaim wrapped client context to avoid leaking memory. This simply drops the value.
+            let _context: Box<ClientContext> = unsafe { Box::from_raw(context) };
         }
     }
 }

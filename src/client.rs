@@ -35,7 +35,7 @@ impl ClientBuilder {
     // Method name refers to call of `UA_ClientConfig_setDefault()`.
     #[must_use]
     fn default() -> Self {
-        Self(ua::ClientConfig::default())
+        Self(ua::ClientConfig::default(ClientContext::default()))
     }
 
     /// Creates builder from default client config with encryption.
@@ -74,6 +74,7 @@ impl ClientBuilder {
         private_key: &crate::PrivateKey,
     ) -> Result<Self> {
         Ok(Self(ua::ClientConfig::default_encryption(
+            ClientContext::default(),
             local_certificate,
             private_key,
         )?))
@@ -281,6 +282,13 @@ impl ClientBuilder {
         // SAFETY: Ownership is not given away.
         unsafe { self.0.as_mut() }
     }
+
+    /// Access client context.
+    #[allow(dead_code)] // --no-default-features
+    #[must_use]
+    fn context_mut(&mut self) -> &mut ClientContext {
+        self.0.context_mut()
+    }
 }
 
 impl Default for ClientBuilder {
@@ -288,6 +296,13 @@ impl Default for ClientBuilder {
         Self::default()
     }
 }
+
+/// Custom client context.
+///
+/// This is stored in the client's `clientContext` attribute and manages custom callbacks as used by
+/// [`ClientBuilder::private_key_password_callback()`].
+#[derive(Debug, Default)]
+pub(crate) struct ClientContext {}
 
 /// Connected OPC UA client.
 ///

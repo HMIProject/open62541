@@ -1,11 +1,11 @@
 use std::ptr::{self, NonNull};
 
 use open62541_sys::{
-    UA_Client, UA_Client_delete, UA_Client_disconnect, UA_Client_getState, UA_Client_new,
-    UA_Client_newWithConfig,
+    UA_Client, UA_Client_delete, UA_Client_disconnect, UA_Client_getContext, UA_Client_getState,
+    UA_Client_new, UA_Client_newWithConfig,
 };
 
-use crate::{ua, DataType as _, Error};
+use crate::{ua, ClientContext, DataType as _, Error};
 
 /// Combined state for [`Client`] and [`AsyncClient`].
 ///
@@ -114,10 +114,17 @@ impl Drop for Client {
     fn drop(&mut self) {
         log::debug!("Deleting client");
 
+        // Fetch context pointer before deleting client below, but free associated memory only after
+        // client has completely shut down.
+        let context = unsafe { UA_Client_getContext(self.as_mut_ptr()) }.cast::<ClientContext>();
+
         // `UA_Client_delete()` matches `UA_Client_new()`. This may block (!) whenever the client is
         // still connected, for as long as it takes to take down the connection. This can be avoided
         // by calling `disconnect()` instead of simply dropping the client.
         unsafe { UA_Client_delete(self.as_mut_ptr()) }
+
+        // Reclaim wrapped client context to avoid leaking memory. This simply drops the value.
+        let _context: Box<ClientContext> = unsafe { Box::from_raw(context) };
     }
 }
 
