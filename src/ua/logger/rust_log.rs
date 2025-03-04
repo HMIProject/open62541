@@ -60,8 +60,13 @@ pub(crate) fn logger() -> ua::Logger {
         let logger = unsafe { Box::from_raw(logger) };
 
         // Run some sanity checks. We should only ever be called on our own data structure.
-        debug_assert!(logger.log == Some(log_c));
-        debug_assert!(logger.clear == Some(clear_c));
+        //
+        // TODO: Use `std::ptr::fn_addr_eq()` when MSRV has been upgraded to Rust 1.85.
+        #[allow(unpredictable_function_pointer_comparisons)]
+        {
+            debug_assert!(logger.log == Some(log_c));
+            debug_assert!(logger.clear == Some(clear_c));
+        }
 
         // As long as we do not carry data, there is nothing to clean up here.
         debug_assert!(logger.context.is_null());
