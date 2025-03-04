@@ -290,6 +290,7 @@ impl ClientBuilder {
     }
 
     /// Access client configuration.
+    #[must_use]
     fn config_mut(&mut self) -> &mut UA_ClientConfig {
         // SAFETY: Ownership is not given away.
         unsafe { self.0.as_mut() }

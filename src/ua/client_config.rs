@@ -176,6 +176,7 @@ impl ClientConfig {
     ///
     /// This initializes the value and makes all attributes well-defined. Additional attributes may
     /// need to be initialized for the value to be actually useful afterwards.
+    #[must_use]
     pub(crate) const fn init() -> Self {
         let inner = MaybeUninit::<UA_ClientConfig>::zeroed();
         // SAFETY: Zero-initialized memory is a valid client config.
