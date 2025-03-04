@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add method `ClientBuilder::private_key_password_callback()` to handle encrypted SSL private keys.
+
+### Fixed
+
+- Avoid default behaviour of blocking and asking for password on standard input when password for
+  encrypted SSL private keys is not available.
+
 ## [0.8.0] - 2025-02-12
 
 ### Added
