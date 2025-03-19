@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add wrapper data type `ua::Enumeration`.
+- Add `ValueType` variants `Structure` (inner type `ua::ExtensionObject`) and `Enumeration`.
+
 ## [0.8.1] - 2025-03-04
 
 ### Added
