@@ -234,7 +234,7 @@ impl serde::Serialize for Variant {
             ],
         );
 
-        // The following types are deliberately missing from the list abvove because we don't have a
+        // The following types are deliberately missing from the list above because we don't have a
         // good serialization for them (yet):
         //
         // - ExpandedNodeId, // Data type ns=0;i=18
