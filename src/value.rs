@@ -33,6 +33,8 @@ pub enum ValueType {
     StatusCode,     // Data type ns=0;i=19
     QualifiedName,  // Data type ns=0;i=20
     LocalizedText,  // Data type ns=0;i=21
+    Structure,      // Data type ns=0;i=22
+    Enumeration,    // Data type ns=0;i=29
     Argument,       // Data type ns=0;i=296
 }
 
@@ -86,6 +88,8 @@ impl ValueType {
                 StatusCode,     // Data type ns=0;i=19
                 QualifiedName,  // Data type ns=0;i=20
                 LocalizedText,  // Data type ns=0;i=21
+                Structure,      // Data type ns=0;i=22
+                Enumeration,    // Data type ns=0;i=29
                 Argument,       // Data type ns=0;i=296
             ],
         )
@@ -113,6 +117,7 @@ pub enum ScalarValue {
     ///
     /// [`Variant::to_scalar()`]: ua::Variant::to_scalar
     Unsupported,
+    // This mirrors the unwrapping in `Variant::to_value()`.
     Boolean(ua::Boolean),               // Data type ns=0;i=1
     SByte(ua::SByte),                   // Data type ns=0;i=2
     Byte(ua::Byte),                     // Data type ns=0;i=3
@@ -132,6 +137,8 @@ pub enum ScalarValue {
     StatusCode(ua::StatusCode),         // Data type ns=0;i=19
     QualifiedName(ua::QualifiedName),   // Data type ns=0;i=20
     LocalizedText(ua::LocalizedText),   // Data type ns=0;i=21
+    Structure(ua::ExtensionObject),     // Data type ns=0;i=22
+    Enumeration(ua::Enumeration),       // Data type ns=0;i=29
     Argument(ua::Argument),             // Data type ns=0;i=296
 }
 

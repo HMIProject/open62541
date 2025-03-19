@@ -143,36 +143,39 @@ impl Variant {
         }
 
         macro_rules! check {
-            ($( $name:ident ),* $(,)?) => {
+            ($( $name:ident($type:ty) ),* $(,)?) => {
                 $(
-                    if let Some(value) = self.to_scalar::<ua::$name>() {
+                    if let Some(value) = self.to_scalar::<$type>() {
                         return VariantValue::Scalar(ScalarValue::$name(value));
                     }
                 )*
             };
         }
 
+        // This mirrors the definition of `ScalarValue`.
         check!(
-            Boolean,        // Data type ns=0;i=1
-            SByte,          // Data type ns=0;i=2
-            Byte,           // Data type ns=0;i=3
-            Int16,          // Data type ns=0;i=4
-            UInt16,         // Data type ns=0;i=5
-            Int32,          // Data type ns=0;i=6
-            UInt32,         // Data type ns=0;i=7
-            Int64,          // Data type ns=0;i=8
-            UInt64,         // Data type ns=0;i=9
-            Float,          // Data type ns=0;i=10
-            Double,         // Data type ns=0;i=11
-            String,         // Data type ns=0;i=12
-            DateTime,       // Data type ns=0;i=13
-            ByteString,     // Data type ns=0;i=15
-            NodeId,         // Data type ns=0;i=17
-            ExpandedNodeId, // Data type ns=0;i=18
-            StatusCode,     // Data type ns=0;i=19
-            QualifiedName,  // Data type ns=0;i=20
-            LocalizedText,  // Data type ns=0;i=21
-            Argument,       // Data type ns=0;i=296
+            Boolean(ua::Boolean),               // Data type ns=0;i=1
+            SByte(ua::SByte),                   // Data type ns=0;i=2
+            Byte(ua::Byte),                     // Data type ns=0;i=3
+            Int16(ua::Int16),                   // Data type ns=0;i=4
+            UInt16(ua::UInt16),                 // Data type ns=0;i=5
+            Int32(ua::Int32),                   // Data type ns=0;i=6
+            UInt32(ua::UInt32),                 // Data type ns=0;i=7
+            Int64(ua::Int64),                   // Data type ns=0;i=8
+            UInt64(ua::UInt64),                 // Data type ns=0;i=9
+            Float(ua::Float),                   // Data type ns=0;i=10
+            Double(ua::Double),                 // Data type ns=0;i=11
+            String(ua::String),                 // Data type ns=0;i=12
+            DateTime(ua::DateTime),             // Data type ns=0;i=13
+            ByteString(ua::ByteString),         // Data type ns=0;i=15
+            NodeId(ua::NodeId),                 // Data type ns=0;i=17
+            ExpandedNodeId(ua::ExpandedNodeId), // Data type ns=0;i=18
+            StatusCode(ua::StatusCode),         // Data type ns=0;i=19
+            QualifiedName(ua::QualifiedName),   // Data type ns=0;i=20
+            LocalizedText(ua::LocalizedText),   // Data type ns=0;i=21
+            Structure(ua::ExtensionObject),     // Data type ns=0;i=22
+            Enumeration(ua::Enumeration),       // Data type ns=0;i=29
+            Argument(ua::Argument),             // Data type ns=0;i=296
         );
 
         VariantValue::Scalar(ScalarValue::Unsupported)
@@ -231,13 +234,15 @@ impl serde::Serialize for Variant {
             ],
         );
 
-        // The following types are deliberately missing from the list abvove because we don't have a
-        // good serialization for them:
+        // The following types are deliberately missing from the list above because we don't have a
+        // good serialization for them (yet):
         //
         // - ExpandedNodeId, // Data type ns=0;i=18
         // - StatusCode,     // Data type ns=0;i=19
         // - QualifiedName,  // Data type ns=0;i=20
         // - LocalizedText,  // Data type ns=0;i=21
+        // - Structure,      // Data type ns=0;i=22
+        // - Enumeration,    // Data type ns=0;i=29
         // - Argument,       // Data type ns=0;i=296
 
         Err(serde::ser::Error::custom("non-primitive value in Variant"))
