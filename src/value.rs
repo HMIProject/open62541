@@ -33,6 +33,8 @@ pub enum ValueType {
     StatusCode,     // Data type ns=0;i=19
     QualifiedName,  // Data type ns=0;i=20
     LocalizedText,  // Data type ns=0;i=21
+    Structure,      // Data type ns=0;i=22
+    Enumeration,    // Data type ns=0;i=29
     Argument,       // Data type ns=0;i=296
 }
 
@@ -86,6 +88,8 @@ impl ValueType {
                 StatusCode,     // Data type ns=0;i=19
                 QualifiedName,  // Data type ns=0;i=20
                 LocalizedText,  // Data type ns=0;i=21
+                Structure,      // Data type ns=0;i=22
+                Enumeration,    // Data type ns=0;i=29
                 Argument,       // Data type ns=0;i=296
             ],
         )
