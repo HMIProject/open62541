@@ -12,6 +12,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add wrapper data type `ua::Enumeration`.
 - Add `ValueType` variants `Structure` (inner type `ua::ExtensionObject`) and `Enumeration`.
 
+### Changed
+
+- Upgrade to open62541 version
+  [1.4.11](https://github.com/open62541/open62541/releases/tag/v1.4.11.1).
+
 ## [0.8.1] - 2025-03-04
 
 ### Added
