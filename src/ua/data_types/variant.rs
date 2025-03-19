@@ -173,6 +173,8 @@ impl Variant {
             StatusCode(ua::StatusCode),         // Data type ns=0;i=19
             QualifiedName(ua::QualifiedName),   // Data type ns=0;i=20
             LocalizedText(ua::LocalizedText),   // Data type ns=0;i=21
+            Structure(ua::ExtensionObject),     // Data type ns=0;i=22
+            Enumeration(ua::Enumeration),       // Data type ns=0;i=29
             Argument(ua::Argument),             // Data type ns=0;i=296
         );
 
@@ -233,12 +235,14 @@ impl serde::Serialize for Variant {
         );
 
         // The following types are deliberately missing from the list abvove because we don't have a
-        // good serialization for them:
+        // good serialization for them (yet):
         //
         // - ExpandedNodeId, // Data type ns=0;i=18
         // - StatusCode,     // Data type ns=0;i=19
         // - QualifiedName,  // Data type ns=0;i=20
         // - LocalizedText,  // Data type ns=0;i=21
+        // - Structure,      // Data type ns=0;i=22
+        // - Enumeration,    // Data type ns=0;i=29
         // - Argument,       // Data type ns=0;i=296
 
         Err(serde::ser::Error::custom("non-primitive value in Variant"))

@@ -137,6 +137,8 @@ pub enum ScalarValue {
     StatusCode(ua::StatusCode),         // Data type ns=0;i=19
     QualifiedName(ua::QualifiedName),   // Data type ns=0;i=20
     LocalizedText(ua::LocalizedText),   // Data type ns=0;i=21
+    Structure(ua::ExtensionObject),     // Data type ns=0;i=22
+    Enumeration(ua::Enumeration),       // Data type ns=0;i=29
     Argument(ua::Argument),             // Data type ns=0;i=296
 }
 
