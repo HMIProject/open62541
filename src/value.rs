@@ -117,6 +117,7 @@ pub enum ScalarValue {
     ///
     /// [`Variant::to_scalar()`]: ua::Variant::to_scalar
     Unsupported,
+    // This mirrors the unwrapping in `Variant::to_value()`.
     Boolean(ua::Boolean),               // Data type ns=0;i=1
     SByte(ua::SByte),                   // Data type ns=0;i=2
     Byte(ua::Byte),                     // Data type ns=0;i=3
