@@ -42,11 +42,11 @@ mod tests {
 
     #[test]
     fn unece_code_from_unit_id() {
-        assert_eq!(UnitId::new(12592).to_unece_code().unwrap(), "10"); // group
-        assert_eq!(UnitId::new(12851).to_unece_code().unwrap(), "23"); // gram per cubic centimetre
-        assert_eq!(UnitId::new(17476).to_unece_code().unwrap(), "DD"); // degree [unit of angle]
-        assert_eq!(UnitId::new(23130).to_unece_code().unwrap(), "ZZ"); // mutually defined
-        assert_eq!(UnitId::new(4405297).to_unece_code().unwrap(), "C81"); // radian
-        assert_eq!(UnitId::new(5910833).to_unece_code().unwrap(), "Z11"); // hanging container
+        assert_eq!(UnitId::new(12_592).to_unece_code().unwrap(), "10"); // group
+        assert_eq!(UnitId::new(12_851).to_unece_code().unwrap(), "23"); // gram per cubic centimetre
+        assert_eq!(UnitId::new(17_476).to_unece_code().unwrap(), "DD"); // degree [unit of angle]
+        assert_eq!(UnitId::new(23_130).to_unece_code().unwrap(), "ZZ"); // mutually defined
+        assert_eq!(UnitId::new(4_405_297).to_unece_code().unwrap(), "C81"); // radian
+        assert_eq!(UnitId::new(5_910_833).to_unece_code().unwrap(), "Z11"); // hanging container
     }
 }
