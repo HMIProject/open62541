@@ -1384,8 +1384,8 @@ impl Server {
         property_name: &ua::QualifiedName,
     ) -> Result<ua::Variant> {
         let mut value = ua::Variant::init();
-        let status_code = unsafe {
-            ua::StatusCode::new(UA_Server_readObjectProperty(
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_readObjectProperty(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // SAFETY: The function expects copies but does not take ownership. In particular,
@@ -1393,8 +1393,8 @@ impl Server {
                 DataType::to_raw_copy(object_id),
                 DataType::to_raw_copy(property_name),
                 value.as_mut_ptr(),
-            ))
-        };
+            )
+        });
         Error::verify_good(&status_code)?;
         Ok(value)
     }
@@ -1451,8 +1451,8 @@ impl Server {
         property_name: &ua::QualifiedName,
         value: &ua::Variant,
     ) -> Result<()> {
-        let status_code = unsafe {
-            ua::StatusCode::new(UA_Server_writeObjectProperty(
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_writeObjectProperty(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.0.as_ptr().cast_mut(),
                 // SAFETY: The function expects copies but does not take ownership. In particular,
@@ -1460,8 +1460,8 @@ impl Server {
                 DataType::to_raw_copy(object_id),
                 DataType::to_raw_copy(property_name),
                 DataType::to_raw_copy(value),
-            ))
-        };
+            )
+        });
         Error::verify_good(&status_code)
     }
 
