@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add wrapper data type `ua::EUInformation` with the accompanying _newtype_ `ua::UnitId`.
+- Add wrapper data type `ua::Range`.
+
 ## [0.8.2] - 2025-03-19
 
 ### Added
