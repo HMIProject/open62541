@@ -13,8 +13,8 @@ impl UnitId {
     /// Decoded from the wrapped integer value according to the
     /// [mapping defined by OPC UA](https://reference.opcfoundation.org/Core/Part8/v104/docs/5.6.3).
     ///
-    /// Returns `None` if the value could not be decoded. The returned string
-    /// is not guaranteed to represent a valid code.
+    /// The returned string is not guaranteed to represent a valid code.
+    /// Returns `None` if the value could not be decoded.
     ///
     /// See also: <http://www.opcfoundation.org/UA/EngineeringUnits/UNECE/UNECE_to_OPCUA.csv>
     #[must_use]
