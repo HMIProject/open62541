@@ -23,9 +23,9 @@ impl UnitId {
         // TODO: More strict validation would require to inspect the official spec.
         String::from_utf8(
             [
-                u8::try_from((unit_id & 0x00ff_0000) >> 16).ok()?,
-                u8::try_from((unit_id & 0x0000_ff00) >> 8).ok()?,
-                u8::try_from(unit_id & 0x0000_00ff).ok()?,
+                u8::try_from((unit_id & 0x00ff_0000) >> 16).expect("always in range"),
+                u8::try_from((unit_id & 0x0000_ff00) >> 8).expect("always in range"),
+                u8::try_from(unit_id & 0x0000_00ff).expect("always in range"),
             ]
             .into_iter()
             .skip_while(|c| *c == 0x00)
