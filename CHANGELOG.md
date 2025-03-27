@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add method `Server::statistics()` to get server statistics.
+- Add `ua::ServerStatistics`, `ua::SecureChannelStatistics`, and `ua::SessionStatistics`.
+
 ## [0.8.2] - 2025-03-19
 
 ### Added
