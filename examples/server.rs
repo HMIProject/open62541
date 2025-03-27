@@ -79,17 +79,35 @@ fn main() -> anyhow::Result<()> {
     read_attribute(&server, &data_value_node_id, ua::AttributeId::NODEID_T)?;
     read_attribute(&server, &data_value_node_id, &ua::AttributeId::VALUE)?;
 
-    let canceled = Arc::new(AtomicBool::new(false));
+    let cancelled = Arc::new(AtomicBool::new(false));
+
+    // Start background task that collects and prints server statistics.
+    let statistics_task_handle = thread::spawn({
+        let server = server.clone();
+        let cancelled = Arc::clone(&cancelled);
+
+        move || -> anyhow::Result<()> {
+            while !cancelled.load(Ordering::Relaxed) {
+                // SAFETY: This is not actually safe, but there is no other way to get the server
+                // statistics at the moment.
+                let statistics = unsafe { server.statistics() };
+                println!("{statistics:?}");
+                thread::sleep(Duration::from_millis(1000));
+            }
+
+            Ok(())
+        }
+    });
 
     // Start background task that simulates changing variable values.
     let server_task_handle = thread::spawn({
-        let canceled = Arc::clone(&canceled);
+        let cancelled = Arc::clone(&cancelled);
 
         move || -> anyhow::Result<()> {
             println!("Simulating values");
             loop {
                 for value in ["foo", "bar", "baz"] {
-                    if canceled.load(Ordering::Relaxed) {
+                    if cancelled.load(Ordering::Relaxed) {
                         return Ok(());
                     }
                     server.write_value(
@@ -117,10 +135,17 @@ fn main() -> anyhow::Result<()> {
         println!("Runner task failed: {err}");
     }
     println!("Exiting");
-    canceled.store(true, Ordering::Relaxed);
+    cancelled.store(true, Ordering::Relaxed);
 
     // Wait for simulation task to shut down after cancelling.
     if let Err(err) = server_task_handle
+        .join()
+        .expect("server task should not panic")
+    {
+        println!("Server task failed: {err}");
+    }
+    // Wait for statistics task to shut down after cancelling.
+    if let Err(err) = statistics_task_handle
         .join()
         .expect("server task should not panic")
     {
