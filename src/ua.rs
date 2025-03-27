@@ -22,6 +22,7 @@ mod server_config;
 mod session_state;
 mod specified_attributes;
 mod subscription_id;
+mod unit_id;
 mod user_identity_token;
 
 #[cfg(feature = "mbedtls")]
@@ -44,6 +45,7 @@ pub use self::{
     session_state::SessionState,
     specified_attributes::SpecifiedAttributes,
     subscription_id::SubscriptionId,
+    unit_id::UnitId,
     user_identity_token::UserIdentityToken,
 };
 pub(crate) use self::{client_config::ClientConfig, logger::Logger, server_config::ServerConfig};

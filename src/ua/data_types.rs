@@ -38,7 +38,7 @@ mod delete_subscriptions_response;
 mod element_operand;
 mod endpoint_description;
 mod enumeration;
-mod euinformation;
+mod eu_information;
 mod event_filter;
 mod expanded_node_id;
 mod extension_object;
@@ -113,7 +113,7 @@ pub use self::{
     element_operand::ElementOperand,
     endpoint_description::EndpointDescription,
     enumeration::Enumeration,
-    euinformation::EUInformation,
+    eu_information::EUInformation,
     event_filter::EventFilter,
     expanded_node_id::ExpandedNodeId,
     extension_object::ExtensionObject,
