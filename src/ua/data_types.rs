@@ -38,6 +38,7 @@ mod delete_subscriptions_response;
 mod element_operand;
 mod endpoint_description;
 mod enumeration;
+mod euinformation;
 mod event_filter;
 mod expanded_node_id;
 mod extension_object;
@@ -55,6 +56,7 @@ mod node_class;
 mod node_id;
 mod node_id_type;
 mod qualified_name;
+mod range;
 mod read_request;
 mod read_response;
 mod read_value_id;
@@ -111,6 +113,7 @@ pub use self::{
     element_operand::ElementOperand,
     endpoint_description::EndpointDescription,
     enumeration::Enumeration,
+    euinformation::EUInformation,
     event_filter::EventFilter,
     expanded_node_id::ExpandedNodeId,
     extension_object::ExtensionObject,
@@ -132,6 +135,7 @@ pub use self::{
     node_id::NodeId,
     node_id_type::NodeIdType,
     qualified_name::QualifiedName,
+    range::Range,
     read_request::ReadRequest,
     read_response::ReadResponse,
     read_value_id::ReadValueId,
