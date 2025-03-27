@@ -18,6 +18,7 @@ impl UnitId {
     ///
     /// See also: <http://www.opcfoundation.org/UA/EngineeringUnits/UNECE/UNECE_to_OPCUA.csv>
     #[must_use]
+    #[allow(clippy::missing_panics_doc, reason = "never panics")]
     pub fn to_unece_code(&self) -> Option<String> {
         let Self(unit_id) = self;
         // TODO: More strict validation would require to inspect the official spec.
