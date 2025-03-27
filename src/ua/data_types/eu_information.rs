@@ -11,7 +11,7 @@ crate::data_type!(EUInformation);
 
 impl EUInformation {
     #[must_use]
-    pub const fn unit_id(&self) -> UnitId {
+    pub const fn unit_id(&self) -> ua::UnitId {
         UnitId::new(self.0.unitId)
     }
 
