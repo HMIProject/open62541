@@ -18,10 +18,10 @@ use open62541_sys::{
     UA_Server_addReference, UA_Server_browse, UA_Server_browseNext, UA_Server_browseRecursive,
     UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
-    UA_Server_read, UA_Server_readObjectProperty, UA_Server_runUntilInterrupt,
-    UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent, UA_Server_writeDataValue,
-    UA_Server_writeObjectProperty, UA_Server_writeValue, __UA_Server_addNode,
-    UA_STATUSCODE_BADNOTFOUND,
+    UA_Server_getStatistics, UA_Server_read, UA_Server_readObjectProperty,
+    UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent,
+    UA_Server_writeDataValue, UA_Server_writeObjectProperty, UA_Server_writeValue,
+    __UA_Server_addNode, UA_STATUSCODE_BADNOTFOUND,
 };
 
 use crate::{
@@ -1463,6 +1463,23 @@ impl Server {
             )
         });
         Error::verify_good(&status_code)
+    }
+
+    /// Gets server statistics.
+    ///
+    /// # Safety
+    ///
+    /// This must only be called when no other server operations are underway, on this instance or
+    /// any of its clones (including background activity). In other words, you must have exclusive
+    /// access to the underlying server and it must not be operating.
+    //
+    // TODO: Lift this requirement when `UA_Server_getStatistics()` has been made `UA_THREADSAFE`.
+    // <https://github.com/open62541/open62541/pull/7190>
+    #[must_use]
+    pub unsafe fn statistics(&self) -> ua::ServerStatistics {
+        unsafe {
+            ua::ServerStatistics::from_raw(UA_Server_getStatistics(self.0.as_ptr().cast_mut()))
+        }
     }
 }
 
