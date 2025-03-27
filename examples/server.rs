@@ -1,10 +1,12 @@
 use std::{
-    sync::mpsc::{self, RecvTimeoutError},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     thread,
     time::Duration,
 };
 
-use anyhow::bail;
 use open62541::{ua, Attribute, ObjectNode, Server, VariableNode};
 use open62541_sys::{
     UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,
@@ -77,24 +79,25 @@ fn main() -> anyhow::Result<()> {
     read_attribute(&server, &data_value_node_id, ua::AttributeId::NODEID_T)?;
     read_attribute(&server, &data_value_node_id, &ua::AttributeId::VALUE)?;
 
-    let (cancel_tx, cancel_rx) = mpsc::channel();
+    let canceled = Arc::new(AtomicBool::new(false));
 
     // Start background task that simulates changing variable values.
-    let server_task_handle = thread::spawn(move || -> anyhow::Result<()> {
-        println!("Simulating values");
-        loop {
-            for value in ["foo", "bar", "baz"] {
-                match cancel_rx.recv_timeout(Duration::from_millis(1000)) {
-                    Ok(()) => return Ok(()),
-                    Err(RecvTimeoutError::Timeout) => {
-                        // Continue and simulate next updated value below, then repeat loop.
+    let server_task_handle = thread::spawn({
+        let canceled = Arc::clone(&canceled);
+
+        move || -> anyhow::Result<()> {
+            println!("Simulating values");
+            loop {
+                for value in ["foo", "bar", "baz"] {
+                    if canceled.load(Ordering::Relaxed) {
+                        return Ok(());
                     }
-                    Err(RecvTimeoutError::Disconnected) => bail!("main task should be running"),
+                    server.write_value(
+                        &value_node_id,
+                        &ua::Variant::scalar(ua::String::new(value)?),
+                    )?;
+                    thread::sleep(Duration::from_millis(1000));
                 }
-                server.write_value(
-                    &value_node_id,
-                    &ua::Variant::scalar(ua::String::new(value)?),
-                )?;
             }
         }
     });
@@ -113,10 +116,8 @@ fn main() -> anyhow::Result<()> {
     {
         println!("Runner task failed: {err}");
     }
-
     println!("Exiting");
-
-    cancel_tx.send(()).expect("server task should be running");
+    canceled.store(true, Ordering::Relaxed);
 
     // Wait for simulation task to shut down after cancelling.
     if let Err(err) = server_task_handle
