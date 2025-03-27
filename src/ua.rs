@@ -16,10 +16,13 @@ mod logger;
 mod monitored_item_id;
 mod node_class_mask;
 mod secure_channel_state;
+mod secure_channel_statistics;
 mod security_level;
 mod server;
 mod server_config;
+mod server_statistics;
 mod session_state;
+mod session_statistics;
 mod specified_attributes;
 mod subscription_id;
 mod user_identity_token;
@@ -39,9 +42,12 @@ pub use self::{
     monitored_item_id::MonitoredItemId,
     node_class_mask::NodeClassMask,
     secure_channel_state::SecureChannelState,
+    secure_channel_statistics::SecureChannelStatistics,
     security_level::SecurityLevel,
     server::Server,
+    server_statistics::ServerStatistics,
     session_state::SessionState,
+    session_statistics::SessionStatistics,
     specified_attributes::SpecifiedAttributes,
     subscription_id::SubscriptionId,
     user_identity_token::UserIdentityToken,
