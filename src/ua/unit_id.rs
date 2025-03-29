@@ -13,27 +13,44 @@ impl UnitId {
     /// Decoded from the wrapped integer value according to the
     /// [mapping defined by OPC UA](https://reference.opcfoundation.org/Core/Part8/v104/docs/5.6.3).
     ///
-    /// The returned string is not guaranteed to represent a valid code.
-    /// Returns `None` if the value could not be decoded.
+    /// Returns an ASCII alphanumeric string with a minimum length of 1 and
+    /// a maximum length of 3. All other strings are discarded as invalid.
+    /// `unit_id`s where the most significant byte is not `0x00` are rejected
+    /// as invalid.
     ///
-    /// See also: <http://www.opcfoundation.org/UA/EngineeringUnits/UNECE/UNECE_to_OPCUA.csv>
+    /// Returns `None` if the value could not be decoded or is invalid.
+    ///
+    /// The returned string is not guaranteed to represent a valid _Common Code_
+    /// as defined by the UNECE documents [\^1] or the OPC UA specification [\^2].
+    ///
+    ///  [\^1] UNECE: <https://unece.org/trade/documents/session-documents/revision-6>
+    ///  [\^2] OPC UA: <http://www.opcfoundation.org/UA/EngineeringUnits/UNECE/UNECE_to_OPCUA.csv>
     #[must_use]
     pub fn to_unece_code(&self) -> Option<String> {
         let Self(unit_id) = self;
-        // TODO: More strict validation would require to inspect the official spec.
-        String::from_utf8(
-            unit_id
-                .to_be_bytes()
-                .iter()
-                .copied()
-                .skip_while(|c| *c == 0x00)
-                .collect(),
-        )
-        .ok()
-        .filter(|code| {
-            // TODO: Add reference for minimum/maximum code length.
-            code.len() >= 2 && code.len() <= 3
-        })
+        let ascii_chars = unit_id
+            .to_be_bytes()
+            .iter()
+            .copied()
+            .skip_while(|c| *c == 0x00)
+            .map(|c| {
+                // TODO: Are lowercase ASCII characters allowed? Probably not.
+                if c.is_ascii_alphanumeric() {
+                    Ok(c)
+                } else {
+                    Err(())
+                }
+            })
+            .collect::<Result<Vec<_>, ()>>()
+            .ok()?;
+        // TODO: Restrict minimum length to 2?
+        #[allow(clippy::len_zero)] // Symmetric bounds checks.
+        if ascii_chars.len() < 1 || ascii_chars.len() > 3 {
+            return None;
+        }
+        let code = String::from_utf8(ascii_chars);
+        debug_assert!(code.is_ok(), "never fails for ASCII character codes");
+        code.ok()
     }
 }
 
@@ -53,11 +70,20 @@ mod tests {
         // Reject codes with invalid length.
         assert!(UnitId::new(0x0000_0000).to_unece_code().is_none());
         assert!(UnitId::new(0x3000_0000).to_unece_code().is_none());
-        assert!(UnitId::new(0x0000_0030).to_unece_code().is_none());
+        assert!(
+            UnitId::new(0x0000_0030).to_unece_code().is_some(),
+            "valid code of 1 ASCII character"
+        );
         assert!(UnitId::new(0x3000_0030).to_unece_code().is_none());
-        assert!(UnitId::new(0x0000_3030).to_unece_code().is_some());
+        assert!(
+            UnitId::new(0x0000_3030).to_unece_code().is_some(),
+            "valid code of 2 ASCII characters"
+        );
         assert!(UnitId::new(0x3000_3030).to_unece_code().is_none());
-        assert!(UnitId::new(0x0030_3030).to_unece_code().is_some());
+        assert!(
+            UnitId::new(0x0030_3030).to_unece_code().is_some(),
+            "valid code of 3 ASCII characters"
+        );
         assert!(UnitId::new(0x3030_3030).to_unece_code().is_none());
     }
 }
