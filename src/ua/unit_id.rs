@@ -36,13 +36,14 @@ impl UnitId {
             .map(|c| {
                 // TODO: Are lowercase ASCII characters allowed? Probably not.
                 if c.is_ascii_alphanumeric() {
-                    Ok(c)
+                    // Valid character.
+                    Some(c)
                 } else {
-                    Err(())
+                    // Invalid character.
+                    None
                 }
             })
-            .collect::<Result<Vec<_>, ()>>()
-            .ok()?;
+            .collect::<Option<Vec<_>>>()?;
         // TODO: Restrict minimum length to 2?
         #[allow(clippy::len_zero)] // Symmetric bounds checks.
         if ascii_chars.len() < 1 || ascii_chars.len() > 3 {
