@@ -21,10 +21,10 @@ impl UnitId {
     /// Returns `None` if the value could not be decoded or is invalid.
     ///
     /// The returned string is not guaranteed to represent a valid _Common Code_
-    /// as defined by the UNECE documents [\^1] or the OPC UA specification [\^2].
+    /// as defined by the [UNECE documents] or the [OPC UA specification].
     ///
-    ///  [\^1] UNECE: <https://unece.org/trade/documents/session-documents/revision-6>
-    ///  [\^2] OPC UA: <http://www.opcfoundation.org/UA/EngineeringUnits/UNECE/UNECE_to_OPCUA.csv>
+    /// [UNECE documents]: <https://unece.org/trade/documents/session-documents/revision-6>
+    /// [OPC UA specification]: <http://www.opcfoundation.org/UA/EngineeringUnits/UNECE/UNECE_to_OPCUA.csv>
     #[must_use]
     pub fn to_unece_code(&self) -> Option<String> {
         let Self(unit_id) = self;
