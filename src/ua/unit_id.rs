@@ -18,19 +18,17 @@ impl UnitId {
     ///
     /// See also: <http://www.opcfoundation.org/UA/EngineeringUnits/UNECE/UNECE_to_OPCUA.csv>
     #[must_use]
-    #[allow(clippy::missing_panics_doc)] // Bitmasks restrict values.
     pub fn to_unece_code(&self) -> Option<String> {
         let Self(unit_id) = self;
         // TODO: More strict validation would require to inspect the official spec.
+        let significant_bytes = &unit_id.to_be_bytes()[1..];
+        debug_assert_eq!(significant_bytes.len(), 3);
         String::from_utf8(
-            [
-                u8::try_from((unit_id & 0x00ff_0000) >> 16).expect("always in range"),
-                u8::try_from((unit_id & 0x0000_ff00) >> 8).expect("always in range"),
-                u8::try_from(unit_id & 0x0000_00ff).expect("always in range"),
-            ]
-            .into_iter()
-            .skip_while(|c| *c == 0x00)
-            .collect(),
+            significant_bytes
+                .iter()
+                .copied()
+                .skip_while(|c| *c == 0x00)
+                .collect(),
         )
         .ok()
     }
