@@ -21,16 +21,19 @@ impl UnitId {
     pub fn to_unece_code(&self) -> Option<String> {
         let Self(unit_id) = self;
         // TODO: More strict validation would require to inspect the official spec.
-        let significant_bytes = &unit_id.to_be_bytes()[1..];
-        debug_assert_eq!(significant_bytes.len(), 3);
         String::from_utf8(
-            significant_bytes
+            unit_id
+                .to_be_bytes()
                 .iter()
                 .copied()
                 .skip_while(|c| *c == 0x00)
                 .collect(),
         )
         .ok()
+        .filter(|code| {
+            // TODO: Add reference for minimum/maximum code length.
+            code.len() >= 2 && code.len() <= 3
+        })
     }
 }
 
@@ -46,5 +49,15 @@ mod tests {
         assert_eq!(UnitId::new(23_130).to_unece_code().unwrap(), "ZZ"); // mutually defined
         assert_eq!(UnitId::new(4_405_297).to_unece_code().unwrap(), "C81"); // radian
         assert_eq!(UnitId::new(5_910_833).to_unece_code().unwrap(), "Z11"); // hanging container
+
+        // Reject codes with invalid length.
+        assert!(UnitId::new(0x0000_0000).to_unece_code().is_none());
+        assert!(UnitId::new(0x3000_0000).to_unece_code().is_none());
+        assert!(UnitId::new(0x0000_0030).to_unece_code().is_none());
+        assert!(UnitId::new(0x3000_0030).to_unece_code().is_none());
+        assert!(UnitId::new(0x0000_3030).to_unece_code().is_some());
+        assert!(UnitId::new(0x3000_3030).to_unece_code().is_none());
+        assert!(UnitId::new(0x0030_3030).to_unece_code().is_some());
+        assert!(UnitId::new(0x3030_3030).to_unece_code().is_none());
     }
 }
