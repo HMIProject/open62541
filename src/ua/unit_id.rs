@@ -62,7 +62,7 @@ mod tests {
         assert_eq!(UnitId::new(4_405_297).to_unece_code().unwrap(), "C81"); // radian
         assert_eq!(UnitId::new(5_910_833).to_unece_code().unwrap(), "Z11"); // hanging container
 
-        // Reject codes with invalid length.
+        // Allow only codes with expected length.
         assert!(UnitId::new(0x0000_0000).to_unece_code().is_none());
         assert!(UnitId::new(0x3000_0000).to_unece_code().is_none());
         assert!(
