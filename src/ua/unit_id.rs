@@ -35,13 +35,7 @@ impl UnitId {
             .skip_while(|c| *c == 0x00)
             .map(|c| {
                 // TODO: Are lowercase ASCII characters allowed? Probably not.
-                if c.is_ascii_alphanumeric() {
-                    // Valid character.
-                    Some(c)
-                } else {
-                    // Invalid character.
-                    None
-                }
+                c.is_ascii_alphanumeric().then_some(c)
             })
             .collect::<Option<Vec<_>>>()?;
         // TODO: Restrict minimum length to 2?
