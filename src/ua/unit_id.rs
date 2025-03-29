@@ -46,7 +46,7 @@ impl UnitId {
             .collect::<Option<Vec<_>>>()?;
         // TODO: Restrict minimum length to 2?
         #[allow(clippy::len_zero)] // Symmetric bounds checks.
-        if ascii_chars.len() < 1 || ascii_chars.len() > 3 {
+        if !(1..=3).contains(&ascii_chars.len()) {
             return None;
         }
         let code = String::from_utf8(ascii_chars);
