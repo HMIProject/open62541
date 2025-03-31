@@ -43,6 +43,7 @@ mod event_filter;
 mod expanded_node_id;
 mod extension_object;
 mod filter_operator;
+mod guid;
 mod issued_identity_token;
 mod literal_operand;
 mod localized_text;
@@ -118,6 +119,7 @@ pub use self::{
     expanded_node_id::ExpandedNodeId,
     extension_object::ExtensionObject,
     filter_operator::FilterOperator,
+    guid::Guid,
     issued_identity_token::IssuedIdentityToken,
     literal_operand::LiteralOperand,
     localized_text::LocalizedText,
