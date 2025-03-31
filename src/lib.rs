@@ -234,7 +234,7 @@ mod value;
 #[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,
-    async_monitored_item::{AsyncMonitoredItem, MonitoredItemBuilder},
+    async_monitored_item::{AsyncMonitoredItem, EventAsyncMonitoredItem, MonitoredItemBuilder},
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
     callback::{CallbackOnce, CallbackStream},
 };

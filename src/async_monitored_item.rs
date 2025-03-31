@@ -12,8 +12,10 @@ use futures_core::Stream;
 use futures_util::stream;
 use open62541_sys::{
     UA_Client, UA_Client_DataChangeNotificationCallback, UA_Client_DeleteMonitoredItemCallback,
-    UA_Client_MonitoredItems_createDataChanges_async, UA_Client_MonitoredItems_delete_async,
+    UA_Client_EventNotificationCallback, UA_Client_MonitoredItems_createDataChanges_async,
+    UA_Client_MonitoredItems_createEvents_async, UA_Client_MonitoredItems_delete_async,
     UA_CreateMonitoredItemsResponse, UA_DataValue, UA_DeleteMonitoredItemsResponse, UA_UInt32,
+    UA_Variant,
 };
 use tokio::sync::mpsc;
 
@@ -177,6 +179,69 @@ impl MonitoredItemBuilder {
         Ok(results)
     }
 
+    /// Creates monitored items.
+    ///
+    /// This creates one or more new monitored items for events. Returns one result for each event node ID.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the entire request is not successful. Errors for individual node IDs are
+    /// returned as error elements inside the resulting list.
+    pub async fn event_create(
+        self,
+        subscription: &AsyncSubscription,
+    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, EventAsyncMonitoredItem)>>> {
+        let Some(client) = &subscription.client().upgrade() else {
+            return Err(Error::internal("client should not be dropped"));
+        };
+        let subscription_id = subscription.subscription_id();
+
+        let request = self.into_request(subscription_id);
+        let result_count = request.items_to_create().map_or(0, <[_]>::len);
+        let (response, rxs) = create_event_monitored_items(client, &request).await?;
+
+        let Some(mut results) = response.into_results() else {
+            return Err(Error::internal("expected monitoring item results"));
+        };
+
+        if results.len() != result_count || rxs.len() != result_count {
+            // This should not happen. In any case, we cannot associate returned items with their
+            // incoming node IDs. Clean up the items that we received to not leave them dangling.
+            //
+            let monitored_item_ids = results
+                .iter()
+                .filter(|result| result.status_code().is_good())
+                .map(ua::MonitoredItemCreateResult::monitored_item_id)
+                .collect::<Vec<_>>();
+            let request = ua::DeleteMonitoredItemsRequest::init()
+                .with_subscription_id(subscription_id)
+                .with_monitored_item_ids(&monitored_item_ids);
+            // This request is processed asynchronously. Errors are logged asynchronously too.
+            delete_monitored_items(client, &request);
+
+            return Err(Error::internal("unexpected number of monitored items"));
+        }
+
+        let results = results
+            .drain_all()
+            .zip(rxs)
+            .map(|(result, rx)| {
+                Error::verify_good(&result.status_code())?;
+
+                let monitored_item = EventAsyncMonitoredItem {
+                    client: Arc::downgrade(client),
+                    subscription_id,
+                    monitored_item_id: result.monitored_item_id(),
+                    rx,
+                };
+
+                Ok((result, monitored_item))
+            })
+            .collect();
+
+        Ok(results)
+    }
+
     fn into_request(self, subscription_id: ua::SubscriptionId) -> ua::CreateMonitoredItemsRequest {
         let Self {
             node_ids,
@@ -275,6 +340,58 @@ impl Stream for AsyncMonitoredItem {
     }
 }
 
+#[derive(Debug)]
+pub struct EventAsyncMonitoredItem {
+    client: Weak<ua::Client>,
+    subscription_id: ua::SubscriptionId,
+    monitored_item_id: ua::MonitoredItemId,
+    rx: mpsc::Receiver<ua::Variant>,
+}
+
+impl EventAsyncMonitoredItem {
+    /// Waits for next value from server.
+    ///
+    /// This waits for the next value received for this monitored item. Returns `None` when item has
+    /// been closed and no more updates will be received.
+    pub async fn next(&mut self) -> Option<ua::Variant> {
+        // This mirrors `<Self as Stream>::poll_next()` but does not require `self` to be pinned.
+        self.rx.recv().await
+    }
+
+    /// Turns monitored item into stream.
+    ///
+    /// The stream will emit all value updates as they are being received. If the client disconnects
+    /// or the corresponding subscription is deleted, the stream is closed.
+    pub fn into_stream(self) -> impl Stream<Item = ua::Variant> + Send + Sync + 'static {
+        stream::unfold(self, move |mut this| async move {
+            this.next().await.map(|value| (value, this))
+        })
+    }
+}
+
+impl Drop for EventAsyncMonitoredItem {
+    fn drop(&mut self) {
+        let Some(client) = self.client.upgrade() else {
+            return;
+        };
+
+        let request = ua::DeleteMonitoredItemsRequest::init()
+            .with_subscription_id(self.subscription_id)
+            .with_monitored_item_ids(&[self.monitored_item_id]);
+
+        delete_monitored_items(&client, &request);
+    }
+}
+
+impl Stream for EventAsyncMonitoredItem {
+    type Item = ua::Variant;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Option<Self::Item>> {
+        // This mirrors `AsyncMonitoredItem::next()` and implements the `Stream` trait.
+        self.rx.poll_recv(cx)
+    }
+}
+
 /// Maximum number of buffered values.
 const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
 
@@ -366,18 +483,28 @@ async fn create_monitored_items(
         let _unused = tx.send(result.map_err(Error::new));
     };
 
-    let items_to_create = request
-        .items_to_create()
-        .map_or(0, <[ua::MonitoredItemCreateRequest]>::len);
+    let mut data_changed_count = 0;
+    for item in request.items_to_create() {
+        for item2 in (*item.clone()).iter() {
+            let attribute_id = item2.clone().read_attribute_id();
+            // would be better do do a comparision on AttributeId instead of u32
+            // but it woule need a cast from u32 to ua::attributeId
+            if attribute_id == ua::AttributeId::EVENTNOTIFIER.as_u32() {
+                //nothing to do here
+            } else {
+                data_changed_count += 1;
+            }
+        }
+    }
 
     let mut notification_callbacks: Vec<UA_Client_DataChangeNotificationCallback> =
-        Vec::with_capacity(items_to_create);
+        Vec::with_capacity(data_changed_count);
     let mut delete_callbacks: Vec<UA_Client_DeleteMonitoredItemCallback> =
-        Vec::with_capacity(items_to_create);
-    let mut contexts = Vec::with_capacity(items_to_create);
-    let mut st_rxs = Vec::with_capacity(items_to_create);
+        Vec::with_capacity(data_changed_count);
+    let mut contexts = Vec::with_capacity(data_changed_count);
+    let mut st_rxs = Vec::with_capacity(data_changed_count);
 
-    for _ in 0..items_to_create {
+    for _ in 0..data_changed_count {
         // TODO: Think about appropriate buffer size or let the caller decide.
         let (st_tx, st_rx) = mpsc::channel::<ua::DataValue>(MONITORED_ITEM_BUFFER_SIZE);
 
@@ -394,31 +521,221 @@ async fn create_monitored_items(
         st_rxs.push(st_rx);
     }
 
-    let status_code = ua::StatusCode::new({
-        log::debug!(
-            "Calling MonitoredItems_createDataChanges(), count={}",
-            contexts.len()
-        );
+    let mut status_code: ua::StatusCode = ua::StatusCode::BAD;
+    if data_changed_count > 0 {
+        status_code = ua::StatusCode::new({
+            log::debug!(
+                "Calling MonitoredItems_createDataChanges(), count={}",
+                contexts.len()
+            );
 
-        // SAFETY: `UA_Client_MonitoredItems_createDataChanges_async()` expects the request passed
-        // by value but does not take ownership.
-        let request = unsafe { ua::CreateMonitoredItemsRequest::to_raw_copy(request) };
+            // SAFETY: `UA_Client_MonitoredItems_createDataChanges_async()` expects the request passed
+            // by value but does not take ownership.
+            let request = unsafe { ua::CreateMonitoredItemsRequest::to_raw_copy(request) };
 
+            unsafe {
+                UA_Client_MonitoredItems_createDataChanges_async(
+                    // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                    client.as_ptr().cast_mut(),
+                    request,
+                    contexts.as_mut_ptr().cast::<*mut c_void>(),
+                    notification_callbacks.as_mut_ptr(),
+                    delete_callbacks.as_mut_ptr(),
+                    Some(callback_c),
+                    Cb::prepare(callback),
+                    ptr::null_mut(),
+                )
+            }
+        });
+    }
+
+    if data_changed_count > 0 {
+        Error::verify_good(&status_code)?;
+    }
+
+    // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
+    // is only dropped after placing a value into the channel and `rx.await` always finds this value
+    // there.
+    rx.await
+        .unwrap_or(Err(Error::internal("callback should send result")))
+        .map(|response| (response, st_rxs))
+}
+
+async fn create_event_monitored_items(
+    client: &ua::Client,
+    request: &ua::CreateMonitoredItemsRequest,
+) -> Result<(
+    ua::CreateMonitoredItemsResponse,
+    Vec<mpsc::Receiver<ua::Variant>>,
+)> {
+    type St = CallbackStream<ua::Variant>;
+    type Cb = CallbackOnce<std::result::Result<ua::CreateMonitoredItemsResponse, ua::StatusCode>>;
+
+    // Wrapper type so that we can mark `*mut c_void` for callbacks as safe to send. Otherwise, this
+    // would make any closure that uses `AsyncMonitoredItem::new()` not `Send`.
+    #[repr(transparent)]
+    struct Context(*mut c_void);
+    // SAFETY: As long as the payload is `Send`, context is also `Send`.
+    unsafe impl Send for Context where St: Send + Sync {}
+
+    unsafe extern "C" fn event_notification_callback_c(
+        _client: *mut UA_Client,
+        _sub_id: UA_UInt32,
+        _sub_context: *mut c_void,
+        _mon_id: UA_UInt32,
+        mon_context: *mut c_void,
+        event_fields_size: usize,
+        event_fields: *mut UA_Variant,
+    ) {
+        log::debug!("EventNotificationCallback() was called");
+
+        let mut data: Vec<ua::Variant> = vec![];
         unsafe {
-            UA_Client_MonitoredItems_createDataChanges_async(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                client.as_ptr().cast_mut(),
-                request,
-                contexts.as_mut_ptr().cast::<*mut c_void>(),
-                notification_callbacks.as_mut_ptr(),
-                delete_callbacks.as_mut_ptr(),
-                Some(callback_c),
-                Cb::prepare(callback),
-                ptr::null_mut(),
-            )
+            for x in std::slice::from_raw_parts::<UA_Variant>(event_fields, event_fields_size) {
+                let value = x;
+                let value = ua::Variant::clone_raw(&value);
+                data.push(value);
+            }
         }
-    });
-    Error::verify_good(&status_code)?;
+
+        let data_array = ua::Array::from_slice(&data);
+        let variant_array = ua::Variant::array(data_array);
+
+        // SAFETY: `userdata` is the result of `St::prepare()` and is used only before `delete()`.
+        unsafe {
+            St::notify(mon_context, variant_array);
+        }
+    }
+
+    unsafe extern "C" fn delete_callback_c(
+        _client: *mut UA_Client,
+        _sub_id: UA_UInt32,
+        _sub_context: *mut c_void,
+        _mon_id: UA_UInt32,
+        mon_context: *mut c_void,
+    ) {
+        log::debug!("DeleteMonitoredItemCallback() was called");
+
+        // SAFETY: `userdata` is the result of `St::prepare()` and is deleted only once.
+        unsafe {
+            St::delete(mon_context);
+        }
+    }
+
+    unsafe extern "C" fn callback_c(
+        _client: *mut UA_Client,
+        userdata: *mut c_void,
+        _request_id: UA_UInt32,
+        response: *mut c_void,
+    ) {
+        log::debug!("MonitoredItems_createDataChanges() completed");
+
+        let response = response.cast::<UA_CreateMonitoredItemsResponse>();
+        // SAFETY: Incoming pointer is valid for access.
+        // PANIC: We expect pointer to be valid when good.
+        let response = unsafe { response.as_ref() }.expect("response should be set");
+        let status_code = ua::StatusCode::new(response.responseHeader.serviceResult);
+
+        let result = if status_code.is_good() {
+            Ok(ua::CreateMonitoredItemsResponse::clone_raw(response))
+        } else {
+            Err(status_code)
+        };
+
+        // SAFETY: `userdata` is the result of `Cb::prepare()` and is used only once.
+        unsafe {
+            Cb::execute(userdata, result);
+        }
+    }
+
+    let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse>>();
+
+    let callback = |result: std::result::Result<ua::CreateMonitoredItemsResponse, _>| {
+        // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
+        // care if that succeeds though: the receiver might already have gone out of scope (when its
+        // future has been cancelled) and we must not panic in FFI callbacks.
+        let _unused = tx.send(result.map_err(Error::new));
+    };
+
+    let (event_tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse>>();
+    let event_callback = |result: std::result::Result<ua::CreateMonitoredItemsResponse, _>| {
+        // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
+        // care if that succeeds though: the receiver might already have gone out of scope (when its
+        // future has been cancelled) and we must not panic in FFI callbacks.
+        let _unused = event_tx.send(result.map_err(Error::new));
+    };
+
+    let items_to_create = request
+        .items_to_create()
+        .map_or(0, <[ua::MonitoredItemCreateRequest]>::len);
+
+    let mut event_count = 0;
+    for item in request.items_to_create() {
+        for item2 in (*item.clone()).iter() {
+            let attribute_id = item2.clone().read_attribute_id();
+            if attribute_id == ua::AttributeId::EVENTNOTIFIER.as_u32() {
+                event_count += 1;
+            } else {
+                //nothing to do here
+            }
+        }
+    }
+
+    let mut notification_callbacks: Vec<UA_Client_EventNotificationCallback> =
+        Vec::with_capacity(event_count);
+    let mut delete_callbacks: Vec<UA_Client_DeleteMonitoredItemCallback> =
+        Vec::with_capacity(event_count);
+    let mut contexts = Vec::with_capacity(event_count);
+    let mut st_rxs = Vec::with_capacity(event_count);
+
+    for _ in 0..event_count {
+        // TODO: Think about appropriate buffer size or let the caller decide.
+        let (st_tx, st_rx) = mpsc::channel::<ua::Variant>(MONITORED_ITEM_BUFFER_SIZE);
+
+        // `open62541` requires one set of notification/delete callback and context per monitored
+        // item in the request.
+        let notification_callback: UA_Client_EventNotificationCallback =
+            Some(event_notification_callback_c);
+        let delete_callback: UA_Client_DeleteMonitoredItemCallback = Some(delete_callback_c);
+        let context = Context(St::prepare(st_tx));
+
+        notification_callbacks.push(notification_callback);
+        delete_callbacks.push(delete_callback);
+        contexts.push(context);
+        st_rxs.push(st_rx);
+    }
+
+    let mut status_code: ua::StatusCode = ua::StatusCode::BAD;
+    if event_count > 0 {
+        status_code = ua::StatusCode::new({
+            log::debug!(
+                "Calling MonitoredItems_createDataChanges(), count={}",
+                contexts.len()
+            );
+
+            // SAFETY: `UA_Client_MonitoredItems_createDataChanges_async()` expects the request passed
+            // by value but does not take ownership.
+            let request = unsafe { ua::CreateMonitoredItemsRequest::to_raw_copy(request) };
+
+            unsafe {
+                UA_Client_MonitoredItems_createEvents_async(
+                    // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                    client.as_ptr().cast_mut(),
+                    request,
+                    contexts.as_mut_ptr().cast::<*mut c_void>(),
+                    notification_callbacks.as_mut_ptr(),
+                    delete_callbacks.as_mut_ptr(),
+                    Some(callback_c),
+                    Cb::prepare(event_callback),
+                    ptr::null_mut(),
+                )
+            }
+        });
+    }
+
+    if event_count > 0 {
+        Error::verify_good(&status_code)?;
+    }
 
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
