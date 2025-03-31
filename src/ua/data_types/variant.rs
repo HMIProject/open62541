@@ -167,6 +167,7 @@ impl Variant {
             Double(ua::Double),                 // Data type ns=0;i=11
             String(ua::String),                 // Data type ns=0;i=12
             DateTime(ua::DateTime),             // Data type ns=0;i=13
+            Guid(ua::Guid),                     // Data type ns=0;i=14
             ByteString(ua::ByteString),         // Data type ns=0;i=15
             NodeId(ua::NodeId),                 // Data type ns=0;i=17
             ExpandedNodeId(ua::ExpandedNodeId), // Data type ns=0;i=18
@@ -229,6 +230,8 @@ impl serde::Serialize for Variant {
                 String,  // Data type ns=0;i=12
                 #[cfg(feature = "time")]
                 DateTime, // Data type ns=0;i=13
+                #[cfg(feature = "uuid")]
+                Guid, // Data type ns=0;i=14
                 ByteString, // Data type ns=0;i=15
                 NodeId,  // Data type ns=0;i=17
             ],
@@ -466,6 +469,16 @@ mod tests {
             let ua_variant = ua::Variant::scalar(ua_datetime);
             let json = serde_json::to_string(&ua_variant).unwrap();
             assert_eq!(r#""2024-02-09T16:48:52.123456Z""#, json);
+        }
+
+        #[cfg(feature = "uuid")]
+        #[test]
+        fn serialize_guid() {
+            let uuid = uuid::Uuid::parse_str("12191b7c-4f71-4e7b-9ac7-d4989bb1b373").unwrap();
+            let ua_guid = ua::Guid::from(uuid);
+            let ua_variant = ua::Variant::scalar(ua_guid);
+            let json = serde_json::to_string(&ua_variant).unwrap();
+            assert_eq!(r#""12191b7c-4f71-4e7b-9ac7-d4989bb1b373""#, json);
         }
 
         #[test]

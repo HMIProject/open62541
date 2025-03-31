@@ -27,6 +27,7 @@ pub enum ValueType {
     Double,         // Data type ns=0;i=11
     String,         // Data type ns=0;i=12
     DateTime,       // Data type ns=0;i=13
+    Guid,           // Data type ns=0;i=14
     ByteString,     // Data type ns=0;i=15
     NodeId,         // Data type ns=0;i=17
     ExpandedNodeId, // Data type ns=0;i=18
@@ -82,6 +83,7 @@ impl ValueType {
                 Double,         // Data type ns=0;i=11
                 String,         // Data type ns=0;i=12
                 DateTime,       // Data type ns=0;i=13
+                Guid,           // Data type ns=0;i=14
                 ByteString,     // Data type ns=0;i=15
                 NodeId,         // Data type ns=0;i=17
                 ExpandedNodeId, // Data type ns=0;i=18
@@ -131,6 +133,7 @@ pub enum ScalarValue {
     Double(ua::Double),                 // Data type ns=0;i=11
     String(ua::String),                 // Data type ns=0;i=12
     DateTime(ua::DateTime),             // Data type ns=0;i=13
+    Guid(ua::Guid),                     // Data type ns=0;i=14
     ByteString(ua::ByteString),         // Data type ns=0;i=15
     NodeId(ua::NodeId),                 // Data type ns=0;i=17
     ExpandedNodeId(ua::ExpandedNodeId), // Data type ns=0;i=18
