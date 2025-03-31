@@ -9,7 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Added built-in data type `ua::Guid`.
+- Add `ua::Guid`.
 
 ## [0.8.3] - 2025-03-27
 
