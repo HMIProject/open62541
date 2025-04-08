@@ -31,6 +31,7 @@ impl Logger {
     }
 
     /// Gives up ownership and returns value.
+    #[allow(clippy::missing_const_for_fn)] // false positive
     pub(crate) fn into_raw(self) -> *mut UA_Logger {
         // Use `ManuallyDrop` to avoid double-free even when added code might cause panic. See
         // documentation of `mem::forget()` for details.
