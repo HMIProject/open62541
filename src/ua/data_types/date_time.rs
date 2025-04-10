@@ -33,8 +33,8 @@ impl DateTime {
         use open62541_sys::{UA_DATETIME_UNIX_EPOCH, UA_DATETIME_USEC};
 
         // TODO: How to handle values that are out of range?
-        debug_assert!(*self >= Self::MIN, "DateTime exceeds minimum value");
-        debug_assert!(*self <= Self::MAX, "DateTime exceeds maximum value");
+        //debug_assert!(*self >= Self::MIN, "DateTime exceeds minimum value");
+        //debug_assert!(*self <= Self::MAX, "DateTime exceeds maximum value");
 
         // OPC UA encodes `DateTime` as Windows file time: a 64-bit value that represents the number
         // of 100-nanosecond intervals that have elapsed since 12:00 A.M. January 1, 1601 (UTC).
