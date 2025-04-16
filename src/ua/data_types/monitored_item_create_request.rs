@@ -33,7 +33,7 @@ impl MonitoredItemCreateRequest {
     }
 
     #[must_use]
-    pub const fn read_attribute_id(&self) -> u32 {
+    pub const fn attribute_id(&self) -> u32 {
         self.0.itemToMonitor.attributeId
     }
 

@@ -488,7 +488,7 @@ async fn create_monitored_items(
     if let Some(item) = request.items_to_create() {
         data_changed_count = item
             .iter()
-            .filter(|x| x.read_attribute_id() != ua::AttributeId::EVENTNOTIFIER.as_u32())
+            .filter(|x| x.attribute_id() != ua::AttributeId::EVENTNOTIFIER.as_u32())
             .count();
     }
 
@@ -652,7 +652,7 @@ async fn create_event_monitored_items(
     if let Some(item) = request.items_to_create() {
         event_count = item
             .iter()
-            .filter(|x| x.read_attribute_id() == ua::AttributeId::EVENTNOTIFIER.as_u32())
+            .filter(|x| x.attribute_id() == ua::AttributeId::EVENTNOTIFIER.as_u32())
             .count();
     }
 
