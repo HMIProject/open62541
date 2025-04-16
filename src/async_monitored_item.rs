@@ -648,15 +648,6 @@ async fn create_event_monitored_items(
         }
     }
 
-    let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse>>();
-
-    let callback = |result: std::result::Result<ua::CreateMonitoredItemsResponse, _>| {
-        // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
-        // care if that succeeds though: the receiver might already have gone out of scope (when its
-        // future has been cancelled) and we must not panic in FFI callbacks.
-        let _unused = tx.send(result.map_err(Error::new));
-    };
-
     let (event_tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse>>();
     let event_callback = |result: std::result::Result<ua::CreateMonitoredItemsResponse, _>| {
         // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
@@ -664,10 +655,6 @@ async fn create_event_monitored_items(
         // future has been cancelled) and we must not panic in FFI callbacks.
         let _unused = event_tx.send(result.map_err(Error::new));
     };
-
-    let items_to_create = request
-        .items_to_create()
-        .map_or(0, <[ua::MonitoredItemCreateRequest]>::len);
 
     let mut event_count = 0;
     for item in request.items_to_create() {
