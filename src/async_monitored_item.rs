@@ -484,17 +484,12 @@ async fn create_monitored_items(
     };
 
     let mut data_changed_count = 0;
-    for item in request.items_to_create() {
-        for item2 in (*item.clone()).iter() {
-            let attribute_id = item2.clone().read_attribute_id();
-            // would be better do do a comparision on AttributeId instead of u32
-            // but it woule need a cast from u32 to ua::attributeId
-            if attribute_id == ua::AttributeId::EVENTNOTIFIER.as_u32() {
-                //nothing to do here
-            } else {
-                data_changed_count += 1;
-            }
-        }
+
+    if let Some(item) = request.items_to_create() {
+        data_changed_count = item
+            .iter()
+            .filter(|x| x.read_attribute_id() != ua::AttributeId::EVENTNOTIFIER.as_u32())
+            .count();
     }
 
     let mut notification_callbacks: Vec<UA_Client_DataChangeNotificationCallback> =
@@ -521,9 +516,8 @@ async fn create_monitored_items(
         st_rxs.push(st_rx);
     }
 
-    let mut status_code: ua::StatusCode = ua::StatusCode::BAD;
     if data_changed_count > 0 {
-        status_code = ua::StatusCode::new({
+        let status_code = ua::StatusCode::new({
             log::debug!(
                 "Calling MonitoredItems_createDataChanges(), count={}",
                 contexts.len()
@@ -547,9 +541,6 @@ async fn create_monitored_items(
                 )
             }
         });
-    }
-
-    if data_changed_count > 0 {
         Error::verify_good(&status_code)?;
     }
 
@@ -593,7 +584,7 @@ async fn create_event_monitored_items(
         unsafe {
             for x in std::slice::from_raw_parts::<UA_Variant>(event_fields, event_fields_size) {
                 let value = x;
-                let value = ua::Variant::clone_raw(&value);
+                let value = ua::Variant::clone_raw(value);
                 data.push(value);
             }
         }
@@ -657,15 +648,12 @@ async fn create_event_monitored_items(
     };
 
     let mut event_count = 0;
-    for item in request.items_to_create() {
-        for item2 in (*item.clone()).iter() {
-            let attribute_id = item2.clone().read_attribute_id();
-            if attribute_id == ua::AttributeId::EVENTNOTIFIER.as_u32() {
-                event_count += 1;
-            } else {
-                //nothing to do here
-            }
-        }
+
+    if let Some(item) = request.items_to_create() {
+        event_count = item
+            .iter()
+            .filter(|x| x.read_attribute_id() == ua::AttributeId::EVENTNOTIFIER.as_u32())
+            .count();
     }
 
     let mut notification_callbacks: Vec<UA_Client_EventNotificationCallback> =
@@ -692,9 +680,8 @@ async fn create_event_monitored_items(
         st_rxs.push(st_rx);
     }
 
-    let mut status_code: ua::StatusCode = ua::StatusCode::BAD;
     if event_count > 0 {
-        status_code = ua::StatusCode::new({
+        let status_code = ua::StatusCode::new({
             log::debug!(
                 "Calling MonitoredItems_createDataChanges(), count={}",
                 contexts.len()
@@ -718,9 +705,6 @@ async fn create_event_monitored_items(
                 )
             }
         });
-    }
-
-    if event_count > 0 {
         Error::verify_good(&status_code)?;
     }
 
