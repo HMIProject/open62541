@@ -32,6 +32,11 @@ impl MonitoredItemCreateRequest {
         self
     }
 
+    #[must_use]
+    pub const fn attribute_id(&self) -> u32 {
+        self.0.itemToMonitor.attributeId
+    }
+
     /// Sets monitoring mode.
     #[must_use]
     pub fn with_monitoring_mode(mut self, monitoring_mode: &ua::MonitoringMode) -> Self {
