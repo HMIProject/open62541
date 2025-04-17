@@ -8,7 +8,7 @@ use std::{
 };
 
 use futures_channel::oneshot;
-use futures_core::Stream;
+use futures_core::{future::BoxFuture, Stream};
 use futures_util::stream;
 use open62541_sys::{
     UA_Client, UA_Client_DataChangeNotificationCallback, UA_Client_DeleteMonitoredItemCallback,
@@ -124,10 +124,20 @@ impl MonitoredItemBuilder {
     ///
     /// This fails when the entire request is not successful. Errors for individual node IDs are
     /// returned as error elements inside the resulting list.
-    pub async fn create(
+    #[allow(clippy::type_complexity)] // generic type definition is currently not stable - see issue #8995 <https://github.com/rust-lang/rust/issues/8995> for more information
+    async fn create_internal<T: Send + Sync>(
         self,
         subscription: &AsyncSubscription,
-    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem)>>> {
+        monitor_create: Box<
+            for<'a> fn(
+                client: &'a ua::Client,
+                request: &'a ua::CreateMonitoredItemsRequest,
+            ) -> BoxFuture<
+                'a,
+                Result<(ua::CreateMonitoredItemsResponse, Vec<mpsc::Receiver<T>>)>,
+            >,
+        >,
+    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem<T>)>>> {
         let Some(client) = &subscription.client().upgrade() else {
             return Err(Error::internal("client should not be dropped"));
         };
@@ -135,7 +145,7 @@ impl MonitoredItemBuilder {
 
         let request = self.into_request(subscription_id);
         let result_count = request.items_to_create().map_or(0, <[_]>::len);
-        let (response, rxs) = create_monitored_items(client, &request).await?;
+        let (response, rxs) = monitor_create(client, &request).await?;
 
         let Some(mut results) = response.into_results() else {
             return Err(Error::internal("expected monitoring item results"));
@@ -181,6 +191,33 @@ impl MonitoredItemBuilder {
 
     /// Creates monitored items.
     ///
+    /// This creates one or more new monitored items. Returns one result for each node ID.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the entire request is not successful. Errors for individual node IDs are
+    /// returned as error elements inside the resulting list.
+    pub async fn create(
+        self,
+        subscription: &AsyncSubscription,
+    ) -> Result<
+        Vec<
+            Result<(
+                ua::MonitoredItemCreateResult,
+                AsyncMonitoredItem<ua::DataValue>,
+            )>,
+        >,
+    > {
+        Self::create_internal(
+            self,
+            subscription,
+            Box::new(move |a, b| Box::pin(create_monitored_items(a, b))),
+        )
+        .await
+    }
+
+    /// Creates monitored items.
+    ///
     /// This creates one or more new monitored items for events. Returns one result for each event node ID.
     ///
     /// # Errors
@@ -190,56 +227,20 @@ impl MonitoredItemBuilder {
     pub async fn event_create(
         self,
         subscription: &AsyncSubscription,
-    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, EventAsyncMonitoredItem)>>> {
-        let Some(client) = &subscription.client().upgrade() else {
-            return Err(Error::internal("client should not be dropped"));
-        };
-        let subscription_id = subscription.subscription_id();
-
-        let request = self.into_request(subscription_id);
-        let result_count = request.items_to_create().map_or(0, <[_]>::len);
-        let (response, rxs) = create_event_monitored_items(client, &request).await?;
-
-        let Some(mut results) = response.into_results() else {
-            return Err(Error::internal("expected monitoring item results"));
-        };
-
-        if results.len() != result_count || rxs.len() != result_count {
-            // This should not happen. In any case, we cannot associate returned items with their
-            // incoming node IDs. Clean up the items that we received to not leave them dangling.
-            //
-            let monitored_item_ids = results
-                .iter()
-                .filter(|result| result.status_code().is_good())
-                .map(ua::MonitoredItemCreateResult::monitored_item_id)
-                .collect::<Vec<_>>();
-            let request = ua::DeleteMonitoredItemsRequest::init()
-                .with_subscription_id(subscription_id)
-                .with_monitored_item_ids(&monitored_item_ids);
-            // This request is processed asynchronously. Errors are logged asynchronously too.
-            delete_monitored_items(client, &request);
-
-            return Err(Error::internal("unexpected number of monitored items"));
-        }
-
-        let results = results
-            .drain_all()
-            .zip(rxs)
-            .map(|(result, rx)| {
-                Error::verify_good(&result.status_code())?;
-
-                let monitored_item = EventAsyncMonitoredItem {
-                    client: Arc::downgrade(client),
-                    subscription_id,
-                    monitored_item_id: result.monitored_item_id(),
-                    rx,
-                };
-
-                Ok((result, monitored_item))
-            })
-            .collect();
-
-        Ok(results)
+    ) -> Result<
+        Vec<
+            Result<(
+                ua::MonitoredItemCreateResult,
+                AsyncMonitoredItem<ua::Variant>,
+            )>,
+        >,
+    > {
+        Self::create_internal(
+            self,
+            subscription,
+            Box::new(move |a, b| Box::pin(create_event_monitored_items(a, b))),
+        )
+        .await
     }
 
     fn into_request(self, subscription_id: ua::SubscriptionId) -> ua::CreateMonitoredItemsRequest {
@@ -289,19 +290,19 @@ impl MonitoredItemBuilder {
 
 /// Monitored item (with asynchronous API).
 #[derive(Debug)]
-pub struct AsyncMonitoredItem {
+pub struct AsyncMonitoredItem<T: Send + Sync> {
     client: Weak<ua::Client>,
     subscription_id: ua::SubscriptionId,
     monitored_item_id: ua::MonitoredItemId,
-    rx: mpsc::Receiver<ua::DataValue>,
+    rx: mpsc::Receiver<T>,
 }
 
-impl AsyncMonitoredItem {
+impl<T: Send + Sync + 'static> AsyncMonitoredItem<T> {
     /// Waits for next value from server.
     ///
     /// This waits for the next value received for this monitored item. Returns `None` when item has
     /// been closed and no more updates will be received.
-    pub async fn next(&mut self) -> Option<ua::DataValue> {
+    pub async fn next(&mut self) -> Option<T> {
         // This mirrors `<Self as Stream>::poll_next()` but does not require `self` to be pinned.
         self.rx.recv().await
     }
@@ -310,14 +311,14 @@ impl AsyncMonitoredItem {
     ///
     /// The stream will emit all value updates as they are being received. If the client disconnects
     /// or the corresponding subscription is deleted, the stream is closed.
-    pub fn into_stream(self) -> impl Stream<Item = ua::DataValue> + Send + Sync + 'static {
+    pub fn into_stream(self) -> impl Stream<Item = T> + Send + Sync + 'static {
         stream::unfold(self, move |mut this| async move {
             this.next().await.map(|value| (value, this))
         })
     }
 }
 
-impl Drop for AsyncMonitoredItem {
+impl<T: Send + Sync> Drop for AsyncMonitoredItem<T> {
     fn drop(&mut self) {
         let Some(client) = self.client.upgrade() else {
             return;
@@ -331,60 +332,8 @@ impl Drop for AsyncMonitoredItem {
     }
 }
 
-impl Stream for AsyncMonitoredItem {
-    type Item = ua::DataValue;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Option<Self::Item>> {
-        // This mirrors `AsyncMonitoredItem::next()` and implements the `Stream` trait.
-        self.rx.poll_recv(cx)
-    }
-}
-
-#[derive(Debug)]
-pub struct EventAsyncMonitoredItem {
-    client: Weak<ua::Client>,
-    subscription_id: ua::SubscriptionId,
-    monitored_item_id: ua::MonitoredItemId,
-    rx: mpsc::Receiver<ua::Variant>,
-}
-
-impl EventAsyncMonitoredItem {
-    /// Waits for next value from server.
-    ///
-    /// This waits for the next value received for this monitored item. Returns `None` when item has
-    /// been closed and no more updates will be received.
-    pub async fn next(&mut self) -> Option<ua::Variant> {
-        // This mirrors `<Self as Stream>::poll_next()` but does not require `self` to be pinned.
-        self.rx.recv().await
-    }
-
-    /// Turns monitored item into stream.
-    ///
-    /// The stream will emit all value updates as they are being received. If the client disconnects
-    /// or the corresponding subscription is deleted, the stream is closed.
-    pub fn into_stream(self) -> impl Stream<Item = ua::Variant> + Send + Sync + 'static {
-        stream::unfold(self, move |mut this| async move {
-            this.next().await.map(|value| (value, this))
-        })
-    }
-}
-
-impl Drop for EventAsyncMonitoredItem {
-    fn drop(&mut self) {
-        let Some(client) = self.client.upgrade() else {
-            return;
-        };
-
-        let request = ua::DeleteMonitoredItemsRequest::init()
-            .with_subscription_id(self.subscription_id)
-            .with_monitored_item_ids(&[self.monitored_item_id]);
-
-        delete_monitored_items(&client, &request);
-    }
-}
-
-impl Stream for EventAsyncMonitoredItem {
-    type Item = ua::Variant;
+impl<T: Send + Sync> Stream for AsyncMonitoredItem<T> {
+    type Item = T;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Option<Self::Item>> {
         // This mirrors `AsyncMonitoredItem::next()` and implements the `Stream` trait.
@@ -395,6 +344,7 @@ impl Stream for EventAsyncMonitoredItem {
 /// Maximum number of buffered values.
 const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
 
+#[allow(clippy::too_many_lines)] // function is to complex to being refactored easily
 async fn create_monitored_items(
     client: &ua::Client,
     request: &ua::CreateMonitoredItemsRequest,
@@ -552,6 +502,7 @@ async fn create_monitored_items(
         .map(|response| (response, st_rxs))
 }
 
+#[allow(clippy::too_many_lines)] // function is to complex to being refactored easily
 async fn create_event_monitored_items(
     client: &ua::Client,
     request: &ua::CreateMonitoredItemsRequest,

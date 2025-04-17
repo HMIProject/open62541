@@ -179,7 +179,10 @@ impl AsyncSubscription {
     /// # Errors
     ///
     /// This fails when the node does not exist.
-    pub async fn create_monitored_item(&self, node_id: &ua::NodeId) -> Result<AsyncMonitoredItem> {
+    pub async fn create_monitored_item(
+        &self,
+        node_id: &ua::NodeId,
+    ) -> Result<AsyncMonitoredItem<ua::DataValue>> {
         let results = MonitoredItemBuilder::new([node_id.clone()])
             .create(self)
             .await?;
