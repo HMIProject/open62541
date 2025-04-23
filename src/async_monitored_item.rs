@@ -36,6 +36,16 @@ pub struct MonitoredItemBuilder {
     discard_oldest: Option<bool>,
 }
 
+// TODO: Use inherent associated type to define this directly on `MonitoredItemBuilder`. At the moment, this
+// is not possible yet.
+// https://github.com/rust-lang/rust/issues/8995
+type CreateMonitorHandle<T> =
+    for<'a> fn(
+        client: &'a ua::Client,
+        request: &'a ua::CreateMonitoredItemsRequest,
+    )
+        -> BoxFuture<'a, Result<(ua::CreateMonitoredItemsResponse, Vec<mpsc::Receiver<T>>)>>;
+
 // Note: The default values in the docs below come from `UA_MonitoredItemCreateRequest_default()`.
 impl MonitoredItemBuilder {
     pub fn new(node_ids: impl IntoIterator<Item = ua::NodeId>) -> Self {
@@ -124,20 +134,20 @@ impl MonitoredItemBuilder {
     ///
     /// This fails when the entire request is not successful. Errors for individual node IDs are
     /// returned as error elements inside the resulting list.
-    #[allow(clippy::type_complexity)] // generic type definition is currently not stable - see issue #8995 <https://github.com/rust-lang/rust/issues/8995> for more information
     async fn create_internal<T: Send + Sync>(
         self,
         subscription: &AsyncSubscription,
-        monitor_create: Box<
-            for<'a> fn(
-                client: &'a ua::Client,
-                request: &'a ua::CreateMonitoredItemsRequest,
-            ) -> BoxFuture<
-                'a,
-                Result<(ua::CreateMonitoredItemsResponse, Vec<mpsc::Receiver<T>>)>,
-            >,
+        monitor_create: CreateMonitorHandle<T>,
+    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem<T>)>>>
+    where
+        CreateMonitorHandle<T>: for<'a> FnOnce(
+            &'a ua::Client,
+            &'a ua::CreateMonitoredItemsRequest,
+        ) -> BoxFuture<
+            'a,
+            Result<(ua::CreateMonitoredItemsResponse, Vec<mpsc::Receiver<T>>)>,
         >,
-    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem<T>)>>> {
+    {
         let Some(client) = &subscription.client().upgrade() else {
             return Err(Error::internal("client should not be dropped"));
         };
@@ -208,11 +218,9 @@ impl MonitoredItemBuilder {
             )>,
         >,
     > {
-        Self::create_internal(
-            self,
-            subscription,
-            Box::new(move |a, b| Box::pin(create_monitored_items(a, b))),
-        )
+        Self::create_internal(self, subscription, |a, b| {
+            Box::pin(create_monitored_items(a, b))
+        })
         .await
     }
 
@@ -235,12 +243,9 @@ impl MonitoredItemBuilder {
             )>,
         >,
     > {
-        Self::create_internal(
-            self,
-            subscription,
-            Box::new(move |a, b| Box::pin(create_event_monitored_items(a, b))),
-        )
-        .await
+        let handle: CreateMonitorHandle<ua::Variant> =
+            |a, b| Box::pin(create_event_monitored_items(a, b));
+        Self::create_internal(self, subscription, handle).await
     }
 
     fn into_request(self, subscription_id: ua::SubscriptionId) -> ua::CreateMonitoredItemsRequest {
