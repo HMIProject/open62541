@@ -600,14 +600,12 @@ async fn create_event_monitored_items(
         let _unused = event_tx.send(result.map_err(Error::new));
     };
 
-    let mut event_count = 0;
-
-    if let Some(item) = request.items_to_create() {
-        event_count = item
-            .iter()
-            .filter(|x| x.attribute_id() == ua::AttributeId::EVENTNOTIFIER.as_u32())
-            .count();
-    }
+    let event_count = request
+        .items_to_create()
+        .into_iter()
+        .flatten()
+        .filter(|x| x.attribute_id() == ua::AttributeId::EVENTNOTIFIER.as_u32())
+        .count();
 
     let mut notification_callbacks: Vec<UA_Client_EventNotificationCallback> =
         Vec::with_capacity(event_count);
