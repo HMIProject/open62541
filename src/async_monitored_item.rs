@@ -344,7 +344,7 @@ impl<T: Send + Sync> Stream for AsyncMonitoredItem<T> {
 /// Maximum number of buffered values.
 const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
 
-#[allow(clippy::too_many_lines)] // function is to complex to being refactored easily
+#[allow(clippy::too_many_lines)] // function is to complex too being refactored easily
 async fn create_monitored_items(
     client: &ua::Client,
     request: &ua::CreateMonitoredItemsRequest,
@@ -433,14 +433,12 @@ async fn create_monitored_items(
         let _unused = tx.send(result.map_err(Error::new));
     };
 
-    let mut data_changed_count = 0;
-
-    if let Some(item) = request.items_to_create() {
-        data_changed_count = item
-            .iter()
-            .filter(|x| x.attribute_id() != ua::AttributeId::EVENTNOTIFIER.as_u32())
-            .count();
-    }
+    let data_changed_count = request
+        .items_to_create()
+        .into_iter()
+        .flatten()
+        .filter(|x| x.attribute_id() != ua::AttributeId::EVENTNOTIFIER.as_u32())
+        .count();
 
     let mut notification_callbacks: Vec<UA_Client_DataChangeNotificationCallback> =
         Vec::with_capacity(data_changed_count);
@@ -502,7 +500,7 @@ async fn create_monitored_items(
         .map(|response| (response, st_rxs))
 }
 
-#[allow(clippy::too_many_lines)] // function is to complex to being refactored easily
+#[allow(clippy::too_many_lines)] // function is to complex too being refactored easily
 async fn create_event_monitored_items(
     client: &ua::Client,
     request: &ua::CreateMonitoredItemsRequest,
@@ -531,16 +529,15 @@ async fn create_event_monitored_items(
     ) {
         log::debug!("EventNotificationCallback() was called");
 
-        let mut data: Vec<ua::Variant> = vec![];
-        unsafe {
-            for x in std::slice::from_raw_parts::<UA_Variant>(event_fields, event_fields_size) {
-                let value = x;
-                let value = ua::Variant::clone_raw(value);
-                data.push(value);
-            }
-        }
-
-        let data_array = ua::Array::from_slice(&data);
+        let data_array = {
+            let data = unsafe {
+                std::slice::from_raw_parts::<UA_Variant>(event_fields, event_fields_size)
+                    .iter()
+                    .map(ua::Variant::clone_raw)
+                    .collect::<Vec<_>>()
+            };
+            ua::Array::from_slice(&data)
+        };
         let variant_array = ua::Variant::array(data_array);
 
         // SAFETY: `userdata` is the result of `St::prepare()` and is used only before `delete()`.
