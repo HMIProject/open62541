@@ -37,6 +37,8 @@ mod delete_subscriptions_request;
 mod delete_subscriptions_response;
 mod element_operand;
 mod endpoint_description;
+mod enum_definition;
+mod enum_field;
 mod enumeration;
 mod eu_information;
 mod event_filter;
@@ -113,6 +115,8 @@ pub use self::{
     delete_subscriptions_response::DeleteSubscriptionsResponse,
     element_operand::ElementOperand,
     endpoint_description::EndpointDescription,
+    enum_definition::EnumDefinition,
+    enum_field::EnumField,
     enumeration::Enumeration,
     eu_information::EUInformation,
     event_filter::EventFilter,
