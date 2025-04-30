@@ -4,8 +4,9 @@ crate::data_type!(BuildInfo);
 
 impl BuildInfo {
     #[must_use]
-    pub const fn build_date(&self) -> i64 {
-        self.0.buildDate
+    pub fn build_date(&self) -> ua::DateTime {
+        // SAFETY: The i64 value represents a valid UtcTime.
+        unsafe { ua::DateTime::from_raw(self.0.buildDate) }
     }
 
     #[must_use]
