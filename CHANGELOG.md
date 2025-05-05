@@ -12,7 +12,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Add `ua::Guid`.
-- Add `ua::EnumDefinition` and `ua::EnumField`.
+- Add `ua::EnumDefinition` with `ua::EnumField`.
+- Add `ua::ServerStatusDataType` with `ua::ServerState` and `ua::BuildInfo`.
 
 ## [0.8.3] - 2025-03-27
 
