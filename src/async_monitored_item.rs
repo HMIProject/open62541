@@ -20,7 +20,8 @@ use open62541_sys::{
 use tokio::sync::mpsc;
 
 use crate::{
-    ua, AsyncSubscription, CallbackOnce, CallbackStream, DataType as _, Error, MonitoringFilter,
+    ua::{self, StatusCode},
+    AsyncSubscription, CallbackOnce, CallbackStream, DataType as _, Error, MonitoringFilter,
     Result,
 };
 
@@ -219,7 +220,7 @@ impl MonitoredItemBuilder {
         >,
     > {
         Self::create_internal(self, subscription, |a, b| {
-            Box::pin(create_monitored_items(a, b))
+            Box::pin(create_monitored_items_for_data_changed(a, b))
         })
         .await
     }
@@ -244,7 +245,7 @@ impl MonitoredItemBuilder {
         >,
     > {
         let handle: CreateMonitorHandle<ua::Variant> =
-            |a, b| Box::pin(create_event_monitored_items(a, b));
+            |a, b| Box::pin(create_monitored_items_for_events(a, b));
         Self::create_internal(self, subscription, handle).await
     }
 
@@ -350,7 +351,7 @@ impl<T: Send + Sync> Stream for AsyncMonitoredItem<T> {
 const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
 
 #[allow(clippy::too_many_lines)] // function is to complex too being refactored easily
-async fn create_monitored_items(
+async fn create_monitored_items_for_data_changed(
     client: &ua::Client,
     request: &ua::CreateMonitoredItemsRequest,
 ) -> Result<(
@@ -468,34 +469,35 @@ async fn create_monitored_items(
         contexts.push(context);
         st_rxs.push(st_rx);
     }
-
-    if data_changed_count > 0 {
-        let status_code = ua::StatusCode::new({
-            log::debug!(
-                "Calling MonitoredItems_createDataChanges(), count={}",
-                contexts.len()
-            );
-
-            // SAFETY: `UA_Client_MonitoredItems_createDataChanges_async()` expects the request passed
-            // by value but does not take ownership.
-            let request = unsafe { ua::CreateMonitoredItemsRequest::to_raw_copy(request) };
-
-            unsafe {
-                UA_Client_MonitoredItems_createDataChanges_async(
-                    // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                    client.as_ptr().cast_mut(),
-                    request,
-                    contexts.as_mut_ptr().cast::<*mut c_void>(),
-                    notification_callbacks.as_mut_ptr(),
-                    delete_callbacks.as_mut_ptr(),
-                    Some(callback_c),
-                    Cb::prepare(callback),
-                    ptr::null_mut(),
-                )
-            }
-        });
-        Error::verify_good(&status_code)?;
+    if data_changed_count == 0 {
+        return Err(Error::new(StatusCode::new(0x800F0000))); //0x800F0000 = Bad_NothingToDo
     }
+
+    let status_code = ua::StatusCode::new({
+        log::debug!(
+            "Calling MonitoredItems_createDataChanges(), count={}",
+            contexts.len()
+        );
+
+        // SAFETY: `UA_Client_MonitoredItems_createDataChanges_async()` expects the request passed
+        // by value but does not take ownership.
+        let request = unsafe { ua::CreateMonitoredItemsRequest::to_raw_copy(request) };
+
+        unsafe {
+            UA_Client_MonitoredItems_createDataChanges_async(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                client.as_ptr().cast_mut(),
+                request,
+                contexts.as_mut_ptr().cast::<*mut c_void>(),
+                notification_callbacks.as_mut_ptr(),
+                delete_callbacks.as_mut_ptr(),
+                Some(callback_c),
+                Cb::prepare(callback),
+                ptr::null_mut(),
+            )
+        }
+    });
+    Error::verify_good(&status_code)?;
 
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
@@ -506,7 +508,7 @@ async fn create_monitored_items(
 }
 
 #[allow(clippy::too_many_lines)] // function is to complex too being refactored easily
-async fn create_event_monitored_items(
+async fn create_monitored_items_for_events(
     client: &ua::Client,
     request: &ua::CreateMonitoredItemsRequest,
 ) -> Result<(
@@ -631,33 +633,35 @@ async fn create_event_monitored_items(
         st_rxs.push(st_rx);
     }
 
-    if event_count > 0 {
-        let status_code = ua::StatusCode::new({
-            log::debug!(
-                "Calling MonitoredItems_createDataChanges(), count={}",
-                contexts.len()
-            );
-
-            // SAFETY: `UA_Client_MonitoredItems_createDataChanges_async()` expects the request passed
-            // by value but does not take ownership.
-            let request = unsafe { ua::CreateMonitoredItemsRequest::to_raw_copy(request) };
-
-            unsafe {
-                UA_Client_MonitoredItems_createEvents_async(
-                    // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                    client.as_ptr().cast_mut(),
-                    request,
-                    contexts.as_mut_ptr().cast::<*mut c_void>(),
-                    notification_callbacks.as_mut_ptr(),
-                    delete_callbacks.as_mut_ptr(),
-                    Some(callback_c),
-                    Cb::prepare(event_callback),
-                    ptr::null_mut(),
-                )
-            }
-        });
-        Error::verify_good(&status_code)?;
+    if event_count == 0 {
+        return Err(Error::new(StatusCode::new(0x800F0000))); //0x800F0000 = Bad_NothingToDo
     }
+
+    let status_code = ua::StatusCode::new({
+        log::debug!(
+            "Calling MonitoredItems_createDataChanges(), count={}",
+            contexts.len()
+        );
+
+        // SAFETY: `UA_Client_MonitoredItems_createDataChanges_async()` expects the request passed
+        // by value but does not take ownership.
+        let request = unsafe { ua::CreateMonitoredItemsRequest::to_raw_copy(request) };
+
+        unsafe {
+            UA_Client_MonitoredItems_createEvents_async(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                client.as_ptr().cast_mut(),
+                request,
+                contexts.as_mut_ptr().cast::<*mut c_void>(),
+                notification_callbacks.as_mut_ptr(),
+                delete_callbacks.as_mut_ptr(),
+                Some(callback_c),
+                Cb::prepare(event_callback),
+                ptr::null_mut(),
+            )
+        }
+    });
+    Error::verify_good(&status_code)?;
 
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
