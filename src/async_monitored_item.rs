@@ -470,7 +470,7 @@ async fn create_monitored_items_for_data_changed(
         st_rxs.push(st_rx);
     }
     if data_changed_count == 0 {
-        return Err(Error::new(StatusCode::new(0x800F0000))); //0x800F0000 = Bad_NothingToDo
+        return Err(Error::internal("no data changed monitor items to create"));
     }
 
     let status_code = ua::StatusCode::new({
@@ -634,7 +634,7 @@ async fn create_monitored_items_for_events(
     }
 
     if event_count == 0 {
-        return Err(Error::new(StatusCode::new(0x800F0000))); //0x800F0000 = Bad_NothingToDo
+        return Err(Error::internal("no event monitor items to create"));
     }
 
     let status_code = ua::StatusCode::new({
