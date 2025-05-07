@@ -184,7 +184,7 @@ impl AsyncSubscription {
         node_id: &ua::NodeId,
     ) -> Result<AsyncMonitoredItem<ua::DataValue>> {
         let results = MonitoredItemBuilder::new([node_id.clone()])
-            .create(self)
+            .create_for_data_changed(self)
             .await?;
 
         // We expect exactly one result for the single monitored item we requested above.

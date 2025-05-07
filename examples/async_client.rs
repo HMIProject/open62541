@@ -124,7 +124,7 @@ async fn subscribe_node_events(client: &AsyncClient) -> anyhow::Result<()> {
                         ))])]),
                 ),
         )
-        .create(&subscription)
+        .create_for_data_changed(&subscription)
         .await
         .context("monitor item")?;
     let Ok::<[_; 1], _>([result]) = results.try_into() else {
@@ -186,7 +186,7 @@ async fn subscribe_node_with_options(client: &AsyncClient) -> anyhow::Result<()>
         .sampling_interval(Some(Duration::from_millis(100)))
         .queue_size(3)
         .discard_oldest(true)
-        .create(&subscription)
+        .create_for_data_changed(&subscription)
         .await
         .context("monitor items")?;
 

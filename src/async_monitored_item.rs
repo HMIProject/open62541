@@ -207,7 +207,7 @@ impl MonitoredItemBuilder {
     ///
     /// This fails when the entire request is not successful. Errors for individual node IDs are
     /// returned as error elements inside the resulting list.
-    pub async fn create(
+    pub async fn create_for_data_changed(
         self,
         subscription: &AsyncSubscription,
     ) -> Result<
@@ -232,7 +232,7 @@ impl MonitoredItemBuilder {
     ///
     /// This fails when the entire request is not successful. Errors for individual node IDs are
     /// returned as error elements inside the resulting list.
-    pub async fn event_create(
+    pub async fn create_for_event(
         self,
         subscription: &AsyncSubscription,
     ) -> Result<
