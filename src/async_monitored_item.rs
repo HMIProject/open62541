@@ -42,6 +42,9 @@ impl MonitoredItemBuilder {
 
     /// Sets attribute ID.
     ///
+    /// By default, monitored items emit [`MonitoredItemValue::DataChange`]. If the attribute ID is
+    /// set to [`ua::AttributeId::EVENTNOTIFIER`], they emit [`MonitoredItemValue::Event`] instead.
+    ///
     /// Default value is [`ua::AttributeId::VALUE`].
     ///
     /// See [`ua::MonitoredItemCreateRequest::with_attribute_id()`].
@@ -214,13 +217,42 @@ impl MonitoredItemBuilder {
     }
 }
 
+/// Value emitted from monitored item notification.
+///
+/// The variant depends on the attribute ID passed to [`MonitoredItemBuilder::attribute_id()`].
+#[derive(Debug)]
+pub enum MonitoredItemValue {
+    /// Data change payload.
+    ///
+    /// This is emitted for attribute IDs other than [`ua::AttributeId::EVENTNOTIFIER`].
+    DataChange(ua::DataValue),
+
+    /// Event payload.
+    ///
+    /// This is emitted for attribute ID [`ua::AttributeId::EVENTNOTIFIER`].
+    Event(ua::Array<ua::Variant>),
+}
+
+impl MonitoredItemValue {
+    /// Shortcut for accessing data change value.
+    ///
+    /// This returns `None` for [`MonitoredItemValue::Event`].
+    #[must_use]
+    pub fn value(&self) -> Option<&ua::Variant> {
+        match self {
+            MonitoredItemValue::DataChange(data_change) => data_change.value(),
+            MonitoredItemValue::Event(_) => None,
+        }
+    }
+}
+
 /// Monitored item (with asynchronous API).
 #[derive(Debug)]
 pub struct AsyncMonitoredItem {
     client: Weak<ua::Client>,
     subscription_id: ua::SubscriptionId,
     monitored_item_id: ua::MonitoredItemId,
-    rx: mpsc::Receiver<ua::DataValue>,
+    rx: mpsc::Receiver<MonitoredItemValue>,
 }
 
 impl AsyncMonitoredItem {
@@ -228,7 +260,7 @@ impl AsyncMonitoredItem {
     ///
     /// This waits for the next value received for this monitored item. Returns `None` when item has
     /// been closed and no more updates will be received.
-    pub async fn next(&mut self) -> Option<ua::DataValue> {
+    pub async fn next(&mut self) -> Option<MonitoredItemValue> {
         // This mirrors `<Self as Stream>::poll_next()` but does not require `self` to be pinned.
         self.rx.recv().await
     }
@@ -237,7 +269,7 @@ impl AsyncMonitoredItem {
     ///
     /// The stream will emit all value updates as they are being received. If the client disconnects
     /// or the corresponding subscription is deleted, the stream is closed.
-    pub fn into_stream(self) -> impl Stream<Item = ua::DataValue> + Send + Sync + 'static {
+    pub fn into_stream(self) -> impl Stream<Item = MonitoredItemValue> + Send + Sync + 'static {
         stream::unfold(self, move |mut this| async move {
             this.next().await.map(|value| (value, this))
         })
@@ -259,7 +291,7 @@ impl Drop for AsyncMonitoredItem {
 }
 
 impl Stream for AsyncMonitoredItem {
-    type Item = ua::DataValue;
+    type Item = MonitoredItemValue;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Option<Self::Item>> {
         // This mirrors `AsyncMonitoredItem::next()` and implements the `Stream` trait.

@@ -1,26 +1,27 @@
-use std::{ffi::c_void, ptr};
+use std::{ffi::c_void, mem, ptr};
 
 use futures_channel::oneshot;
 use open62541_sys::{
     UA_Client, UA_Client_DataChangeNotificationCallback, UA_Client_DeleteMonitoredItemCallback,
     UA_Client_MonitoredItems_createDataChanges_async, UA_CreateMonitoredItemsResponse,
-    UA_DataValue, UA_UInt32,
+    UA_DataValue, UA_UInt32, UA_Variant,
 };
 use tokio::sync::mpsc;
 
-use crate::{ua, CallbackOnce, CallbackStream, DataType as _, Error, Result};
+use crate::{ua, CallbackOnce, CallbackStream, DataType as _, Error, MonitoredItemValue, Result};
 
 /// Maximum number of buffered values.
 const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
 
-type St = CallbackStream<ua::DataValue>;
+type St = CallbackStream<MonitoredItemValue>;
 type Cb = CallbackOnce<std::result::Result<ua::CreateMonitoredItemsResponse, ua::StatusCode>>;
 
-// Wrapper type so that we can mark `*mut c_void` for callbacks as safe to send. Otherwise, this
-// would make any closure that uses `AsyncMonitoredItem::new()` not `Send`.
+// Wrapper type so that we can mark `*mut c_void` for callbacks as safe to send. Otherwise, closures
+// that use `AsyncMonitoredItem::new()` would never be `Send`.
 #[repr(transparent)]
 struct Context(*mut c_void);
-// SAFETY: As long as the payload is `Send`, context is also `Send`.
+
+// SAFETY: As long as payload is `Send`, wrapper is `Send`.
 unsafe impl Send for Context where St: Send + Sync {}
 
 pub(super) async fn call(
@@ -28,7 +29,7 @@ pub(super) async fn call(
     request: &ua::CreateMonitoredItemsRequest,
 ) -> Result<(
     ua::CreateMonitoredItemsResponse,
-    Vec<mpsc::Receiver<ua::DataValue>>,
+    Vec<mpsc::Receiver<MonitoredItemValue>>,
 )> {
     let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse>>();
 
@@ -39,29 +40,29 @@ pub(super) async fn call(
         let _unused = tx.send(result.map_err(Error::new));
     };
 
-    let items_to_create = request
-        .items_to_create()
-        .map_or(0, <[ua::MonitoredItemCreateRequest]>::len);
+    let items_to_create = request.items_to_create().unwrap_or_default();
 
     let mut notification_callbacks: Vec<UA_Client_DataChangeNotificationCallback> =
-        Vec::with_capacity(items_to_create);
+        Vec::with_capacity(items_to_create.len());
     let mut delete_callbacks: Vec<UA_Client_DeleteMonitoredItemCallback> =
-        Vec::with_capacity(items_to_create);
-    let mut contexts = Vec::with_capacity(items_to_create);
-    let mut st_rxs = Vec::with_capacity(items_to_create);
+        Vec::with_capacity(items_to_create.len());
+    let mut contexts = Vec::with_capacity(items_to_create.len());
+    let mut st_rxs = Vec::with_capacity(items_to_create.len());
 
-    for _ in 0..items_to_create {
+    for item_to_create in items_to_create {
         // TODO: Think about appropriate buffer size or let the caller decide.
-        let (st_tx, st_rx) = mpsc::channel::<ua::DataValue>(MONITORED_ITEM_BUFFER_SIZE);
+        let (st_tx, st_rx) = mpsc::channel::<MonitoredItemValue>(MONITORED_ITEM_BUFFER_SIZE);
 
         // `open62541` requires one set of notification/delete callback and context per monitored
         // item in the request.
-        let notification_callback: UA_Client_DataChangeNotificationCallback =
-            Some(notification_callback_c);
+        let notification_callback = NotificationCallback::new(item_to_create);
         let delete_callback: UA_Client_DeleteMonitoredItemCallback = Some(delete_callback_c);
         let context = Context(St::prepare(st_tx));
 
-        notification_callbacks.push(notification_callback);
+        // SAFETY: This cast is possible because `UA_Client_MonitoredItems_createDataChanges_async`
+        // internally casts the function pointer back to the appropriate type before calling (union
+        // type of attribute `handler` in `UA_Client_MonitoredItem`).
+        notification_callbacks.push(Some(unsafe { notification_callback.into_data_change() }));
         delete_callbacks.push(delete_callback);
         contexts.push(context);
         st_rxs.push(st_rx);
@@ -78,6 +79,9 @@ pub(super) async fn call(
         let request = unsafe { ua::CreateMonitoredItemsRequest::to_raw_copy(request) };
 
         unsafe {
+            // This handles both data change and event notifications as determined by the monitored
+            // attribute ID, delegating to `createDataChanges_async()` in both cases. We must still
+            // make sure to pass the expected callback function in `notification_callbacks` above.
             UA_Client_MonitoredItems_createDataChanges_async(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 client.as_ptr().cast_mut(),
@@ -101,7 +105,42 @@ pub(super) async fn call(
         .map(|response| (response, st_rxs))
 }
 
-unsafe extern "C" fn notification_callback_c(
+enum NotificationCallback {
+    DataChange,
+    Event,
+}
+
+impl NotificationCallback {
+    fn new(request: &ua::MonitoredItemCreateRequest) -> Self {
+        if request.attribute_id() == ua::AttributeId::EVENTNOTIFIER {
+            Self::Event
+        } else {
+            Self::DataChange
+        }
+    }
+
+    unsafe fn into_data_change(self) -> DataChangeNotificationCallbackC {
+        match self {
+            Self::DataChange => data_change_notification_callback_c,
+            Self::Event => unsafe {
+                mem::transmute::<EventNotificationCallbackC, DataChangeNotificationCallbackC>(
+                    event_notification_callback_c,
+                )
+            },
+        }
+    }
+}
+
+type DataChangeNotificationCallbackC = unsafe extern "C" fn(
+    client: *mut UA_Client,
+    sub_id: UA_UInt32,
+    sub_context: *mut c_void,
+    mon_id: UA_UInt32,
+    mon_context: *mut c_void,
+    value: *mut UA_DataValue,
+);
+
+unsafe extern "C" fn data_change_notification_callback_c(
     _client: *mut UA_Client,
     _sub_id: UA_UInt32,
     _sub_context: *mut c_void,
@@ -116,9 +155,40 @@ unsafe extern "C" fn notification_callback_c(
     let value = unsafe { value.as_ref() }.expect("value should be set");
     let value = ua::DataValue::clone_raw(value);
 
-    // SAFETY: `userdata` is the result of `St::prepare()` and is used only before `delete()`.
+    // SAFETY: `mon_context` is result of `St::prepare()` and is used only before `delete()`.
     unsafe {
-        St::notify(mon_context, value);
+        St::notify(mon_context, MonitoredItemValue::DataChange(value));
+    }
+}
+
+type EventNotificationCallbackC = unsafe extern "C" fn(
+    client: *mut UA_Client,
+    sub_id: UA_UInt32,
+    sub_context: *mut c_void,
+    mon_id: UA_UInt32,
+    mon_context: *mut c_void,
+    n_event_fields: usize,
+    event_fields: *mut UA_Variant,
+);
+
+unsafe extern "C" fn event_notification_callback_c(
+    _client: *mut UA_Client,
+    _sub_id: UA_UInt32,
+    _sub_context: *mut c_void,
+    _mon_id: UA_UInt32,
+    mon_context: *mut c_void,
+    n_event_fields: usize,
+    event_fields: *mut UA_Variant,
+) {
+    log::debug!("EventNotificationCallback() was called");
+
+    // PANIC: We expect pointer to be valid when called.
+    let event_fields = ua::Array::from_raw_parts(n_event_fields, event_fields)
+        .expect("event fields should be set");
+
+    // SAFETY: `mon_context` is result of `St::prepare()` and is used only before `delete()`.
+    unsafe {
+        St::notify(mon_context, MonitoredItemValue::Event(event_fields));
     }
 }
 
@@ -131,7 +201,7 @@ unsafe extern "C" fn delete_callback_c(
 ) {
     log::debug!("DeleteMonitoredItemCallback() was called");
 
-    // SAFETY: `userdata` is the result of `St::prepare()` and is deleted only once.
+    // SAFETY: `mon_context` is result of `St::prepare()` and is deleted only once.
     unsafe {
         St::delete(mon_context);
     }
