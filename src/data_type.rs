@@ -493,6 +493,12 @@ macro_rules! enum_variants {
                 }
             )*
 
+            #[allow(dead_code)] // --no-default-features
+            pub(crate) fn from_u32(value: u32) -> Self {
+                // This cast is necessary on Windows builds with inner type `i32`.
+                Self(open62541_sys::$inner(value.try_into().expect("should convert from u32")))
+            }
+
             pub(crate) fn as_u32(&self) -> u32 {
                 // This cast is necessary on Windows builds with inner type `i32`.
                 #[allow(clippy::useless_conversion)]

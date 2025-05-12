@@ -89,6 +89,11 @@ impl MonitoredItemCreateRequest {
         self.0.requestedParameters.discardOldest = discard_oldest;
         self
     }
+
+    #[must_use]
+    pub(crate) fn attribute_id(&self) -> ua::AttributeId {
+        ua::AttributeId::from_u32(self.0.itemToMonitor.attributeId)
+    }
 }
 
 impl Default for MonitoredItemCreateRequest {
