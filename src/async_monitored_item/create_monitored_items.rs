@@ -13,6 +13,16 @@ use crate::{ua, CallbackOnce, CallbackStream, DataType as _, Error, Result};
 /// Maximum number of buffered values.
 const MONITORED_ITEM_BUFFER_SIZE: usize = 3;
 
+type St = CallbackStream<ua::DataValue>;
+type Cb = CallbackOnce<std::result::Result<ua::CreateMonitoredItemsResponse, ua::StatusCode>>;
+
+// Wrapper type so that we can mark `*mut c_void` for callbacks as safe to send. Otherwise, this
+// would make any closure that uses `AsyncMonitoredItem::new()` not `Send`.
+#[repr(transparent)]
+struct Context(*mut c_void);
+// SAFETY: As long as the payload is `Send`, context is also `Send`.
+unsafe impl Send for Context where St: Send + Sync {}
+
 pub(super) async fn call(
     client: &ua::Client,
     request: &ua::CreateMonitoredItemsRequest,
@@ -20,78 +30,6 @@ pub(super) async fn call(
     ua::CreateMonitoredItemsResponse,
     Vec<mpsc::Receiver<ua::DataValue>>,
 )> {
-    type St = CallbackStream<ua::DataValue>;
-    type Cb = CallbackOnce<std::result::Result<ua::CreateMonitoredItemsResponse, ua::StatusCode>>;
-
-    // Wrapper type so that we can mark `*mut c_void` for callbacks as safe to send. Otherwise, this
-    // would make any closure that uses `AsyncMonitoredItem::new()` not `Send`.
-    #[repr(transparent)]
-    struct Context(*mut c_void);
-    // SAFETY: As long as the payload is `Send`, context is also `Send`.
-    unsafe impl Send for Context where St: Send + Sync {}
-
-    unsafe extern "C" fn notification_callback_c(
-        _client: *mut UA_Client,
-        _sub_id: UA_UInt32,
-        _sub_context: *mut c_void,
-        _mon_id: UA_UInt32,
-        mon_context: *mut c_void,
-        value: *mut UA_DataValue,
-    ) {
-        log::debug!("DataChangeNotificationCallback() was called");
-
-        // SAFETY: Incoming pointer is valid for access.
-        // PANIC: We expect pointer to be valid when called.
-        let value = unsafe { value.as_ref() }.expect("value should be set");
-        let value = ua::DataValue::clone_raw(value);
-
-        // SAFETY: `userdata` is the result of `St::prepare()` and is used only before `delete()`.
-        unsafe {
-            St::notify(mon_context, value);
-        }
-    }
-
-    unsafe extern "C" fn delete_callback_c(
-        _client: *mut UA_Client,
-        _sub_id: UA_UInt32,
-        _sub_context: *mut c_void,
-        _mon_id: UA_UInt32,
-        mon_context: *mut c_void,
-    ) {
-        log::debug!("DeleteMonitoredItemCallback() was called");
-
-        // SAFETY: `userdata` is the result of `St::prepare()` and is deleted only once.
-        unsafe {
-            St::delete(mon_context);
-        }
-    }
-
-    unsafe extern "C" fn callback_c(
-        _client: *mut UA_Client,
-        userdata: *mut c_void,
-        _request_id: UA_UInt32,
-        response: *mut c_void,
-    ) {
-        log::debug!("MonitoredItems_createDataChanges() completed");
-
-        let response = response.cast::<UA_CreateMonitoredItemsResponse>();
-        // SAFETY: Incoming pointer is valid for access.
-        // PANIC: We expect pointer to be valid when good.
-        let response = unsafe { response.as_ref() }.expect("response should be set");
-        let status_code = ua::StatusCode::new(response.responseHeader.serviceResult);
-
-        let result = if status_code.is_good() {
-            Ok(ua::CreateMonitoredItemsResponse::clone_raw(response))
-        } else {
-            Err(status_code)
-        };
-
-        // SAFETY: `userdata` is the result of `Cb::prepare()` and is used only once.
-        unsafe {
-            Cb::execute(userdata, result);
-        }
-    }
-
     let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse>>();
 
     let callback = |result: std::result::Result<ua::CreateMonitoredItemsResponse, _>| {
@@ -161,4 +99,66 @@ pub(super) async fn call(
     rx.await
         .unwrap_or(Err(Error::internal("callback should send result")))
         .map(|response| (response, st_rxs))
+}
+
+unsafe extern "C" fn notification_callback_c(
+    _client: *mut UA_Client,
+    _sub_id: UA_UInt32,
+    _sub_context: *mut c_void,
+    _mon_id: UA_UInt32,
+    mon_context: *mut c_void,
+    value: *mut UA_DataValue,
+) {
+    log::debug!("DataChangeNotificationCallback() was called");
+
+    // SAFETY: Incoming pointer is valid for access.
+    // PANIC: We expect pointer to be valid when called.
+    let value = unsafe { value.as_ref() }.expect("value should be set");
+    let value = ua::DataValue::clone_raw(value);
+
+    // SAFETY: `userdata` is the result of `St::prepare()` and is used only before `delete()`.
+    unsafe {
+        St::notify(mon_context, value);
+    }
+}
+
+unsafe extern "C" fn delete_callback_c(
+    _client: *mut UA_Client,
+    _sub_id: UA_UInt32,
+    _sub_context: *mut c_void,
+    _mon_id: UA_UInt32,
+    mon_context: *mut c_void,
+) {
+    log::debug!("DeleteMonitoredItemCallback() was called");
+
+    // SAFETY: `userdata` is the result of `St::prepare()` and is deleted only once.
+    unsafe {
+        St::delete(mon_context);
+    }
+}
+
+unsafe extern "C" fn callback_c(
+    _client: *mut UA_Client,
+    userdata: *mut c_void,
+    _request_id: UA_UInt32,
+    response: *mut c_void,
+) {
+    log::debug!("MonitoredItems_createDataChanges() completed");
+
+    let response = response.cast::<UA_CreateMonitoredItemsResponse>();
+    // SAFETY: Incoming pointer is valid for access.
+    // PANIC: We expect pointer to be valid when good.
+    let response = unsafe { response.as_ref() }.expect("response should be set");
+    let status_code = ua::StatusCode::new(response.responseHeader.serviceResult);
+
+    let result = if status_code.is_good() {
+        Ok(ua::CreateMonitoredItemsResponse::clone_raw(response))
+    } else {
+        Err(status_code)
+    };
+
+    // SAFETY: `userdata` is the result of `Cb::prepare()` and is used only once.
+    unsafe {
+        Cb::execute(userdata, result);
+    }
 }

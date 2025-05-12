@@ -7,25 +7,6 @@ use open62541_sys::{
 use crate::{ua, DataType as _, Error};
 
 pub(super) fn call(client: &ua::Client, request: &ua::DeleteMonitoredItemsRequest) {
-    unsafe extern "C" fn callback_c(
-        _client: *mut UA_Client,
-        _userdata: *mut c_void,
-        _request_id: UA_UInt32,
-        response: *mut c_void,
-    ) {
-        log::debug!("MonitoredItems_delete() completed");
-
-        let response = response.cast::<UA_DeleteMonitoredItemsResponse>();
-        // SAFETY: Incoming pointer is valid for access.
-        // PANIC: We expect pointer to be valid when good.
-        let response = unsafe { response.as_ref() }.expect("response should be set");
-        let status_code = ua::StatusCode::new(response.responseHeader.serviceResult);
-
-        if let Err(error) = Error::verify_good(&status_code) {
-            log::warn!("Error in response when deleting monitored items: {error}");
-        }
-    }
-
     let status_code = ua::StatusCode::new({
         log::debug!("Calling MonitoredItems_delete()");
 
@@ -46,5 +27,24 @@ pub(super) fn call(client: &ua::Client, request: &ua::DeleteMonitoredItemsReques
     });
     if let Err(error) = Error::verify_good(&status_code) {
         log::warn!("Error in request when deleting monitored items: {error}");
+    }
+}
+
+unsafe extern "C" fn callback_c(
+    _client: *mut UA_Client,
+    _userdata: *mut c_void,
+    _request_id: UA_UInt32,
+    response: *mut c_void,
+) {
+    log::debug!("MonitoredItems_delete() completed");
+
+    let response = response.cast::<UA_DeleteMonitoredItemsResponse>();
+    // SAFETY: Incoming pointer is valid for access.
+    // PANIC: We expect pointer to be valid when good.
+    let response = unsafe { response.as_ref() }.expect("response should be set");
+    let status_code = ua::StatusCode::new(response.responseHeader.serviceResult);
+
+    if let Err(error) = Error::verify_good(&status_code) {
+        log::warn!("Error in response when deleting monitored items: {error}");
     }
 }
