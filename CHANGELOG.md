@@ -7,9 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.4] - 2025-04-30
+
 ### Added
 
 - Add `ua::Guid`.
+- Add `ua::EnumDefinition` with `ua::EnumField`.
+- Add `ua::ServerStatusDataType` with `ua::ServerState` and `ua::BuildInfo`.
 
 ## [0.8.3] - 2025-03-27
 
@@ -436,7 +440,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
-[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.8.3...HEAD
+[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.8.4...HEAD
+[0.8.4]: https://github.com/HMIProject/open62541/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/HMIProject/open62541/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/HMIProject/open62541/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/HMIProject/open62541/compare/v0.8.0...v0.8.1

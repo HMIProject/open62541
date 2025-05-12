@@ -17,6 +17,7 @@ mod browse_path_target;
 mod browse_request;
 mod browse_response;
 mod browse_result;
+mod build_info;
 mod byte_string;
 mod call_method_request;
 mod call_method_result;
@@ -37,6 +38,8 @@ mod delete_subscriptions_request;
 mod delete_subscriptions_response;
 mod element_operand;
 mod endpoint_description;
+mod enum_definition;
+mod enum_field;
 mod enumeration;
 mod eu_information;
 mod event_filter;
@@ -64,6 +67,8 @@ mod read_value_id;
 mod reference_description;
 mod relative_path;
 mod relative_path_element;
+mod server_state;
+mod server_status_data_type;
 mod simple_attribute_operand;
 mod status_code;
 mod string;
@@ -93,6 +98,7 @@ pub use self::{
     browse_request::BrowseRequest,
     browse_response::BrowseResponse,
     browse_result::BrowseResult,
+    build_info::BuildInfo,
     byte_string::ByteString,
     call_method_request::CallMethodRequest,
     call_method_result::CallMethodResult,
@@ -113,6 +119,8 @@ pub use self::{
     delete_subscriptions_response::DeleteSubscriptionsResponse,
     element_operand::ElementOperand,
     endpoint_description::EndpointDescription,
+    enum_definition::EnumDefinition,
+    enum_field::EnumField,
     enumeration::Enumeration,
     eu_information::EUInformation,
     event_filter::EventFilter,
@@ -144,6 +152,8 @@ pub use self::{
     reference_description::ReferenceDescription,
     relative_path::RelativePath,
     relative_path_element::RelativePathElement,
+    server_state::ServerState,
+    server_status_data_type::ServerStatusDataType,
     simple_attribute_operand::SimpleAttributeOperand,
     status_code::StatusCode,
     string::String,
