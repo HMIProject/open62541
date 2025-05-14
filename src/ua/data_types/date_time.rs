@@ -7,6 +7,17 @@ crate::data_type!(DateTime);
 impl DateTime {
     /// Creates [`DateTime`] from a UNIX timestamp with nanosecond precision.
     ///
+    /// /// # Examples
+    ///
+    /// ```
+    /// use open62541::ua;
+    ///
+    /// // Unix timestamp (1707482096 seconds) corresponding to 9th February 2024, 12:34:56 UTC.
+    /// let dt = ua::DateTime::try_from_unix_timestamp_nanos(1_707_482_096_000_000_000).unwrap();
+    ///
+    /// assert_eq!(format!("{dt:?}"), "\"2024-02-09T12:34:56Z\"");
+    /// ```
+    ///
     /// # Errors
     ///
     /// The UNIX timestamp must be valid and in range of the 64-bit representation of [`DateTime`].
@@ -56,6 +67,8 @@ impl TryFrom<time::OffsetDateTime> for DateTime {
     /// use time::macros::datetime;
     ///
     /// let dt: ua::DateTime = datetime!(2024-02-09 12:34:56 UTC).try_into().unwrap();
+    ///
+    /// assert_eq!(format!("{dt:?}"), "\"2024-02-09T12:34:56Z\"");
     /// ```
     ///
     /// # Errors
