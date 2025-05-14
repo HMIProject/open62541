@@ -2,6 +2,7 @@ mod create_monitored_items;
 mod delete_monitored_items;
 
 use std::{
+    marker::PhantomData,
     pin::Pin,
     sync::{Arc, Weak},
     task::{self, Poll},
@@ -12,10 +13,12 @@ use futures_core::Stream;
 use futures_util::stream;
 use tokio::sync::mpsc;
 
-use crate::{ua, AsyncSubscription, DataType as _, Error, MonitoringFilter, Result};
+use crate::{attributes, ua, AsyncSubscription, DataType as _, Error, MonitoringFilter, Result};
+
+use self::sealed::{DataChange, MonitoredItemAttribute, MonitoredItemKind, Unknown};
 
 #[derive(Debug)]
-pub struct MonitoredItemBuilder {
+pub struct MonitoredItemBuilder<K: MonitoredItemKind> {
     node_ids: Vec<ua::NodeId>,
     attribute_id: ua::AttributeId,
     monitoring_mode: Option<ua::MonitoringMode>,
@@ -24,10 +27,10 @@ pub struct MonitoredItemBuilder {
     filter: Option<Box<dyn MonitoringFilter>>,
     queue_size: Option<u32>,
     discard_oldest: Option<bool>,
+    _kind: PhantomData<K>,
 }
 
-// Note: The default values in the docs below come from `UA_MonitoredItemCreateRequest_default()`.
-impl MonitoredItemBuilder {
+impl MonitoredItemBuilder<DataChange<attributes::Value>> {
     pub fn new(node_ids: impl IntoIterator<Item = ua::NodeId>) -> Self {
         Self {
             node_ids: node_ids.into_iter().collect(),
@@ -38,23 +41,85 @@ impl MonitoredItemBuilder {
             filter: None,
             queue_size: None,
             discard_oldest: None,
+            _kind: PhantomData,
+        }
+    }
+}
+
+// Note: The default values in the docs below come from `UA_MonitoredItemCreateRequest_default()`.
+impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
+    /// Sets attribute.
+    ///
+    /// By default, monitored items emit [`MonitoredItemValue::DataChange`]. If the attribute is set
+    /// to [`attributes::EventNotifier`], they emit [`MonitoredItemValue::Event`] instead.
+    ///
+    /// Default value is [`attributes::Value`].
+    ///
+    /// See [`Self::attribute_id()`] to set the attribute ID at runtime.
+    #[must_use]
+    pub fn attribute<T: MonitoredItemAttribute>(
+        self,
+        attribute: T,
+    ) -> MonitoredItemBuilder<T::Kind> {
+        let Self {
+            node_ids,
+            attribute_id: _,
+            monitoring_mode,
+            sampling_interval,
+            filter,
+            queue_size,
+            discard_oldest,
+            _kind,
+        } = self;
+
+        MonitoredItemBuilder {
+            node_ids,
+            attribute_id: attribute.id(),
+            monitoring_mode,
+            sampling_interval,
+            filter,
+            queue_size,
+            discard_oldest,
+            _kind: PhantomData,
         }
     }
 
     /// Sets attribute ID.
     ///
-    /// By default, monitored items emit [`MonitoredItemValue::DataChange`]. If the attribute ID is
-    /// set to [`ua::AttributeId::EVENTNOTIFIER`], they emit [`MonitoredItemValue::Event`] instead.
+    /// By default, monitored items emit [`MonitoredItemValue::DataChange`]. If the attribute is set
+    /// to [`ua::AttributeId::EVENTNOTIFIER`], they emit [`MonitoredItemValue::Event`] instead.
     ///
     /// Default value is [`ua::AttributeId::VALUE`].
     ///
     /// See [`ua::MonitoredItemCreateRequest::with_attribute_id()`].
     #[must_use]
-    pub fn attribute_id(mut self, attribute_id: ua::AttributeId) -> Self {
-        self.attribute_id = attribute_id;
-        self
-    }
+    pub fn attribute_id(self, attribute_id: ua::AttributeId) -> MonitoredItemBuilder<Unknown> {
+        let Self {
+            node_ids,
+            attribute_id: _,
+            monitoring_mode,
+            sampling_interval,
+            filter,
+            queue_size,
+            discard_oldest,
+            _kind,
+        } = self;
 
+        MonitoredItemBuilder {
+            node_ids,
+            attribute_id,
+            monitoring_mode,
+            sampling_interval,
+            filter,
+            queue_size,
+            discard_oldest,
+            _kind: PhantomData,
+        }
+    }
+}
+
+// Note: The default values in the docs below come from `UA_MonitoredItemCreateRequest_default()`.
+impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     /// Sets monitoring mode.
     ///
     /// Default value is [`ua::MonitoringMode::REPORTING`].
@@ -182,6 +247,7 @@ impl MonitoredItemBuilder {
             filter,
             queue_size,
             discard_oldest,
+            _kind: _,
         } = self;
 
         let items_to_create = node_ids
@@ -296,5 +362,85 @@ impl Stream for AsyncMonitoredItem {
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Option<Self::Item>> {
         // This mirrors `AsyncMonitoredItem::next()` and implements the `Stream` trait.
         self.rx.poll_recv(cx)
+    }
+}
+
+mod sealed {
+    use std::marker::PhantomData;
+
+    use crate::Attribute;
+
+    /// Typestate used in [`super::MonitoredItemBuilder`].
+    pub trait MonitoredItemKind {}
+
+    /// Typestate for [`MonitoredItemKind`] that yields data change notifications.
+    #[derive(Debug)]
+    pub struct DataChange<T: Attribute>(PhantomData<T>);
+    impl<T: DataChangeAttribute> MonitoredItemKind for DataChange<T> {}
+
+    /// Typestate for [`MonitoredItemKind`] that yields event notifications.
+    #[derive(Debug)]
+    pub struct Event;
+    impl MonitoredItemKind for Event {}
+
+    /// Typestate for [`MonitoredItemKind`] that yields notifications.
+    ///
+    /// This is used for untyped or mixed-type notifications.
+    #[derive(Debug)]
+    pub struct Unknown;
+    impl MonitoredItemKind for Unknown {}
+
+    /// Attribute that yields data change notifications.
+    ///
+    /// This is implemented for all attributes except [`crate::attributes::EventNotifier`].
+    pub trait DataChangeAttribute: Attribute {}
+
+    /// Helper trait to get correct [`MonitoredItemKind`].
+    ///
+    /// Given an arbitrary attribute, including [`crate::attributes::EventNotifier`], this helps get
+    /// the right [`MonitoredItemKind`] implementation for [`super::MonitoredItemBuilder`].
+    pub trait MonitoredItemAttribute: Attribute {
+        /// Matching [`MonitoredItemKind`] implementation for attribute.
+        type Kind: MonitoredItemKind;
+    }
+
+    macro_rules! data_change_impl {
+        ($($name:ident),* $(,)?) => {
+            $(
+                impl DataChangeAttribute for $crate::attributes::$name {}
+
+                impl MonitoredItemAttribute for $crate::attributes::$name {
+                    type Kind = DataChange<$crate::attributes::$name>;
+                }
+            )*
+        };
+    }
+
+    data_change_impl!(
+        NodeId,
+        NodeClass,
+        BrowseName,
+        DisplayName,
+        Description,
+        WriteMask,
+        IsAbstract,
+        Symmetric,
+        InverseName,
+        ContainsNoLoops,
+        // We to _not_ implement `DataChange` kind for `EventNotifier`, because the attribute uses a
+        // dedicated callback function yielding `ua::Array<ua::Variant>` instead of `ua::DataValue`.
+        Value,
+        DataType,
+        ValueRank,
+        ArrayDimensions,
+        AccessLevel,
+        AccessLevelEx,
+        MinimumSamplingInterval,
+        Historizing,
+        Executable,
+    );
+
+    impl MonitoredItemAttribute for crate::attributes::EventNotifier {
+        type Kind = Event;
     }
 }
