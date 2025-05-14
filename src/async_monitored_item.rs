@@ -225,12 +225,12 @@ pub enum MonitoredItemValue {
     /// Data change payload.
     ///
     /// This is emitted for attribute IDs other than [`ua::AttributeId::EVENTNOTIFIER`].
-    DataChange(ua::DataValue),
+    DataChange { value: ua::DataValue },
 
     /// Event payload.
     ///
     /// This is emitted for attribute ID [`ua::AttributeId::EVENTNOTIFIER`].
-    Event(ua::Array<ua::Variant>),
+    Event { fields: ua::Array<ua::Variant> },
 }
 
 impl MonitoredItemValue {
@@ -240,8 +240,8 @@ impl MonitoredItemValue {
     #[must_use]
     pub fn value(&self) -> Option<&ua::Variant> {
         match self {
-            MonitoredItemValue::DataChange(data_change) => data_change.value(),
-            MonitoredItemValue::Event(_) => None,
+            MonitoredItemValue::DataChange { value } => value.value(),
+            MonitoredItemValue::Event { fields: _ } => None,
         }
     }
 }

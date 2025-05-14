@@ -171,7 +171,7 @@ unsafe extern "C" fn data_change_notification_callback_c(
 
     // SAFETY: `mon_context` is result of `St::prepare()` and is used only before `delete()`.
     unsafe {
-        St::notify(mon_context, MonitoredItemValue::DataChange(value));
+        St::notify(mon_context, MonitoredItemValue::DataChange { value });
     }
 }
 
@@ -197,12 +197,12 @@ unsafe extern "C" fn event_notification_callback_c(
     log::debug!("EventNotificationCallback() was called");
 
     // PANIC: We expect pointer to be valid when called.
-    let event_fields = ua::Array::from_raw_parts(n_event_fields, event_fields)
+    let fields = ua::Array::from_raw_parts(n_event_fields, event_fields)
         .expect("event fields should be set");
 
     // SAFETY: `mon_context` is result of `St::prepare()` and is used only before `delete()`.
     unsafe {
-        St::notify(mon_context, MonitoredItemValue::Event(event_fields));
+        St::notify(mon_context, MonitoredItemValue::Event { fields });
     }
 }
 
