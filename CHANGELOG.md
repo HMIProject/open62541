@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.5] - 2025-05-14
+
 ### Added
 
 - Add `ua::ServerStatusDataType` with `ua::ServerState` and `ua::BuildInfo`.
@@ -445,7 +447,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
-[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.8.4...HEAD
+[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.8.5...HEAD
+[0.8.5]: https://github.com/HMIProject/open62541/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/HMIProject/open62541/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/HMIProject/open62541/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/HMIProject/open62541/compare/v0.8.1...v0.8.2
