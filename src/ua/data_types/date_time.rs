@@ -10,6 +10,7 @@ impl DateTime {
         // of 100-nanosecond intervals that have elapsed since 12:00 A.M. January 1, 1601 (UTC).
         let ua_ticks = i128::from(self.0);
         let unix_ticks = ua_ticks - i128::from(UA_DATETIME_UNIX_EPOCH);
+
         unix_ticks * i128::from(1000 / UA_DATETIME_USEC)
     }
 
