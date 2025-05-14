@@ -18,13 +18,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Monitored items with the attribute ID `ua::AttributeId::EVENTNOTIFIER` are handled properly and
   yield enum variant `MonitoredItemValue::Event`.
 
+## [0.8.5] - 2025-05-14
+
+### Added
+
+- Add `ua::ServerStatusDataType` with `ua::ServerState` and `ua::BuildInfo`.
+- Add methods `ua::DateTime::try_from_unix_timestamp_nanos()` and `as_unix_timestamp_nanos()` that
+  work independently of the `time` feature.
+
 ## [0.8.4] - 2025-04-30
 
 ### Added
 
 - Add `ua::Guid`.
-- Add `ua::EnumDefinition` with `ua::EnumField`.
-- Add `ua::ServerStatusDataType` with `ua::ServerState` and `ua::BuildInfo`.
+- Add `ua::EnumDefinition` and `ua::EnumField`.
 
 ## [0.8.3] - 2025-03-27
 
@@ -451,7 +458,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
-[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.8.4...HEAD
+[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.8.5...HEAD
+[0.8.5]: https://github.com/HMIProject/open62541/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/HMIProject/open62541/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/HMIProject/open62541/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/HMIProject/open62541/compare/v0.8.1...v0.8.2
