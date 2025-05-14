@@ -5,17 +5,6 @@ use crate::Error;
 crate::data_type!(DateTime);
 
 impl DateTime {
-    /// Returns the UNIX timestamp with nanosecond precision.
-    #[must_use]
-    pub fn as_unix_timestamp_nanos(&self) -> i128 {
-        // OPC UA encodes `DateTime` as Windows file time: a 64-bit value that represents the number
-        // of 100-nanosecond intervals that have elapsed since 12:00 A.M. January 1, 1601 (UTC).
-        let ua_ticks = i128::from(self.0);
-        let unix_ticks = ua_ticks - i128::from(UA_DATETIME_UNIX_EPOCH);
-
-        unix_ticks * i128::from(1000 / UA_DATETIME_USEC)
-    }
-
     /// Creates [`DateTime`] from a UNIX timestamp with nanosecond precision.
     ///
     /// # Errors
@@ -30,6 +19,17 @@ impl DateTime {
         i64::try_from(ua_ticks)
             .map_err(|_| Error::internal("DateTime should be in range"))
             .map(Self)
+    }
+
+    /// Returns the UNIX timestamp with nanosecond precision.
+    #[must_use]
+    pub fn as_unix_timestamp_nanos(&self) -> i128 {
+        // OPC UA encodes `DateTime` as Windows file time: a 64-bit value that represents the number
+        // of 100-nanosecond intervals that have elapsed since 12:00 A.M. January 1, 1601 (UTC).
+        let ua_ticks = i128::from(self.0);
+        let unix_ticks = ua_ticks - i128::from(UA_DATETIME_UNIX_EPOCH);
+
+        unix_ticks * i128::from(1000 / UA_DATETIME_USEC)
     }
 }
 
