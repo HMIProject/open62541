@@ -1,18 +1,44 @@
 crate::data_type!(DateTime);
 
 impl DateTime {
-    #[cfg(feature = "time")]
+    /// Returns the UNIX timestamp with nanosecond precision.
     #[must_use]
-    pub fn to_utc(&self) -> Option<time::OffsetDateTime> {
+    pub fn as_unix_timestamp_nanos(&self) -> i128 {
         use open62541_sys::{UA_DATETIME_UNIX_EPOCH, UA_DATETIME_USEC};
 
         // OPC UA encodes `DateTime` as Windows file time: a 64-bit value that represents the number
         // of 100-nanosecond intervals that have elapsed since 12:00 A.M. January 1, 1601 (UTC).
-        let ticks_ua = i128::from(self.0);
-        let ticks_unix = ticks_ua - i128::from(UA_DATETIME_UNIX_EPOCH);
-        let nanos_unix = ticks_unix * i128::from(1000 / UA_DATETIME_USEC);
+        let ua_ticks = i128::from(self.0);
+        let unix_ticks = ua_ticks - i128::from(UA_DATETIME_UNIX_EPOCH);
+        unix_ticks * i128::from(1000 / UA_DATETIME_USEC)
+    }
 
-        time::OffsetDateTime::from_unix_timestamp_nanos(nanos_unix).ok()
+    /// Creates [`DateTime`] from a UNIX timestamp with nanosecond precision.
+    ///
+    /// # Errors
+    ///
+    /// The UNIX timestamp must be valid and in range of the 64-bit representation of [`DateTime`].
+    pub fn try_from_unix_timestamp_nanos(unix_timestamp_nanos: i128) -> Result<Self, crate::Error> {
+        use open62541_sys::{UA_DATETIME_UNIX_EPOCH, UA_DATETIME_USEC};
+
+        // OPC UA encodes `DateTime` as Windows file time: a 64-bit value that represents the number
+        // of 100-nanosecond intervals that have elapsed since 12:00 A.M. January 1, 1601 (UTC).
+        let ticks_unix = unix_timestamp_nanos / i128::from(1000 / UA_DATETIME_USEC);
+        let ticks_ua = ticks_unix + i128::from(UA_DATETIME_UNIX_EPOCH);
+
+        i64::try_from(ticks_ua)
+            // Explicit module path to avoid linter errors when feature is not enable by `#[cfg()]`.
+            .map_err(|_| crate::Error::internal("DateTime should be in range"))
+            .map(Self)
+    }
+}
+
+#[cfg(feature = "time")]
+impl DateTime {
+    // TODO (breaking change): Return time::UtcDateTime instead of time::OffsetDateTime.
+    #[must_use]
+    pub fn to_utc(&self) -> Option<time::OffsetDateTime> {
+        time::OffsetDateTime::from_unix_timestamp_nanos(self.as_unix_timestamp_nanos()).ok()
     }
 }
 
@@ -36,18 +62,7 @@ impl TryFrom<time::OffsetDateTime> for DateTime {
     ///
     /// The date/time must be valid and in range of the 64-bit representation of [`DateTime`].
     fn try_from(from: time::OffsetDateTime) -> Result<Self, Self::Error> {
-        use open62541_sys::{UA_DATETIME_UNIX_EPOCH, UA_DATETIME_USEC};
-
-        // OPC UA encodes `DateTime` as Windows file time: a 64-bit value that represents the number
-        // of 100-nanosecond intervals that have elapsed since 12:00 A.M. January 1, 1601 (UTC).
-        let nanos_unix = from.unix_timestamp_nanos();
-        let ticks_unix = nanos_unix / i128::from(1000 / UA_DATETIME_USEC);
-        let ticks_ua = ticks_unix + i128::from(UA_DATETIME_UNIX_EPOCH);
-
-        i64::try_from(ticks_ua)
-            // Explicit module path to avoid linter errors when feature is not enable by `#[cfg()]`.
-            .map_err(|_| crate::Error::internal("DateTime should be in range"))
-            .map(Self)
+        Self::try_from_unix_timestamp_nanos(from.unix_timestamp_nanos())
     }
 }
 
