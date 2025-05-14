@@ -186,7 +186,7 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     pub async fn create(
         self,
         subscription: &AsyncSubscription,
-    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem)>>> {
+    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem<K>)>>> {
         let Some(client) = &subscription.client().upgrade() else {
             return Err(Error::internal("client should not be dropped"));
         };
@@ -224,12 +224,12 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
             .map(|(result, rx)| {
                 Error::verify_good(&result.status_code())?;
 
-                let monitored_item = AsyncMonitoredItem {
-                    client: Arc::downgrade(client),
+                let monitored_item = AsyncMonitoredItem::new(
+                    client,
                     subscription_id,
-                    monitored_item_id: result.monitored_item_id(),
+                    result.monitored_item_id(),
                     rx,
-                };
+                );
 
                 Ok((result, monitored_item))
             })
@@ -314,35 +314,54 @@ impl MonitoredItemValue {
 
 /// Monitored item (with asynchronous API).
 #[derive(Debug)]
-pub struct AsyncMonitoredItem {
+pub struct AsyncMonitoredItem<K: MonitoredItemKind = DataChange<attributes::Value>> {
     client: Weak<ua::Client>,
     subscription_id: ua::SubscriptionId,
     monitored_item_id: ua::MonitoredItemId,
     rx: mpsc::Receiver<MonitoredItemValue>,
+    _kind: PhantomData<K>,
 }
 
-impl AsyncMonitoredItem {
+impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
+    fn new(
+        client: &Arc<ua::Client>,
+        subscription_id: ua::SubscriptionId,
+        monitored_item_id: ua::MonitoredItemId,
+        rx: mpsc::Receiver<MonitoredItemValue>,
+    ) -> Self {
+        Self {
+            client: Arc::downgrade(client),
+            subscription_id,
+            monitored_item_id,
+            rx,
+            _kind: PhantomData,
+        }
+    }
+
     /// Waits for next value from server.
     ///
     /// This waits for the next value received for this monitored item. Returns `None` when item has
     /// been closed and no more updates will be received.
-    pub async fn next(&mut self) -> Option<MonitoredItemValue> {
+    pub async fn next(&mut self) -> Option<K::Value> {
         // This mirrors `<Self as Stream>::poll_next()` but does not require `self` to be pinned.
-        self.rx.recv().await
+        self.rx.recv().await.map(K::map_value)
     }
 
     /// Turns monitored item into stream.
     ///
     /// The stream will emit all value updates as they are being received. If the client disconnects
     /// or the corresponding subscription is deleted, the stream is closed.
-    pub fn into_stream(self) -> impl Stream<Item = MonitoredItemValue> + Send + Sync + 'static {
+    //
+    // TODO: Remove this? Consuming `AsyncMonitoredItem` to turn it into a stream drops it, removing
+    // the monitored item subscription immediately. See `Drop` implementation below.
+    pub fn into_stream(self) -> impl Stream<Item = K::Value> + Send + Sync + 'static {
         stream::unfold(self, move |mut this| async move {
             this.next().await.map(|value| (value, this))
         })
     }
 }
 
-impl Drop for AsyncMonitoredItem {
+impl<K: MonitoredItemKind> Drop for AsyncMonitoredItem<K> {
     fn drop(&mut self) {
         let Some(client) = self.client.upgrade() else {
             return;
@@ -356,14 +375,19 @@ impl Drop for AsyncMonitoredItem {
     }
 }
 
-impl Stream for AsyncMonitoredItem {
-    type Item = MonitoredItemValue;
+impl<K: MonitoredItemKind> Stream for AsyncMonitoredItem<K> {
+    type Item = K::Value;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Option<Self::Item>> {
         // This mirrors `AsyncMonitoredItem::next()` and implements the `Stream` trait.
-        self.rx.poll_recv(cx)
+        self.as_mut()
+            .rx
+            .poll_recv(cx)
+            .map(|value| value.map(K::map_value))
     }
 }
+
+impl<K: MonitoredItemKind> Unpin for AsyncMonitoredItem<K> {}
 
 mod sealed {
     use std::marker::PhantomData;
@@ -371,24 +395,51 @@ mod sealed {
     use crate::Attribute;
 
     /// Typestate used in [`super::MonitoredItemBuilder`].
-    pub trait MonitoredItemKind {}
+    pub trait MonitoredItemKind: Send + Sync + 'static {
+        type Value: Send;
+
+        fn map_value(value: super::MonitoredItemValue) -> Self::Value;
+    }
 
     /// Typestate for [`MonitoredItemKind`] that yields data change notifications.
     #[derive(Debug)]
     pub struct DataChange<T: Attribute>(PhantomData<T>);
-    impl<T: DataChangeAttribute> MonitoredItemKind for DataChange<T> {}
+
+    impl<T: DataChangeAttribute + Send + Sync + 'static> MonitoredItemKind for DataChange<T> {
+        // TODO: Use more specific type.
+        type Value = super::MonitoredItemValue;
+
+        fn map_value(value: super::MonitoredItemValue) -> Self::Value {
+            value
+        }
+    }
 
     /// Typestate for [`MonitoredItemKind`] that yields event notifications.
     #[derive(Debug)]
     pub struct Event;
-    impl MonitoredItemKind for Event {}
+
+    impl MonitoredItemKind for Event {
+        // TODO: Use more specific type.
+        type Value = super::MonitoredItemValue;
+
+        fn map_value(value: super::MonitoredItemValue) -> Self::Value {
+            value
+        }
+    }
 
     /// Typestate for [`MonitoredItemKind`] that yields notifications.
     ///
     /// This is used for untyped or mixed-type notifications.
     #[derive(Debug)]
     pub struct Unknown;
-    impl MonitoredItemKind for Unknown {}
+
+    impl MonitoredItemKind for Unknown {
+        type Value = super::MonitoredItemValue;
+
+        fn map_value(value: super::MonitoredItemValue) -> Self::Value {
+            value
+        }
+    }
 
     /// Attribute that yields data change notifications.
     ///
