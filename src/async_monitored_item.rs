@@ -91,6 +91,9 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     ///
     /// Default value is [`ua::AttributeId::VALUE`].
     ///
+    /// See [`Self::attribute()`] for a type-safe alternative that yields appropriately typed values
+    /// for the given monitored attribute directly.
+    ///
     /// See [`ua::MonitoredItemCreateRequest::with_attribute_id()`].
     #[must_use]
     pub fn attribute_id(self, attribute_id: ua::AttributeId) -> MonitoredItemBuilder<Unknown> {
@@ -392,7 +395,7 @@ impl<K: MonitoredItemKind> Unpin for AsyncMonitoredItem<K> {}
 mod sealed {
     use std::marker::PhantomData;
 
-    use crate::Attribute;
+    use crate::{ua, Attribute};
 
     /// Typestate used in [`super::MonitoredItemBuilder`].
     pub trait MonitoredItemKind: Send + Sync + 'static {
@@ -406,11 +409,18 @@ mod sealed {
     pub struct DataChange<T: Attribute>(PhantomData<T>);
 
     impl<T: DataChangeAttribute + Send + Sync + 'static> MonitoredItemKind for DataChange<T> {
-        // TODO: Use more specific type.
-        type Value = super::MonitoredItemValue;
+        // TODO: Use more specific type. Return appropriate value for attribute `T`, but still allow
+        // access to other data from `DataValue` such as timestamps.
+        type Value = ua::DataValue;
 
         fn map_value(value: super::MonitoredItemValue) -> Self::Value {
-            value
+            match value {
+                super::MonitoredItemValue::DataChange { value } => value,
+                super::MonitoredItemValue::Event { fields: _ } => {
+                    // PANIC: Typestate uses attribute ID to enforce callback method.
+                    unreachable!("unexpected event payload in data change notification");
+                }
+            }
         }
     }
 
@@ -419,11 +429,16 @@ mod sealed {
     pub struct Event;
 
     impl MonitoredItemKind for Event {
-        // TODO: Use more specific type.
-        type Value = super::MonitoredItemValue;
+        type Value = ua::Array<ua::Variant>;
 
         fn map_value(value: super::MonitoredItemValue) -> Self::Value {
-            value
+            match value {
+                super::MonitoredItemValue::DataChange { value: _ } => {
+                    // PANIC: Typestate uses attribute ID to enforce callback method.
+                    unreachable!("unexpected data change payload in event notification");
+                }
+                super::MonitoredItemValue::Event { fields } => fields,
+            }
         }
     }
 
