@@ -119,9 +119,23 @@ impl NotificationCallback {
         }
     }
 
+    /// Provides callback function for C call.
+    ///
+    /// # Safety
+    ///
+    /// This always returns a function pointer for [`UA_Client_DataChangeNotificationCallback`], for
+    /// both data change _and_ event callbacks. Care must be taken to only pass the expected handler
+    /// to the corresponding [`ua::MonitoredItemCreateRequest`], depending on the attribute ID.
     unsafe fn into_data_change(self) -> DataChangeNotificationCallbackC {
         match self {
             Self::DataChange => data_change_notification_callback_c,
+
+            // This is rather unfortunate. Since we cannot call `createDataChanges_async()` directly
+            // (it is not exported by open62541), we must use one of the two wrapper functions, i.e.
+            // `UA_Client_MonitoredItems_create[DataChanges|Events]_async()`, instead. These wrapper
+            // functions only adjust the types in the function signature and add a mutex lock. Thus,
+            // apart from the fact that open62541 does some `void` pointer magic, the transmute here
+            // is safe (at least not more unsafe/unportable than the underlying C code already is).
             Self::Event => unsafe {
                 mem::transmute::<EventNotificationCallbackC, DataChangeNotificationCallbackC>(
                     event_notification_callback_c,
