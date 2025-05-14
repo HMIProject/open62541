@@ -10,6 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Add `ua::ServerStatusDataType` with `ua::ServerState` and `ua::BuildInfo`.
+- Add methods `ua::DateTime::try_from_unix_timestamp_nanos()` and `as_unix_timestamp_nanos()` that
+  work independently of the `time` feature.
 
 ## [0.8.4] - 2025-04-30
 
