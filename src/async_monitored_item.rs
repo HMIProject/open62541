@@ -13,9 +13,9 @@ use futures_core::Stream;
 use futures_util::stream;
 use tokio::sync::mpsc;
 
-use crate::{attributes, ua, AsyncSubscription, DataType as _, Error, MonitoringFilter, Result};
-
-use self::sealed::{DataChange, MonitoredItemAttribute, MonitoredItemKind, Unknown};
+use crate::{
+    attributes, ua, AsyncSubscription, Attribute, DataType as _, Error, MonitoringFilter, Result,
+};
 
 #[derive(Debug)]
 pub struct MonitoredItemBuilder<K: MonitoredItemKind> {
@@ -50,10 +50,10 @@ impl MonitoredItemBuilder<DataChange<attributes::Value>> {
 impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     /// Sets attribute.
     ///
-    /// By default, monitored items emit [`MonitoredItemValue::DataChange`]. If the attribute is set
-    /// to [`attributes::EventNotifier`], they emit [`MonitoredItemValue::Event`] instead.
+    /// By default, monitored items emit [`ua::DataValue`]. If the attribute is set to
+    /// [`ua::AttributeId::EVENTNOTIFIER_T`], they emit `ua::Array<ua::Variant>` instead.
     ///
-    /// Default value is [`attributes::Value`].
+    /// Default value is [`ua::AttributeId::VALUE_T`].
     ///
     /// See [`Self::attribute_id()`] to set the attribute ID at runtime.
     #[must_use]
@@ -86,8 +86,8 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
 
     /// Sets attribute ID.
     ///
-    /// By default, monitored items emit [`MonitoredItemValue::DataChange`]. If the attribute is set
-    /// to [`ua::AttributeId::EVENTNOTIFIER`], they emit [`MonitoredItemValue::Event`] instead.
+    /// By default, monitored items emit [`ua::DataValue`]. If the attribute ID is set to
+    /// [`ua::AttributeId::EVENTNOTIFIER`], they emit `ua::Array<ua::Variant>` instead.
     ///
     /// Default value is [`ua::AttributeId::VALUE`].
     ///
@@ -392,121 +392,124 @@ impl<K: MonitoredItemKind> Stream for AsyncMonitoredItem<K> {
 
 impl<K: MonitoredItemKind> Unpin for AsyncMonitoredItem<K> {}
 
+/// Sealed typestate used in [`MonitoredItemBuilder`].
+pub trait MonitoredItemKind: sealed::MonitoredItemKind + Send + Sync + 'static {
+    type Value;
+
+    fn map_value(value: MonitoredItemValue) -> Self::Value;
+}
+
+/// Typestate for [`MonitoredItemKind`] that yields data change notifications.
+#[derive(Debug)]
+pub struct DataChange<T: Attribute>(PhantomData<T>);
+
+impl<T: DataChangeAttribute + Send + Sync + 'static> MonitoredItemKind for DataChange<T> {
+    // TODO: Use more specific type. Return appropriate value for attribute `T`, but still allow
+    // access to other data from `DataValue` such as timestamps.
+    type Value = ua::DataValue;
+
+    fn map_value(value: MonitoredItemValue) -> Self::Value {
+        match value {
+            MonitoredItemValue::DataChange { value } => value,
+            MonitoredItemValue::Event { fields: _ } => {
+                // PANIC: Typestate uses attribute ID to enforce callback method.
+                unreachable!("unexpected event payload in data change notification");
+            }
+        }
+    }
+}
+
+/// Typestate for [`MonitoredItemKind`] that yields event notifications.
+#[derive(Debug)]
+pub struct Event;
+
+impl MonitoredItemKind for Event {
+    type Value = ua::Array<ua::Variant>;
+
+    fn map_value(value: MonitoredItemValue) -> Self::Value {
+        match value {
+            MonitoredItemValue::DataChange { value: _ } => {
+                // PANIC: Typestate uses attribute ID to enforce callback method.
+                unreachable!("unexpected data change payload in event notification");
+            }
+            MonitoredItemValue::Event { fields } => fields,
+        }
+    }
+}
+
+/// Typestate for [`MonitoredItemKind`] that yields notifications.
+///
+/// This is used for runtime and/or mixed-type notifications.
+#[derive(Debug)]
+pub struct Unknown;
+
+impl MonitoredItemKind for Unknown {
+    type Value = MonitoredItemValue;
+
+    fn map_value(value: MonitoredItemValue) -> Self::Value {
+        value
+    }
+}
+
+/// Attribute that yields data change notifications.
+///
+/// This is implemented for all attributes except [`ua::AttributeId::EVENTNOTIFIER_T`].
+trait DataChangeAttribute: Attribute {}
+
+/// Attribute for [`MonitoredItemBuilder::attribute()`].
+pub trait MonitoredItemAttribute: Attribute {
+    /// Matching [`MonitoredItemKind`] implementation for attribute.
+    type Kind: MonitoredItemKind;
+}
+
+macro_rules! data_change_impl {
+    ($($name:ident),* $(,)?) => {
+        $(
+            impl DataChangeAttribute for $crate::attributes::$name {}
+
+            impl MonitoredItemAttribute for $crate::attributes::$name {
+                type Kind = DataChange<$crate::attributes::$name>;
+            }
+        )*
+    };
+}
+
+data_change_impl!(
+    NodeId,
+    NodeClass,
+    BrowseName,
+    DisplayName,
+    Description,
+    WriteMask,
+    IsAbstract,
+    Symmetric,
+    InverseName,
+    ContainsNoLoops,
+    // We to _not_ implement `DataChange` kind for `EventNotifier`, because the attribute uses a
+    // dedicated callback function yielding `ua::Array<ua::Variant>` instead of `ua::DataValue`.
+    Value,
+    DataType,
+    ValueRank,
+    ArrayDimensions,
+    AccessLevel,
+    AccessLevelEx,
+    MinimumSamplingInterval,
+    Historizing,
+    Executable,
+);
+
+impl MonitoredItemAttribute for attributes::EventNotifier {
+    type Kind = Event;
+}
+
 mod sealed {
-    use std::marker::PhantomData;
+    use crate::Attribute;
 
-    use crate::{ua, Attribute};
+    pub trait MonitoredItemKind {}
 
-    /// Typestate used in [`super::MonitoredItemBuilder`].
-    pub trait MonitoredItemKind: Send + Sync + 'static {
-        type Value: Send;
+    impl<T: Attribute> MonitoredItemKind for super::DataChange<T> {}
 
-        fn map_value(value: super::MonitoredItemValue) -> Self::Value;
-    }
+    impl MonitoredItemKind for super::Event {}
 
-    /// Typestate for [`MonitoredItemKind`] that yields data change notifications.
-    #[derive(Debug)]
-    pub struct DataChange<T: Attribute>(PhantomData<T>);
-
-    impl<T: DataChangeAttribute + Send + Sync + 'static> MonitoredItemKind for DataChange<T> {
-        // TODO: Use more specific type. Return appropriate value for attribute `T`, but still allow
-        // access to other data from `DataValue` such as timestamps.
-        type Value = ua::DataValue;
-
-        fn map_value(value: super::MonitoredItemValue) -> Self::Value {
-            match value {
-                super::MonitoredItemValue::DataChange { value } => value,
-                super::MonitoredItemValue::Event { fields: _ } => {
-                    // PANIC: Typestate uses attribute ID to enforce callback method.
-                    unreachable!("unexpected event payload in data change notification");
-                }
-            }
-        }
-    }
-
-    /// Typestate for [`MonitoredItemKind`] that yields event notifications.
-    #[derive(Debug)]
-    pub struct Event;
-
-    impl MonitoredItemKind for Event {
-        type Value = ua::Array<ua::Variant>;
-
-        fn map_value(value: super::MonitoredItemValue) -> Self::Value {
-            match value {
-                super::MonitoredItemValue::DataChange { value: _ } => {
-                    // PANIC: Typestate uses attribute ID to enforce callback method.
-                    unreachable!("unexpected data change payload in event notification");
-                }
-                super::MonitoredItemValue::Event { fields } => fields,
-            }
-        }
-    }
-
-    /// Typestate for [`MonitoredItemKind`] that yields notifications.
-    ///
-    /// This is used for untyped or mixed-type notifications.
-    #[derive(Debug)]
-    pub struct Unknown;
-
-    impl MonitoredItemKind for Unknown {
-        type Value = super::MonitoredItemValue;
-
-        fn map_value(value: super::MonitoredItemValue) -> Self::Value {
-            value
-        }
-    }
-
-    /// Attribute that yields data change notifications.
-    ///
-    /// This is implemented for all attributes except [`crate::attributes::EventNotifier`].
-    pub trait DataChangeAttribute: Attribute {}
-
-    /// Helper trait to get correct [`MonitoredItemKind`].
-    ///
-    /// Given an arbitrary attribute, including [`crate::attributes::EventNotifier`], this helps get
-    /// the right [`MonitoredItemKind`] implementation for [`super::MonitoredItemBuilder`].
-    pub trait MonitoredItemAttribute: Attribute {
-        /// Matching [`MonitoredItemKind`] implementation for attribute.
-        type Kind: MonitoredItemKind;
-    }
-
-    macro_rules! data_change_impl {
-        ($($name:ident),* $(,)?) => {
-            $(
-                impl DataChangeAttribute for $crate::attributes::$name {}
-
-                impl MonitoredItemAttribute for $crate::attributes::$name {
-                    type Kind = DataChange<$crate::attributes::$name>;
-                }
-            )*
-        };
-    }
-
-    data_change_impl!(
-        NodeId,
-        NodeClass,
-        BrowseName,
-        DisplayName,
-        Description,
-        WriteMask,
-        IsAbstract,
-        Symmetric,
-        InverseName,
-        ContainsNoLoops,
-        // We to _not_ implement `DataChange` kind for `EventNotifier`, because the attribute uses a
-        // dedicated callback function yielding `ua::Array<ua::Variant>` instead of `ua::DataValue`.
-        Value,
-        DataType,
-        ValueRank,
-        ArrayDimensions,
-        AccessLevel,
-        AccessLevelEx,
-        MinimumSamplingInterval,
-        Historizing,
-        Executable,
-    );
-
-    impl MonitoredItemAttribute for crate::attributes::EventNotifier {
-        type Kind = Event;
-    }
+    impl MonitoredItemKind for super::Unknown {}
 }
