@@ -81,15 +81,6 @@ impl TryFrom<time::UtcDateTime> for DateTime {
 }
 
 #[cfg(feature = "time")]
-impl TryFrom<DateTime> for time::OffsetDateTime {
-    type Error = Error;
-
-    fn try_from(value: DateTime) -> Result<Self, Self::Error> {
-        time::UtcDateTime::try_from(value).map(Into::into)
-    }
-}
-
-#[cfg(feature = "time")]
 impl TryFrom<DateTime> for time::UtcDateTime {
     type Error = Error;
 
@@ -116,7 +107,7 @@ impl serde::Serialize for DateTime {
 mod tests {
     use time::{
         macros::{datetime, offset},
-        OffsetDateTime,
+        OffsetDateTime, UtcDateTime,
     };
 
     use crate::ua;
@@ -128,7 +119,7 @@ mod tests {
         assert_eq!(offset!(-2:00), dt.offset());
         assert_ne!(offset!(UTC), dt.offset());
         let dt_ua = ua::DateTime::try_from(dt.to_utc()).unwrap();
-        let dt_utc = OffsetDateTime::try_from(dt_ua).unwrap();
+        let dt_utc: OffsetDateTime = UtcDateTime::try_from(dt_ua).unwrap().into();
 
         // Equal to the original timestamp, but the offset is now UTC.
         assert_eq!(offset!(UTC), dt_utc.offset());
