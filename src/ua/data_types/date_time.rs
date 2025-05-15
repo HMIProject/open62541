@@ -133,3 +133,28 @@ impl serde::Serialize for DateTime {
             .and_then(|utc| time::serde::rfc3339::serialize(&utc.into(), serializer))
     }
 }
+
+#[cfg(all(test, feature = "time"))]
+mod tests {
+    use time::{
+        macros::{datetime, offset},
+        OffsetDateTime,
+    };
+
+    use crate::ua;
+
+    #[test]
+    fn from_offset_to_utc() {
+        // A timestamp with 100-nanosecond precision.
+        let dt = datetime!(2023-11-20 16:51:15.9876543 -2:00);
+        assert_eq!(offset!(-2:00), dt.offset());
+        assert_ne!(offset!(UTC), dt.offset());
+        let dt_ua = ua::DateTime::try_from(dt).unwrap();
+        let dt_utc = OffsetDateTime::try_from(dt_ua).unwrap();
+
+        // Equal to the original timestamp, but the offset is now UTC.
+        assert_eq!(offset!(UTC), dt_utc.offset());
+        assert_ne!(dt.offset(), dt_utc.offset());
+        assert_eq!(dt, dt_utc);
+    }
+}
