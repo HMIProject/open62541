@@ -72,7 +72,7 @@ async fn subscribe_node_value(client: &AsyncClient) -> anyhow::Result<()> {
         .context("monitor item")?;
 
     tokio::spawn(async move {
-        println!("Watching for monitored item values");
+        println!("Watching for monitored item values (data changes)");
         while let Some(value) = monitored_item.next().await {
             println!("{node_id} -> {value:?}");
         }
@@ -133,9 +133,9 @@ async fn subscribe_node_events(client: &AsyncClient) -> anyhow::Result<()> {
     let (_, mut monitored_item) = result?;
 
     tokio::spawn(async move {
-        println!("Watching for monitored item events");
-        while let Some(event) = monitored_item.next().await {
-            println!("{node_id} -> {event:?}");
+        println!("Watching for monitored item values (events)");
+        while let Some(value) = monitored_item.next().await {
+            println!("{node_id} -> {value:?}");
         }
         println!("Closed monitored item subscription");
     });
@@ -206,7 +206,7 @@ async fn subscribe_node_with_options(client: &AsyncClient) -> anyhow::Result<()>
         println!("Revised queue size: {}", result.revised_queue_size());
 
         tokio::spawn(async move {
-            println!("Watching for monitored item values");
+            println!("Watching for monitored item values (data changes)");
             while let Some(value) = monitored_item.next().await {
                 println!("{node_id} -> {value:?}");
             }

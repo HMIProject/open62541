@@ -25,7 +25,13 @@ impl MonitoredItemCreateRequest {
 
     /// Shortcut for setting attribute ID.
     ///
+    /// By default, monitored items emit [`MonitoredItemValue::DataChange`]. If the attribute ID is
+    /// set to [`ua::AttributeId::EVENTNOTIFIER`], they emit [`MonitoredItemValue::Event`] instead.
+    ///
     /// See [`ua::ReadValueId::with_attribute_id()`].
+    ///
+    /// [`MonitoredItemValue::DataChange`]: crate::MonitoredItemValue::DataChange
+    /// [`MonitoredItemValue::Event`]: crate::MonitoredItemValue::Event
     #[must_use]
     pub fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
         self.0.itemToMonitor.attributeId = attribute_id.as_u32();
@@ -88,6 +94,12 @@ impl MonitoredItemCreateRequest {
     pub const fn with_discard_oldest(mut self, discard_oldest: bool) -> Self {
         self.0.requestedParameters.discardOldest = discard_oldest;
         self
+    }
+
+    #[allow(dead_code)] // --no-default-features
+    #[must_use]
+    pub(crate) fn attribute_id(&self) -> ua::AttributeId {
+        ua::AttributeId::from_u32(self.0.itemToMonitor.attributeId)
     }
 }
 
