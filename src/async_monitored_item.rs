@@ -86,13 +86,11 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
 
     /// Sets attribute ID.
     ///
-    /// By default, monitored items emit [`ua::DataValue`]. If the attribute ID is set to
-    /// [`ua::AttributeId::EVENTNOTIFIER`], they emit `ua::Array<ua::Variant>` instead.
+    /// When using this method, monitored items emit [`MonitoredItemValue`] instead of the specific
+    /// type. See [`Self::attribute()`] for a type-safe alternative that yields appropriately typed
+    /// values for the given monitored attribute directly.
     ///
     /// Default value is [`ua::AttributeId::VALUE`].
-    ///
-    /// See [`Self::attribute()`] for a type-safe alternative that yields appropriately typed values
-    /// for the given monitored attribute directly.
     ///
     /// See [`ua::MonitoredItemCreateRequest::with_attribute_id()`].
     #[must_use]
