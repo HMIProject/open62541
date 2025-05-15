@@ -71,7 +71,7 @@ impl Client {
     }
 
     /// Gets current channel and session state, and connect status.
-    #[allow(dead_code, reason = "--no-default-features")]
+    #[must_use]
     pub(crate) fn state(&self) -> ClientState {
         log::debug!("Getting state");
 

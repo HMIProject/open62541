@@ -96,7 +96,7 @@ impl MonitoredItemCreateRequest {
         self
     }
 
-    #[allow(dead_code, reason = "--no-default-features")]
+    #[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
     #[must_use]
     pub(crate) fn attribute_id(&self) -> ua::AttributeId {
         ua::AttributeId::from_u32(self.0.itemToMonitor.attributeId)

@@ -1,11 +1,11 @@
 use crate::{ua, DataType};
 
-#[allow(dead_code, reason = "--no-default-features")]
+#[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
 pub(crate) trait ServiceRequest: DataType + 'static {
     type Response: ServiceResponse;
 }
 
-#[allow(dead_code, reason = "--no-default-features")]
+#[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
 pub(crate) trait ServiceResponse: DataType + 'static {
     type Request: ServiceRequest;
 

@@ -38,7 +38,7 @@ impl ByteString {
         dst
     }
 
-    #[allow(dead_code, reason = "--no-default-features")]
+    #[cfg_attr(not(feature = "mbedtls"), expect(dead_code, reason = "unused"))]
     fn clear(&mut self) {
         unsafe {
             // Clearing frees the referenced heap memory and resets length and data pointer to all
@@ -47,7 +47,7 @@ impl ByteString {
         }
     }
 
-    #[allow(dead_code, reason = "--no-default-features")]
+    #[cfg_attr(not(feature = "mbedtls"), expect(dead_code, reason = "unused"))]
     fn mem_zero(&mut self) {
         unsafe {
             // This zeroizes the string contents, i.e. characters, leaving the string object itself
@@ -93,11 +93,13 @@ impl ByteString {
     /// # Panic
     ///
     /// The byte string itself must not be invalid (as defined by OPC UA).
-    #[allow(dead_code, reason = "--no-default-features")]
+    #[cfg_attr(not(feature = "mbedtls"), expect(dead_code, reason = "unused"))]
+    #[must_use]
     pub(crate) unsafe fn as_bytes_unchecked(&self) -> &[u8] {
         unsafe { self.as_bytes().unwrap_unchecked() }
     }
 
+    #[must_use]
     fn array_value(&self) -> ArrayValue<u8> {
         // Internally, `open62541` represents strings as `Byte` array and has the same special cases
         // as regular arrays, i.e. empty and invalid states.

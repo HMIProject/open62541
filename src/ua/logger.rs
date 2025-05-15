@@ -46,7 +46,7 @@ impl Logger {
     ///
     /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
-    #[allow(dead_code, reason = "--no-default-features")]
+    #[cfg_attr(not(feature = "mbedtls"), expect(dead_code, reason = "unused"))]
     pub(crate) unsafe fn as_mut_ptr(&mut self) -> *mut UA_Logger {
         self.0.as_ptr()
     }

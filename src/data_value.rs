@@ -69,7 +69,7 @@ impl DataValue<ua::Variant> {
     /// This consumes `self` and casts the inner value to the specified data type. This should be
     /// used in situation where the expected type can be deduced from circumstances and unwrapped
     /// data values are needed for convenience. This always expects a scalar value.
-    #[allow(dead_code, reason = "--no-default-features")]
+    #[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
     pub(crate) fn into_scalar<T: DataType>(self) -> Result<DataValue<T>> {
         let Self {
             value,
