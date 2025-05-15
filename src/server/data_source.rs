@@ -79,7 +79,7 @@ pub trait DataSource {
     /// This should return an appropriate error when the write is not possible. The underlying
     /// status code is forwarded to the client.
     // TODO: Check if we can guarantee `&mut self`.
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "unused in default implementation")]
     fn write(&mut self, context: &mut DataSourceWriteContext) -> DataSourceResult {
         Err(DataSourceError::from_status_code(
             ua::StatusCode::BADNOTSUPPORTED,
@@ -182,9 +182,7 @@ pub(crate) unsafe fn wrap_data_source(
         value: *mut UA_DataValue,
     ) -> UA_StatusCode {
         let node_context = unsafe { NodeContext::peek_at(node_context) };
-        #[allow(irrefutable_let_patterns)] // We will add more node context types eventually.
-        let NodeContext::DataSource(data_source) = node_context
-        else {
+        let NodeContext::DataSource(data_source) = node_context else {
             // We expect to always find this node context type.
             return ua::StatusCode::BADINTERNALERROR.into_raw();
         };
@@ -217,9 +215,7 @@ pub(crate) unsafe fn wrap_data_source(
         value: *const UA_DataValue,
     ) -> UA_StatusCode {
         let node_context = unsafe { NodeContext::peek_at(node_context) };
-        #[allow(irrefutable_let_patterns)] // We will add more node context types eventually.
-        let NodeContext::DataSource(data_source) = node_context
-        else {
+        let NodeContext::DataSource(data_source) = node_context else {
             // We expect to always find this node context type.
             return ua::StatusCode::BADINTERNALERROR.into_raw();
         };

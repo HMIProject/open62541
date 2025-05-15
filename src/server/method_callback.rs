@@ -173,9 +173,7 @@ pub(crate) unsafe fn wrap_method_callback(
         output: *mut UA_Variant,
     ) -> UA_StatusCode {
         let node_context = unsafe { NodeContext::peek_at(method_context) };
-        #[allow(irrefutable_let_patterns)] // We will add more node context types eventually.
-        let NodeContext::MethodCallback(method_callback) = node_context
-        else {
+        let NodeContext::MethodCallback(method_callback) = node_context else {
             // We expect to always find this node context type.
             return ua::StatusCode::BADINTERNALERROR.into_raw();
         };

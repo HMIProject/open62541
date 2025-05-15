@@ -12,7 +12,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 ///
 /// [`is_good()`]: crate::ua::StatusCode::is_good
 #[derive(Debug, Error)]
-#[allow(clippy::error_impl_error)] // The main error type of our crate may be named `Error`.
+#[expect(clippy::error_impl_error, reason = "main error type")]
 pub enum Error {
     /// Error from server.
     #[error("{0}")]

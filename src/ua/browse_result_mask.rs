@@ -1,7 +1,7 @@
+#[expect(unreachable_pub, reason = "hidden inner enum")]
 // We do not expose the inner enum. We want to use a proper `u32` for bit operations on the mask and
 // we want to be clear about what is an initial (const, enum-like) value and what is a derived mask;
 // specifically, the bitmask type is _not_ an enum even though declared so in `open62541-sys`.
-#[allow(unreachable_pub)]
 mod inner {
     crate::data_type!(BrowseResultMask);
 

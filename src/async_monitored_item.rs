@@ -19,7 +19,7 @@ pub struct MonitoredItemBuilder {
     node_ids: Vec<ua::NodeId>,
     attribute_id: Option<ua::AttributeId>,
     monitoring_mode: Option<ua::MonitoringMode>,
-    #[allow(clippy::option_option)]
+    #[expect(clippy::option_option, reason = "implied default vs. unset")]
     sampling_interval: Option<Option<Duration>>,
     filter: Option<Box<dyn MonitoringFilter>>,
     queue_size: Option<u32>,

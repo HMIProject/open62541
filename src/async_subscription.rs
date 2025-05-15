@@ -19,12 +19,12 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub struct SubscriptionBuilder {
-    #[allow(clippy::option_option)]
+    #[expect(clippy::option_option, reason = "implied default vs. unset")]
     requested_publishing_interval: Option<Option<Duration>>,
     requested_lifetime_count: Option<u32>,
-    #[allow(clippy::option_option)]
+    #[expect(clippy::option_option, reason = "implied default vs. unset")]
     requested_max_keep_alive_count: Option<Option<NonZeroU32>>,
-    #[allow(clippy::option_option)]
+    #[expect(clippy::option_option, reason = "implied default vs. unset")]
     max_notifications_per_publish: Option<Option<NonZeroU32>>,
     publishing_enabled: Option<bool>,
     priority: Option<u8>,

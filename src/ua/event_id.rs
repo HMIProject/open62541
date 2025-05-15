@@ -25,21 +25,21 @@ impl EventId {
     }
 
     /// Gets underlying representation.
-    #[allow(dead_code)] // It is unclear whether external callers need the raw event ID.
+    #[expect(dead_code, reason = "unused for now")]
     #[must_use]
     pub(crate) const fn as_byte_string(&self) -> &ua::ByteString {
         &self.0
     }
 
     /// Gets underlying representation.
-    #[allow(dead_code)] // It is unclear whether external callers need the raw event ID.
+    #[expect(dead_code, reason = "unused for now")]
     #[must_use]
     pub(crate) fn to_byte_string(&self) -> ua::ByteString {
         self.0.clone()
     }
 
     /// Gets underlying representation.
-    #[allow(dead_code)] // It is unclear whether external callers need the raw event ID.
+    #[expect(dead_code, reason = "unused for now")]
     #[must_use]
     pub(crate) fn into_byte_string(self) -> ua::ByteString {
         self.0
