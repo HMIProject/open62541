@@ -38,7 +38,7 @@ impl ByteString {
         dst
     }
 
-    #[allow(dead_code)] // --no-default-features
+    #[allow(dead_code, reason = "--no-default-features")]
     fn clear(&mut self) {
         unsafe {
             // Clearing frees the referenced heap memory and resets length and data pointer to all
@@ -47,7 +47,7 @@ impl ByteString {
         }
     }
 
-    #[allow(dead_code)] // --no-default-features
+    #[allow(dead_code, reason = "--no-default-features")]
     fn mem_zero(&mut self) {
         unsafe {
             // This zeroizes the string contents, i.e. characters, leaving the string object itself
@@ -93,7 +93,7 @@ impl ByteString {
     /// # Panic
     ///
     /// The byte string itself must not be invalid (as defined by OPC UA).
-    #[allow(dead_code)] // --no-default-features
+    #[allow(dead_code, reason = "--no-default-features")]
     pub(crate) unsafe fn as_bytes_unchecked(&self) -> &[u8] {
         unsafe { self.as_bytes().unwrap_unchecked() }
     }

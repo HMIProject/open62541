@@ -8,7 +8,7 @@ impl CreateMonitoredItemsResponse {
         unsafe { ua::Array::slice_from_raw_parts(self.0.resultsSize, self.0.results) }
     }
 
-    #[allow(dead_code)] // --no-default-features
+    #[allow(dead_code, reason = "--no-default-features")]
     pub(crate) fn into_results(mut self) -> Option<ua::Array<ua::MonitoredItemCreateResult>> {
         unsafe { ua::Array::move_from_raw_parts(&mut self.0.resultsSize, &mut self.0.results) }
     }

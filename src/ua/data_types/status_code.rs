@@ -97,14 +97,14 @@ macro_rules! enum_variants {
                 /// Enum variant
                 #[doc = paste::paste! { concat!("[`", stringify!([<$inner:upper _ $value>]), "`](open62541_sys::", stringify!([<$inner:upper _ $value>]), ")") }]
                 /// from [`open62541_sys`].
-                #[allow(dead_code)] // Allow unused `pub`-declared constants in private modules.
+                #[allow(dead_code, reason = "unused `pub`-declared constants in private modules")]
                 pub const $value: Self = Self(
                     paste::paste! { open62541_sys::[<$inner:upper _ $value>] }
                 );
 
                 paste::paste! {
                     // This cast is necessary on Windows builds with inner type `i32`.
-                    #[allow(clippy::as_conversions, trivial_numeric_casts)]
+                    #[allow(clippy::as_conversions, trivial_numeric_casts, reason = "bindgen i32")]
                     pub const [<$value _U32>]: u32 = open62541_sys::[<$inner:upper _ $value>];
                 }
             )*

@@ -394,9 +394,8 @@ macro_rules! data_type {
                 // PANIC: Value must fit into `usize` to allow indexing.
                 let index = usize::try_from(open62541_sys::$index).unwrap();
                 // SAFETY: We use this static variable only read-only.
+                #[allow(unused_unsafe, reason = "unsafe only before Rust 1.82")]
                 // This was unsafe only before Rust 1.82.
-                // <https://blog.rust-lang.org/2024/10/17/Rust-1.82.0.html#safely-addressing-unsafe-statics>
-                #[allow(unused_unsafe)]
                 let ua_types = unsafe { std::ptr::addr_of!(open62541_sys::UA_TYPES) };
                 // SAFETY: Pointer is non-zero, aligned, correct type.
                 // PANIC: The given index is valid within `UA_TYPES`.
@@ -481,19 +480,19 @@ macro_rules! enum_variants {
                 /// Enum variant
                 #[doc = paste::paste! { concat!("[`", stringify!([<$inner:upper _ $value>]), "`](open62541_sys::", stringify!($inner), "::", stringify!([<$inner:upper _ $value>]), ")") }]
                 /// from [`open62541_sys`].
-                #[allow(dead_code)] // Allow unused `pub`-declared constants in private modules.
+                #[allow(dead_code, reason = "unused `pub`-declared constants in private modules")]
                 pub const $value: Self = Self(
                     paste::paste! { open62541_sys::$inner::[<$inner:upper _ $value>] }
                 );
 
                 paste::paste! {
                     // This cast is necessary on Windows builds with inner type `i32`.
-                    #[allow(clippy::as_conversions, trivial_numeric_casts)]
+                    #[allow(clippy::as_conversions, trivial_numeric_casts, reason = "bindgen i32")]
                     pub const [<$value _U32>]: u32 = open62541_sys::$inner::[<$inner:upper _ $value>].0 as u32;
                 }
             )*
 
-            #[allow(dead_code)] // --no-default-features
+            #[allow(dead_code, reason = "--no-default-features")]
             pub(crate) fn from_u32(value: u32) -> Self {
                 // This cast is necessary on Windows builds with inner type `i32`.
                 Self(open62541_sys::$inner(value.try_into().expect("should convert from u32")))
@@ -501,7 +500,7 @@ macro_rules! enum_variants {
 
             pub(crate) fn as_u32(&self) -> u32 {
                 // This cast is necessary on Windows builds with inner type `i32`.
-                #[allow(clippy::useless_conversion)]
+                #[allow(clippy::useless_conversion, reason = "bindgen i32")]
                 u32::try_from((self.0).0).expect("should convert to u32")
             }
         }

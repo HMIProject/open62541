@@ -96,7 +96,7 @@ impl MonitoredItemCreateRequest {
         self
     }
 
-    #[allow(dead_code)] // --no-default-features
+    #[allow(dead_code, reason = "--no-default-features")]
     #[must_use]
     pub(crate) fn attribute_id(&self) -> ua::AttributeId {
         ua::AttributeId::from_u32(self.0.itemToMonitor.attributeId)

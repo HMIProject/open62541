@@ -315,7 +315,7 @@ impl ClientBuilder {
     }
 
     /// Access client context.
-    #[allow(dead_code)] // --no-default-features
+    #[allow(dead_code, reason = "--no-default-features")]
     #[must_use]
     fn context_mut(&mut self) -> &mut ClientContext {
         self.0.context_mut()
@@ -352,10 +352,7 @@ pub(crate) struct ClientContext {
 /// To disconnect, prefer method [`disconnect()`](Self::disconnect) over simply dropping the client:
 /// disconnection involves server communication and might take a short amount of time.
 #[derive(Debug)]
-pub struct Client(
-    #[allow(dead_code)] // --no-default-features
-    ua::Client,
-);
+pub struct Client(#[allow(dead_code, reason = "--no-default-features")] ua::Client);
 
 impl Client {
     /// Creates default client connected to endpoint.

@@ -55,7 +55,7 @@ impl Error {
         }
     }
 
-    #[allow(dead_code)] // --no-default-features
+    #[allow(dead_code, reason = "--no-default-features")]
     #[must_use]
     pub(crate) const fn internal(message: &'static str) -> Self {
         Self::Internal(message)

@@ -140,7 +140,7 @@ impl ClientConfig {
     }
 
     /// Access client context.
-    #[allow(dead_code)] // --no-default-features
+    #[allow(dead_code, reason = "--no-default-features")]
     #[must_use]
     pub(crate) fn context_mut(&mut self) -> &mut ClientContext {
         let context = unsafe { self.as_mut() }
