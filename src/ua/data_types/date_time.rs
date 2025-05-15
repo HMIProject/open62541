@@ -102,6 +102,26 @@ impl TryFrom<time::UtcDateTime> for DateTime {
     }
 }
 
+#[cfg(feature = "time")]
+impl TryFrom<DateTime> for time::OffsetDateTime {
+    type Error = Error;
+
+    fn try_from(value: DateTime) -> Result<Self, Self::Error> {
+        time::UtcDateTime::try_from(value).map(Into::into)
+    }
+}
+
+#[cfg(feature = "time")]
+impl TryFrom<DateTime> for time::UtcDateTime {
+    type Error = Error;
+
+    fn try_from(value: DateTime) -> Result<Self, Self::Error> {
+        value
+            .to_utc()
+            .ok_or(Error::internal("DateTime should be in range"))
+    }
+}
+
 #[cfg(all(feature = "serde", feature = "time"))]
 impl serde::Serialize for DateTime {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
