@@ -110,7 +110,7 @@ impl CertificateVerification {
     /// [`from_raw()`]: Self::from_raw
     /// [`UA_Client`]: open62541_sys::UA_Client
     #[must_use]
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[expect(clippy::missing_const_for_fn, reason = "false positive")]
     pub(crate) fn into_raw(self) -> UA_CertificateVerification {
         // Use `ManuallyDrop` to avoid double-free even when added code might cause panic. See
         // documentation of `mem::forget()` for details.
@@ -157,7 +157,6 @@ impl CertificateVerification {
     ///
     /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
-    #[allow(dead_code)] // This is unused for now.
     #[must_use]
     pub(crate) unsafe fn as_mut(&mut self) -> &mut UA_CertificateVerification {
         &mut self.0

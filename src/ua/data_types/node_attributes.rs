@@ -31,7 +31,6 @@ macro_rules! derived {
                     self
                 }
 
-                #[allow(dead_code)]
                 fn as_node_attributes(&self) -> &ua::NodeAttributes {
                     // SAFETY: This transmutes from `Self` to `UA_NodeAttributes`, a strict subset of
                     // `UA_(...)Attributes` with the same memory layout.

@@ -315,7 +315,7 @@ impl ClientBuilder {
     }
 
     /// Access client context.
-    #[allow(dead_code)] // --no-default-features
+    #[cfg_attr(not(feature = "mbedtls"), expect(dead_code, reason = "unused"))]
     #[must_use]
     fn context_mut(&mut self) -> &mut ClientContext {
         self.0.context_mut()
@@ -352,10 +352,7 @@ pub(crate) struct ClientContext {
 /// To disconnect, prefer method [`disconnect()`](Self::disconnect) over simply dropping the client:
 /// disconnection involves server communication and might take a short amount of time.
 #[derive(Debug)]
-pub struct Client(
-    #[allow(dead_code)] // --no-default-features
-    ua::Client,
-);
+pub struct Client(ua::Client);
 
 impl Client {
     /// Creates default client connected to endpoint.
@@ -413,9 +410,9 @@ impl Client {
     /// This consumes the client and handles the graceful shutdown of the connection. This should be
     /// preferred over simply dropping the instance to give the server a chance to clean up and also
     /// to avoid blocking unexpectedly when the client is being dropped without calling this method.
+    #[expect(clippy::semicolon_if_nothing_returned, reason = "future fail-safe")]
     // Forward any result as-is to detect mismatching method signatures at compile time if the
     // return type of the inner method should ever change.
-    #[allow(clippy::semicolon_if_nothing_returned)]
     pub fn disconnect(self) {
         self.0.disconnect()
     }

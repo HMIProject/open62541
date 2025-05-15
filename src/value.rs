@@ -104,7 +104,7 @@ pub enum VariantValue {
     Empty,
     Scalar(ScalarValue),
     // TODO: Add proper interface.
-    #[allow(private_interfaces)]
+    #[expect(private_interfaces, reason = "pending refactor")]
     NonScalar(NonScalarValue),
 }
 

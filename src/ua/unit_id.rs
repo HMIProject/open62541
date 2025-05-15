@@ -39,7 +39,6 @@ impl UnitId {
             })
             .collect::<Option<Vec<_>>>()?;
         // TODO: Restrict minimum length to 2?
-        #[allow(clippy::len_zero)] // Symmetric bounds checks.
         if !(1..=3).contains(&ascii_chars.len()) {
             return None;
         }

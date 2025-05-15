@@ -115,8 +115,8 @@ impl KeyValueMap {
     }
 
     /// Gives up ownership and returns value.
-    #[allow(dead_code)] // This is unused for now.
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[expect(dead_code, reason = "unused for now")]
+    #[expect(clippy::missing_const_for_fn, reason = "false positive")]
     pub(crate) fn into_raw(self) -> *mut UA_KeyValueMap {
         // Use `ManuallyDrop` to avoid double-free even when added code might cause panic. See
         // documentation of `mem::forget()` for details.
@@ -222,9 +222,7 @@ mod tests {
         assert!(key_value_map.contains(&ua::QualifiedName::new(2, "ipsum")));
     }
 
-    // TODO: Enable when <https://github.com/open62541/open62541/issues/6905> has been fixed.
-    #[allow(dead_code)]
-    #[cfg_attr(any(), test)]
+    #[test]
     fn remove_key() {
         let mut key_value_map = KeyValueMap::from_slice(&[
             (

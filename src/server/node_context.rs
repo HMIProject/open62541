@@ -14,7 +14,6 @@ pub(crate) enum NodeContext {
     MethodCallback(Box<dyn MethodCallback>),
 }
 
-#[allow(dead_code)] // We will use the methods soon.
 impl NodeContext {
     /// Leaks node context.
     ///
@@ -53,6 +52,7 @@ impl NodeContext {
     ///
     /// [`leak()`]: Self::leak
     /// [`consume()`]: Self::consume
+    #[expect(dead_code, reason = "unused for now")]
     #[must_use]
     pub(crate) unsafe fn consume(data: *mut c_void) -> Self {
         // SAFETY: We require the same safety guarantees from our callers.

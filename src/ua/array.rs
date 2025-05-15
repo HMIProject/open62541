@@ -175,7 +175,7 @@ impl<T: DataType> Array<T> {
     ///
     /// Ownership is transferred. There must not be any aliased references to the array elements, as
     /// they will be owned and freed when the returned value is dropped.
-    #[allow(dead_code)] // --no-default-features
+    #[must_use]
     pub(crate) unsafe fn move_from_raw_parts(
         size: &mut usize,
         ptr: &mut *mut T::Inner,
@@ -498,14 +498,14 @@ impl<T: DataType> fmt::Debug for Array<T> {
 impl<T: DataType> ops::Index<usize> for Array<T> {
     type Output = T;
 
-    #[allow(clippy::indexing_slicing)] // We forward the underlying panic.
+    #[expect(clippy::indexing_slicing, reason = "forward underlying panic")]
     fn index(&self, index: usize) -> &Self::Output {
         &self.as_slice()[index]
     }
 }
 
 impl<T: DataType> ops::IndexMut<usize> for Array<T> {
-    #[allow(clippy::indexing_slicing)] // We forward the underlying panic.
+    #[expect(clippy::indexing_slicing, reason = "forward underlying panic")]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.as_slice_mut()[index]
     }

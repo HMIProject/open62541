@@ -31,7 +31,7 @@ impl Logger {
     }
 
     /// Gives up ownership and returns value.
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[expect(clippy::missing_const_for_fn, reason = "false positive")]
     pub(crate) fn into_raw(self) -> *mut UA_Logger {
         // Use `ManuallyDrop` to avoid double-free even when added code might cause panic. See
         // documentation of `mem::forget()` for details.
@@ -46,7 +46,7 @@ impl Logger {
     ///
     /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
-    #[allow(dead_code)] // --features mbedtls
+    #[cfg_attr(not(feature = "mbedtls"), expect(dead_code, reason = "unused"))]
     pub(crate) unsafe fn as_mut_ptr(&mut self) -> *mut UA_Logger {
         self.0.as_ptr()
     }

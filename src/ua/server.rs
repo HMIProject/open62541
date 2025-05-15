@@ -38,7 +38,6 @@ impl Server {
     ///
     /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
-    #[allow(dead_code)] // This is unused for now.
     #[must_use]
     pub(crate) const unsafe fn as_ptr(&self) -> *const UA_Server {
         self.0.as_ptr()

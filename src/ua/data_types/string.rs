@@ -26,14 +26,13 @@ impl String {
 
     /// Creates invalid string (as defined by OPC UA).
     // TODO: The OPC UA specification calls invalid strings "null". Consider changing this to match.
-    #[allow(dead_code)] // This is unused for now.
     pub(crate) fn invalid() -> Self {
         let str = unsafe { UA_String_fromChars(ptr::null()) };
         Self(str)
     }
 
     /// Creates empty string.
-    #[allow(dead_code)] // This is unused for now.
+    #[expect(dead_code, reason = "unused for now")]
     pub(crate) fn empty() -> Self {
         Self::new("").unwrap()
     }

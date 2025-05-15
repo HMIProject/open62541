@@ -10,7 +10,7 @@ use open62541_sys::{UA_NS0ID_HASCOMPONENT, UA_NS0ID_OBJECTSFOLDER};
 struct ExampleCallback {}
 
 impl MethodCallback for ExampleCallback {
-    #[allow(clippy::get_first)] // We want to make 0-based access to arguments clearer.
+    #[expect(clippy::get_first, reason = "show 0-based arguments in example")]
     fn call(&mut self, context: &mut MethodCallbackContext) -> MethodCallbackResult {
         let input_argument =
             context

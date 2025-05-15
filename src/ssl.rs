@@ -39,7 +39,7 @@ impl Password {
         unsafe { self.0.as_bytes_unchecked() }
     }
 
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[expect(clippy::missing_const_for_fn, reason = "false positive")]
     pub(crate) fn as_byte_string(&self) -> &ua::ByteString {
         &self.0
     }
@@ -161,7 +161,7 @@ impl PrivateKey {
         unsafe { self.0.as_bytes_unchecked() }
     }
 
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[expect(clippy::missing_const_for_fn, reason = "false positive")]
     pub(crate) fn as_byte_string(&self) -> &ua::ByteString {
         &self.0
     }
