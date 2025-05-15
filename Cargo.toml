@@ -42,7 +42,7 @@ env_logger = "0.11.1"
 futures = "0.3.30"
 itertools = "0.13.0"
 rand = "0.8.5"
-time = { version = "0.3.31", features = ["macros"] }
+time = { version = "0.3.38", features = ["macros"] }
 # Enable multi-threaded runtime in examples to increase the chances of finding
 # problems with our use of open62541.
 tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
