@@ -52,7 +52,6 @@ impl DateTime {
     }
 }
 
-// TODO (breaking change): Upgrade `time` (0.3.38), add conversion from `time::UtcDateTime`.
 #[cfg(feature = "time")]
 impl TryFrom<time::UtcDateTime> for DateTime {
     type Error = Error;
