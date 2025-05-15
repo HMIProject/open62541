@@ -53,6 +53,31 @@ impl DateTime {
 }
 
 #[cfg(feature = "time")]
+impl TryFrom<time::OffsetDateTime> for DateTime {
+    type Error = Error;
+
+    /// Creates [`DateTime`] from [`time::OffsetDateTime`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use open62541::ua;
+    /// use time::macros::datetime;
+    ///
+    /// let dt: ua::DateTime = datetime!(2024-02-09 21:34:56 +09:00).try_into().unwrap();
+    ///
+    /// assert_eq!(format!("{dt:?}"), "\"2024-02-09T12:34:56Z\"");
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// The date/time must be valid and in range of the 64-bit representation of [`DateTime`].
+    fn try_from(value: time::OffsetDateTime) -> Result<Self, Self::Error> {
+        time::UtcDateTime::from(value).try_into()
+    }
+}
+
+#[cfg(feature = "time")]
 impl TryFrom<time::UtcDateTime> for DateTime {
     type Error = Error;
 
@@ -72,8 +97,8 @@ impl TryFrom<time::UtcDateTime> for DateTime {
     /// # Errors
     ///
     /// The date/time must be valid and in range of the 64-bit representation of [`DateTime`].
-    fn try_from(from: time::UtcDateTime) -> Result<Self, Self::Error> {
-        Self::try_from_unix_timestamp_nanos(from.unix_timestamp_nanos())
+    fn try_from(value: time::UtcDateTime) -> Result<Self, Self::Error> {
+        Self::try_from_unix_timestamp_nanos(value.unix_timestamp_nanos())
     }
 }
 
