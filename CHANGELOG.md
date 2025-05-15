@@ -12,6 +12,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: `AsyncMonitoredItem` yields `MonitoredItemValue` enum instead of `ua::DataValue`. Use
   `MonitoredItemValue::value()` to directly get the data change value for monitored items with an
   attribute ID other than `ua::AttributeId::EVENTNOTIFIER`.
+- Breaking: Replace `time::OffsetDateTime` with `time::UtcDateTime` in conversions from/to
+  `ua::DateTime`.
 
 ### Fixed
 

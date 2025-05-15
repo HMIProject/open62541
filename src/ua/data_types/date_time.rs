@@ -46,27 +46,28 @@ impl DateTime {
 
 #[cfg(feature = "time")]
 impl DateTime {
-    // TODO (breaking change): Return `time::UtcDateTime` instead of `time::OffsetDateTime`.
     #[must_use]
-    pub fn to_utc(&self) -> Option<time::OffsetDateTime> {
-        time::OffsetDateTime::from_unix_timestamp_nanos(self.as_unix_timestamp_nanos()).ok()
+    pub fn to_utc(&self) -> Option<time::UtcDateTime> {
+        time::UtcDateTime::from_unix_timestamp_nanos(self.as_unix_timestamp_nanos()).ok()
     }
 }
 
-// TODO (breaking change): Upgrade `time` (0.3.38), add conversion from `time::UtcDateTime`.
 #[cfg(feature = "time")]
-impl TryFrom<time::OffsetDateTime> for DateTime {
+impl TryFrom<time::UtcDateTime> for DateTime {
     type Error = Error;
 
-    /// Creates [`DateTime`] from [`time::OffsetDateTime`].
+    /// Creates [`DateTime`] from [`time::UtcDateTime`].
+    ///
+    /// Note: [`DateTime`] does not keep track of UTC offsets. Therefore, when converting from value
+    /// of type [`time::OffsetDateTime`], use [`to_utc()`](time::OffsetDateTime::to_utc) first.
     ///
     /// # Examples
     ///
     /// ```
     /// use open62541::ua;
-    /// use time::macros::datetime;
+    /// use time::macros::utc_datetime;
     ///
-    /// let dt: ua::DateTime = datetime!(2024-02-09 12:34:56 UTC).try_into().unwrap();
+    /// let dt: ua::DateTime = utc_datetime!(2024-02-09 12:34:56).try_into().unwrap();
     ///
     /// assert_eq!(format!("{dt:?}"), "\"2024-02-09T12:34:56Z\"");
     /// ```
@@ -74,8 +75,19 @@ impl TryFrom<time::OffsetDateTime> for DateTime {
     /// # Errors
     ///
     /// The date/time must be valid and in range of the 64-bit representation of [`DateTime`].
-    fn try_from(from: time::OffsetDateTime) -> Result<Self, Self::Error> {
-        Self::try_from_unix_timestamp_nanos(from.unix_timestamp_nanos())
+    fn try_from(value: time::UtcDateTime) -> Result<Self, Self::Error> {
+        Self::try_from_unix_timestamp_nanos(value.unix_timestamp_nanos())
+    }
+}
+
+#[cfg(feature = "time")]
+impl TryFrom<DateTime> for time::UtcDateTime {
+    type Error = Error;
+
+    fn try_from(value: DateTime) -> Result<Self, Self::Error> {
+        value
+            .to_utc()
+            .ok_or(Error::internal("DateTime should be in range"))
     }
 }
 
@@ -87,23 +99,30 @@ impl serde::Serialize for DateTime {
     {
         self.to_utc()
             .ok_or(serde::ser::Error::custom("DateTime should be in range"))
-            .and_then(|dt| time::serde::rfc3339::serialize(&dt, serializer))
+            .and_then(|utc| time::serde::rfc3339::serialize(&utc.into(), serializer))
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "time"))]
 mod tests {
-    #[cfg(feature = "time")]
+    use time::{
+        macros::{datetime, offset},
+        OffsetDateTime, UtcDateTime,
+    };
+
+    use crate::ua;
+
     #[test]
     fn from_offset_to_utc() {
-        // A timestamp with 100-nanosecond precision
-        let dt = time::macros::datetime!(2023-11-20 16:51:15.9876543 -2:00);
-        assert_eq!(time::macros::offset!(-2:00), dt.offset());
-        assert_ne!(time::macros::offset!(UTC), dt.offset());
-        let dt_ua = crate::ua::DateTime::try_from(dt).unwrap();
-        let dt_utc = dt_ua.to_utc().unwrap();
+        // A timestamp with 100-nanosecond precision.
+        let dt = datetime!(2023-11-20 16:51:15.9876543 -2:00);
+        assert_eq!(offset!(-2:00), dt.offset());
+        assert_ne!(offset!(UTC), dt.offset());
+        let dt_ua = ua::DateTime::try_from(dt.to_utc()).unwrap();
+        let dt_utc: OffsetDateTime = UtcDateTime::try_from(dt_ua).unwrap().into();
+
         // Equal to the original timestamp, but the offset is now UTC.
-        assert_eq!(time::macros::offset!(UTC), dt_utc.offset());
+        assert_eq!(offset!(UTC), dt_utc.offset());
         assert_ne!(dt.offset(), dt_utc.offset());
         assert_eq!(dt, dt_utc);
     }
