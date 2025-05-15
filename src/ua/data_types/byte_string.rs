@@ -38,7 +38,10 @@ impl ByteString {
         dst
     }
 
-    #[cfg_attr(not(feature = "mbedtls"), expect(dead_code, reason = "unused"))]
+    #[cfg_attr(
+        not(any(feature = "mbedtls", test)),
+        expect(dead_code, reason = "unused")
+    )]
     fn clear(&mut self) {
         unsafe {
             // Clearing frees the referenced heap memory and resets length and data pointer to all
@@ -47,7 +50,10 @@ impl ByteString {
         }
     }
 
-    #[cfg_attr(not(feature = "mbedtls"), expect(dead_code, reason = "unused"))]
+    #[cfg_attr(
+        not(any(feature = "mbedtls", test)),
+        expect(dead_code, reason = "unused")
+    )]
     fn mem_zero(&mut self) {
         unsafe {
             // This zeroizes the string contents, i.e. characters, leaving the string object itself
