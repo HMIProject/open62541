@@ -53,35 +53,13 @@ impl DateTime {
 }
 
 #[cfg(feature = "time")]
-impl TryFrom<time::OffsetDateTime> for DateTime {
-    type Error = Error;
-
-    /// Creates [`DateTime`] from [`time::OffsetDateTime`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use open62541::ua;
-    /// use time::macros::datetime;
-    ///
-    /// let dt: ua::DateTime = datetime!(2024-02-09 21:34:56 +09:00).try_into().unwrap();
-    ///
-    /// assert_eq!(format!("{dt:?}"), "\"2024-02-09T12:34:56Z\"");
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// The date/time must be valid and in range of the 64-bit representation of [`DateTime`].
-    fn try_from(value: time::OffsetDateTime) -> Result<Self, Self::Error> {
-        time::UtcDateTime::from(value).try_into()
-    }
-}
-
-#[cfg(feature = "time")]
 impl TryFrom<time::UtcDateTime> for DateTime {
     type Error = Error;
 
     /// Creates [`DateTime`] from [`time::UtcDateTime`].
+    ///
+    /// Note: [`DateTime`] does not keep track of UTC offsets. Therefore, when converting from value
+    /// of type [`time::OffsetDateTime`], use [`to_utc()`](time::OffsetDateTime::to_utc) first.
     ///
     /// # Examples
     ///
@@ -149,7 +127,7 @@ mod tests {
         let dt = datetime!(2023-11-20 16:51:15.9876543 -2:00);
         assert_eq!(offset!(-2:00), dt.offset());
         assert_ne!(offset!(UTC), dt.offset());
-        let dt_ua = ua::DateTime::try_from(dt).unwrap();
+        let dt_ua = ua::DateTime::try_from(dt.to_utc()).unwrap();
         let dt_utc = OffsetDateTime::try_from(dt_ua).unwrap();
 
         // Equal to the original timestamp, but the offset is now UTC.
