@@ -116,7 +116,8 @@ impl KeyValueMap {
 
     /// Gives up ownership and returns value.
     #[expect(dead_code, reason = "unused for now")]
-    #[expect(clippy::missing_const_for_fn, reason = "false positive")]
+    #[expect(clippy::allow_attributes, reason = "non-static condition")]
+    #[allow(clippy::missing_const_for_fn, reason = "unsupported before Rust 1.87")]
     pub(crate) fn into_raw(self) -> *mut UA_KeyValueMap {
         // Use `ManuallyDrop` to avoid double-free even when added code might cause panic. See
         // documentation of `mem::forget()` for details.

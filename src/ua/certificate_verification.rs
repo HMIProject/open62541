@@ -110,7 +110,8 @@ impl CertificateVerification {
     /// [`from_raw()`]: Self::from_raw
     /// [`UA_Client`]: open62541_sys::UA_Client
     #[must_use]
-    #[expect(clippy::missing_const_for_fn, reason = "false positive")]
+    #[expect(clippy::allow_attributes, reason = "non-static condition")]
+    #[allow(clippy::missing_const_for_fn, reason = "unsupported before Rust 1.87")]
     pub(crate) fn into_raw(self) -> UA_CertificateVerification {
         // Use `ManuallyDrop` to avoid double-free even when added code might cause panic. See
         // documentation of `mem::forget()` for details.
