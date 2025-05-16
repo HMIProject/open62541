@@ -1,4 +1,4 @@
-use std::ptr::{self, NonNull};
+use std::ptr::NonNull;
 
 use open62541_sys::{
     UA_Client, UA_Client_delete, UA_Client_disconnect, UA_Client_getContext, UA_Client_getState,
@@ -42,7 +42,7 @@ impl Client {
     /// (e.g. logging configuration and logger instance).
     pub(crate) fn new_with_config(config: ua::ClientConfig) -> Self {
         let config = config.into_raw();
-        let inner = unsafe { UA_Client_newWithConfig(ptr::addr_of!(config)) };
+        let inner = unsafe { UA_Client_newWithConfig(&raw const config) };
         // PANIC: The only possible errors here are out-of-memory.
         let inner = NonNull::new(inner).expect("create UA_Client");
         Self(inner)

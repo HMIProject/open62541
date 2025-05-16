@@ -3,9 +3,9 @@ name = "open62541"
 version = "0.8.5"
 authors = ["HMI Project"]
 edition = "2021"
-# Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.81 for the following reason:
-# we want to use the `expect` lint level and lint reasons, as in `#[expect(lint, reason = "...")]`.
-rust-version = "1.81"
+# Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.82 for the following reason:
+# we want to use `&raw const` and `&raw mut` for creating pointers.
+rust-version = "1.82"
 description = "High-level, safe bindings for the C99 library open62541, an open source and free implementation of OPC UA (OPC Unified Architecture)."
 documentation = "https://docs.rs/open62541"
 readme = "README.md"

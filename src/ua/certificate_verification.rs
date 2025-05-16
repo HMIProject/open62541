@@ -117,7 +117,7 @@ impl CertificateVerification {
         // documentation of `mem::forget()` for details.
         let this = ManuallyDrop::new(self);
         // SAFETY: Aliasing memory temporarily is safe because destructor will not be called.
-        unsafe { ptr::read(ptr::addr_of!(this.0)) }
+        unsafe { ptr::read(&raw const this.0) }
     }
 
     /// Creates wrapper initialized with defaults.
@@ -171,7 +171,7 @@ impl CertificateVerification {
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
     pub(crate) unsafe fn as_mut_ptr(&mut self) -> *mut UA_CertificateVerification {
-        ptr::addr_of_mut!(self.0)
+        &raw mut self.0
     }
 }
 
@@ -179,7 +179,7 @@ impl Drop for CertificateVerification {
     fn drop(&mut self) {
         if let Some(clear) = self.0.clear {
             unsafe {
-                clear(ptr::addr_of_mut!(self.0));
+                clear(&raw mut self.0);
             }
         }
     }
