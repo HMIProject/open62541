@@ -57,7 +57,7 @@ async fn watch_background(client: Arc<AsyncClient>) -> anyhow::Result<()> {
         .await
         .context("create monitored item")?;
 
-    let mut stream = pin!(monitored_item.into_stream().take(3).enumerate());
+    let mut stream = pin!(monitored_item.take(3).enumerate());
 
     while let Some((index, value)) = stream.next().await {
         println!(
