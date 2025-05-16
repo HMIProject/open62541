@@ -10,7 +10,6 @@ use std::{
 };
 
 use futures_core::Stream;
-use futures_util::stream;
 use tokio::sync::mpsc;
 
 use crate::{
@@ -352,10 +351,9 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
     ///
     /// The stream will emit all value updates as they are being received. If the client disconnects
     /// or the corresponding subscription is deleted, the stream is closed.
+    #[deprecated = "AsyncMonitoredItem implements Stream."]
     pub fn into_stream(self) -> impl Stream<Item = K::Value> + Send + Sync + 'static {
-        stream::unfold(self, move |mut this| async move {
-            this.next().await.map(|value| (value, this))
-        })
+        self
     }
 }
 
