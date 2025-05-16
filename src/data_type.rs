@@ -403,12 +403,10 @@ macro_rules! data_type {
                 unsafe { (*ua_types).get(index) }.unwrap()
             }
 
-            #[must_use]
             unsafe fn from_raw(src: Self::Inner) -> Self {
                 $name(src)
             }
 
-            #[must_use]
             fn into_raw(self) -> Self::Inner {
                 // Use `ManuallyDrop` to avoid double-free even when added code might cause panic.
                 // See documentation of `mem::forget()` for details.

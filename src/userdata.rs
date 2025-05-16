@@ -72,7 +72,6 @@ impl<T> Userdata<T> {
     /// Use [`UserdataSentinel::as_ptr()`] to get the pointer from the sentinel.
     ///
     /// [`prepare()`]: Self::prepare
-    /// [`sentinel()`]: Self::sentinel
     pub fn prepare_sentinel(userdata: T) -> UserdataSentinel<T> {
         let data = Self::prepare(userdata);
         UserdataSentinel(data, PhantomData)
@@ -111,7 +110,6 @@ impl<T> Userdata<T> {
     ///
     /// [`prepare()`]: Self::prepare
     /// [`consume()`]: Self::consume
-    /// [`sentinel()`]: Self::sentinel
     #[must_use]
     pub unsafe fn consume(data: *mut c_void) -> T {
         let ptr: *mut T = data.cast::<T>();
