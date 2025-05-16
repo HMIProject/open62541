@@ -352,9 +352,6 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
     ///
     /// The stream will emit all value updates as they are being received. If the client disconnects
     /// or the corresponding subscription is deleted, the stream is closed.
-    //
-    // TODO: Remove this? Consuming `AsyncMonitoredItem` to turn it into a stream drops it, removing
-    // the monitored item subscription immediately. See `Drop` implementation below.
     pub fn into_stream(self) -> impl Stream<Item = K::Value> + Send + Sync + 'static {
         stream::unfold(self, move |mut this| async move {
             this.next().await.map(|value| (value, this))
