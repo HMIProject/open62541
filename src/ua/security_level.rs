@@ -7,16 +7,17 @@ use crate::ua;
 pub struct SecurityLevel(UA_Byte);
 
 impl SecurityLevel {
+    #[must_use]
     pub(crate) const fn new(security_level: UA_Byte) -> Self {
         Self(security_level)
     }
 
-    #[allow(dead_code)] // This is unused for now.
+    #[must_use]
     pub(crate) const fn as_u8(self) -> u8 {
         self.0
     }
 
-    #[allow(dead_code)] // This is unused for now.
+    #[expect(dead_code, reason = "unused for now")]
     pub(crate) const fn to_byte(self) -> ua::Byte {
         ua::Byte::new(self.as_u8())
     }

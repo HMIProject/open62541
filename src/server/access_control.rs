@@ -53,7 +53,7 @@ pub unsafe trait AccessControl {
 /// >
 /// > For `TransferSubscriptions`, we check whether the transfer happens between Sessions for the
 /// > same user.
-#[allow(missing_debug_implementations)] // Do not leak credentials.
+#[expect(missing_debug_implementations, reason = "Do not leak credentials.")]
 pub struct DefaultAccessControl<'a> {
     allow_anonymous: bool,
     username_password_login: &'a [(&'a ua::String, &'a ua::String)],

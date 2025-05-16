@@ -41,7 +41,7 @@ impl BrowseDescription {
         self
     }
 
-    #[allow(dead_code)] // --no-default-features
+    #[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
     #[must_use]
     pub(crate) fn node_id(&self) -> &ua::NodeId {
         ua::NodeId::raw_ref(&self.0.nodeId)

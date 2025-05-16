@@ -62,7 +62,6 @@ impl NodeId {
 
     /// Creates null node ID.
     #[must_use]
-    #[allow(dead_code)]
     pub(crate) fn null() -> Self {
         // SAFETY: Read-only access of static.
         Self::clone_raw(unsafe { &UA_NODEID_NULL })

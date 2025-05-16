@@ -12,7 +12,7 @@ use open62541_sys::{
     UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,
     UA_NS0ID_STRING,
 };
-use time::macros::datetime;
+use time::macros::utc_datetime;
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -73,7 +73,7 @@ fn main() -> anyhow::Result<()> {
     server.write_data_value(
         &data_value_node_id,
         &ua::DataValue::new(ua::Variant::scalar(ua::String::new("foobar")?))
-            .with_source_timestamp(&datetime!(2024-02-09 12:34:56 UTC).try_into()?),
+            .with_source_timestamp(&utc_datetime!(2024-02-09 12:34:56).try_into()?),
     )?;
 
     read_attribute(&server, &data_value_node_id, ua::AttributeId::NODEID_T)?;

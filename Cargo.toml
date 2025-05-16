@@ -3,9 +3,9 @@ name = "open62541"
 version = "0.8.5"
 authors = ["HMI Project"]
 edition = "2021"
-# Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.80 since
-# we want to conveniently exclude examples from published crate.
-rust-version = "1.80"
+# Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.81 for the following reason:
+# we want to use the `expect` lint level and lint reasons, as in `#[expect(lint, reason = "...")]`.
+rust-version = "1.81"
 description = "High-level, safe bindings for the C99 library open62541, an open source and free implementation of OPC UA (OPC Unified Architecture)."
 documentation = "https://docs.rs/open62541"
 readme = "README.md"
@@ -26,7 +26,7 @@ paste = "1.0.14"
 serde = { version = "1.0.194", optional = true }
 serde_json = { version = "1.0.111", optional = true }
 thiserror = "2.0.3"
-time = { version = "0.3.36", optional = true }
+time = { version = "0.3.38", optional = true }
 tokio = { version = "1.38.2", optional = true, features = [
   "rt",
   "sync",
@@ -42,7 +42,7 @@ env_logger = "0.11.1"
 futures = "0.3.30"
 itertools = "0.13.0"
 rand = "0.8.5"
-time = { version = "0.3.31", features = ["macros"] }
+time = { version = "0.3.38", features = ["macros"] }
 # Enable multi-threaded runtime in examples to increase the chances of finding
 # problems with our use of open62541.
 tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }

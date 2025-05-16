@@ -457,14 +457,14 @@ mod tests {
         #[test]
         fn serialize_datetime() {
             // Minute precision
-            let datetime = time::macros::datetime!(2024-02-09 16:48 UTC);
+            let datetime = time::macros::utc_datetime!(2024-02-09 16:48);
             let ua_datetime = ua::DateTime::try_from(datetime).unwrap();
             let ua_variant = ua::Variant::scalar(ua_datetime);
             let json = serde_json::to_string(&ua_variant).unwrap();
             assert_eq!(r#""2024-02-09T16:48:00Z""#, json);
 
             // Microsecond precision
-            let datetime = time::macros::datetime!(2024-02-09 16:48:52.123456 UTC);
+            let datetime = time::macros::utc_datetime!(2024-02-09 16:48:52.123456);
             let ua_datetime = ua::DateTime::try_from(datetime).unwrap();
             let ua_variant = ua::Variant::scalar(ua_datetime);
             let json = serde_json::to_string(&ua_variant).unwrap();
