@@ -14,7 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   attribute ID other than `ua::AttributeId::EVENTNOTIFIER`.
 - Breaking: Replace `time::OffsetDateTime` with `time::UtcDateTime` in conversions from/to
   `ua::DateTime`.
-- Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.81.
+- Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.82.
 
 ### Fixed
 
