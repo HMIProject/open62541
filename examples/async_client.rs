@@ -99,7 +99,7 @@ async fn subscribe_node_events(client: &AsyncClient) -> anyhow::Result<()> {
     let node_id = ua::NodeId::ns0(UA_NS0ID_SERVER);
 
     let results = MonitoredItemBuilder::new([node_id.clone()])
-        .attribute_id(ua::AttributeId::EVENTNOTIFIER)
+        .attribute(ua::AttributeId::EVENTNOTIFIER_T)
         .filter(
             ua::EventFilter::init()
                 .with_select_clauses(&[

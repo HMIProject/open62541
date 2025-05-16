@@ -11,6 +11,8 @@ use crate::{ua, DataType};
 ///
 /// - [`AsyncClient::read_attribute()`](crate::AsyncClient::read_attribute)
 /// - [`Server::read_attribute()`](crate::Server::read_attribute)
+//
+// FIXME: Turn into sealed trait.
 pub trait Attribute: fmt::Debug + Copy {
     /// Attribute data type.
     type Value: DataType;
@@ -23,6 +25,8 @@ pub trait Attribute: fmt::Debug + Copy {
 ///
 /// This is used to allow handling different node types when adding nodes to the server's data tree
 /// in [`Server::add_node()`](crate::Server::add_node).
+//
+// FIXME: Turn into sealed trait.
 pub trait Attributes: DataType {
     /// Gets associated node class.
     fn node_class(&self) -> ua::NodeClass;

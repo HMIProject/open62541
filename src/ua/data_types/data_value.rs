@@ -58,7 +58,7 @@ impl DataValue {
         self
     }
 
-    #[deprecated = "use Self::with_status() instead"]
+    #[deprecated = "Use Self::with_status() instead."]
     #[must_use]
     pub fn with_status_code(self, status_code: &ua::StatusCode) -> Self {
         self.with_status(status_code)
@@ -110,7 +110,7 @@ impl DataValue {
             .then(|| ua::StatusCode::new(self.0.status))
     }
 
-    #[deprecated = "use Self::status() instead"]
+    #[deprecated = "Use Self::status() instead."]
     #[must_use]
     pub fn status_code(&self) -> Option<ua::StatusCode> {
         self.status()
