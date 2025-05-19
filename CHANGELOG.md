@@ -17,9 +17,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Breaking: When using `MonitoredItemBuilder::attribute_id()` for attributes not known at compile
   time, monitored items yield values of `MonitoredItemValue`.
-- Breaking: Replace `time::OffsetDateTime` with `time::UtcDateTime` in conversions from/to
+- Breaking: Replace `time::OffsetDateTime` with `time::UtcDateTime` in conversions from and/or to
   `ua::DateTime`.
+- Breaking: Remove methods `ua::DataValue::status_code()` and `ua::DataValue::with_status_code()`
+  deprecated in 0.7.1. Use `status()` and/or `with_status()` instead.
+- Breaking: Remove method `ua::String::as_slice()` deprecated in 0.5.0. Use `as_bytes()` instead.
 - Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.82.
+- Mark `AsyncMonitoredItem::into_stream()` as deprecated. Use the `Stream` implementation of this
+  type directly instead.
 
 ### Fixed
 
