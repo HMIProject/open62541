@@ -378,7 +378,7 @@ macro_rules! data_type {
                 // in it, no matter how deeply nested.
                 unsafe {
                     open62541_sys::UA_clear(
-                        std::ptr::addr_of_mut!(self.0).cast::<std::ffi::c_void>(),
+                        (&raw mut self.0).cast::<std::ffi::c_void>(),
                         <Self as $crate::DataType>::data_type(),
                     )
                 }
@@ -393,11 +393,7 @@ macro_rules! data_type {
             fn data_type() -> *const open62541_sys::UA_DataType {
                 // PANIC: Value must fit into `usize` to allow indexing.
                 let index = usize::try_from(open62541_sys::$index).unwrap();
-                // SAFETY: We use this static variable only read-only.
-                #[expect(clippy::allow_attributes, reason = "non-static condition")]
-                #[allow(unused_unsafe, reason = "unsafe only before Rust 1.82")]
-                // This was unsafe only before Rust 1.82.
-                let ua_types = unsafe { std::ptr::addr_of!(open62541_sys::UA_TYPES) };
+                let ua_types = &raw const open62541_sys::UA_TYPES;
                 // SAFETY: Pointer is non-zero, aligned, correct type.
                 // PANIC: The given index is valid within `UA_TYPES`.
                 unsafe { (*ua_types).get(index) }.unwrap()
@@ -413,7 +409,7 @@ macro_rules! data_type {
                 let this = std::mem::ManuallyDrop::new(self);
                 // SAFETY: Aliasing memory temporarily is safe because destructor will not be
                 // called.
-                unsafe { std::ptr::read(std::ptr::addr_of!(this.0)) }
+                unsafe { std::ptr::read(&raw const this.0) }
             }
         }
 

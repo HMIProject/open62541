@@ -388,7 +388,7 @@ impl Server {
                 // changed and it is only used in the scope of the function. This means ownership is
                 // preserved and passing by value is safe here.
                 DataType::to_raw_copy(namespace_uri),
-                ptr::addr_of_mut!(found_index),
+                &raw mut found_index,
             )
         });
         if !status_code.is_good() {

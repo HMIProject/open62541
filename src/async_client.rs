@@ -1,6 +1,6 @@
 use std::{
     ffi::c_void,
-    ptr, slice,
+    slice,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -606,7 +606,7 @@ async fn service_request<R: ServiceRequest>(
             Some(callback_c::<R>),
             R::Response::data_type(),
             Cb::<R>::prepare(callback),
-            ptr::addr_of_mut!(request_id),
+            &raw mut request_id,
         )
     });
     // The request itself fails when the client is not connected (or the secure session has not been
