@@ -10,7 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Add `MonitoredItemBuilder::attribute()` to select monitored attribute at compile time, yielding
-  values of the expected type.
+  values of the expected `DataValue` subtype.
 - Add `MonitoredItemValue` enum wrapping both data change and event monitored item notifications.
 
 ### Changed

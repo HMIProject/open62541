@@ -13,7 +13,8 @@ use futures_core::Stream;
 use tokio::sync::mpsc;
 
 use crate::{
-    attributes, ua, AsyncSubscription, Attribute, DataType as _, Error, MonitoringFilter, Result,
+    attributes, ua, AsyncSubscription, Attribute, DataType as _, DataValue, Error,
+    MonitoringFilter, Result,
 };
 
 #[derive(Debug)]
@@ -399,11 +400,11 @@ pub struct DataChange<T: Attribute>(PhantomData<T>);
 impl<T: DataChangeAttribute + Send + Sync + 'static> MonitoredItemKind for DataChange<T> {
     // TODO: Use more specific type. Return appropriate value for attribute `T`, but still allow
     // access to other data from `DataValue` such as timestamps.
-    type Value = ua::DataValue;
+    type Value = Result<DataValue<T::Value>>;
 
     fn map_value(value: MonitoredItemValue) -> Self::Value {
         match value {
-            MonitoredItemValue::DataChange { value } => value,
+            MonitoredItemValue::DataChange { value } => value.to_generic(),
             MonitoredItemValue::Event { fields: _ } => {
                 // PANIC: Typestate uses attribute ID to enforce callback method.
                 unreachable!("unexpected event payload in data change notification");
