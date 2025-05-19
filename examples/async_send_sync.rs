@@ -2,7 +2,7 @@ use std::{pin::pin, sync::Arc};
 
 use anyhow::Context as _;
 use futures::StreamExt as _;
-use open62541::{ua, AsyncClient};
+use open62541::{ua, AsyncClient, DataValue};
 use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME;
 use tokio::task;
 
@@ -60,13 +60,13 @@ async fn watch_background(client: Arc<AsyncClient>) -> anyhow::Result<()> {
     let mut stream = pin!(monitored_item.take(3).enumerate());
 
     while let Some((index, value)) = stream.next().await {
-        println!(
-            "Node {node_id} emitted value #{index}: {:?}",
-            value
-                .value()
-                .and_then(ua::Variant::as_scalar)
-                .and_then(ua::DateTime::to_utc)
-        );
+        let value = value
+            .as_ref()
+            .map(DataValue::value)
+            .ok()
+            .and_then(ua::Variant::as_scalar)
+            .and_then(ua::DateTime::to_utc);
+        println!("Node {node_id} emitted value #{index}: {value:?}");
     }
 
     Ok(())

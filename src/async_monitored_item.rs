@@ -13,7 +13,8 @@ use futures_core::Stream;
 use tokio::sync::mpsc;
 
 use crate::{
-    attributes, ua, AsyncSubscription, Attribute, DataType as _, Error, MonitoringFilter, Result,
+    attributes, ua, AsyncSubscription, Attribute, DataType as _, DataValue, Error,
+    MonitoringFilter, Result,
 };
 
 #[derive(Debug)]
@@ -49,12 +50,36 @@ impl MonitoredItemBuilder<DataChange<attributes::Value>> {
 impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     /// Sets attribute.
     ///
-    /// By default, monitored items emit [`ua::DataValue`]. If the attribute is set to
-    /// [`ua::AttributeId::EVENTNOTIFIER_T`], they emit `ua::Array<ua::Variant>` instead.
+    /// By default, monitored items emit [`DataValue`] of the appropriate subtype matching the given
+    /// attribute. If the attribute is set to [`ua::AttributeId::EVENTNOTIFIER_T`], they emit
+    /// `ua::Array<ua::Variant>` instead.
     ///
     /// Default value is [`ua::AttributeId::VALUE_T`].
     ///
     /// See [`Self::attribute_id()`] to set the attribute ID at runtime.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use open62541::{DataValue, MonitoredItemBuilder, MonitoredItemValue, ua};
+    /// use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME;
+    ///
+    /// # async fn wrap(subscription: open62541::AsyncSubscription) -> open62541::Result<()> {
+    /// let node_ids = [ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME)];
+    ///
+    /// let mut results = MonitoredItemBuilder::new(node_ids)
+    ///     .attribute(ua::AttributeId::BROWSENAME_T)
+    ///     .create(&subscription)
+    ///     .await?;
+    /// let (_, mut monitored_item) = results.pop().unwrap()?;
+    ///
+    /// if let Some(value) = monitored_item.next().await {
+    ///     // Typed value for attribute `BROWSENAME` above.
+    ///     let value: DataValue<ua::QualifiedName> = value?;
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     #[must_use]
     pub fn attribute<T: MonitoredItemAttribute>(
         self,
@@ -92,6 +117,30 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     /// Default value is [`ua::AttributeId::VALUE`].
     ///
     /// See [`ua::MonitoredItemCreateRequest::with_attribute_id()`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use open62541::{DataValue, MonitoredItemBuilder, MonitoredItemValue, ua};
+    /// use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME;
+    ///
+    /// # async fn wrap(subscription: open62541::AsyncSubscription) -> open62541::Result<()> {
+    /// let node_ids = [ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME)];
+    /// let attribute_id = ua::AttributeId::BROWSENAME;
+    ///
+    /// let mut results = MonitoredItemBuilder::new(node_ids)
+    ///     .attribute_id(attribute_id)
+    ///     .create(&subscription)
+    ///     .await?;
+    /// let (_, mut monitored_item) = results.pop().unwrap()?;
+    ///
+    /// if let Some(value) = monitored_item.next().await {
+    ///     // Dynamically typed value for any attribute.
+    ///     let value: MonitoredItemValue = value;
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     #[must_use]
     pub fn attribute_id(self, attribute_id: ua::AttributeId) -> MonitoredItemBuilder<Unknown> {
         let Self {
@@ -285,9 +334,51 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
 
 /// Value emitted from monitored item notification.
 ///
-/// The variant depends on the attribute ID passed to [`MonitoredItemBuilder::attribute_id()`].
+/// This depends on the attribute ID passed to [`MonitoredItemBuilder::attribute_id()`].
 #[derive(Debug)]
-pub enum MonitoredItemValue {
+pub struct MonitoredItemValue(MonitoredItemValueInner);
+
+impl MonitoredItemValue {
+    #[must_use]
+    const fn data_change(value: ua::DataValue) -> Self {
+        Self(MonitoredItemValueInner::DataChange { value })
+    }
+
+    #[must_use]
+    const fn event(fields: ua::Array<ua::Variant>) -> Self {
+        Self(MonitoredItemValueInner::Event { fields })
+    }
+
+    /// Gets data change payload.
+    ///
+    /// This returns `None` for event monitored items.
+    #[must_use]
+    pub const fn value(&self) -> Option<&ua::DataValue> {
+        match &self.0 {
+            MonitoredItemValueInner::DataChange { value } => Some(value),
+            MonitoredItemValueInner::Event { fields: _ } => None,
+        }
+    }
+
+    /// Gets event payload.
+    ///
+    /// This returns `None` for data change monitored items.
+    #[must_use]
+    pub const fn fields(&self) -> Option<&[ua::Variant]> {
+        match &self.0 {
+            MonitoredItemValueInner::DataChange { value: _ } => None,
+            MonitoredItemValueInner::Event { fields } => Some(fields.as_slice()),
+        }
+    }
+
+    #[must_use]
+    fn into_inner(self) -> MonitoredItemValueInner {
+        self.0
+    }
+}
+
+#[derive(Debug)]
+enum MonitoredItemValueInner {
     /// Data change payload.
     ///
     /// This is emitted for attribute IDs other than [`ua::AttributeId::EVENTNOTIFIER`].
@@ -297,19 +388,6 @@ pub enum MonitoredItemValue {
     ///
     /// This is emitted for attribute ID [`ua::AttributeId::EVENTNOTIFIER`].
     Event { fields: ua::Array<ua::Variant> },
-}
-
-impl MonitoredItemValue {
-    /// Shortcut for accessing data change value.
-    ///
-    /// This returns `None` for [`MonitoredItemValue::Event`].
-    #[must_use]
-    pub fn value(&self) -> Option<&ua::Variant> {
-        match self {
-            MonitoredItemValue::DataChange { value } => value.value(),
-            MonitoredItemValue::Event { fields: _ } => None,
-        }
-    }
 }
 
 /// Monitored item (with asynchronous API).
@@ -397,14 +475,12 @@ pub trait MonitoredItemKind: sealed::MonitoredItemKind + Send + Sync + 'static {
 pub struct DataChange<T: Attribute>(PhantomData<T>);
 
 impl<T: DataChangeAttribute + Send + Sync + 'static> MonitoredItemKind for DataChange<T> {
-    // TODO: Use more specific type. Return appropriate value for attribute `T`, but still allow
-    // access to other data from `DataValue` such as timestamps.
-    type Value = ua::DataValue;
+    type Value = Result<DataValue<T::Value>>;
 
     fn map_value(value: MonitoredItemValue) -> Self::Value {
-        match value {
-            MonitoredItemValue::DataChange { value } => value,
-            MonitoredItemValue::Event { fields: _ } => {
+        match value.into_inner() {
+            MonitoredItemValueInner::DataChange { value } => value.to_generic(),
+            MonitoredItemValueInner::Event { fields: _ } => {
                 // PANIC: Typestate uses attribute ID to enforce callback method.
                 unreachable!("unexpected event payload in data change notification");
             }
@@ -420,12 +496,12 @@ impl MonitoredItemKind for Event {
     type Value = ua::Array<ua::Variant>;
 
     fn map_value(value: MonitoredItemValue) -> Self::Value {
-        match value {
-            MonitoredItemValue::DataChange { value: _ } => {
+        match value.into_inner() {
+            MonitoredItemValueInner::DataChange { value: _ } => {
                 // PANIC: Typestate uses attribute ID to enforce callback method.
                 unreachable!("unexpected data change payload in event notification");
             }
-            MonitoredItemValue::Event { fields } => fields,
+            MonitoredItemValueInner::Event { fields } => fields,
         }
     }
 }
