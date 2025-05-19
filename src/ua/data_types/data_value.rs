@@ -58,12 +58,6 @@ impl DataValue {
         self
     }
 
-    #[deprecated = "Use Self::with_status() instead."]
-    #[must_use]
-    pub fn with_status_code(self, status_code: &ua::StatusCode) -> Self {
-        self.with_status(status_code)
-    }
-
     /// Gets value.
     ///
     /// This returns the value as [`ua::Variant`] if it is set. Returns `None` when the `DataValue`
@@ -108,12 +102,6 @@ impl DataValue {
         self.0
             .hasStatus()
             .then(|| ua::StatusCode::new(self.0.status))
-    }
-
-    #[deprecated = "Use Self::status() instead."]
-    #[must_use]
-    pub fn status_code(&self) -> Option<ua::StatusCode> {
-        self.status()
     }
 
     pub(crate) fn to_generic<T: DataType>(&self) -> Result<crate::DataValue<T>> {
