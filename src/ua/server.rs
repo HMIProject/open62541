@@ -1,4 +1,4 @@
-use std::ptr::{self, NonNull};
+use std::ptr::NonNull;
 
 use open62541_sys::{UA_Server, UA_Server_delete, UA_Server_newWithConfig};
 
@@ -26,7 +26,7 @@ impl Server {
     /// (e.g. logging configuration and logger instance).
     pub(crate) fn new_with_config(config: ua::ServerConfig) -> Self {
         let mut config = config.into_raw();
-        let inner = unsafe { UA_Server_newWithConfig(ptr::addr_of_mut!(config)) };
+        let inner = unsafe { UA_Server_newWithConfig(&raw mut config) };
         // PANIC: The only possible errors here are out-of-memory.
         let inner = NonNull::new(inner).expect("create UA_Server");
         Self(inner)
