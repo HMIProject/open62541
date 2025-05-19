@@ -7,19 +7,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add `MonitoredItemBuilder::attribute()` to select monitored attribute at compile time, yielding
+  values of the expected type.
+- Add `MonitoredItemValue` enum wrapping both data change and event monitored item notifications.
+
 ### Changed
 
-- Breaking: `AsyncMonitoredItem` yields `MonitoredItemValue` enum instead of `ua::DataValue`. Use
-  `MonitoredItemValue::value()` to directly get the data change value for monitored items with an
-  attribute ID other than `ua::AttributeId::EVENTNOTIFIER`.
+- Breaking: When using `MonitoredItemBuilder::attribute_id()` for attributes not known at compile
+  time, monitored items yield values of `MonitoredItemValue`.
 - Breaking: Replace `time::OffsetDateTime` with `time::UtcDateTime` in conversions from/to
   `ua::DateTime`.
 - Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.82.
 
 ### Fixed
 
-- Monitored items with the attribute ID `ua::AttributeId::EVENTNOTIFIER` are handled properly and
-  yield enum variant `MonitoredItemValue::Event`.
+- Fix runtime crash for monitored items with attribute ID `ua::AttributeId::EVENTNOTIFIER`. Using
+  `MonitoredItemBuilder::attribute()`, yielded value type is `ua::Array<ua::Variant>` (instead of
+  `ua::DataValue`, e.g. for `ua::AttributeId::VALUE`).
 
 ## [0.8.5] - 2025-05-14
 
