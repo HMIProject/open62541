@@ -50,12 +50,36 @@ impl MonitoredItemBuilder<DataChange<attributes::Value>> {
 impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     /// Sets attribute.
     ///
-    /// By default, monitored items emit [`ua::DataValue`]. If the attribute is set to
-    /// [`ua::AttributeId::EVENTNOTIFIER_T`], they emit `ua::Array<ua::Variant>` instead.
+    /// By default, monitored items emit [`DataValue`] of the appropriate subtype matching the given
+    /// attribute. If the attribute is set to [`ua::AttributeId::EVENTNOTIFIER_T`], they emit
+    /// `ua::Array<ua::Variant>` instead.
     ///
     /// Default value is [`ua::AttributeId::VALUE_T`].
     ///
     /// See [`Self::attribute_id()`] to set the attribute ID at runtime.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use open62541::{DataValue, MonitoredItemBuilder, MonitoredItemValue, ua};
+    /// use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME;
+    ///
+    /// # async fn wrap(subscription: open62541::AsyncSubscription) -> open62541::Result<()> {
+    /// let node_ids = [ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME)];
+    ///
+    /// let mut results = MonitoredItemBuilder::new(node_ids)
+    ///     .attribute(ua::AttributeId::BROWSENAME_T)
+    ///     .create(&subscription)
+    ///     .await?;
+    /// let (_, mut monitored_item) = results.pop().unwrap()?;
+    ///
+    /// if let Some(value) = monitored_item.next().await {
+    ///     // Typed value for attribute `BROWSENAME` above.
+    ///     let value: DataValue<ua::QualifiedName> = value?;
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     #[must_use]
     pub fn attribute<T: MonitoredItemAttribute>(
         self,
@@ -93,6 +117,30 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     /// Default value is [`ua::AttributeId::VALUE`].
     ///
     /// See [`ua::MonitoredItemCreateRequest::with_attribute_id()`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use open62541::{DataValue, MonitoredItemBuilder, MonitoredItemValue, ua};
+    /// use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME;
+    ///
+    /// # async fn wrap(subscription: open62541::AsyncSubscription) -> open62541::Result<()> {
+    /// let node_ids = [ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME)];
+    /// let attribute_id = ua::AttributeId::BROWSENAME;
+    ///
+    /// let mut results = MonitoredItemBuilder::new(node_ids)
+    ///     .attribute_id(attribute_id)
+    ///     .create(&subscription)
+    ///     .await?;
+    /// let (_, mut monitored_item) = results.pop().unwrap()?;
+    ///
+    /// if let Some(value) = monitored_item.next().await {
+    ///     // Dynamically typed value for any attribute.
+    ///     let value: MonitoredItemValue = value;
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     #[must_use]
     pub fn attribute_id(self, attribute_id: ua::AttributeId) -> MonitoredItemBuilder<Unknown> {
         let Self {
