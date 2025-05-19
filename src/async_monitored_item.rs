@@ -340,23 +340,36 @@ pub enum MonitoredItemValue {
     /// Data change payload.
     ///
     /// This is emitted for attribute IDs other than [`ua::AttributeId::EVENTNOTIFIER`].
+    #[doc(hidden)]
     DataChange { value: ua::DataValue },
 
     /// Event payload.
     ///
     /// This is emitted for attribute ID [`ua::AttributeId::EVENTNOTIFIER`].
+    #[doc(hidden)]
     Event { fields: ua::Array<ua::Variant> },
 }
 
 impl MonitoredItemValue {
-    /// Shortcut for accessing data change value.
+    /// Gets data change payload.
     ///
     /// This returns `None` for [`MonitoredItemValue::Event`].
     #[must_use]
-    pub fn value(&self) -> Option<&ua::Variant> {
+    pub const fn value(&self) -> Option<&ua::DataValue> {
         match self {
-            MonitoredItemValue::DataChange { value } => value.value(),
+            MonitoredItemValue::DataChange { value } => Some(value),
             MonitoredItemValue::Event { fields: _ } => None,
+        }
+    }
+
+    /// Gets event payload.
+    ///
+    /// This returns `None` for [`MonitoredItemValue::DataChange`].
+    #[must_use]
+    pub const fn fields(&self) -> Option<&[ua::Variant]> {
+        match self {
+            MonitoredItemValue::DataChange { value: _ } => None,
+            MonitoredItemValue::Event { fields } => Some(fields.as_slice()),
         }
     }
 }
