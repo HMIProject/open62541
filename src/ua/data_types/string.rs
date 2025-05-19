@@ -52,12 +52,6 @@ impl String {
         matches!(self.array_value(), ArrayValue::Empty)
     }
 
-    #[deprecated(note = "use `Self::as_bytes()` instead")]
-    #[must_use]
-    pub fn as_slice(&self) -> Option<&[u8]> {
-        self.as_bytes()
-    }
-
     /// Returns string contents as byte slice.
     ///
     /// This may return [`None`] when the string itself is invalid (as defined by OPC UA).
