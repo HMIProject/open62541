@@ -51,7 +51,7 @@ pub(super) async fn call(
 
     for item_to_create in items_to_create {
         // TODO: Think about appropriate buffer size or let the caller decide.
-        let (st_tx, st_rx) = mpsc::channel::<MonitoredItemValue>(MONITORED_ITEM_BUFFER_SIZE);
+        let (st_tx, st_rx) = mpsc::channel(MONITORED_ITEM_BUFFER_SIZE);
 
         // `open62541` requires one set of notification/delete callback and context per monitored
         // item in the request.
@@ -171,7 +171,7 @@ unsafe extern "C" fn data_change_notification_callback_c(
 
     // SAFETY: `mon_context` is result of `St::prepare()` and is used only before `delete()`.
     unsafe {
-        St::notify(mon_context, MonitoredItemValue::DataChange { value });
+        St::notify(mon_context, MonitoredItemValue::data_change(value));
     }
 }
 
@@ -202,7 +202,7 @@ unsafe extern "C" fn event_notification_callback_c(
 
     // SAFETY: `mon_context` is result of `St::prepare()` and is used only before `delete()`.
     unsafe {
-        St::notify(mon_context, MonitoredItemValue::Event { fields });
+        St::notify(mon_context, MonitoredItemValue::event(fields));
     }
 }
 

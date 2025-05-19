@@ -334,44 +334,60 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
 
 /// Value emitted from monitored item notification.
 ///
-/// The variant depends on the attribute ID passed to [`MonitoredItemBuilder::attribute_id()`].
+/// This depends on the attribute ID passed to [`MonitoredItemBuilder::attribute_id()`].
 #[derive(Debug)]
-pub enum MonitoredItemValue {
-    /// Data change payload.
-    ///
-    /// This is emitted for attribute IDs other than [`ua::AttributeId::EVENTNOTIFIER`].
-    #[doc(hidden)]
-    DataChange { value: ua::DataValue },
-
-    /// Event payload.
-    ///
-    /// This is emitted for attribute ID [`ua::AttributeId::EVENTNOTIFIER`].
-    #[doc(hidden)]
-    Event { fields: ua::Array<ua::Variant> },
-}
+pub struct MonitoredItemValue(MonitoredItemValueInner);
 
 impl MonitoredItemValue {
+    #[must_use]
+    const fn data_change(value: ua::DataValue) -> Self {
+        Self(MonitoredItemValueInner::DataChange { value })
+    }
+
+    #[must_use]
+    const fn event(fields: ua::Array<ua::Variant>) -> Self {
+        Self(MonitoredItemValueInner::Event { fields })
+    }
+
     /// Gets data change payload.
     ///
-    /// This returns `None` for [`MonitoredItemValue::Event`].
+    /// This returns `None` for event monitored items.
     #[must_use]
     pub const fn value(&self) -> Option<&ua::DataValue> {
-        match self {
-            MonitoredItemValue::DataChange { value } => Some(value),
-            MonitoredItemValue::Event { fields: _ } => None,
+        match &self.0 {
+            MonitoredItemValueInner::DataChange { value } => Some(value),
+            MonitoredItemValueInner::Event { fields: _ } => None,
         }
     }
 
     /// Gets event payload.
     ///
-    /// This returns `None` for [`MonitoredItemValue::DataChange`].
+    /// This returns `None` for data change monitored items.
     #[must_use]
     pub const fn fields(&self) -> Option<&[ua::Variant]> {
-        match self {
-            MonitoredItemValue::DataChange { value: _ } => None,
-            MonitoredItemValue::Event { fields } => Some(fields.as_slice()),
+        match &self.0 {
+            MonitoredItemValueInner::DataChange { value: _ } => None,
+            MonitoredItemValueInner::Event { fields } => Some(fields.as_slice()),
         }
     }
+
+    #[must_use]
+    fn into_inner(self) -> MonitoredItemValueInner {
+        self.0
+    }
+}
+
+#[derive(Debug)]
+enum MonitoredItemValueInner {
+    /// Data change payload.
+    ///
+    /// This is emitted for attribute IDs other than [`ua::AttributeId::EVENTNOTIFIER`].
+    DataChange { value: ua::DataValue },
+
+    /// Event payload.
+    ///
+    /// This is emitted for attribute ID [`ua::AttributeId::EVENTNOTIFIER`].
+    Event { fields: ua::Array<ua::Variant> },
 }
 
 /// Monitored item (with asynchronous API).
@@ -464,9 +480,9 @@ impl<T: DataChangeAttribute + Send + Sync + 'static> MonitoredItemKind for DataC
     type Value = Result<DataValue<T::Value>>;
 
     fn map_value(value: MonitoredItemValue) -> Self::Value {
-        match value {
-            MonitoredItemValue::DataChange { value } => value.to_generic(),
-            MonitoredItemValue::Event { fields: _ } => {
+        match value.into_inner() {
+            MonitoredItemValueInner::DataChange { value } => value.to_generic(),
+            MonitoredItemValueInner::Event { fields: _ } => {
                 // PANIC: Typestate uses attribute ID to enforce callback method.
                 unreachable!("unexpected event payload in data change notification");
             }
@@ -482,12 +498,12 @@ impl MonitoredItemKind for Event {
     type Value = ua::Array<ua::Variant>;
 
     fn map_value(value: MonitoredItemValue) -> Self::Value {
-        match value {
-            MonitoredItemValue::DataChange { value: _ } => {
+        match value.into_inner() {
+            MonitoredItemValueInner::DataChange { value: _ } => {
                 // PANIC: Typestate uses attribute ID to enforce callback method.
                 unreachable!("unexpected data change payload in event notification");
             }
-            MonitoredItemValue::Event { fields } => fields,
+            MonitoredItemValueInner::Event { fields } => fields,
         }
     }
 }
