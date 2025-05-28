@@ -578,7 +578,6 @@ dependencies = [
  "env_logger",
  "futures",
  "futures-channel",
- "futures-core",
  "futures-util",
  "itertools",
  "log",
