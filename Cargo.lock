@@ -578,7 +578,7 @@ dependencies = [
  "env_logger",
  "futures",
  "futures-channel",
- "futures-util",
+ "futures-core",
  "itertools",
  "log",
  "open62541-sys",
