@@ -299,7 +299,7 @@ struct ServerState {
 
 impl ServerState {
     #[must_use]
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             mutex: Mutex::new(ServerStateInner::Idle),
             condvar: Condvar::new(),
@@ -319,7 +319,6 @@ impl ServerState {
         self.condvar.notify_all();
     }
 
-    #[must_use]
     fn wait_while(
         &self,
         f: impl Fn(&ServerStateInner) -> bool,
@@ -1646,7 +1645,7 @@ impl ServerRunner {
                 state.write(ServerStateInner::Shutdown { err: true });
                 return Err(err);
             }
-        };
+        }
 
         // Compile-time assertion to make sure that the sentinel value was still around for the call
         // above (including any branches that exit early with `?` or `return`): only when the server
@@ -1691,7 +1690,7 @@ impl ServerRunner {
                 state.write(ServerStateInner::Startup { err: true });
                 return Err(err);
             }
-        };
+        }
 
         while !is_cancelled() {
             // Track time of iteration start to report iteration times below.

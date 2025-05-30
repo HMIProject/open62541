@@ -1,6 +1,6 @@
 use open62541::ServerBuilder;
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     env_logger::init();
 
     let (server, runner) = ServerBuilder::default()
@@ -14,7 +14,7 @@ fn main() -> anyhow::Result<()> {
             println!("No discovery URLs");
         }
         Some(urls) => {
-            println!("Discovery URLs: {:?}", urls);
+            println!("Discovery URLs: {urls:?}");
 
             if let Some(tail) = urls
                 .as_slice()
@@ -32,6 +32,4 @@ fn main() -> anyhow::Result<()> {
     }
 
     handle.join().unwrap();
-
-    Ok(())
 }
