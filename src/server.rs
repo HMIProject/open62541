@@ -1466,19 +1466,13 @@ impl Server {
     }
 
     /// Gets server statistics.
-    ///
-    /// # Safety
-    ///
-    /// This must only be called when no other server operations are underway, on this instance or
-    /// any of its clones (including background activity). In other words, you must have exclusive
-    /// access to the underlying server and it must not be operating.
-    //
-    // TODO: Lift this requirement when `UA_Server_getStatistics()` has been made `UA_THREADSAFE`.
-    // <https://github.com/open62541/open62541/pull/7190>
     #[must_use]
-    pub unsafe fn statistics(&self) -> ua::ServerStatistics {
+    pub fn statistics(&self) -> ua::ServerStatistics {
         unsafe {
-            ua::ServerStatistics::from_raw(UA_Server_getStatistics(self.0.as_ptr().cast_mut()))
+            ua::ServerStatistics::from_raw(UA_Server_getStatistics(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.0.as_ptr().cast_mut(),
+            ))
         }
     }
 }

@@ -27,6 +27,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.83.
 - Mark `AsyncMonitoredItem::into_stream()` as deprecated. Use the `Stream` implementation of this
   type directly instead.
+- Remove `unsafe` qualifier from `Server::statistics()`, it may now be be called concurrently.
 - Upgrade to open62541 version
   [1.4.12](https://github.com/open62541/open62541/releases/tag/v1.4.12).
 

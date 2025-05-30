@@ -138,9 +138,7 @@ fn read_attribute(
 
 fn statistics_task(server: &Server, cancelled: &AtomicBool) {
     while !cancelled.load(Ordering::Relaxed) {
-        // SAFETY: This is not actually safe, but there is no other way to get the server
-        // statistics at the moment.
-        let statistics = unsafe { server.statistics() };
+        let statistics = server.statistics();
         println!("{statistics:?}");
         thread::sleep(Duration::from_millis(1000));
     }
