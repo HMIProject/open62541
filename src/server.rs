@@ -334,17 +334,12 @@ impl ServerState {
 #[derive(Debug, Clone, Copy)]
 enum ServerStateInner {
     Idle,
-
-    /// `UA_Server_run_startup()` has returned.
-    Startup {
-        err: bool,
-    },
-
-    /// `UA_Server_run_shutdown()` has returned.
-    Shutdown {
-        #[expect(dead_code, reason = "Match `Self::Startup`.")]
-        err: bool,
-    },
+    /// An error has occurred.
+    Error,
+    /// `UA_Server_run_startup()` has returned successfully.
+    Startup,
+    /// `UA_Server_run_shutdown()` has returned successfully.
+    Shutdown,
 }
 
 /// OPC UA server.
@@ -394,7 +389,7 @@ impl Server {
             .wait_while(|state| matches!(state, ServerStateInner::Idle));
 
         // If startup failed or server has already shut down again, refuse to read invalid URLs.
-        let ServerStateInner::Startup { err: false } = *state else {
+        let ServerStateInner::Startup = *state else {
             return None;
         };
 
@@ -1640,9 +1635,9 @@ impl ServerRunner {
             )
         });
         match Error::verify_good(&status_code) {
-            Ok(()) => state.write(ServerStateInner::Shutdown { err: false }),
+            Ok(()) => state.write(ServerStateInner::Shutdown),
             Err(err) => {
-                state.write(ServerStateInner::Shutdown { err: true });
+                state.write(ServerStateInner::Error);
                 return Err(err);
             }
         }
@@ -1685,9 +1680,9 @@ impl ServerRunner {
             )
         });
         match Error::verify_good(&status_code) {
-            Ok(()) => state.write(ServerStateInner::Startup { err: false }),
+            Ok(()) => state.write(ServerStateInner::Startup),
             Err(err) => {
-                state.write(ServerStateInner::Startup { err: true });
+                state.write(ServerStateInner::Error);
                 return Err(err);
             }
         }
@@ -1726,9 +1721,9 @@ impl ServerRunner {
             )
         });
         match Error::verify_good(&status_code) {
-            Ok(()) => state.write(ServerStateInner::Shutdown { err: false }),
+            Ok(()) => state.write(ServerStateInner::Shutdown),
             Err(err) => {
-                state.write(ServerStateInner::Shutdown { err: true });
+                state.write(ServerStateInner::Error);
                 // Unexpected error.
                 log::error!("Shutdown of cancelled server failed with {err}");
                 // We do not forward this error to the caller: it happened during shutdown and there
