@@ -14,6 +14,8 @@ impl SecureChannelState {
 
     /// Returns mutable pointer to value.
     #[must_use]
+    #[expect(clippy::allow_attributes, reason = "non-static condition")]
+    #[allow(clippy::missing_const_for_fn, reason = "unsupported before Rust 1.87")]
     pub(crate) fn as_mut_ptr(&mut self) -> *mut UA_SecureChannelState {
         &mut self.0
     }

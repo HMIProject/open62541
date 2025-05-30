@@ -316,6 +316,8 @@ impl<T: DataType> Array<T> {
         }
     }
 
+    #[expect(clippy::allow_attributes, reason = "non-static condition")]
+    #[allow(clippy::missing_const_for_fn, reason = "unsupported before Rust 1.87")]
     #[must_use]
     pub fn as_slice_mut(&mut self) -> &mut [T] {
         match self.0 {
