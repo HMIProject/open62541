@@ -62,7 +62,7 @@ pub(crate) fn logger() -> ua::Logger {
         // Run some sanity checks. We should only ever be called on our own data structure.
         //
         // TODO: Use `std::ptr::fn_addr_eq()` when MSRV has been upgraded to Rust 1.85.
-        #[expect(unpredictable_function_pointer_comparisons, reason = "MSRV 1.81")]
+        #[expect(unpredictable_function_pointer_comparisons, reason = "MSRV 1.83")]
         {
             debug_assert!(logger.log == Some(log_c));
             debug_assert!(logger.clear == Some(clear_c));

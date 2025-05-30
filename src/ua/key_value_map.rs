@@ -144,6 +144,8 @@ impl KeyValueMap {
     /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
     /// may happen when `open62541` functions are called that take ownership of values by pointer.
     #[must_use]
+    #[expect(clippy::allow_attributes, reason = "non-static condition")]
+    #[allow(clippy::missing_const_for_fn, reason = "unsupported before Rust 1.87")]
     pub(crate) unsafe fn as_mut_ptr(&mut self) -> *mut UA_KeyValueMap {
         self.0.as_ptr()
     }
