@@ -200,6 +200,9 @@ required-features = ["mbedtls"]
 name = "server_method_callback"
 
 [[example]]
+name = "server_random_port"
+
+[[example]]
 name = "ssl_create_certificate"
 required-features = ["mbedtls", "x509"]
 
