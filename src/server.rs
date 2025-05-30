@@ -1576,7 +1576,7 @@ impl Server {
         // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE`, but the pointer it
         // returns is not changed after the server has been created: `server->config`. Documentation
         // of `UA_Server_getConfig()` tells us that the config must not be adjusted while the server
-        // is running, so we only return a non-mutable reference.
+        // is running, so we only return a immutable reference.
         //
         // TODO: Find out when exactly it is safe to access the configuration. Maybe only outside of
         // `UA_Server_run_iterate()` calls?
