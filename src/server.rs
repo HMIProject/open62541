@@ -386,7 +386,7 @@ impl Server {
     #[must_use]
     pub fn discovery_urls(&self) -> Option<ua::Array<ua::String>> {
         // The discovery URLs are only populated by `open62541` _after_ `UA_Server_run_startup()` is
-        // done setting up the underlying network sockets.
+        // done with setting up the underlying network sockets.
         let state = self
             .state
             .wait_while(|state| matches!(state, ServerStateInner::Idle));
