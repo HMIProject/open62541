@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.0] - 2025-05-30
+
 ### Added
 
 - Add `MonitoredItemBuilder::attribute()` to select monitored attribute at compile time, yielding
@@ -22,9 +24,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Remove methods `ua::DataValue::status_code()` and `ua::DataValue::with_status_code()`
   deprecated in 0.7.1. Use `status()` and/or `with_status()` instead.
 - Breaking: Remove method `ua::String::as_slice()` deprecated in 0.5.0. Use `as_bytes()` instead.
-- Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.82.
+- Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.83.
 - Mark `AsyncMonitoredItem::into_stream()` as deprecated. Use the `Stream` implementation of this
   type directly instead.
+- Upgrade to open62541 version
+  [1.4.12](https://github.com/open62541/open62541/releases/tag/v1.4.12).
 
 ### Fixed
 
@@ -472,7 +476,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
-[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.8.5...HEAD
+[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/HMIProject/open62541/compare/v0.8.5...v0.9.0
 [0.8.5]: https://github.com/HMIProject/open62541/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/HMIProject/open62541/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/HMIProject/open62541/compare/v0.8.2...v0.8.3

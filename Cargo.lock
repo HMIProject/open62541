@@ -572,7 +572,7 @@ checksum = "1261fe7e33c73b354eab43b1273a57c8f967d0391e80353e51f764ac02cf6775"
 
 [[package]]
 name = "open62541"
-version = "0.8.5"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "env_logger",
@@ -596,9 +596,9 @@ dependencies = [
 
 [[package]]
 name = "open62541-sys"
-version = "0.4.14"
+version = "0.4.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d5dffdafda1e922acf576ceb0fbf8d5a13b84454273b564391d2fb5305f3df1"
+checksum = "ac4abbe71bfd153a8719a55369ce21dbd66a774bab41eaf6ec5258540bb0cd2e"
 dependencies = [
  "bindgen",
  "cc",
