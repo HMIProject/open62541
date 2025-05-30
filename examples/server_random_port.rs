@@ -1,3 +1,5 @@
+use std::thread;
+
 use open62541::ServerBuilder;
 
 fn main() {
@@ -7,7 +9,7 @@ fn main() {
         .server_urls(&["opc.tcp://127.0.0.1:0"])
         .build();
 
-    let handle = std::thread::spawn(|| runner.run_until_cancelled(&mut || true).unwrap());
+    let handle = thread::spawn(|| runner.run_until_cancelled(&mut || true).unwrap());
 
     if let Some(urls) = server.discovery_urls() {
         println!("Discovery URLs: {urls:?}");
