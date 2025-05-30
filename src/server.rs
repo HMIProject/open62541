@@ -273,7 +273,11 @@ impl ServerBuilder {
         let server = Arc::new(ua::Server::new_with_config(config));
         let state = Arc::new(ServerState::new());
 
-        let runner = ServerRunner::new(&server, access_control_sentinel, Arc::clone(&state));
+        let runner = ServerRunner::new(
+            Arc::clone(&server),
+            access_control_sentinel,
+            Arc::clone(&state),
+        );
         let server = Server { server, state };
         (server, runner)
     }
@@ -1593,12 +1597,12 @@ pub struct ServerRunner {
 impl ServerRunner {
     #[must_use]
     fn new(
-        server: &Arc<ua::Server>,
+        server: Arc<ua::Server>,
         access_control_sentinel: Option<Box<dyn Any + Send>>,
         state: Arc<ServerState>,
     ) -> Self {
         Self {
-            server: Arc::clone(server),
+            server,
             access_control_sentinel,
             state,
         }
