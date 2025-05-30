@@ -8,7 +8,7 @@ use std::{
     any::Any,
     ffi::{c_void, CString},
     ptr,
-    sync::Arc,
+    sync::{Arc, Condvar, Mutex, MutexGuard},
     time::Instant,
 };
 
@@ -17,11 +17,12 @@ use open62541_sys::{
     UA_Server_addDataSourceVariableNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
     UA_Server_addReference, UA_Server_browse, UA_Server_browseNext, UA_Server_browseRecursive,
     UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
-    UA_Server_deleteReference, UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName,
-    UA_Server_getStatistics, UA_Server_read, UA_Server_readObjectProperty,
-    UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, UA_Server_triggerEvent,
-    UA_Server_writeDataValue, UA_Server_writeObjectProperty, UA_Server_writeValue,
-    __UA_Server_addNode, UA_STATUSCODE_BADNOTFOUND,
+    UA_Server_deleteReference, UA_Server_getConfig, UA_Server_getNamespaceByIndex,
+    UA_Server_getNamespaceByName, UA_Server_getStatistics, UA_Server_read,
+    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt, UA_Server_run_iterate,
+    UA_Server_run_shutdown, UA_Server_run_startup, UA_Server_translateBrowsePathToNodeIds,
+    UA_Server_triggerEvent, UA_Server_writeDataValue, UA_Server_writeObjectProperty,
+    UA_Server_writeValue, __UA_Server_addNode, UA_STATUSCODE_BADNOTFOUND,
 };
 
 use crate::{
@@ -270,9 +271,10 @@ impl ServerBuilder {
         } = self;
 
         let server = Arc::new(ua::Server::new_with_config(config));
+        let state = Arc::new(ServerState::new());
 
-        let runner = ServerRunner::new(&server, access_control_sentinel);
-        let server = Server { server };
+        let runner = ServerRunner::new(&server, access_control_sentinel, Arc::clone(&state));
+        let server = Server { server, state };
         (server, runner)
     }
 
@@ -289,6 +291,63 @@ impl Default for ServerBuilder {
     }
 }
 
+#[derive(Debug)]
+struct ServerState {
+    mutex: Mutex<ServerStateInner>,
+    condvar: Condvar,
+}
+
+impl ServerState {
+    #[must_use]
+    fn new() -> Self {
+        Self {
+            mutex: Mutex::new(ServerStateInner::Idle),
+            condvar: Condvar::new(),
+        }
+    }
+
+    #[must_use]
+    fn read(&self) -> ServerStateInner {
+        // PANIC: Forward poison errors to caller.
+        *self.mutex.lock().unwrap()
+    }
+
+    fn write(&self, state: ServerStateInner) {
+        // PANIC: Forward poison errors to caller.
+        *self.mutex.lock().unwrap() = state;
+
+        self.condvar.notify_all();
+    }
+
+    #[must_use]
+    fn wait_while(
+        &self,
+        f: impl Fn(&ServerStateInner) -> bool,
+    ) -> MutexGuard<'_, ServerStateInner> {
+        // PANIC: Forward poison errors to caller.
+        let state = self.mutex.lock().unwrap();
+
+        // PANIC: Forward poison errors to caller.
+        self.condvar.wait_while(state, |state| f(state)).unwrap()
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ServerStateInner {
+    Idle,
+
+    /// `UA_Server_run_startup()` has returned.
+    Startup {
+        err: bool,
+    },
+
+    /// `UA_Server_run_shutdown()` has returned.
+    Shutdown {
+        #[expect(dead_code, reason = "Match `Self::Startup`.")]
+        err: bool,
+    },
+}
+
 /// OPC UA server.
 ///
 /// This represents an OPC UA server. Nodes can be added through the several methods below.
@@ -298,6 +357,7 @@ impl Default for ServerBuilder {
 #[derive(Debug, Clone)]
 pub struct Server {
     server: Arc<ua::Server>,
+    state: Arc<ServerState>,
 }
 
 impl Server {
@@ -316,6 +376,35 @@ impl Server {
     #[must_use]
     pub fn new() -> (Self, ServerRunner) {
         ServerBuilder::default().build()
+    }
+
+    /// Gets discovery URLs.
+    ///
+    /// This is particularly useful when the server has been configured to listen on a random port.
+    ///
+    /// Note: This blocks until the server has been started. Make sure to start the server runner in
+    /// a separate thread to prevent deadlocks, with [`ServerRunner::run_until_cancelled()`].
+    // This is not part of the public API until it works with `ServerRunner::run()` too.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn discovery_urls(&self) -> Option<ua::Array<ua::String>> {
+        // The discovery URLs are only populated by `open62541` _after_ `UA_Server_run_startup()` is
+        // done setting up the underlying network sockets.
+        let state = self
+            .state
+            .wait_while(|state| matches!(state, ServerStateInner::Idle));
+
+        // If startup failed or server has already shut down again, refuse to read invalid URLs.
+        let ServerStateInner::Startup { err: false } = *state else {
+            return None;
+        };
+
+        let config = unsafe { self.config() };
+        // TODO: Adjust signature to return non-owned value instead.
+        ua::Array::from_raw_parts(
+            config.applicationDescription.discoveryUrlsSize,
+            config.applicationDescription.discoveryUrls,
+        )
     }
 
     /// Adds a new namespace to the server. Returns the index of the new namespace.
@@ -1477,6 +1566,23 @@ impl Server {
             ))
         }
     }
+
+    /// Access server configuration.
+    ///
+    /// # Safety
+    ///
+    /// External synchronization is required to prevent the server from mutating the configuration.
+    #[must_use]
+    unsafe fn config(&self) -> &UA_ServerConfig {
+        // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE`, but the pointer it
+        // returns is not changed after the server has been created: `server->config`. Documentation
+        // of `UA_Server_getConfig()` tells us that the config must not be adjusted while the server
+        // is running, so we only return a non-mutable reference.
+        //
+        // TODO: Find out when exactly it is safe to access the configuration. Maybe only outside of
+        // `UA_Server_run_iterate()` calls?
+        unsafe { &*UA_Server_getConfig(self.server.as_ptr().cast_mut()) }
+    }
 }
 
 #[derive(Debug)]
@@ -1486,14 +1592,21 @@ pub struct ServerRunner {
     /// [`AccessControl`] instances may hold additional data that must be kept alive until server is
     /// shut down. The sentinel value cleans this up when it is dropped.
     access_control_sentinel: Option<Box<dyn Any + Send>>,
+
+    state: Arc<ServerState>,
 }
 
 impl ServerRunner {
     #[must_use]
-    fn new(server: &Arc<ua::Server>, access_control_sentinel: Option<Box<dyn Any + Send>>) -> Self {
+    fn new(
+        server: &Arc<ua::Server>,
+        access_control_sentinel: Option<Box<dyn Any + Send>>,
+        state: Arc<ServerState>,
+    ) -> Self {
         Self {
             server: Arc::clone(server),
             access_control_sentinel,
+            state,
         }
     }
 
@@ -1509,8 +1622,15 @@ impl ServerRunner {
         let Self {
             server,
             access_control_sentinel,
+            state,
         } = self;
 
+        // PANIC: We consume `self` and nobody else writes the server state.
+        debug_assert!(matches!(state.read(), ServerStateInner::Idle));
+        log::info!("Running server");
+
+        // TODO: Refactor to use `UA_Server_run_startup()` and `UA_Server_run_shutdown()`. As it is,
+        // we cannot know when the server startup was completed and thus cannot write correct state.
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_runUntilInterrupt(
                 // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE` but we make
@@ -1520,7 +1640,13 @@ impl ServerRunner {
                 server.as_ptr().cast_mut(),
             )
         });
-        Error::verify_good(&status_code)?;
+        match Error::verify_good(&status_code) {
+            Ok(()) => state.write(ServerStateInner::Shutdown { err: false }),
+            Err(err) => {
+                state.write(ServerStateInner::Shutdown { err: true });
+                return Err(err);
+            }
+        };
 
         // Compile-time assertion to make sure that the sentinel value was still around for the call
         // above (including any branches that exit early with `?` or `return`): only when the server
@@ -1542,13 +1668,16 @@ impl ServerRunner {
         let Self {
             server,
             access_control_sentinel,
+            state,
         } = self;
 
+        // PANIC: We consume `self` and nobody else writes the server state.
+        debug_assert!(matches!(state.read(), ServerStateInner::Idle));
         log::info!("Starting up server");
 
         let status_code = ua::StatusCode::new(unsafe {
             // The prologue part of `UA_Server_run()`.
-            open62541_sys::UA_Server_run_startup(
+            UA_Server_run_startup(
                 // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE` but we make
                 // sure that it can only be invoked a single time (ownership of `ServerRunner`). The
                 // examples in `open62541` demonstrate that running the server in its own thread and
@@ -1556,7 +1685,13 @@ impl ServerRunner {
                 server.as_ptr().cast_mut(),
             )
         });
-        Error::verify_good(&status_code)?;
+        match Error::verify_good(&status_code) {
+            Ok(()) => state.write(ServerStateInner::Startup { err: false }),
+            Err(err) => {
+                state.write(ServerStateInner::Startup { err: true });
+                return Err(err);
+            }
+        };
 
         while !is_cancelled() {
             // Track time of iteration start to report iteration times below.
@@ -1571,7 +1706,7 @@ impl ServerRunner {
                 // callback, as `UA_Server_run_iterate()` does the required waiting. See
                 // <https://github.com/open62541/open62541/blob/d4c5aaa2a755d846d8517f96995d318a66742d42/include/open62541/server.h#L474-L483>
                 // for more information.
-                let _ = open62541_sys::UA_Server_run_iterate(
+                let _ = UA_Server_run_iterate(
                     // SAFETY: Cast to `mut` pointer. This is safe despite missing `UA_THREADSAFE`.
                     server.as_ptr().cast_mut(),
                     true,
@@ -1586,17 +1721,21 @@ impl ServerRunner {
 
         let status_code = ua::StatusCode::new(unsafe {
             // The epilogue part of `UA_Server_run()`.
-            open62541_sys::UA_Server_run_shutdown(
+            UA_Server_run_shutdown(
                 // SAFETY: Cast to `mut` pointer. This is safe despite missing `UA_THREADSAFE`.
                 server.as_ptr().cast_mut(),
             )
         });
-        if let Err(error) = Error::verify_good(&status_code) {
-            // Unexpected error.
-            log::error!("Shutdown of cancelled server failed with {error}");
-            // We do not forward the error to the caller because it happened during shutdown. Errors
-            // during startup are handled and returned above.
-            return Ok(());
+        match Error::verify_good(&status_code) {
+            Ok(()) => state.write(ServerStateInner::Shutdown { err: false }),
+            Err(err) => {
+                state.write(ServerStateInner::Shutdown { err: true });
+                // Unexpected error.
+                log::error!("Shutdown of cancelled server failed with {err}");
+                // We do not forward this error to the caller: it happened during shutdown and there
+                // is not much we can do now (errors during startup are handled and returned above).
+                return Ok(());
+            }
         }
 
         // Compile-time assertion to make sure that the sentinel value was still around for the call
