@@ -310,10 +310,9 @@ impl ServerState {
         }
     }
 
-    #[must_use]
-    fn read(&self) -> ServerStateInner {
+    fn read(&self) -> MutexGuard<'_, ServerStateInner> {
         // PANIC: Forward poison errors to caller.
-        *self.mutex.lock().unwrap()
+        self.mutex.lock().unwrap()
     }
 
     fn write(&self, state: ServerStateInner) {
@@ -1624,7 +1623,7 @@ impl ServerRunner {
         } = self;
 
         // PANIC: We consume `self` and nobody else writes the server state.
-        debug_assert!(matches!(state.read(), ServerStateInner::Idle));
+        debug_assert!(matches!(*state.read(), ServerStateInner::Idle));
         log::info!("Running server");
 
         // TODO: Refactor to use `UA_Server_run_startup()` and `UA_Server_run_shutdown()`. As it is,
@@ -1670,7 +1669,7 @@ impl ServerRunner {
         } = self;
 
         // PANIC: We consume `self` and nobody else writes the server state.
-        debug_assert!(matches!(state.read(), ServerStateInner::Idle));
+        debug_assert!(matches!(*state.read(), ServerStateInner::Idle));
         log::info!("Starting up server");
 
         let status_code = ua::StatusCode::new(unsafe {
