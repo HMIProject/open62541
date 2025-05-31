@@ -8,7 +8,7 @@ use std::{
     any::Any,
     ffi::{c_void, CString},
     ptr,
-    sync::{Arc, Condvar, Mutex, MutexGuard},
+    sync::Arc,
     time::Instant,
 };
 
@@ -24,6 +24,7 @@ use open62541_sys::{
     UA_Server_triggerEvent, UA_Server_writeDataValue, UA_Server_writeObjectProperty,
     UA_Server_writeValue, __UA_Server_addNode, UA_STATUSCODE_BADNOTFOUND,
 };
+use parking_lot::{Condvar, Mutex, MutexGuard};
 
 use crate::{
     ua, Attribute, Attributes, BrowseResult, DataType, DataValue, Error, Result,
@@ -271,7 +272,7 @@ impl ServerBuilder {
         } = self;
 
         let server = Arc::new(ua::Server::new_with_config(config));
-        let state = Arc::new(ServerState::new());
+        let state = Arc::new(RunnerState::new());
 
         let runner = ServerRunner::new(
             Arc::clone(&server),
@@ -296,46 +297,62 @@ impl Default for ServerBuilder {
 }
 
 #[derive(Debug)]
-struct ServerState {
-    mutex: Mutex<ServerStateInner>,
+struct RunnerState {
+    mutex: Mutex<RunnerStateInner>,
     condvar: Condvar,
 }
 
-impl ServerState {
+impl RunnerState {
     #[must_use]
     const fn new() -> Self {
         Self {
-            mutex: Mutex::new(ServerStateInner::Idle),
+            mutex: Mutex::new(RunnerStateInner::Idle),
             condvar: Condvar::new(),
         }
     }
 
-    fn read(&self) -> MutexGuard<'_, ServerStateInner> {
-        // PANIC: Forward poison errors to caller.
-        self.mutex.lock().unwrap()
+    #[must_use]
+    fn lock(&self) -> RunnerStateGuard<'_> {
+        RunnerStateGuard {
+            guard: self.mutex.lock(),
+            condvar: &self.condvar,
+        }
+    }
+}
+
+struct RunnerStateGuard<'a> {
+    guard: MutexGuard<'a, RunnerStateInner>,
+    condvar: &'a Condvar,
+}
+
+impl RunnerStateGuard<'_> {
+    #[must_use]
+    fn read(&self) -> RunnerStateInner {
+        *self.guard
     }
 
-    fn write(&self, state: ServerStateInner) {
-        // PANIC: Forward poison errors to caller.
-        *self.mutex.lock().unwrap() = state;
-
+    fn write(&mut self, state: RunnerStateInner) {
+        *self.guard = state;
         self.condvar.notify_all();
+        // Fairly unlock mutex to allow another thread to pick up the update, then relock the mutex.
+        // This is a fast operation when there are no threads waiting.
+        MutexGuard::bump(&mut self.guard);
     }
 
-    fn wait_while(
-        &self,
-        f: impl Fn(&ServerStateInner) -> bool,
-    ) -> MutexGuard<'_, ServerStateInner> {
-        // PANIC: Forward poison errors to caller.
-        let state = self.mutex.lock().unwrap();
+    fn yield_now(&mut self) {
+        // Fairly unlock mutex to allow another thread to read current state, then relock the mutex.
+        // This is a fast operation when there are no threads waiting.
+        MutexGuard::bump(&mut self.guard);
+    }
 
-        // PANIC: Forward poison errors to caller.
-        self.condvar.wait_while(state, |state| f(state)).unwrap()
+    fn wait_while(&mut self, f: impl Fn(RunnerStateInner) -> bool) {
+        // Unlock mutex when waiting for condition to be signalled, then relock it before returning.
+        self.condvar.wait_while(&mut self.guard, |state| f(*state));
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-enum ServerStateInner {
+enum RunnerStateInner {
     Idle,
     /// An error has occurred.
     Error,
@@ -354,7 +371,7 @@ enum ServerStateInner {
 #[derive(Debug, Clone)]
 pub struct Server {
     server: Arc<ua::Server>,
-    state: Arc<ServerState>,
+    state: Arc<RunnerState>,
 }
 
 impl Server {
@@ -380,24 +397,28 @@ impl Server {
     /// This is particularly useful when the server has been configured to listen on a random port.
     ///
     /// Note: This blocks until the server has been started. Make sure to start the server runner in
-    /// a separate thread to prevent deadlocks, with [`ServerRunner::run_until_cancelled()`].
+    /// a separate thread before (or soon after) calling the method to prevent deadlocks, e.g. using
+    /// [`ServerRunner::run()`] or [`ServerRunner::run_until_cancelled()`].
+    ///
+    /// If the server could not be started or no discovery URLs are available, this returns `None`.
     // This is not part of the public API until it works with `ServerRunner::run()` too.
     #[doc(hidden)]
     #[must_use]
-    pub fn discovery_urls(&self) -> Option<ua::Array<ua::String>> {
+    pub fn discovery_urls(&mut self) -> Option<ua::Array<ua::String>> {
+        let mut state_guard = self.state.lock();
+
         // The discovery URLs are only populated by `open62541` _after_ `UA_Server_run_startup()` is
         // done with setting up the underlying network sockets.
-        let state = self
-            .state
-            .wait_while(|state| matches!(state, ServerStateInner::Idle));
+        state_guard.wait_while(|state| matches!(state, RunnerStateInner::Idle));
 
         // If startup failed or server has already shut down again, refuse to read invalid URLs.
-        let ServerStateInner::Startup = *state else {
+        let RunnerStateInner::Startup = state_guard.read() else {
             return None;
         };
 
-        let config = unsafe { self.config() };
-        // TODO: Adjust signature to return non-owned value instead.
+        // SAFETY: With `&mut self` we know that no server functions are being executed.
+        let config = unsafe { self.config(&mut state_guard) };
+
         ua::Array::from_raw_parts(
             config.applicationDescription.discoveryUrlsSize,
             config.applicationDescription.discoveryUrls,
@@ -1566,18 +1587,22 @@ impl Server {
 
     /// Access server configuration.
     ///
+    /// This requires the mutex guard from [`RunnerState::lock()`], proving that no [`ServerRunner`]
+    /// methods are being executed while the resulting reference is still active.
+    ///
     /// # Safety
     ///
-    /// External synchronization is required to prevent the server from mutating the configuration.
+    /// While the resulting reference is still active, no other server functions must be executed as
+    /// well.
     #[must_use]
-    unsafe fn config(&self) -> &UA_ServerConfig {
+    unsafe fn config<'a>(&self, _guard: &'a mut RunnerStateGuard<'_>) -> &'a UA_ServerConfig {
         // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE`, but the pointer it
         // returns is not changed after the server has been created: `server->config`. Documentation
         // of `UA_Server_getConfig()` tells us that the config must not be adjusted while the server
-        // is running, so we only return a immutable reference.
+        // is running, so we only return an immutable reference.
         //
-        // TODO: Find out when exactly it is safe to access the configuration. Maybe only outside of
-        // `UA_Server_run_iterate()` calls?
+        // In addition, by binding the lifetime of the resulting reference to the guard, we know for
+        // sure that no runner function is executed while this reference is being accessed.
         unsafe { &*UA_Server_getConfig(self.server.as_ptr().cast_mut()) }
     }
 }
@@ -1590,7 +1615,7 @@ pub struct ServerRunner {
     /// shut down. The sentinel value cleans this up when it is dropped.
     access_control_sentinel: Option<Box<dyn Any + Send>>,
 
-    state: Arc<ServerState>,
+    state: Arc<RunnerState>,
 }
 
 impl ServerRunner {
@@ -1598,7 +1623,7 @@ impl ServerRunner {
     fn new(
         server: Arc<ua::Server>,
         access_control_sentinel: Option<Box<dyn Any + Send>>,
-        state: Arc<ServerState>,
+        state: Arc<RunnerState>,
     ) -> Self {
         Self {
             server,
@@ -1615,15 +1640,18 @@ impl ServerRunner {
     /// # Errors
     ///
     /// This fails when the server cannot be started.
-    pub fn run(self) -> Result<()> {
+    pub fn run(mut self) -> Result<()> {
         let Self {
             server,
             access_control_sentinel,
             state,
-        } = self;
+        } = &mut self;
+        let access_control_sentinel = access_control_sentinel.take();
+
+        let mut state_guard = state.lock();
 
         // PANIC: We consume `self` and nobody else writes the server state.
-        debug_assert!(matches!(*state.read(), ServerStateInner::Idle));
+        debug_assert!(matches!(state_guard.read(), RunnerStateInner::Idle));
         log::info!("Running server");
 
         // TODO: Refactor to use `UA_Server_run_startup()` and `UA_Server_run_shutdown()`. As it is,
@@ -1638,9 +1666,9 @@ impl ServerRunner {
             )
         });
         match Error::verify_good(&status_code) {
-            Ok(()) => state.write(ServerStateInner::Shutdown),
+            Ok(()) => state_guard.write(RunnerStateInner::Shutdown),
             Err(err) => {
-                state.write(ServerStateInner::Error);
+                state_guard.write(RunnerStateInner::Error);
                 return Err(err);
             }
         }
@@ -1661,15 +1689,18 @@ impl ServerRunner {
     /// # Errors
     ///
     /// This fails when the server cannot be started.
-    pub fn run_until_cancelled(self, is_cancelled: &mut impl FnMut() -> bool) -> Result<()> {
+    pub fn run_until_cancelled(mut self, is_cancelled: &mut impl FnMut() -> bool) -> Result<()> {
         let Self {
             server,
             access_control_sentinel,
             state,
-        } = self;
+        } = &mut self;
+        let access_control_sentinel = access_control_sentinel.take();
+
+        let mut state_guard = state.lock();
 
         // PANIC: We consume `self` and nobody else writes the server state.
-        debug_assert!(matches!(*state.read(), ServerStateInner::Idle));
+        debug_assert!(matches!(state_guard.read(), RunnerStateInner::Idle));
         log::info!("Starting up server");
 
         let status_code = ua::StatusCode::new(unsafe {
@@ -1683,9 +1714,9 @@ impl ServerRunner {
             )
         });
         match Error::verify_good(&status_code) {
-            Ok(()) => state.write(ServerStateInner::Startup),
+            Ok(()) => state_guard.write(RunnerStateInner::Startup),
             Err(err) => {
-                state.write(ServerStateInner::Error);
+                state_guard.write(RunnerStateInner::Error);
                 return Err(err);
             }
         }
@@ -1710,6 +1741,9 @@ impl ServerRunner {
                 );
             }
 
+            // Allow accessing `Server::config()` between iterations if necessary.
+            state_guard.yield_now();
+
             let time_taken = start_of_iteration.elapsed();
             log::trace!("Iterate run took {time_taken:?}");
         }
@@ -1724,9 +1758,9 @@ impl ServerRunner {
             )
         });
         match Error::verify_good(&status_code) {
-            Ok(()) => state.write(ServerStateInner::Shutdown),
+            Ok(()) => state_guard.write(RunnerStateInner::Shutdown),
             Err(err) => {
-                state.write(ServerStateInner::Error);
+                state_guard.write(RunnerStateInner::Error);
                 // Unexpected error.
                 log::error!("Shutdown of cancelled server failed with {err}");
                 // We do not forward this error to the caller: it happened during shutdown and there
@@ -1741,6 +1775,17 @@ impl ServerRunner {
         drop(access_control_sentinel);
 
         Ok(())
+    }
+}
+
+impl Drop for ServerRunner {
+    fn drop(&mut self) {
+        let mut state_guard = self.state.lock();
+
+        // Prevent deadlock when dropped without run method executed.
+        if matches!(state_guard.read(), RunnerStateInner::Idle) {
+            state_guard.write(RunnerStateInner::Error);
+        }
     }
 }
 
