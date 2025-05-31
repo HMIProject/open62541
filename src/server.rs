@@ -320,6 +320,7 @@ impl RunnerState {
     }
 }
 
+#[derive(Debug)]
 struct RunnerStateGuard<'a> {
     guard: MutexGuard<'a, RunnerStateInner>,
     condvar: &'a Condvar,
@@ -327,11 +328,11 @@ struct RunnerStateGuard<'a> {
 
 impl RunnerStateGuard<'_> {
     #[must_use]
-    fn read(&self) -> RunnerStateInner {
+    fn state(&self) -> RunnerStateInner {
         *self.guard
     }
 
-    fn write(&mut self, state: RunnerStateInner) {
+    fn set_state(&mut self, state: RunnerStateInner) {
         *self.guard = state;
         self.condvar.notify_all();
         // Fairly unlock mutex to allow another thread to pick up the update, then relock the mutex.
@@ -345,7 +346,7 @@ impl RunnerStateGuard<'_> {
         MutexGuard::bump(&mut self.guard);
     }
 
-    fn wait_while(&mut self, f: impl Fn(RunnerStateInner) -> bool) {
+    fn wait_while(&mut self, mut f: impl FnMut(RunnerStateInner) -> bool) {
         // Unlock mutex when waiting for condition to be signalled, then relock it before returning.
         self.condvar.wait_while(&mut self.guard, |state| f(*state));
     }
@@ -360,6 +361,24 @@ enum RunnerStateInner {
     Startup,
     /// `UA_Server_run_shutdown()` has returned successfully.
     Shutdown,
+}
+
+#[derive(Debug)]
+struct ServerConfigGuard<'a> {
+    config: &'a UA_ServerConfig,
+    guard: RunnerStateGuard<'a>,
+}
+
+impl ServerConfigGuard<'_> {
+    #[must_use]
+    const fn config(&self) -> &UA_ServerConfig {
+        self.config
+    }
+
+    #[must_use]
+    fn state(&self) -> RunnerStateInner {
+        self.guard.state()
+    }
 }
 
 /// OPC UA server.
@@ -398,26 +417,26 @@ impl Server {
     ///
     /// Note: This blocks until the server has been started. Make sure to start the server runner in
     /// a separate thread before (or soon after) calling the method to prevent deadlocks, e.g. using
-    /// [`ServerRunner::run()`] or [`ServerRunner::run_until_cancelled()`].
+    /// [`ServerRunner::run_until_interrupt()`] or [`ServerRunner::run_until_cancelled()`].
     ///
     /// If the server could not be started or no discovery URLs are available, this returns `None`.
-    // This is not part of the public API until it works with `ServerRunner::run()` too.
+    // Not part of public API until it works with `ServerRunner::run_until_interrupt()` too.
     #[doc(hidden)]
     #[must_use]
     pub fn discovery_urls(&self) -> Option<ua::Array<ua::String>> {
-        let mut state_guard = self.state.lock();
-
         // The discovery URLs are only populated by `open62541` _after_ `UA_Server_run_startup()` is
         // done with setting up the underlying network sockets.
-        state_guard.wait_while(|state| matches!(state, RunnerStateInner::Idle));
+        //
+        // SAFETY: Methods on `Self` do not mutate the config attributes that we read below.
+        let config_guard =
+            unsafe { self.wait_for_config(|state| !matches!(state, RunnerStateInner::Idle)) };
 
         // If startup failed or server has already shut down again, refuse to read invalid URLs.
-        let RunnerStateInner::Startup = state_guard.read() else {
+        let RunnerStateInner::Startup = config_guard.state() else {
             return None;
         };
 
-        // SAFETY: We access config attributes that are not mutated by methods on `Self`.
-        let config = unsafe { self.config(&mut state_guard) };
+        let config = config_guard.config();
 
         ua::Array::from_raw_parts(
             config.applicationDescription.discoveryUrlsSize,
@@ -1587,15 +1606,22 @@ impl Server {
 
     /// Access server configuration.
     ///
-    /// This requires the mutex guard from [`RunnerState::lock()`], proving that no [`ServerRunner`]
-    /// methods are being executed while the resulting reference is alive.
+    /// This waits for [`ServerRunner`] to be idle, i.e. either before running startup or in-between
+    /// calls to `UA_Server_run_iterate()` or after running shutdown. The runner continues only when
+    /// the returned guard is dropped. Supply callback function to wait for a specific runner state.
     ///
     /// # Safety
     ///
-    /// While the resulting reference is alive, no server functions must be executed that mutate the
-    /// config.
-    #[must_use]
-    unsafe fn config<'a>(&self, _guard: &'a mut RunnerStateGuard<'_>) -> &'a UA_ServerConfig {
+    /// While the resulting guard is alive, no other server functions outside the runner must be run
+    /// that mutate the config.
+    unsafe fn wait_for_config(
+        &self,
+        mut f: impl FnMut(RunnerStateInner) -> bool,
+    ) -> ServerConfigGuard<'_> {
+        let mut state_guard = self.state.lock();
+
+        state_guard.wait_while(|state| !f(state));
+
         // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE`, but the pointer it
         // returns is not changed after the server has been created: `server->config`. Documentation
         // of `UA_Server_getConfig()` tells us that the config must not be adjusted while the server
@@ -1603,7 +1629,12 @@ impl Server {
         //
         // In addition, by binding the lifetime of the resulting reference to the guard, we know for
         // sure that no runner function is being executed while this reference is alive.
-        unsafe { &*UA_Server_getConfig(self.server.as_ptr().cast_mut()) }
+        let config = unsafe { &*UA_Server_getConfig(self.server.as_ptr().cast_mut()) };
+
+        ServerConfigGuard {
+            config,
+            guard: state_guard,
+        }
     }
 }
 
@@ -1661,7 +1692,7 @@ impl ServerRunner {
         let mut state_guard = state.lock();
 
         // PANIC: We consume `self` and nobody else writes the server state.
-        debug_assert!(matches!(state_guard.read(), RunnerStateInner::Idle));
+        debug_assert!(matches!(state_guard.state(), RunnerStateInner::Idle));
         log::info!("Running server");
 
         // TODO: Refactor to use `UA_Server_run_startup()` and `UA_Server_run_shutdown()`. As it is,
@@ -1676,9 +1707,9 @@ impl ServerRunner {
             )
         });
         match Error::verify_good(&status_code) {
-            Ok(()) => state_guard.write(RunnerStateInner::Shutdown),
+            Ok(()) => state_guard.set_state(RunnerStateInner::Shutdown),
             Err(err) => {
-                state_guard.write(RunnerStateInner::Error);
+                state_guard.set_state(RunnerStateInner::Error);
                 return Err(err);
             }
         }
@@ -1710,7 +1741,7 @@ impl ServerRunner {
         let mut state_guard = state.lock();
 
         // PANIC: We consume `self` and nobody else writes the server state.
-        debug_assert!(matches!(state_guard.read(), RunnerStateInner::Idle));
+        debug_assert!(matches!(state_guard.state(), RunnerStateInner::Idle));
         log::info!("Starting up server");
 
         let status_code = ua::StatusCode::new(unsafe {
@@ -1724,9 +1755,9 @@ impl ServerRunner {
             )
         });
         match Error::verify_good(&status_code) {
-            Ok(()) => state_guard.write(RunnerStateInner::Startup),
+            Ok(()) => state_guard.set_state(RunnerStateInner::Startup),
             Err(err) => {
-                state_guard.write(RunnerStateInner::Error);
+                state_guard.set_state(RunnerStateInner::Error);
                 return Err(err);
             }
         }
@@ -1768,9 +1799,9 @@ impl ServerRunner {
             )
         });
         match Error::verify_good(&status_code) {
-            Ok(()) => state_guard.write(RunnerStateInner::Shutdown),
+            Ok(()) => state_guard.set_state(RunnerStateInner::Shutdown),
             Err(err) => {
-                state_guard.write(RunnerStateInner::Error);
+                state_guard.set_state(RunnerStateInner::Error);
                 // Unexpected error.
                 log::error!("Shutdown of cancelled server failed with {err}");
                 // We do not forward this error to the caller: it happened during shutdown and there
@@ -1793,8 +1824,8 @@ impl Drop for ServerRunner {
         let mut state_guard = self.state.lock();
 
         // Prevent deadlock when dropped without run method executed.
-        if matches!(state_guard.read(), RunnerStateInner::Idle) {
-            state_guard.write(RunnerStateInner::Error);
+        if matches!(state_guard.state(), RunnerStateInner::Idle) {
+            state_guard.set_state(RunnerStateInner::Error);
         }
     }
 }
