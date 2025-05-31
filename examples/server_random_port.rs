@@ -5,7 +5,7 @@ use open62541::ServerBuilder;
 fn main() {
     env_logger::init();
 
-    let (mut server, runner) = ServerBuilder::default()
+    let (server, runner) = ServerBuilder::default()
         .server_urls(&["opc.tcp://127.0.0.1:0"])
         .build();
 

@@ -404,7 +404,7 @@ impl Server {
     // This is not part of the public API until it works with `ServerRunner::run()` too.
     #[doc(hidden)]
     #[must_use]
-    pub fn discovery_urls(&mut self) -> Option<ua::Array<ua::String>> {
+    pub fn discovery_urls(&self) -> Option<ua::Array<ua::String>> {
         let mut state_guard = self.state.lock();
 
         // The discovery URLs are only populated by `open62541` _after_ `UA_Server_run_startup()` is
@@ -416,7 +416,7 @@ impl Server {
             return None;
         };
 
-        // SAFETY: With `&mut self` we know that no server functions are being executed.
+        // SAFETY: We access config attributes that are not mutated by methods on `Self`.
         let config = unsafe { self.config(&mut state_guard) };
 
         ua::Array::from_raw_parts(
@@ -1588,12 +1588,12 @@ impl Server {
     /// Access server configuration.
     ///
     /// This requires the mutex guard from [`RunnerState::lock()`], proving that no [`ServerRunner`]
-    /// methods are being executed while the resulting reference is still active.
+    /// methods are being executed while the resulting reference is alive.
     ///
     /// # Safety
     ///
-    /// While the resulting reference is still active, no other server functions must be executed as
-    /// well.
+    /// While the resulting reference is alvie, no server functions must be executed that mutate the
+    /// config.
     #[must_use]
     unsafe fn config<'a>(&self, _guard: &'a mut RunnerStateGuard<'_>) -> &'a UA_ServerConfig {
         // SAFETY: Cast to `mut` pointer. Function is not marked `UA_THREADSAFE`, but the pointer it
@@ -1602,7 +1602,7 @@ impl Server {
         // is running, so we only return an immutable reference.
         //
         // In addition, by binding the lifetime of the resulting reference to the guard, we know for
-        // sure that no runner function is executed while this reference is being accessed.
+        // sure that no runner function is being executed while this reference is alive.
         unsafe { &*UA_Server_getConfig(self.server.as_ptr().cast_mut()) }
     }
 }
