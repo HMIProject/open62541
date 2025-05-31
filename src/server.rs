@@ -1495,6 +1495,16 @@ impl ServerRunner {
         }
     }
 
+    /// Runs the server.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the server cannot be started.
+    #[deprecated = "Use `Self::run_until_interrupt()` instead."]
+    pub fn run(self) -> Result<()> {
+        self.run_until_interrupt()
+    }
+
     /// Runs the server until interrupted.
     ///
     /// The server is shut down cleanly upon receiving the `SIGINT` signal at which point the method
@@ -1503,7 +1513,7 @@ impl ServerRunner {
     /// # Errors
     ///
     /// This fails when the server cannot be started.
-    pub fn run(self) -> Result<()> {
+    pub fn run_until_interrupt(self) -> Result<()> {
         let Self {
             server,
             access_control_sentinel,

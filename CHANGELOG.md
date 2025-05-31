@@ -27,6 +27,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Adjust signature of `ServerRunner::run_until_cancelled()` to use closure instead of a
   reference to a closure.
 - Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.83.
+- Rename `ServerRunner::run()` to `ServerRunner::run_until_interrupt()`. Deprecate former method.
 - Mark `AsyncMonitoredItem::into_stream()` as deprecated. Use the `Stream` implementation of this
   type directly instead.
 - Remove `unsafe` qualifier from `Server::statistics()`, it may now be be called concurrently.

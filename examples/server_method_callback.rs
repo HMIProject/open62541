@@ -81,7 +81,7 @@ fn main() -> anyhow::Result<()> {
     // Start runner task that handles incoming connections (events).
     let runner_task_handle = thread::spawn(|| -> anyhow::Result<()> {
         println!("Running server");
-        runner.run()?;
+        runner.run_until_interrupt()?;
         Ok(())
     });
 
