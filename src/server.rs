@@ -1592,7 +1592,7 @@ impl Server {
     ///
     /// # Safety
     ///
-    /// While the resulting reference is alvie, no server functions must be executed that mutate the
+    /// While the resulting reference is alive, no server functions must be executed that mutate the
     /// config.
     #[must_use]
     unsafe fn config<'a>(&self, _guard: &'a mut RunnerStateGuard<'_>) -> &'a UA_ServerConfig {
