@@ -89,7 +89,7 @@
 //!
 //! // Define data nodes on `server`.
 //!
-//! runner.run()?;
+//! runner.run_until_interrupt()?;
 //! #
 //! # Ok(())
 //! # }

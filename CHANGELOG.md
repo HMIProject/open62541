@@ -24,7 +24,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Remove methods `ua::DataValue::status_code()` and `ua::DataValue::with_status_code()`
   deprecated in 0.7.1. Use `status()` and/or `with_status()` instead.
 - Breaking: Remove method `ua::String::as_slice()` deprecated in 0.5.0. Use `as_bytes()` instead.
+- Breaking: Adjust signature of `ServerRunner::run_until_cancelled()` to use closure instead of a
+  reference to a closure.
 - Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.83.
+- Rename `ServerRunner::run()` to `ServerRunner::run_until_interrupt()`. Deprecate former method.
 - Mark `AsyncMonitoredItem::into_stream()` as deprecated. Use the `Stream` implementation of this
   type directly instead.
 - Remove `unsafe` qualifier from `Server::statistics()`, it may now be be called concurrently.

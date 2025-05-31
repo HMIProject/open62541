@@ -107,7 +107,7 @@ fn main() -> anyhow::Result<()> {
 
     println!("Running server");
 
-    runner.run()?;
+    runner.run_until_interrupt()?;
 
     println!("Exiting");
 
