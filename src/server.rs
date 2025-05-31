@@ -1546,7 +1546,7 @@ impl ServerRunner {
     /// # Errors
     ///
     /// This fails when the server cannot be started.
-    pub fn run_until_cancelled(self, is_cancelled: &mut impl FnMut() -> bool) -> Result<()> {
+    pub fn run_until_cancelled(self, mut is_cancelled: impl FnMut() -> bool) -> Result<()> {
         let Self {
             server,
             access_control_sentinel,
