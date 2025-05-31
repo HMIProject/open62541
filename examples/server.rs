@@ -167,7 +167,7 @@ fn server_task(
 fn runner_task(runner: ServerRunner) -> anyhow::Result<()> {
     println!("Running server");
 
-    runner.run()?;
+    runner.run_until_interrupt()?;
 
     Ok(())
 }
