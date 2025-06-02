@@ -1,6 +1,6 @@
-use std::{ffi::CString, fmt};
+use std::{ffi::CString, fmt, hash};
 
-use open62541_sys::UA_QUALIFIEDNAME_ALLOC;
+use open62541_sys::{UA_QualifiedName_hash, UA_QUALIFIEDNAME_ALLOC};
 
 use crate::{ua, DataType as _};
 
@@ -53,6 +53,14 @@ impl QualifiedName {
     #[must_use]
     pub fn as_ns0(&self) -> Option<&ua::String> {
         (self.namespace_index() == 0).then(|| self.name())
+    }
+}
+
+impl hash::Hash for QualifiedName {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        let hash = unsafe { UA_QualifiedName_hash(self.as_ptr()) };
+
+        state.write_u32(hash);
     }
 }
 
