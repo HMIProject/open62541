@@ -17,9 +17,11 @@ impl DataTypeDefinition {
         };
 
         if *type_id == ua::NodeId::ns0(UA_NS0ID_STRUCTUREDEFINITION) {
-            Self::Structure(value.into_scalar().unwrap())
+            // PANIC: We have checked that the expected type ID is set.
+            Self::Structure(value.into_scalar().expect("require structure definition"))
         } else if *type_id == ua::NodeId::ns0(UA_NS0ID_ENUMDEFINITION) {
-            Self::Enum(value.into_scalar().unwrap())
+            // PANIC: We have checked that the expected type ID is set.
+            Self::Enum(value.into_scalar().expect("require enum definition"))
         } else {
             Self::Unknown(value)
         }
