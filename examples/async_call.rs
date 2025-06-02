@@ -188,7 +188,7 @@ async fn read_sparse_node_values(
 
     for node_id in node_ids {
         match node_id {
-            Some(_) => result.push(Some(values.next().expect("should have value")?)),
+            Some(_) => result.push(Some(values.next().expect("should have value"))),
             None => result.push(None),
         }
     }
@@ -208,8 +208,9 @@ fn get_arguments(value: &DataValue<ua::Variant>) -> anyhow::Result<Vec<(ua::Stri
 
     let arguments = value
         .value()
+        .context("should have value")?
         .to_array::<ua::Argument>()
-        .ok_or(anyhow::anyhow!("should have array"))?;
+        .context("should have array")?;
 
     Ok(arguments
         .iter()
