@@ -550,6 +550,7 @@ data_change_impl!(
     DisplayName,
     Description,
     WriteMask,
+    UserWriteMask,
     IsAbstract,
     Symmetric,
     InverseName,
@@ -559,12 +560,18 @@ data_change_impl!(
     Value,
     DataType,
     ValueRank,
-    ArrayDimensions,
+    // ArrayDimensions,
     AccessLevel,
-    AccessLevelEx,
+    UserAccessLevel,
     MinimumSamplingInterval,
     Historizing,
     Executable,
+    UserExecutable,
+    DataTypeDefinition,
+    // RolePermissions,
+    // UserRolePermissions,
+    AccessRestrictions,
+    AccessLevelEx,
 );
 
 impl MonitoredItemAttribute for attributes::EventNotifier {

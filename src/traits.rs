@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::Debug;
 
 use open62541_sys::UA_DataType;
 
@@ -11,7 +11,7 @@ use crate::{ua, DataType};
 ///
 /// [`AttributeWriteMask`]: crate::ua::AttributeWriteMask
 /// [`UInt32`]: crate::ua::UInt32
-pub trait DataTypeExt {
+pub trait DataTypeExt: Debug + Clone {
     /// Inner type sent over the wire.
     type Inner: DataType;
 
@@ -44,7 +44,7 @@ impl<T: DataType> DataTypeExt for T {
 /// - [`Server::read_attribute()`](crate::Server::read_attribute)
 //
 // FIXME: Turn into sealed trait.
-pub trait Attribute: fmt::Debug + Copy {
+pub trait Attribute: Debug + Copy {
     /// Attribute data type.
     type Value: DataTypeExt;
 
@@ -123,7 +123,7 @@ where
 /// Monitoring filter.
 ///
 /// This is used as extensible parameter in [`ua::MonitoringParameters::with_filter()`].
-pub trait MonitoringFilter: fmt::Debug + Send + Sync + 'static {
+pub trait MonitoringFilter: Debug + Send + Sync + 'static {
     fn to_extension_object(&self) -> ua::ExtensionObject;
 }
 
@@ -136,7 +136,7 @@ impl MonitoringFilter for Box<dyn MonitoringFilter> {
 /// Filter operand.
 ///
 /// This is used as extensible parameter in [`ua::ContentFilterElement::with_filter_operands()`].
-pub trait FilterOperand: fmt::Debug + Send + Sync + 'static {
+pub trait FilterOperand: Debug + Send + Sync + 'static {
     fn to_extension_object(&self) -> ua::ExtensionObject;
 }
 

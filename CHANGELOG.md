@@ -11,10 +11,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Add bitset types `ua::AccessLevelExType`, `ua::AccessRestrictionType`, `ua::AttributeWriteMask`,
   `ua::EventNotifierType`.
+- Add `ua::Duration`.
+- Add `ua::StructureDefinition` stub.
+- Add `ua::DataTypeDefinition` enum, parent of `ua::EnumDefinition` and `ua::StructureDefinition`.
 - Implement `std::hash::Hash` for `ua::QualifiedName`.
 - Add method `ua::DataValue::cast()` to create typed `DataValue` instance that returns appropriate
   value type with `DataValue::scalar_value()`, `DataValue::into_scalar_value()`.
 - Add method `DataValue::status()` to fetch underlying status code like `ua::DataValue::status()`.
+- Add support for remaining non-array node attributes.
 
 ### Changed
 
