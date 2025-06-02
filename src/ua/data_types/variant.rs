@@ -105,7 +105,7 @@ impl Variant {
         self.scalar_data::<T>()
             // SAFETY: Inner pointer holds valid data and we have exclusive access through `self`.
             .and_then(|data| unsafe { data.cast_mut().as_mut() })
-            .map(T::move_raw)
+            .map(T::take_raw)
     }
 
     #[must_use]

@@ -73,7 +73,7 @@ impl DataValue {
     pub(crate) fn into_value(mut self) -> Option<ua::Variant> {
         self.0
             .hasValue()
-            .then(|| DataType::move_raw(&mut self.0.value))
+            .then(|| DataType::take_raw(&mut self.0.value))
     }
 
     #[must_use]

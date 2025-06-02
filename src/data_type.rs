@@ -59,12 +59,12 @@ pub unsafe trait DataType: Debug + Clone {
     ///
     /// Ownership of the value passes to `Self`. This must only be used for values that are not
     /// contained within other values that may be dropped (such as attributes in other data types).
-    /// In this case use [`clone_raw()`] or [`move_raw()`] instead to clone or move data instead of
+    /// In this case use [`clone_raw()`] or [`take_raw()`] instead to clone or move data instead of
     /// taking ownership.
     ///
     /// [`UA_new()`]: open62541_sys::UA_new
     /// [`clone_raw()`]: DataType::clone_raw
-    /// [`move_raw()`]: DataType::move_raw
+    /// [`take_raw()`]: DataType::take_raw
     #[must_use]
     unsafe fn from_raw(src: Self::Inner) -> Self;
 
@@ -158,7 +158,7 @@ pub unsafe trait DataType: Debug + Clone {
     ///
     /// This moves an existing value and uses [`UA_init()`] to leave an initialized value behind.
     #[must_use]
-    fn move_raw(src: &mut Self::Inner) -> Self {
+    fn take_raw(src: &mut Self::Inner) -> Self {
         // Take out source value and leave behind a freshly initialized value that gets cleaned up
         // when the external owner frees memory.
         let src = mem::replace(src, Self::init().into_raw());
