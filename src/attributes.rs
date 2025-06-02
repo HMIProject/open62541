@@ -29,6 +29,12 @@ macro_rules! attribute_impl {
 }
 
 // Attribute types taken from <https://reference.opcfoundation.org/Core/Part3/v105/docs/5>.
+//
+// Note: Array values are not supported yet in their typed form: previously, any such attempt would
+// fail, because converting to `DataValue` expects scalar values.
+//
+// To give us some time to think about the best, typed representation of such non-scalar values, we
+// remove their `impl` for now. Access is still possible with the non-typed attribute methods.
 attribute_impl!(
     (NodeId, NodeId),
     (NodeClass, NodeClass),
