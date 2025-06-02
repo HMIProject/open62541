@@ -7,7 +7,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
 - Implement `std::hash::Hash` for `ua::QualifiedName`.
+- Add method `ua::DataValue::cast()` to create typed `DataValue` instance that returns appropriate
+  value type with `DataValue::value()`, `DataValue::into_value()`.
+
+### Changed
+
+- Breaking: Return error from `DataValue::value()`, ``DataValue::into_value()` when value is unset
+  or cast fails.
+- Breaking: Methods `value()`, `source_timestamp()`, `server_timestamp()`, `source_picoseconds()`,
+  `server_picoseconds()` of `DataValue` are no longer `const`.
 
 ## [0.9.0] - 2025-06-02
 

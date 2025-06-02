@@ -1,4 +1,4 @@
-use crate::{ua, DataType, Result};
+use crate::{ua, DataType};
 
 crate::data_type!(DataValue);
 
@@ -70,6 +70,13 @@ impl DataValue {
     }
 
     #[must_use]
+    pub(crate) fn into_value(mut self) -> Option<ua::Variant> {
+        self.0
+            .hasValue()
+            .then(|| DataType::move_raw(&mut self.0.value))
+    }
+
+    #[must_use]
     pub fn source_timestamp(&self) -> Option<&ua::DateTime> {
         self.0
             .hasSourceTimestamp()
@@ -104,7 +111,15 @@ impl DataValue {
             .then(|| ua::StatusCode::new(self.0.status))
     }
 
-    pub(crate) fn to_generic<T: DataType>(&self) -> Result<crate::DataValue<T>> {
+    /// Casts to specific value type.
+    ///
+    /// This adjusts the target type of `self`, casting the inner value to the specified data type
+    /// when read with [`Self::value()`]. This should be used in situations when the expected type
+    /// can be deduced from circumstances and typed data values can be returned for convenience.
+    ///
+    /// [`Self::value()`]: crate::DataValue::value
+    #[must_use]
+    pub fn cast<T: DataType>(self) -> crate::DataValue<T> {
         crate::DataValue::new(self)
     }
 }

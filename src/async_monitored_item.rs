@@ -475,11 +475,11 @@ pub trait MonitoredItemKind: sealed::MonitoredItemKind + Send + Sync + 'static {
 pub struct DataChange<T: Attribute>(PhantomData<T>);
 
 impl<T: DataChangeAttribute + Send + Sync + 'static> MonitoredItemKind for DataChange<T> {
-    type Value = Result<DataValue<T::Value>>;
+    type Value = DataValue<T::Value>;
 
     fn map_value(value: MonitoredItemValue) -> Self::Value {
         match value.into_inner() {
-            MonitoredItemValueInner::DataChange { value } => value.to_generic(),
+            MonitoredItemValueInner::DataChange { value } => value.cast(),
             MonitoredItemValueInner::Event { fields: _ } => {
                 // PANIC: Typestate uses attribute ID to enforce callback method.
                 unreachable!("unexpected event payload in data change notification");
