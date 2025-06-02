@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use anyhow::Context as _;
-use open62541::{ua, AsyncClient, AsyncSubscription, DataValue};
+use open62541::{ua, AsyncClient, AsyncSubscription};
 use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
 };
@@ -71,7 +71,7 @@ async fn monitor_background(
         let node_id = node_id.clone();
         async move {
             while let Some(value) = monitored_item.next().await {
-                let value = value.as_ref().map(DataValue::value);
+                let value = value.scalar_value();
                 println!("Received value from node {node_id}: {value:?}");
             }
             Ok::<(), anyhow::Error>(())

@@ -86,18 +86,32 @@ impl Variant {
 
     #[must_use]
     pub fn as_scalar<T: DataType>(&self) -> Option<&T> {
-        self.scalar_data::<T>().map(T::raw_ref)
+        self.scalar_data::<T>()
+            // SAFETY: Inner pointer holds valid data.
+            .and_then(|data| unsafe { data.as_ref() })
+            .map(T::raw_ref)
     }
 
     #[must_use]
     pub fn to_scalar<T: DataType>(&self) -> Option<T> {
-        self.scalar_data::<T>().map(T::clone_raw)
+        self.scalar_data::<T>()
+            // SAFETY: Inner pointer holds valid data.
+            .and_then(|data| unsafe { data.as_ref() })
+            .map(T::clone_raw)
     }
 
     #[must_use]
-    fn scalar_data<T: DataType>(&self) -> Option<&T::Inner> {
+    pub(crate) fn into_scalar<T: DataType>(self) -> Option<T> {
+        self.scalar_data::<T>()
+            // SAFETY: Inner pointer holds valid data and we have exclusive access through `self`.
+            .and_then(|data| unsafe { data.cast_mut().as_mut() })
+            .map(T::take_raw)
+    }
+
+    #[must_use]
+    fn scalar_data<T: DataType>(&self) -> Option<*const T::Inner> {
         if unsafe { UA_Variant_hasScalarType(self.as_ptr(), T::data_type()) } {
-            unsafe { self.0.data.cast::<T::Inner>().as_ref() }
+            Some(self.0.data.cast::<T::Inner>())
         } else {
             if T::data_type() != Self::data_type() {
                 return None;
@@ -105,7 +119,7 @@ impl Variant {
             // If type conversion to `ua::Variant` is requested, we fall back to `self` as-is (OPC
             // UA specifies that variants cannot directly contain other variants; we use this here
             // to allow idempotent unwrapping which is useful in generic code).
-            unsafe { self.as_ptr().cast::<T::Inner>().as_ref() }
+            Some(unsafe { self.as_ptr().cast::<T::Inner>() })
         }
     }
 

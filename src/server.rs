@@ -1361,9 +1361,7 @@ impl Server {
     ///    type directly.
     /// 2. Use dynamic [`ua::AttributeId`] value and handle the resulting [`ua::Variant`].
     ///
-    /// # Errors
-    ///
-    /// This fails when the node does not exist or the attribute cannot be read.
+    /// Use [`DataValue::status()`] to check validity of result.
     ///
     /// # Examples
     ///
@@ -1379,20 +1377,26 @@ impl Server {
     ///
     /// // Use static dispatch to get expected value type directly:
     /// let browse_name = server
-    ///     .read_attribute(&node_id, ua::AttributeId::BROWSENAME_T)?
-    ///     .into_value();
+    ///     .read_attribute(&node_id, ua::AttributeId::BROWSENAME_T)
+    ///     .into_value()?;
     /// // The type of `browse_name` is `ua::QualifiedName` here.
     /// assert_eq!(browse_name, ua::QualifiedName::new(0, "ServerStatus"));
     ///
     /// // Use dynamic attribute and unwrap `ua::Variant` manually:
     /// let attribute_id: ua::AttributeId = ua::AttributeId::BROWSENAME;
-    /// let browse_name = server.read_attribute(&node_id, &attribute_id)?.into_value();
-    /// // The type of `browse_name` is `ua::Variant` here.
+    /// let browse_name = server.read_attribute(&node_id, &attribute_id).into_value()?;
+    /// // The type of `browse_name` is `ua::Variant` here. Let's unwrap it.
     /// let browse_name = browse_name.to_scalar::<ua::QualifiedName>().unwrap();
     /// assert_eq!(browse_name, ua::QualifiedName::new(0, "ServerStatus"));
-    /// #
-    /// # let unknown_node_id = ua::NodeId::ns0(123_456_789);
-    /// # assert!(server.read_attribute(&unknown_node_id, ua::AttributeId::NODEID_T).is_err());
+    ///
+    /// // When reading succeeds, the value might still be missing:
+    /// let unknown_node_id = ua::NodeId::ns0(123_456_789);
+    /// let result = server.read_attribute(&unknown_node_id, ua::AttributeId::NODEID_T);
+    /// assert!(!result.status().unwrap_or(ua::StatusCode::GOOD).is_good());
+    /// assert_eq!(result.status(), Some(ua::StatusCode::BADNODEIDUNKNOWN));
+    /// assert!(result.value().is_err());
+    /// # // The identity-function closure serves as type assertion here.
+    /// # result.into_value().map(|value: ua::NodeId| value);
     /// #
     /// # Ok(())
     /// # }
@@ -1401,10 +1405,11 @@ impl Server {
         &self,
         node_id: &ua::NodeId,
         attribute: T,
-    ) -> Result<DataValue<T::Value>> {
+    ) -> DataValue<T::Value> {
         let item = ua::ReadValueId::init()
             .with_node_id(node_id)
             .with_attribute_id(&attribute.id());
+
         let result = unsafe {
             ua::DataValue::from_raw(UA_Server_read(
                 self.server.as_ptr().cast_mut(),
@@ -1414,7 +1419,8 @@ impl Server {
                 ua::TimestampsToReturn::BOTH.into_raw(),
             ))
         };
-        result.to_generic::<T::Value>()
+
+        result.cast()
     }
 
     /// Writes node value.

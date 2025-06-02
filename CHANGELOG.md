@@ -7,7 +7,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
 - Implement `std::hash::Hash` for `ua::QualifiedName`.
+- Add method `ua::DataValue::cast()` to create typed `DataValue` instance that returns appropriate
+  value type with `DataValue::scalar_value()`, `DataValue::into_scalar_value()`.
+- Add method `DataValue::status()` to fetch underlying status code like `ua::DataValue::status()`.
+
+### Changed
+
+- Breaking: Return error from `DataValue::scalar_value()`, `DataValue::into_scalar_value()` if the
+  value is unset or the cast fails.
+- Breaking: `AsyncClient::read_attributes()`, `AsyncClient::read_many_attributes()` return only an
+  outer error, not nested errors. Use `DataValue` methods to check validity or status of value(s).
+- Breaking: `Server::read_attribute()` always returns `DataValue` (without error). Use `DataValue`
+  methods to check validity or status of value.
+- Rename `DataValue` methods `value()`, `into_value()` to `scalar_value()`, `into_scalar_value()`,
+  marking previous names as deprecated.
 
 ## [0.9.0] - 2025-06-02
 

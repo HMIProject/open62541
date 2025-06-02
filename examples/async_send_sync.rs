@@ -2,7 +2,7 @@ use std::{pin::pin, sync::Arc};
 
 use anyhow::Context as _;
 use futures::StreamExt as _;
-use open62541::{ua, AsyncClient, DataValue};
+use open62541::{ua, AsyncClient};
 use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME;
 use tokio::task;
 
@@ -38,7 +38,11 @@ async fn read_background(client: Arc<AsyncClient>) -> anyhow::Result<()> {
 
     println!(
         "Node {node_id} has value {:?}",
-        value.value().as_scalar().and_then(ua::DateTime::to_utc)
+        value
+            .scalar_value()
+            .context("get value")?
+            .as_scalar()
+            .and_then(ua::DateTime::to_utc)
     );
 
     Ok(())
@@ -61,8 +65,7 @@ async fn watch_background(client: Arc<AsyncClient>) -> anyhow::Result<()> {
 
     while let Some((index, value)) = stream.next().await {
         let value = value
-            .as_ref()
-            .map(DataValue::value)
+            .scalar_value()
             .ok()
             .and_then(ua::Variant::as_scalar)
             .and_then(ua::DateTime::to_utc);
