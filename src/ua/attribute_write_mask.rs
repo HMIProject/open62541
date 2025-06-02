@@ -1,4 +1,18 @@
-use open62541_sys::UA_AttributeWriteMask;
+use open62541_sys::{
+    UA_AttributeWriteMask, UA_ATTRIBUTEWRITEMASK_ACCESSLEVEL, UA_ATTRIBUTEWRITEMASK_ACCESSLEVELEX,
+    UA_ATTRIBUTEWRITEMASK_ACCESSRESTRICTIONS, UA_ATTRIBUTEWRITEMASK_ARRAYDIMENSIONS,
+    UA_ATTRIBUTEWRITEMASK_BROWSENAME, UA_ATTRIBUTEWRITEMASK_CONTAINSNOLOOPS,
+    UA_ATTRIBUTEWRITEMASK_DATATYPE, UA_ATTRIBUTEWRITEMASK_DATATYPEDEFINITION,
+    UA_ATTRIBUTEWRITEMASK_DESCRIPTION, UA_ATTRIBUTEWRITEMASK_DISPLAYNAME,
+    UA_ATTRIBUTEWRITEMASK_EVENTNOTIFIER, UA_ATTRIBUTEWRITEMASK_EXECUTABLE,
+    UA_ATTRIBUTEWRITEMASK_HISTORIZING, UA_ATTRIBUTEWRITEMASK_INVERSENAME,
+    UA_ATTRIBUTEWRITEMASK_ISABSTRACT, UA_ATTRIBUTEWRITEMASK_MINIMUMSAMPLINGINTERVAL,
+    UA_ATTRIBUTEWRITEMASK_NODECLASS, UA_ATTRIBUTEWRITEMASK_NODEID,
+    UA_ATTRIBUTEWRITEMASK_ROLEPERMISSIONS, UA_ATTRIBUTEWRITEMASK_SYMMETRIC,
+    UA_ATTRIBUTEWRITEMASK_USERACCESSLEVEL, UA_ATTRIBUTEWRITEMASK_USEREXECUTABLE,
+    UA_ATTRIBUTEWRITEMASK_USERWRITEMASK, UA_ATTRIBUTEWRITEMASK_VALUEFORVARIABLETYPE,
+    UA_ATTRIBUTEWRITEMASK_VALUERANK, UA_ATTRIBUTEWRITEMASK_WRITEMASK,
+};
 
 use crate::{ua, DataTypeExt};
 
@@ -18,107 +32,107 @@ impl AttributeWriteMask {
 
     /// Indicates if the AccessLevel attribute is writeable.
     pub const fn access_level(&self) -> bool {
-        self.0 & (1 << 0) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_ACCESSLEVEL != 0
     }
 
     /// Indicates if the ArrayDimensions attribute is writeable.
     pub const fn array_dimensions(&self) -> bool {
-        self.0 & (1 << 1) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_ARRAYDIMENSIONS != 0
     }
 
     /// Indicates if the BrowseName attribute is writeable.
     pub const fn browse_name(&self) -> bool {
-        self.0 & (1 << 2) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_BROWSENAME != 0
     }
 
     /// Indicates if the ContainsNoLoops attribute is writeable.
     pub const fn contains_no_loops(&self) -> bool {
-        self.0 & (1 << 3) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_CONTAINSNOLOOPS != 0
     }
 
     /// Indicates if the DataType attribute is writeable.
     pub const fn data_type(&self) -> bool {
-        self.0 & (1 << 4) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_DATATYPE != 0
     }
 
     /// Indicates if the Description attribute is writeable.
     pub const fn description(&self) -> bool {
-        self.0 & (1 << 5) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_DESCRIPTION != 0
     }
 
     /// Indicates if the DisplayName attribute is writeable.
     pub const fn display_name(&self) -> bool {
-        self.0 & (1 << 6) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_DISPLAYNAME != 0
     }
 
     /// Indicates if the EventNotifier attribute is writeable.
     pub const fn event_notifier(&self) -> bool {
-        self.0 & (1 << 7) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_EVENTNOTIFIER != 0
     }
 
     /// Indicates if the Executable attribute is writeable.
     pub const fn executable(&self) -> bool {
-        self.0 & (1 << 8) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_EXECUTABLE != 0
     }
 
     /// Indicates if the Historizing attribute is writeable.
     pub const fn historizing(&self) -> bool {
-        self.0 & (1 << 9) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_HISTORIZING != 0
     }
 
     /// Indicates if the InverseName attribute is writeable.
     pub const fn inverse_name(&self) -> bool {
-        self.0 & (1 << 10) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_INVERSENAME != 0
     }
 
     /// Indicates if the IsAbstract attribute is writeable.
     pub const fn is_abstract(&self) -> bool {
-        self.0 & (1 << 11) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_ISABSTRACT != 0
     }
 
     /// Indicates if the MinimumSamplingInterval attribute is writeable.
     pub const fn minimum_sampling_interval(&self) -> bool {
-        self.0 & (1 << 12) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_MINIMUMSAMPLINGINTERVAL != 0
     }
 
     /// Indicates if the NodeClass attribute is writeable.
     pub const fn node_class(&self) -> bool {
-        self.0 & (1 << 13) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_NODECLASS != 0
     }
 
     /// Indicates if the NodeId attribute is writeable.
     pub const fn node_id(&self) -> bool {
-        self.0 & (1 << 14) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_NODEID != 0
     }
 
     /// Indicates if the Symmetric attribute is writeable.
     pub const fn symmetric(&self) -> bool {
-        self.0 & (1 << 15) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_SYMMETRIC != 0
     }
 
     /// Indicates if the UserAccessLevel attribute is writeable.
     pub const fn user_access_level(&self) -> bool {
-        self.0 & (1 << 16) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_USERACCESSLEVEL != 0
     }
 
     /// Indicates if the UserExecutable attribute is writeable.
     pub const fn user_executable(&self) -> bool {
-        self.0 & (1 << 17) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_USEREXECUTABLE != 0
     }
 
     /// Indicates if the UserWriteMask attribute is writeable.
     pub const fn user_write_mask(&self) -> bool {
-        self.0 & (1 << 18) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_USERWRITEMASK != 0
     }
 
     /// Indicates if the ValueRank attribute is writeable.
     pub const fn value_rank(&self) -> bool {
-        self.0 & (1 << 19) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_VALUERANK != 0
     }
 
     /// Indicates if the WriteMask attribute is writeable.
     pub const fn write_mask(&self) -> bool {
-        self.0 & (1 << 20) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_WRITEMASK != 0
     }
 
     /// Indicates if the Value Attribute is writeable for a VariableType.
@@ -126,27 +140,27 @@ impl AttributeWriteMask {
     /// Note: It does not apply for Variables since this is handled by the AccessLevel and
     /// UserAccessLevel attributes for the Variable. For Variables this bit shall be set to 0.
     pub const fn value_for_variable_type(&self) -> bool {
-        self.0 & (1 << 21) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_VALUEFORVARIABLETYPE != 0
     }
 
     /// Indicates if the DataTypeDefinition attribute is writeable.
     pub const fn data_type_definition(&self) -> bool {
-        self.0 & (1 << 22) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_DATATYPEDEFINITION != 0
     }
 
     /// Indicates if the RolePermissions attribute is writeable.
     pub const fn role_permissions(&self) -> bool {
-        self.0 & (1 << 23) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_ROLEPERMISSIONS != 0
     }
 
     /// Indicates if the AccessRestrictions attribute is writeable.
     pub const fn access_restrictions(&self) -> bool {
-        self.0 & (1 << 24) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_ACCESSRESTRICTIONS != 0
     }
 
     /// Indicates if the AccessLevelEx attribute is writeable.
     pub const fn access_level_ex(&self) -> bool {
-        self.0 & (1 << 25) != 0
+        self.0 & UA_ATTRIBUTEWRITEMASK_ACCESSLEVELEX != 0
     }
 }
 

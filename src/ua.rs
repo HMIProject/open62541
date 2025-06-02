@@ -1,6 +1,8 @@
 //! Thin wrappers for [`open62541_sys`] types.
 
+mod access_level_ex_type;
 mod access_level_type;
+mod access_restriction_type;
 mod array;
 mod attribute_write_mask;
 mod browse_result_mask;
@@ -34,7 +36,9 @@ mod user_identity_token;
 pub use self::certificate_format::CertificateFormat;
 #[expect(deprecated, reason = "explicit re-export")]
 pub use self::{
+    access_level_ex_type::AccessLevelExType,
     access_level_type::{AccessLevel, AccessLevelType},
+    access_restriction_type::AccessRestrictionType,
     array::Array,
     attribute_write_mask::AttributeWriteMask,
     browse_result_mask::BrowseResultMask,

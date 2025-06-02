@@ -1,4 +1,7 @@
-use open62541_sys::UA_EventNotifierType;
+use open62541_sys::{
+    UA_EventNotifierType, UA_EVENTNOTIFIERTYPE_HISTORYREAD, UA_EVENTNOTIFIERTYPE_HISTORYWRITE,
+    UA_EVENTNOTIFIERTYPE_SUBSCRIBETOEVENTS,
+};
 
 use crate::{ua, DataTypeExt};
 
@@ -17,18 +20,18 @@ impl EventNotifierType {
     }
 
     /// Indicates if it can be used to subscribe to events.
-    pub const fn subscribe_to_events(&self) -> bool {
-        self.0 & (1 << 0) != 0
+    pub fn subscribe_to_events(&self) -> bool {
+        u32::from(self.0) & UA_EVENTNOTIFIERTYPE_SUBSCRIBETOEVENTS != 0
     }
 
     /// Indicates if the history of the events is readable.
-    pub const fn history_read(&self) -> bool {
-        self.0 & (1 << 2) != 0
+    pub fn history_read(&self) -> bool {
+        u32::from(self.0) & UA_EVENTNOTIFIERTYPE_HISTORYREAD != 0
     }
 
     /// Indicates if the history of the events is writeable.
-    pub const fn history_write(&self) -> bool {
-        self.0 & (1 << 3) != 0
+    pub fn history_write(&self) -> bool {
+        u32::from(self.0) & UA_EVENTNOTIFIERTYPE_HISTORYWRITE != 0
     }
 }
 
