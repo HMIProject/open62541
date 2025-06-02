@@ -20,16 +20,19 @@ impl EventNotifierType {
     }
 
     /// Indicates if it can be used to subscribe to events.
+    #[must_use]
     pub fn subscribe_to_events(&self) -> bool {
         u32::from(self.0) & UA_EVENTNOTIFIERTYPE_SUBSCRIBETOEVENTS != 0
     }
 
     /// Indicates if the history of the events is readable.
+    #[must_use]
     pub fn history_read(&self) -> bool {
         u32::from(self.0) & UA_EVENTNOTIFIERTYPE_HISTORYREAD != 0
     }
 
     /// Indicates if the history of the events is writeable.
+    #[must_use]
     pub fn history_write(&self) -> bool {
         u32::from(self.0) & UA_EVENTNOTIFIERTYPE_HISTORYWRITE != 0
     }

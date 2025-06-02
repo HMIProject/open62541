@@ -23,25 +23,29 @@ impl AccessRestrictionType {
     /// The client can only access the node when using a secure channel which digitally signs all
     /// messages.
     ///
-    /// This does not apply to the browse permission if the ApplyRestrictionsToBrowse is not set.
+    /// This does not apply to the browse permission if the `ApplyRestrictionsToBrowse` is not set.
+    #[must_use]
     pub fn signing_required(&self) -> bool {
         u32::from(self.as_u16()) & UA_ACCESSRESTRICTIONTYPE_SIGNINGREQUIRED != 0
     }
 
     /// The client can only access the node when using a secure channel which encrypts all messages.
     ///
-    /// This does not apply to the browse permission if the ApplyRestrictionsToBrowse is not set.
+    /// This does not apply to the browse permission if the `ApplyRestrictionsToBrowse` is not set.
+    #[must_use]
     pub fn encryption_required(&self) -> bool {
         u32::from(self.as_u16()) & UA_ACCESSRESTRICTIONTYPE_ENCRYPTIONREQUIRED != 0
     }
 
-    /// The client cannot access the node when using SessionlessInvoke service invocation.
+    /// The client cannot access the node when using `SessionlessInvoke` service invocation.
+    #[must_use]
     pub fn session_required(&self) -> bool {
         u32::from(self.as_u16()) & UA_ACCESSRESTRICTIONTYPE_SESSIONREQUIRED != 0
     }
 
-    /// If this bit is set, the access restrictions SigningRequired and EncryptionRequired are also
-    /// applied to the browse permission.
+    /// If this bit is set, the access restrictions `SigningRequired` and `EncryptionRequired` are
+    /// also applied to the browse permission.
+    #[must_use]
     pub fn apply_restrictions_to_browse(&self) -> bool {
         u32::from(self.as_u16()) & UA_ACCESSRESTRICTIONTYPE_APPLYRESTRICTIONSTOBROWSE != 0
     }

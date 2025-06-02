@@ -47,6 +47,7 @@ impl AccessLevelType {
     /// Indicates if the current value is readable.
     ///
     /// It also indicates if the current value of the variable is available.
+    #[must_use]
     pub fn current_read(&self) -> bool {
         u32::from(self.0) & UA_ACCESSLEVELTYPE_CURRENTREAD != 0
     }
@@ -54,6 +55,7 @@ impl AccessLevelType {
     /// Indicates if the current value is writable.
     ///
     /// It also indicates if the current value of the variable is available.
+    #[must_use]
     pub fn current_write(&self) -> bool {
         u32::from(self.0) & UA_ACCESSLEVELTYPE_CURRENTWRITE != 0
     }
@@ -61,6 +63,7 @@ impl AccessLevelType {
     /// Indicates if the history of the value is readable.
     ///
     /// It also indicates if the history of the variable is available via the OPC UA Server.
+    #[must_use]
     pub fn history_read(&self) -> bool {
         u32::from(self.0) & UA_ACCESSLEVELTYPE_HISTORYREAD != 0
     }
@@ -68,22 +71,26 @@ impl AccessLevelType {
     /// Indicates if the history of the value is writable.
     ///
     /// It also indicates if the history of the variable is available via the OPC UA Server.
+    #[must_use]
     pub fn history_write(&self) -> bool {
         u32::from(self.0) & UA_ACCESSLEVELTYPE_HISTORYWRITE != 0
     }
 
     /// This flag is set for properties that define semantic aspects of the parent node of the
     /// property and where the property value, and thus the semantic, may change during operation.
+    #[must_use]
     pub fn semantic_change(&self) -> bool {
         u32::from(self.0) & UA_ACCESSLEVELTYPE_SEMANTICCHANGE != 0
     }
 
     /// Indicates if the current status code of the value is writable.
+    #[must_use]
     pub fn status_write(&self) -> bool {
         u32::from(self.0) & UA_ACCESSLEVELTYPE_STATUSWRITE != 0
     }
 
     /// Indicates if the current source timestamp is writable.
+    #[must_use]
     pub fn timestamp_write(&self) -> bool {
         u32::from(self.0) & UA_ACCESSLEVELTYPE_TIMESTAMPWRITE != 0
     }
