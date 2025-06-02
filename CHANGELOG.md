@@ -25,6 +25,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   methods to check validity or status of value.
 - Rename `DataValue` methods `value()`, `into_value()` to `scalar_value()`, `into_scalar_value()`,
   marking previous names as deprecated.
+- Rename `ua::AccessLevel` to `ua::AccessLevelType` to match OPC UA specification with former name
+  as deprecated type alias.
 
 ## [0.9.0] - 2025-06-02
 

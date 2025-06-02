@@ -1,8 +1,10 @@
+use open62541_sys::UA_AttributeWriteMask;
+
 use crate::{ua, DataTypeExt};
 
-/// Wrapper for attribute write mask from [`open62541_sys`].
+/// Wrapper for [`UA_AttributeWriteMask`] from [`open62541_sys`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct AttributeWriteMask(u32);
+pub struct AttributeWriteMask(UA_AttributeWriteMask);
 
 // See <https://reference.opcfoundation.org/Core/Part3/v105/docs/8.60> for bit values.
 impl AttributeWriteMask {

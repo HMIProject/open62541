@@ -1,8 +1,10 @@
+use open62541_sys::UA_EventNotifierType;
+
 use crate::{ua, DataTypeExt};
 
-/// Wrapper for event notifier type from [`open62541_sys`].
+/// Wrapper for [`UA_EventNotifierType`] from [`open62541_sys`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct EventNotifierType(u8);
+pub struct EventNotifierType(UA_EventNotifierType);
 
 // See <https://reference.opcfoundation.org/Core/Part3/v105/docs/8.59> for bit values.
 impl EventNotifierType {
