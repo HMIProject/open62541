@@ -114,8 +114,8 @@ impl DataValue {
     /// Casts to specific value type.
     ///
     /// This adjusts the target type of `self`, casting the inner value to the specified data type
-    /// when read with [`Self::value()`]. This should be used in situations when the expected type
-    /// can be deduced from circumstances and typed data values can be returned for convenience.
+    /// when read with [`Self::value()`]. Use this when the type can be deduced from circumstances
+    /// and typed data values should be returned for convenience.
     ///
     /// [`Self::value()`]: crate::DataValue::value
     #[must_use]

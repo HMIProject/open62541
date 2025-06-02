@@ -129,7 +129,7 @@ fn read_attribute(
     node_id: &ua::NodeId,
     attribute: impl Attribute,
 ) -> anyhow::Result<()> {
-    let value = server.read_attribute(node_id, attribute)?;
+    let value = server.read_attribute(node_id, attribute);
 
     println!("- attribute {attribute:?} has value {value:?}");
 

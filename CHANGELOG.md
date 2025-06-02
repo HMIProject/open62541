@@ -12,6 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Implement `std::hash::Hash` for `ua::QualifiedName`.
 - Add method `ua::DataValue::cast()` to create typed `DataValue` instance that returns appropriate
   value type with `DataValue::value()`, `DataValue::into_value()`.
+- Add method `DataValue::status()` to fetch underlying status code like `ua::DataValue::status()`.
 
 ### Changed
 
@@ -21,6 +22,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `server_picoseconds()` of `DataValue` are no longer `const`.
 - Breaking: `AsyncClient::read_attributes()`, `AsyncClient::read_many_attributes()` return only an
   outer error, not nested errors. Use `DataValue` methods to check validity or status of value(s).
+- Breaking: `Server::read_attribute()` always returns `DataValue` (without error). Use `DataValue`
+  methods to check validity or status of value.
 
 ## [0.9.0] - 2025-06-02
 

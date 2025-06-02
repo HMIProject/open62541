@@ -63,6 +63,11 @@ impl<T: DataType> DataValue<T> {
     pub fn server_picoseconds(&self) -> Option<u16> {
         self.data_value.server_picoseconds()
     }
+
+    #[must_use]
+    pub fn status(&self) -> Option<ua::StatusCode> {
+        self.data_value.status()
+    }
 }
 
 impl DataValue<ua::Variant> {

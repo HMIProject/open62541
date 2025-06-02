@@ -75,7 +75,7 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     ///
     /// if let Some(value) = monitored_item.next().await {
     ///     // Typed value for attribute `BROWSENAME` above.
-    ///     let value: DataValue<ua::QualifiedName> = value?;
+    ///     let value: DataValue<ua::QualifiedName> = value;
     /// }
     /// # Ok(())
     /// # }
