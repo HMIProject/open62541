@@ -191,7 +191,7 @@ impl AsyncClient {
             return Err(Error::internal("should contain exactly one attribute"));
         };
 
-        value.and_then(DataValue::into_scalar::<T::Value>)
+        Ok(value.cast())
     }
 
     /// Reads several node attributes.
@@ -211,7 +211,7 @@ impl AsyncClient {
         &self,
         node_id: &ua::NodeId,
         attribute_ids: &[ua::AttributeId],
-    ) -> Result<Vec<Result<DataValue<ua::Variant>>>> {
+    ) -> Result<Vec<DataValue<ua::Variant>>> {
         // TODO: Avoid cloning, use `AsRef` in `read_many_attributes()`?
         self.read_many_attributes(
             &attribute_ids
@@ -238,7 +238,7 @@ impl AsyncClient {
     pub async fn read_many_attributes(
         &self,
         node_attributes: &[(ua::NodeId, ua::AttributeId)],
-    ) -> Result<Vec<Result<DataValue<ua::Variant>>>> {
+    ) -> Result<Vec<DataValue<ua::Variant>>> {
         let nodes_to_read: Vec<_> = node_attributes
             .iter()
             .map(|(node_id, attribute_id)| {
@@ -256,14 +256,12 @@ impl AsyncClient {
 
         let response = service_request(&self.client, request).await?;
 
-        let Some(results) = response.results() else {
+        let Some(mut results) = response.results() else {
             return Err(Error::internal("read should return results"));
         };
 
-        let results: Vec<_> = results
-            .iter()
-            .map(ua::DataValue::to_generic::<ua::Variant>)
-            .collect();
+        let results: Vec<DataValue<ua::Variant>> =
+            results.drain_all().map(ua::DataValue::cast).collect();
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.

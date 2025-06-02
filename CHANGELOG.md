@@ -19,6 +19,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   or cast fails.
 - Breaking: Methods `value()`, `source_timestamp()`, `server_timestamp()`, `source_picoseconds()`,
   `server_picoseconds()` of `DataValue` are no longer `const`.
+- Breaking: `AsyncClient::read_attributes()`, `AsyncClient::read_many_attributes()` return only an
+  outer error, not nested errors. Use `DataValue` methods to check validity or status of value(s).
 
 ## [0.9.0] - 2025-06-02
 

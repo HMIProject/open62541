@@ -1405,6 +1405,7 @@ impl Server {
         let item = ua::ReadValueId::init()
             .with_node_id(node_id)
             .with_attribute_id(&attribute.id());
+
         let result = unsafe {
             ua::DataValue::from_raw(UA_Server_read(
                 self.server.as_ptr().cast_mut(),
@@ -1414,7 +1415,8 @@ impl Server {
                 ua::TimestampsToReturn::BOTH.into_raw(),
             ))
         };
-        result.to_generic::<T::Value>()
+
+        Ok(result.cast())
     }
 
     /// Writes node value.
