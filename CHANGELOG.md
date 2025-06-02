@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+- Implement `std::hash::Hash` for `ua::QualifiedName`.
+
 ## [0.9.0] - 2025-06-02
 
 ### Added
