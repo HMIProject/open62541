@@ -39,7 +39,7 @@ async fn read_background(client: Arc<AsyncClient>) -> anyhow::Result<()> {
     println!(
         "Node {node_id} has value {:?}",
         value
-            .value()
+            .scalar_value()
             .context("get value")?
             .as_scalar()
             .and_then(ua::DateTime::to_utc)
@@ -65,7 +65,7 @@ async fn watch_background(client: Arc<AsyncClient>) -> anyhow::Result<()> {
 
     while let Some((index, value)) = stream.next().await {
         let value = value
-            .value()
+            .scalar_value()
             .ok()
             .and_then(ua::Variant::as_scalar)
             .and_then(ua::DateTime::to_utc);

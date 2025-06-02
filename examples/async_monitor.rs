@@ -71,7 +71,7 @@ async fn monitor_background(
         let node_id = node_id.clone();
         async move {
             while let Some(value) = monitored_item.next().await {
-                let value = value.value();
+                let value = value.scalar_value();
                 println!("Received value from node {node_id}: {value:?}");
             }
             Ok::<(), anyhow::Error>(())

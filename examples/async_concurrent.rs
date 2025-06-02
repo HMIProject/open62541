@@ -33,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
                 .read_value(&ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME))
                 .await
                 .context("read")?;
-            let value = value.value().context("value")?.to_value();
+            let value = value.scalar_value().context("value")?.to_value();
             println!("Value: {value:?}");
 
             Ok::<_, anyhow::Error>(())

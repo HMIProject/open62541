@@ -207,7 +207,7 @@ fn get_arguments(value: &DataValue<ua::Variant>) -> anyhow::Result<Vec<(ua::Stri
     // `Argument` type.
 
     let arguments = value
-        .value()
+        .scalar_value()
         .context("should have value")?
         .to_array::<ua::Argument>()
         .context("should have array")?;

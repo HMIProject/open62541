@@ -18,12 +18,18 @@ impl<T: DataType> DataValue<T> {
         }
     }
 
+    #[expect(clippy::missing_errors_doc, reason = "deprecated method")]
+    #[deprecated = "Use `Self::scalar_value()` instead."]
+    pub fn value(&self) -> Result<&T> {
+        self.scalar_value()
+    }
+
     /// Gets scalar value.
     ///
     /// # Errors
     ///
     /// This fails when the value is unset or not a scalar of the expected type.
-    pub fn value(&self) -> Result<&T> {
+    pub fn scalar_value(&self) -> Result<&T> {
         self.data_value
             .value()
             .ok_or(Error::internal("missing value"))?
@@ -31,12 +37,18 @@ impl<T: DataType> DataValue<T> {
             .ok_or(Error::internal("unexpected data type"))
     }
 
+    #[expect(clippy::missing_errors_doc, reason = "deprecated method")]
+    #[deprecated = "Use `Self::into_scalar_value()` instead."]
+    pub fn into_value(self) -> Result<T> {
+        self.into_scalar_value()
+    }
+
     /// Extracts scalar value.
     ///
     /// # Errors
     ///
     /// This fails when the value is unset or not a scalar of the expected type.
-    pub fn into_value(self) -> Result<T> {
+    pub fn into_scalar_value(self) -> Result<T> {
         self.data_value
             .into_value()
             .ok_or(Error::internal("missing value"))?
