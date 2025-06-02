@@ -11,23 +11,31 @@ pub struct DataValue<T> {
 
 impl<T: DataType> DataValue<T> {
     #[must_use]
-    pub(crate) fn new(data_value: ua::DataValue) -> Self {
+    pub(crate) const fn new(data_value: ua::DataValue) -> Self {
         Self {
             data_value,
             _kind: PhantomData,
         }
     }
 
-    #[must_use]
-    pub fn value(&self) -> Result<T> {
+    /// Gets scalar value.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the value is unset or not a scalar of the expected type.
+    pub fn value(&self) -> Result<&T> {
         self.data_value
             .value()
             .ok_or(Error::internal("missing value"))?
-            .to_scalar::<T>()
+            .as_scalar::<T>()
             .ok_or(Error::internal("unexpected data type"))
     }
 
-    #[must_use]
+    /// Extracts scalar value.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the value is unset or not a scalar of the expected type.
     pub fn into_value(self) -> Result<T> {
         self.data_value
             .into_value()

@@ -119,7 +119,7 @@ impl DataValue {
     ///
     /// [`Self::value()`]: crate::DataValue::value
     #[must_use]
-    pub fn cast<T: DataType>(self) -> crate::DataValue<T> {
+    pub const fn cast<T: DataType>(self) -> crate::DataValue<T> {
         crate::DataValue::new(self)
     }
 }
