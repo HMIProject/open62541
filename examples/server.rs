@@ -47,13 +47,13 @@ fn main() -> anyhow::Result<()> {
         &ua::Variant::scalar(ua::String::new("foobar")?),
     )?;
 
-    read_attribute(&server, &value_node_id, ua::AttributeId::NODEID_T)?;
-    read_attribute(&server, &value_node_id, ua::AttributeId::NODECLASS_T)?;
-    read_attribute(&server, &value_node_id, ua::AttributeId::BROWSENAME_T)?;
-    read_attribute(&server, &value_node_id, ua::AttributeId::DISPLAYNAME_T)?;
+    read_attribute(&server, &value_node_id, ua::AttributeId::NODEID_T);
+    read_attribute(&server, &value_node_id, ua::AttributeId::NODECLASS_T);
+    read_attribute(&server, &value_node_id, ua::AttributeId::BROWSENAME_T);
+    read_attribute(&server, &value_node_id, ua::AttributeId::DISPLAYNAME_T);
 
     for attribute in [ua::AttributeId::DESCRIPTION, ua::AttributeId::WRITEMASK] {
-        read_attribute(&server, &value_node_id, &attribute)?;
+        read_attribute(&server, &value_node_id, &attribute);
     }
 
     println!("Adding server data value nodes");
@@ -76,8 +76,8 @@ fn main() -> anyhow::Result<()> {
             .with_source_timestamp(&utc_datetime!(2024-02-09 12:34:56).try_into()?),
     )?;
 
-    read_attribute(&server, &data_value_node_id, ua::AttributeId::NODEID_T)?;
-    read_attribute(&server, &data_value_node_id, &ua::AttributeId::VALUE)?;
+    read_attribute(&server, &data_value_node_id, ua::AttributeId::NODEID_T);
+    read_attribute(&server, &data_value_node_id, &ua::AttributeId::VALUE);
 
     let cancelled = Arc::new(AtomicBool::new(false));
 
@@ -124,16 +124,10 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn read_attribute(
-    server: &Server,
-    node_id: &ua::NodeId,
-    attribute: impl Attribute,
-) -> anyhow::Result<()> {
+fn read_attribute(server: &Server, node_id: &ua::NodeId, attribute: impl Attribute) {
     let value = server.read_attribute(node_id, attribute);
 
     println!("- attribute {attribute:?} has value {value:?}");
-
-    Ok(())
 }
 
 fn statistics_task(server: &Server, cancelled: &AtomicBool) {
