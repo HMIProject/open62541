@@ -4,6 +4,37 @@ use open62541_sys::UA_DataType;
 
 use crate::{ua, DataType};
 
+/// Extended values.
+///
+/// This is used for values which are represented differently from their underlying data type, e.g.
+/// [`AttributeWriteMask`] which is [`UInt32`] with additional methods and particular semantics.
+///
+/// [`AttributeWriteMask`]: crate::ua::AttributeWriteMask
+/// [`UInt32`]: crate::ua::UInt32
+pub trait DataTypeExt {
+    /// Inner type sent over the wire.
+    type Inner: DataType;
+
+    /// Creates instance for immer type.
+    fn from_inner(value: Self::Inner) -> Self;
+
+    /// Returns inner type representation.
+    fn into_inner(self) -> Self::Inner;
+}
+
+// Umbrella implementation that simplifies type constraints: `DataType` is trivially `DataTypeExt`.
+impl<T: DataType> DataTypeExt for T {
+    type Inner = Self;
+
+    fn from_inner(value: Self::Inner) -> Self {
+        value
+    }
+
+    fn into_inner(self) -> Self::Inner {
+        self
+    }
+}
+
 /// Node attribute.
 ///
 /// This is used to match the appropriate result types at compile time when reading attributes from
@@ -15,7 +46,7 @@ use crate::{ua, DataType};
 // FIXME: Turn into sealed trait.
 pub trait Attribute: fmt::Debug + Copy {
     /// Attribute data type.
-    type Value: DataType;
+    type Value: DataTypeExt;
 
     /// Gets attribute ID.
     fn id(&self) -> ua::AttributeId;

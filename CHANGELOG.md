@@ -9,6 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Add `ua::AttributeWriteMask`, `ua::EventNotifierType`.
 - Implement `std::hash::Hash` for `ua::QualifiedName`.
 - Add method `ua::DataValue::cast()` to create typed `DataValue` instance that returns appropriate
   value type with `DataValue::scalar_value()`, `DataValue::into_scalar_value()`.

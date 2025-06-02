@@ -2,6 +2,7 @@
 
 mod access_level;
 mod array;
+mod attribute_write_mask;
 mod browse_result_mask;
 #[cfg(feature = "mbedtls")]
 mod certificate_format;
@@ -11,6 +12,7 @@ mod client_config;
 mod continuation_point;
 mod data_types;
 mod event_id;
+mod event_notifier_type;
 mod key_value_map;
 mod logger;
 mod monitored_item_id;
@@ -33,12 +35,14 @@ pub use self::certificate_format::CertificateFormat;
 pub use self::{
     access_level::AccessLevel,
     array::Array,
+    attribute_write_mask::AttributeWriteMask,
     browse_result_mask::BrowseResultMask,
     certificate_verification::CertificateVerification,
     client::{Client, ClientState},
     continuation_point::ContinuationPoint,
     data_types::*,
     event_id::EventId,
+    event_notifier_type::EventNotifierType,
     key_value_map::KeyValueMap,
     monitored_item_id::MonitoredItemId,
     node_class_mask::NodeClassMask,

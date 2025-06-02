@@ -254,7 +254,8 @@ pub use self::{
         MethodNode, Node, ObjectNode, Server, ServerBuilder, ServerRunner, VariableNode,
     },
     traits::{
-        Attribute, Attributes, CustomCertificateVerification, FilterOperand, MonitoringFilter,
+        Attribute, Attributes, CustomCertificateVerification, DataTypeExt, FilterOperand,
+        MonitoringFilter,
     },
     userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},

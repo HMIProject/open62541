@@ -28,6 +28,7 @@ macro_rules! attribute_impl {
     };
 }
 
+// Attribute types taken from <https://reference.opcfoundation.org/Core/Part3/v105/docs/5>.
 attribute_impl!(
     (NodeId, NodeId),
     (NodeClass, NodeClass),
