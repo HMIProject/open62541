@@ -107,7 +107,7 @@ impl Variant {
     }
 
     #[must_use]
-    pub(crate) fn into_scalar<T>(self) -> Option<T>
+    pub fn into_scalar<T>(self) -> Option<T>
     where
         T: DataType,
     {

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{ua, DataType, DataTypeExt, Error, Result};
+use crate::{ua, DataType, DataTypeExt};
 
 /// Typed variant of [`ua::DataValue`].
 #[derive(Debug, Clone)]
@@ -18,52 +18,42 @@ impl<T: DataTypeExt> DataValue<T> {
         }
     }
 
-    #[expect(clippy::missing_errors_doc, reason = "deprecated method")]
-    #[deprecated = "Use `Self::scalar_value()` instead."]
-    pub fn value(&self) -> Result<&T>
-    where
-        T: DataType,
-    {
-        self.scalar_value()
+    /// Gets value.
+    ///
+    /// This returns `None` when the value is unset.
+    #[must_use]
+    pub fn value(&self) -> Option<&ua::Variant> {
+        self.data_value.value()
+    }
+
+    /// Extracts value.
+    ///
+    /// This returns `None` when the value is unset.
+    #[must_use]
+    pub fn into_value(self) -> Option<ua::Variant> {
+        self.data_value.into_value()
     }
 
     /// Gets scalar value.
     ///
-    /// # Errors
-    ///
-    /// This fails when the value is unset or not a scalar of the expected type.
-    pub fn scalar_value(&self) -> Result<&T>
+    /// This returns `None` when the value is unset or not a scalar of the given type. The same can
+    /// be achieved in two steps with [`Self::value()`] and [`ua::Variant::as_scalar()`].
+    pub fn scalar_value(&self) -> Option<&T>
     where
         // `DataType` has transparent representation required for `as_scalar()`.
         T: DataType,
     {
-        self.data_value
-            .value()
-            .ok_or(Error::internal("missing value"))?
-            .as_scalar::<T>()
-            .ok_or(Error::internal("unexpected data type"))
-    }
-
-    #[expect(clippy::missing_errors_doc, reason = "deprecated method")]
-    #[deprecated = "Use `Self::into_scalar_value()` instead."]
-    pub fn into_value(self) -> Result<T> {
-        self.into_scalar_value()
+        self.value().and_then(ua::Variant::as_scalar::<T>)
     }
 
     /// Extracts scalar value.
     ///
-    /// # Errors
-    ///
-    /// This fails when the value is unset or not a scalar of the expected type.
-    pub fn into_scalar_value(self) -> Result<T> {
-        let value = self
-            .data_value
-            .into_value()
-            .ok_or(Error::internal("missing value"))?
-            .into_scalar::<T::Inner>()
-            .ok_or(Error::internal("unexpected data type"))?;
-
-        Ok(T::from_inner(value))
+    /// This returns `None` when the value is unset or not a scalar of the given type. The same can
+    /// be achieved in two steps with [`Self::into_value()`] and [`ua::Variant::into_scalar()`].
+    pub fn into_scalar_value(self) -> Option<T> {
+        self.into_value()
+            .and_then(ua::Variant::into_scalar::<T::Inner>)
+            .map(T::from_inner)
     }
 
     #[must_use]
