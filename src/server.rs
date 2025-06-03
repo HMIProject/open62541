@@ -1366,7 +1366,7 @@ impl Server {
     /// # Examples
     ///
     /// ```
-    /// # use open62541::{DataType as _, ServerBuilder, ua};
+    /// # use open62541::{DataType as _, DataValue, ServerBuilder, ua};
     /// # use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS;
     /// #
     /// # #[tokio::main]
@@ -1376,27 +1376,32 @@ impl Server {
     /// let node_id = ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS);
     ///
     /// // Use static dispatch to get expected value type directly:
-    /// let browse_name = server
+    /// let browse_name: ua::QualifiedName = server
     ///     .read_attribute(&node_id, ua::AttributeId::BROWSENAME_T)
-    ///     .into_value()?;
+    ///     .into_scalar_value()
+    ///     .unwrap();
     /// // The type of `browse_name` is `ua::QualifiedName` here.
     /// assert_eq!(browse_name, ua::QualifiedName::new(0, "ServerStatus"));
     ///
     /// // Use dynamic attribute and unwrap `ua::Variant` manually:
-    /// let attribute_id: ua::AttributeId = ua::AttributeId::BROWSENAME;
-    /// let browse_name = server.read_attribute(&node_id, &attribute_id).into_value()?;
+    /// let attribute_id = ua::AttributeId::BROWSENAME;
+    /// let browse_name: ua::Variant = server
+    ///     .read_attribute(&node_id, &attribute_id)
+    ///     .into_scalar_value()
+    ///     .unwrap();
     /// // The type of `browse_name` is `ua::Variant` here. Let's unwrap it.
     /// let browse_name = browse_name.to_scalar::<ua::QualifiedName>().unwrap();
     /// assert_eq!(browse_name, ua::QualifiedName::new(0, "ServerStatus"));
     ///
     /// // When reading succeeds, the value might still be missing:
     /// let unknown_node_id = ua::NodeId::ns0(123_456_789);
-    /// let result = server.read_attribute(&unknown_node_id, ua::AttributeId::NODEID_T);
+    /// let result: DataValue<ua::NodeId> = server
+    ///     .read_attribute(&unknown_node_id, ua::AttributeId::NODEID_T);
     /// assert!(!result.status().unwrap_or(ua::StatusCode::GOOD).is_good());
     /// assert_eq!(result.status(), Some(ua::StatusCode::BADNODEIDUNKNOWN));
-    /// assert!(result.value().is_err());
+    /// assert_eq!(result.value(), None);
     /// # // The identity-function closure serves as type assertion here.
-    /// # result.into_value().map(|value: ua::NodeId| value);
+    /// # result.into_scalar_value().map(|value: ua::NodeId| value);
     /// #
     /// # Ok(())
     /// # }
