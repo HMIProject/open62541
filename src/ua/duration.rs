@@ -72,6 +72,7 @@ impl DataTypeExt for Duration {
 }
 
 #[cfg(test)]
+#[expect(clippy::float_cmp, reason = "exactly representable values for test")]
 mod tests {
     use super::*;
 
