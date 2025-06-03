@@ -22,14 +22,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Breaking: Return error from `DataValue::scalar_value()`, `DataValue::into_scalar_value()` if the
-  value is unset or the cast fails.
+- Breaking: Methods `DataValue::value()`, `into_value()` return `ua::Variant`. To get scalar value
+  as before, use `DataValue::scalar_value()`, `into_scalar_value()`, or methods on `ua::Variant`.
+- Breaking: `DataValue::scalar_value()`, `DataValue::into_scalar_value()` return `None` when value
+  is unset or the cast fails.
 - Breaking: `AsyncClient::read_attributes()`, `AsyncClient::read_many_attributes()` return only an
   outer error, not nested errors. Use `DataValue` methods to check validity or status of value(s).
 - Breaking: `Server::read_attribute()` always returns `DataValue` (without error). Use `DataValue`
   methods to check validity or status of value.
-- Rename `DataValue` methods `value()`, `into_value()` to `scalar_value()`, `into_scalar_value()`,
-  marking previous names as deprecated.
 - Rename `ua::AccessLevel` to `ua::AccessLevelType` to match OPC UA specification with former name
   as deprecated type alias.
 
