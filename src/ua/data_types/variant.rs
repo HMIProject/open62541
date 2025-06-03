@@ -85,7 +85,10 @@ impl Variant {
     }
 
     #[must_use]
-    pub fn as_scalar<T: DataType>(&self) -> Option<&T> {
+    pub fn as_scalar<T>(&self) -> Option<&T>
+    where
+        T: DataType,
+    {
         self.scalar_data::<T>()
             // SAFETY: Inner pointer holds valid data.
             .and_then(|data| unsafe { data.as_ref() })
@@ -93,7 +96,10 @@ impl Variant {
     }
 
     #[must_use]
-    pub fn to_scalar<T: DataType>(&self) -> Option<T> {
+    pub fn to_scalar<T>(&self) -> Option<T>
+    where
+        T: DataType,
+    {
         self.scalar_data::<T>()
             // SAFETY: Inner pointer holds valid data.
             .and_then(|data| unsafe { data.as_ref() })
@@ -101,7 +107,10 @@ impl Variant {
     }
 
     #[must_use]
-    pub(crate) fn into_scalar<T: DataType>(self) -> Option<T> {
+    pub fn into_scalar<T>(self) -> Option<T>
+    where
+        T: DataType,
+    {
         self.scalar_data::<T>()
             // SAFETY: Inner pointer holds valid data and we have exclusive access through `self`.
             .and_then(|data| unsafe { data.cast_mut().as_mut() })

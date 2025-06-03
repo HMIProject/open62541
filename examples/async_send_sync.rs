@@ -65,8 +65,7 @@ async fn watch_background(client: Arc<AsyncClient>) -> anyhow::Result<()> {
 
     while let Some((index, value)) = stream.next().await {
         let value = value
-            .scalar_value()
-            .ok()
+            .value()
             .and_then(ua::Variant::as_scalar)
             .and_then(ua::DateTime::to_utc);
         println!("Node {node_id} emitted value #{index}: {value:?}");
