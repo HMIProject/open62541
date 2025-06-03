@@ -16,7 +16,7 @@ impl super::VariableAttributes {
     }
 
     #[must_use]
-    pub const fn with_access_level(mut self, access_level: &ua::AccessLevel) -> Self {
+    pub const fn with_access_level(mut self, access_level: &ua::AccessLevelType) -> Self {
         self.0.accessLevel = access_level.as_u8();
         self.0.specifiedAttributes |= ua::SpecifiedAttributes::ACCESSLEVEL.as_u32();
         self

@@ -72,6 +72,7 @@ mod server_status_data_type;
 mod simple_attribute_operand;
 mod status_code;
 mod string;
+mod structure_definition;
 mod timestamps_to_return;
 mod user_name_identity_token;
 mod variant;
@@ -157,6 +158,7 @@ pub use self::{
     simple_attribute_operand::SimpleAttributeOperand,
     status_code::StatusCode,
     string::String,
+    structure_definition::StructureDefinition,
     timestamps_to_return::TimestampsToReturn,
     user_name_identity_token::UserNameIdentityToken,
     variant::Variant,

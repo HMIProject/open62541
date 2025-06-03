@@ -1,4 +1,4 @@
-use crate::{ua, DataType};
+use crate::{ua, DataType, DataTypeExt};
 
 crate::data_type!(DataValue);
 
@@ -119,7 +119,7 @@ impl DataValue {
     ///
     /// [`Self::value()`]: crate::DataValue::value
     #[must_use]
-    pub const fn cast<T: DataType>(self) -> crate::DataValue<T> {
+    pub const fn cast<T: DataTypeExt>(self) -> crate::DataValue<T> {
         crate::DataValue::new(self)
     }
 }

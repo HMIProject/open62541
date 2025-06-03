@@ -1,8 +1,39 @@
-use std::fmt;
+use std::fmt::Debug;
 
 use open62541_sys::UA_DataType;
 
 use crate::{ua, DataType};
+
+/// Extended values.
+///
+/// This is used for values which are represented differently from their underlying data type, e.g.
+/// [`AttributeWriteMask`] which is [`UInt32`] with additional methods and particular semantics.
+///
+/// [`AttributeWriteMask`]: crate::ua::AttributeWriteMask
+/// [`UInt32`]: crate::ua::UInt32
+pub trait DataTypeExt: Debug + Clone {
+    /// Inner type sent over the wire.
+    type Inner: DataType;
+
+    /// Creates instance for immer type.
+    fn from_inner(value: Self::Inner) -> Self;
+
+    /// Returns inner type representation.
+    fn into_inner(self) -> Self::Inner;
+}
+
+// Umbrella implementation that simplifies type constraints: `DataType` is trivially `DataTypeExt`.
+impl<T: DataType> DataTypeExt for T {
+    type Inner = Self;
+
+    fn from_inner(value: Self::Inner) -> Self {
+        value
+    }
+
+    fn into_inner(self) -> Self::Inner {
+        self
+    }
+}
 
 /// Node attribute.
 ///
@@ -13,9 +44,9 @@ use crate::{ua, DataType};
 /// - [`Server::read_attribute()`](crate::Server::read_attribute)
 //
 // FIXME: Turn into sealed trait.
-pub trait Attribute: fmt::Debug + Copy {
+pub trait Attribute: Debug + Copy {
     /// Attribute data type.
-    type Value: DataType;
+    type Value: DataTypeExt;
 
     /// Gets attribute ID.
     fn id(&self) -> ua::AttributeId;
@@ -92,7 +123,7 @@ where
 /// Monitoring filter.
 ///
 /// This is used as extensible parameter in [`ua::MonitoringParameters::with_filter()`].
-pub trait MonitoringFilter: fmt::Debug + Send + Sync + 'static {
+pub trait MonitoringFilter: Debug + Send + Sync + 'static {
     fn to_extension_object(&self) -> ua::ExtensionObject;
 }
 
@@ -105,7 +136,7 @@ impl MonitoringFilter for Box<dyn MonitoringFilter> {
 /// Filter operand.
 ///
 /// This is used as extensible parameter in [`ua::ContentFilterElement::with_filter_operands()`].
-pub trait FilterOperand: fmt::Debug + Send + Sync + 'static {
+pub trait FilterOperand: Debug + Send + Sync + 'static {
     fn to_extension_object(&self) -> ua::ExtensionObject;
 }
 

@@ -89,7 +89,7 @@ fn main() -> anyhow::Result<()> {
         attributes: ua::VariableAttributes::default()
             .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING))
             .with_access_level(
-                &ua::AccessLevel::NONE
+                &ua::AccessLevelType::NONE
                     .with_current_read(true)
                     .with_current_write(true),
             ),

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{ua, DataType, Error, Result};
+use crate::{ua, DataType, DataTypeExt, Error, Result};
 
 /// Typed variant of [`ua::DataValue`].
 #[derive(Debug, Clone)]
@@ -9,7 +9,7 @@ pub struct DataValue<T> {
     _kind: PhantomData<T>,
 }
 
-impl<T: DataType> DataValue<T> {
+impl<T: DataTypeExt> DataValue<T> {
     #[must_use]
     pub(crate) const fn new(data_value: ua::DataValue) -> Self {
         Self {
@@ -20,7 +20,10 @@ impl<T: DataType> DataValue<T> {
 
     #[expect(clippy::missing_errors_doc, reason = "deprecated method")]
     #[deprecated = "Use `Self::scalar_value()` instead."]
-    pub fn value(&self) -> Result<&T> {
+    pub fn value(&self) -> Result<&T>
+    where
+        T: DataType,
+    {
         self.scalar_value()
     }
 
@@ -29,7 +32,11 @@ impl<T: DataType> DataValue<T> {
     /// # Errors
     ///
     /// This fails when the value is unset or not a scalar of the expected type.
-    pub fn scalar_value(&self) -> Result<&T> {
+    pub fn scalar_value(&self) -> Result<&T>
+    where
+        // `DataType` has transparent representation required for `as_scalar()`.
+        T: DataType,
+    {
         self.data_value
             .value()
             .ok_or(Error::internal("missing value"))?
@@ -49,11 +56,14 @@ impl<T: DataType> DataValue<T> {
     ///
     /// This fails when the value is unset or not a scalar of the expected type.
     pub fn into_scalar_value(self) -> Result<T> {
-        self.data_value
+        let value = self
+            .data_value
             .into_value()
             .ok_or(Error::internal("missing value"))?
-            .into_scalar::<T>()
-            .ok_or(Error::internal("unexpected data type"))
+            .into_scalar::<T::Inner>()
+            .ok_or(Error::internal("unexpected data type"))?;
+
+        Ok(T::from_inner(value))
     }
 
     #[must_use]
@@ -89,12 +99,9 @@ impl DataValue<ua::Variant> {
     /// when read with [`Self::value()`]. This should be used in situations when the expected type
     /// can be deduced from circumstances and typed data values can be returned for convenience.
     #[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
-    pub(crate) fn cast<T: DataType>(self) -> DataValue<T> {
+    pub(crate) fn cast<T: DataTypeExt>(self) -> DataValue<T> {
         let Self { data_value, _kind } = self;
 
-        DataValue {
-            data_value,
-            _kind: PhantomData,
-        }
+        DataValue::new(data_value)
     }
 }

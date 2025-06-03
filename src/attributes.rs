@@ -28,27 +28,41 @@ macro_rules! attribute_impl {
     };
 }
 
+// Attribute types taken from <https://reference.opcfoundation.org/Core/Part3/v105/docs/5>.
+//
+// Note: Array values are not supported yet in their typed form: previously, any such attempt would
+// fail, because converting to `DataValue` expects scalar values.
+//
+// To give us some time to think about the best, typed representation of such non-scalar values, we
+// remove their `impl` for now. Access is still possible with the non-typed attribute methods.
 attribute_impl!(
     (NodeId, NodeId),
     (NodeClass, NodeClass),
     (BrowseName, QualifiedName),
     (DisplayName, LocalizedText),
     (Description, LocalizedText),
-    (WriteMask, UInt32),
+    (WriteMask, AttributeWriteMask),
+    (UserWriteMask, AttributeWriteMask),
     (IsAbstract, Boolean),
     (Symmetric, Boolean),
     (InverseName, LocalizedText),
     (ContainsNoLoops, Boolean),
-    (EventNotifier, Byte),
+    (EventNotifier, EventNotifierType),
     (Value, Variant),
     (DataType, NodeId),
-    (ValueRank, UInt32),
-    (ArrayDimensions, Variant),
-    (AccessLevel, Byte),
-    (AccessLevelEx, UInt32),
-    (MinimumSamplingInterval, Double),
+    (ValueRank, Int32),
+    // (ArrayDimensions, UInt32[]),
+    (AccessLevel, AccessLevelType),
+    (UserAccessLevel, AccessLevelType),
+    (MinimumSamplingInterval, Duration),
     (Historizing, Boolean),
     (Executable, Boolean),
+    (UserExecutable, Boolean),
+    (DataTypeDefinition, DataTypeDefinition),
+    // (RolePermissions, RolePermissionType[]),`
+    // (UserRolePermissions, RolePermissionType[]),`
+    (AccessRestrictions, AccessRestrictionType),
+    (AccessLevelEx, AccessLevelExType),
 );
 
 impl Attribute for &ua::AttributeId {

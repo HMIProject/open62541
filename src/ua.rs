@@ -1,7 +1,10 @@
 //! Thin wrappers for [`open62541_sys`] types.
 
-mod access_level;
+mod access_level_ex_type;
+mod access_level_type;
+mod access_restriction_type;
 mod array;
+mod attribute_write_mask;
 mod browse_result_mask;
 #[cfg(feature = "mbedtls")]
 mod certificate_format;
@@ -9,8 +12,11 @@ mod certificate_verification;
 mod client;
 mod client_config;
 mod continuation_point;
+mod data_type_definition;
 mod data_types;
+mod duration;
 mod event_id;
+mod event_notifier_type;
 mod key_value_map;
 mod logger;
 mod monitored_item_id;
@@ -30,15 +36,22 @@ mod user_identity_token;
 
 #[cfg(feature = "mbedtls")]
 pub use self::certificate_format::CertificateFormat;
+#[expect(deprecated, reason = "explicit re-export")]
 pub use self::{
-    access_level::AccessLevel,
+    access_level_ex_type::AccessLevelExType,
+    access_level_type::{AccessLevel, AccessLevelType},
+    access_restriction_type::AccessRestrictionType,
     array::Array,
+    attribute_write_mask::AttributeWriteMask,
     browse_result_mask::BrowseResultMask,
     certificate_verification::CertificateVerification,
     client::{Client, ClientState},
     continuation_point::ContinuationPoint,
+    data_type_definition::DataTypeDefinition,
     data_types::*,
+    duration::Duration,
     event_id::EventId,
+    event_notifier_type::EventNotifierType,
     key_value_map::KeyValueMap,
     monitored_item_id::MonitoredItemId,
     node_class_mask::NodeClassMask,
