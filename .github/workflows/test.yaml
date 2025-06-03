@@ -49,9 +49,9 @@ jobs:
             runner_os: macos-15
 
           - target: x86_64-pc-windows-msvc
-            runner_os: windows-2019
-          - target: x86_64-pc-windows-msvc
             runner_os: windows-2022
+          - target: x86_64-pc-windows-msvc
+            runner_os: windows-2025
 
           - target: x86_64-unknown-linux-gnu
             runner_os: ubuntu-22.04
@@ -67,9 +67,9 @@ jobs:
 
     steps:
       - name: Adjust build settings for Windows
-        if: contains(matrix.target, '-windows-')
-        # Required for Windows builds: for version numbers with pre-release part
-        # as suffix, the resulting paths would get too long to build otherwise.
+        if: startsWith(matrix.runner_os, 'windows-') && !endsWith(matrix.runner_os, '-2025')
+        # Required for Windows builds on older runners: for version numbers with
+        # pre-release part as suffix, the resulting paths would become too long.
         run: >-
           echo "CARGO_TARGET_DIR=D:\t" >> $env:GITHUB_ENV
 
