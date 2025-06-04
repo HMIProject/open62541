@@ -159,11 +159,15 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails when the node does not exist or its value attribute cannot be read.
+    /// This fails only when the entire request fails (e.g. communication error). When the node does
+    /// not exist or its value attribute cannot be read, the server returns a [`DataValue`] with the
+    /// appropriate [`status()`] and with [`value()`] unset.
     ///
     /// [`read_attribute()`]: Self::read_attribute
     /// [`read_attributes()`]: Self::read_attributes
     /// [`read_many_attributes()`]: Self::read_many_attributes
+    /// [`status()`]: DataValue::status
+    /// [`value()`]: DataValue::value
     pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<DataValue<ua::Variant>> {
         self.read_attribute(node_id, ua::AttributeId::VALUE_T).await
     }
@@ -174,9 +178,13 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails when the node does not exist or the attribute cannot be read.
+    /// This fails only when the entire request fails (e.g. communication error). When the node does
+    /// not exist or the given attribute cannot be read, the server returns a [`DataValue`] with the
+    /// appropriate [`status()`] and with [`value()`] unset.
     ///
     /// [`read_value()`]: Self::read_value
+    /// [`status()`]: DataValue::status
+    /// [`value()`]: DataValue::value
     pub async fn read_attribute<T: Attribute>(
         &self,
         node_id: &ua::NodeId,
@@ -203,10 +211,13 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails only when the entire request fails. When the node does not exist or one of the
-    /// attributes cannot be read, an inner `Err` is returned.
+    /// This fails only when the entire request fails (e.g. communication error). When the node does
+    /// not exist or one of the given attributes cannot be read, the server returns a corresponding
+    /// [`DataValue`] with the appropriate [`status()`] and with [`value()`] unset.
     ///
     /// [`read_attribute()`]: Self::read_attribute
+    /// [`status()`]: DataValue::status
+    /// [`value()`]: DataValue::value
     pub async fn read_attributes(
         &self,
         node_id: &ua::NodeId,
@@ -231,10 +242,13 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails only when the entire request fails. When a node does not exist or one of the
-    /// attributes cannot be read, an inner `Err` is returned.
+    /// This fails only when the entire request fails (e.g. communication error). When a node does
+    /// not exist or one of the given attributes cannot be read, the server returns a corresponding
+    /// [`DataValue`] with the appropriate [`status()`] and with [`value()`] unset.
     ///
     /// [`read_attributes()`]: Self::read_attributes
+    /// [`status()`]: DataValue::status
+    /// [`value()`]: DataValue::value
     pub async fn read_many_attributes(
         &self,
         node_attributes: &[(ua::NodeId, ua::AttributeId)],

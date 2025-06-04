@@ -26,8 +26,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   as before, use `DataValue::scalar_value()`, `into_scalar_value()`, or methods on `ua::Variant`.
 - Breaking: `DataValue::scalar_value()`, `DataValue::into_scalar_value()` return `None` when value
   is unset or the cast fails.
-- Breaking: `AsyncClient::read_attributes()`, `AsyncClient::read_many_attributes()` return only an
-  outer error, not nested errors. Use `DataValue` methods to check validity or status of value(s).
+- Breaking: Methods `AsyncClient::read_value()`, `AsyncClient::read_attribute()`,
+  `AsyncClient::read_attributes()`, `AsyncClient::read_many_attributes()` return only an outer
+  error, no longer nested errors. Use `DataValue` methods to check validity or status of value(s).
 - Breaking: `Server::read_attribute()` always returns `DataValue` (without error). Use `DataValue`
   methods to check validity or status of value.
 - Rename `ua::AccessLevel` to `ua::AccessLevelType` to match OPC UA specification with former name
