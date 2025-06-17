@@ -7,8 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.1] - 2025-06-17
+
 ### Added
 
+- Add `MonitoredItemBuilder::attribute()` to select monitored attribute at compile time, yielding
+  values of the expected `DataValue` subtype.
+- Add `MonitoredItemValue` enum wrapping both data change and event monitored item notifications.
 - Add bitset types `ua::AccessLevelExType`, `ua::AccessRestrictionType`, `ua::AttributeWriteMask`,
   `ua::EventNotifierType`.
 - Add `ua::Duration`.
@@ -22,28 +27,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Breaking: Methods `DataValue::value()`, `into_value()` return `ua::Variant`. To get scalar value
-  as before, use `DataValue::scalar_value()`, `into_scalar_value()`, or methods on `ua::Variant`.
-- Breaking: `DataValue::scalar_value()`, `DataValue::into_scalar_value()` return `None` when value
-  is unset or the cast fails.
-- Breaking: Methods `AsyncClient::read_value()`, `AsyncClient::read_attribute()`,
-  `AsyncClient::read_attributes()`, `AsyncClient::read_many_attributes()` return only an outer
-  error, no longer nested errors. Use `DataValue` methods to check validity or status of value(s).
-- Breaking: `Server::read_attribute()` always returns `DataValue` (without error). Use `DataValue`
-  methods to check validity or status of value.
-- Rename `ua::AccessLevel` to `ua::AccessLevelType` to match OPC UA specification with former name
-  as deprecated type alias.
-
-## [0.9.0] - 2025-06-02
-
-### Added
-
-- Add `MonitoredItemBuilder::attribute()` to select monitored attribute at compile time, yielding
-  values of the expected `DataValue` subtype.
-- Add `MonitoredItemValue` enum wrapping both data change and event monitored item notifications.
-
-### Changed
-
 - Breaking: When using `MonitoredItemBuilder::attribute_id()` for attributes not known at compile
   time, monitored items yield values of `MonitoredItemValue`.
 - Breaking: Replace `time::OffsetDateTime` with `time::UtcDateTime` in conversions from and/or to
@@ -54,18 +37,31 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Adjust signature of `ServerRunner::run_until_cancelled()` to use closure instead of a
   reference to a closure.
 - Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.83.
+- Breaking: Methods `DataValue::value()`, `into_value()` return `ua::Variant`. To get scalar value
+  as before, use `DataValue::scalar_value()`, `into_scalar_value()`, or methods on `ua::Variant`.
+- Breaking: `DataValue::scalar_value()`, `DataValue::into_scalar_value()` return `None` when value
+  is unset or the cast fails.
+- Breaking: Methods `AsyncClient::read_value()`, `AsyncClient::read_attribute()`,
+  `AsyncClient::read_attributes()`, `AsyncClient::read_many_attributes()` return only an outer
+  error, no longer nested errors. Use `DataValue` methods to check validity or status of value(s).
+- Breaking: `Server::read_attribute()` always returns `DataValue` (without error). Use `DataValue`
+  methods to check validity or status of value.
 - Rename `ServerRunner::run()` to `ServerRunner::run_until_interrupt()`. Deprecate former method.
 - Mark `AsyncMonitoredItem::into_stream()` as deprecated. Use the `Stream` implementation of this
   type directly instead.
 - Remove `unsafe` qualifier from `Server::statistics()`, it may now be be called concurrently.
 - Upgrade to open62541 version
   [1.4.12](https://github.com/open62541/open62541/releases/tag/v1.4.12).
+- Rename `ua::AccessLevel` to `ua::AccessLevelType` to match OPC UA specification with former name
+  as deprecated type alias.
 
 ### Fixed
 
 - Fix runtime crash for monitored items with attribute ID `ua::AttributeId::EVENTNOTIFIER`. Using
   `MonitoredItemBuilder::attribute()`, yielded value type is `ua::Array<ua::Variant>` (instead of
   `ua::DataValue`, e.g. for `ua::AttributeId::VALUE`).
+
+## [0.9.0] - 2025-06-02 [YANKED]
 
 ## [0.8.5] - 2025-05-14
 
@@ -507,7 +503,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
-[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/HMIProject/open62541/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/HMIProject/open62541/compare/v0.8.5...v0.9.0
 [0.8.5]: https://github.com/HMIProject/open62541/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/HMIProject/open62541/compare/v0.8.3...v0.8.4
