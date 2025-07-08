@@ -195,7 +195,7 @@ impl ClientBuilder {
     pub fn accept_all(mut self) -> Self {
         let config = self.config_mut();
         unsafe {
-            UA_CertificateVerification_AcceptAll(&mut config.certificateVerification);
+            UA_CertificateVerification_AcceptAll(&raw mut config.certificateVerification);
         }
         self
     }
@@ -280,8 +280,8 @@ impl ClientBuilder {
                 UA_Client_getEndpoints(
                     client.0.as_mut_ptr(),
                     server_url.as_ptr(),
-                    &mut endpoint_descriptions_size,
-                    &mut endpoint_descriptions_ptr,
+                    &raw mut endpoint_descriptions_size,
+                    &raw mut endpoint_descriptions_ptr,
                 )
             };
             // Wrap array result immediately to not leak memory when leaving function early as with

@@ -29,7 +29,7 @@ impl ByteString {
         };
         // We let `UA_ByteString_copy()` do the heavy lifting of allocating memory and copying data.
         let status_code =
-            ua::StatusCode::new(unsafe { UA_ByteString_copy(&src, dst.as_mut_ptr()) });
+            ua::StatusCode::new(unsafe { UA_ByteString_copy(&raw const src, dst.as_mut_ptr()) });
         // PANIC: The only possible errors here are out-of-memory.
         assert!(
             status_code.is_good(),

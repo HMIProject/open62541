@@ -17,6 +17,6 @@ impl SessionState {
     #[expect(clippy::allow_attributes, reason = "non-static condition")]
     #[allow(clippy::missing_const_for_fn, reason = "unsupported before Rust 1.87")]
     pub(crate) fn as_mut_ptr(&mut self) -> *mut UA_SessionState {
-        &mut self.0
+        &raw mut self.0
     }
 }

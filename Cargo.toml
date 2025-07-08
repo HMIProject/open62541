@@ -98,7 +98,6 @@ get_unwrap = "warn"
 index_refutable_slice = "warn"
 indexing_slicing = "warn"
 manual_assert = "warn"
-match_on_vec_items = "warn"
 match_wild_err_arm = "warn"
 # TODO: Add assert messages.
 missing_assert_message = "allow"
