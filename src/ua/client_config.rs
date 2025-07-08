@@ -224,7 +224,7 @@ impl Drop for ClientConfig {
             // Fetch context pointer before clearing config. Free associated memory only afterwards.
             let context = inner.clientContext.cast::<ClientContext>();
 
-            unsafe { UA_ClientConfig_clear(&mut inner) }
+            unsafe { UA_ClientConfig_clear(&raw mut inner) }
 
             // Reclaim wrapped client context to avoid leaking memory. This simply drops the value.
             let _context: Box<ClientContext> = unsafe { Box::from_raw(context) };

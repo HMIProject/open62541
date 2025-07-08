@@ -194,8 +194,8 @@ impl ServerBuilder {
     pub fn accept_all(mut self) -> Self {
         let config = self.config_mut();
         unsafe {
-            UA_CertificateVerification_AcceptAll(&mut config.secureChannelPKI);
-            UA_CertificateVerification_AcceptAll(&mut config.sessionPKI);
+            UA_CertificateVerification_AcceptAll(&raw mut config.secureChannelPKI);
+            UA_CertificateVerification_AcceptAll(&raw mut config.sessionPKI);
         }
         self
     }
@@ -1197,8 +1197,8 @@ impl Server {
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
                 browse_description.as_ptr(),
-                &mut result_size,
-                &mut result_ptr,
+                &raw mut result_size,
+                &raw mut result_ptr,
             )
         });
         Error::verify_good(&status_code)?;

@@ -191,7 +191,7 @@ impl Drop for ServerConfig {
         // Check if we still hold the server config. If not, we need not clean up: the ownership has
         // passed to the server that was created from this config.
         if let Some(mut inner) = self.0.take() {
-            unsafe { UA_ServerConfig_clean(&mut inner) }
+            unsafe { UA_ServerConfig_clean(&raw mut inner) }
         }
     }
 }
