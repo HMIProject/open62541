@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::ua;
 
 /// Wrapper for subscription ID from [`open62541_sys`].
@@ -16,5 +18,11 @@ impl SubscriptionId {
 
     pub(crate) const fn to_uint32(self) -> ua::UInt32 {
         ua::UInt32::new(self.as_u32())
+    }
+}
+
+impl fmt::Display for SubscriptionId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
