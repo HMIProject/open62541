@@ -200,8 +200,9 @@ impl AsyncSubscription {
         &self.client
     }
 
+    /// Gets the ID of this subscription.
     #[must_use]
-    pub(crate) const fn subscription_id(&self) -> ua::SubscriptionId {
+    pub const fn subscription_id(&self) -> ua::SubscriptionId {
         self.subscription_id
     }
 }
