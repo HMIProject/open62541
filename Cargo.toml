@@ -1,6 +1,6 @@
 [package]
 name = "open62541"
-version = "0.9.1"
+version = "0.9.2"
 authors = ["HMI Project"]
 edition = "2021"
 # Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.82 for the following reason:
@@ -20,7 +20,7 @@ include = ["src/", "README.md", "CHANGELOG.md"]
 futures-channel = "0.3.30"
 futures-core = { version = "0.3.30", default-features = false }
 log = "0.4.20"
-open62541-sys = "0.4.16"
+open62541-sys = "0.4.17"
 parking_lot = "0.12.4"
 paste = "1.0.14"
 serde = { version = "1.0.194", optional = true }

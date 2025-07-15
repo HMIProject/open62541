@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.2] - 2025-07-15
+
 ### Added
 
 - Add `AsyncSubscription::subscription_id()`.
@@ -508,7 +510,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
-[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/HMIProject/open62541/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/HMIProject/open62541/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/HMIProject/open62541/compare/v0.8.5...v0.9.0
 [0.8.5]: https://github.com/HMIProject/open62541/compare/v0.8.4...v0.8.5
