@@ -1,3 +1,5 @@
+use std::fmt;
+
 /// Wrapper for [`ua::EUInformation::unit_id`](crate::ua::EUInformation::unit_id).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UnitId(i32);
@@ -45,6 +47,12 @@ impl UnitId {
         let code = String::from_utf8(ascii_chars);
         debug_assert!(code.is_ok(), "never fails for ASCII character codes");
         code.ok()
+    }
+}
+
+impl fmt::Display for UnitId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 

@@ -10,6 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Add `AsyncSubscription::subscription_id()`.
+- Implement `Display` for `ua::MonitoredItemId`, `ua::SubscriptionId`, `ua::UnitId`.
 
 ## [0.9.1] - 2025-06-17
 
