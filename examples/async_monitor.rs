@@ -89,7 +89,7 @@ async fn monitor_background(
 }
 
 async fn write_background(client: Arc<AsyncClient>, node_id: ua::NodeId) -> anyhow::Result<()> {
-    let value = rand::thread_rng().gen_range(0.0..100.0);
+    let value = rand::rng().random_range(0.0..100.0);
 
     time::sleep(Duration::from_secs(1)).await;
 
