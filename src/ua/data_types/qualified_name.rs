@@ -58,8 +58,8 @@ impl QualifiedName {
 
 impl hash::Hash for QualifiedName {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        // We are using UA_QualifiedName_hash() instead of a custom u64 hash function
-        // for consistency with UA_QualifiedName_equal().
+        // We are using `UA_QualifiedName_hash()` instead of a custom `u64` hash function
+        // for consistency with `UA_QualifiedName_equal()`.
         let hash = unsafe { UA_QualifiedName_hash(self.as_ptr()) };
 
         state.write_u32(hash);
@@ -68,7 +68,7 @@ impl hash::Hash for QualifiedName {
 
 impl fmt::Display for QualifiedName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // TODO: Replace custom implementation with UA_QualifiedName_print() when available.
+        // TODO: Replace custom implementation with `UA_QualifiedName_print()` when available.
         let namespace_index = self.namespace_index();
         if namespace_index == 0 {
             return self.name().fmt(f);
@@ -77,7 +77,7 @@ impl fmt::Display for QualifiedName {
     }
 }
 
-// TODO: Implement std::str::FromStr for QualifiedName using UA_QualifiedName_parse() when available.
+// TODO: Implement `std::str::FromStr` for `QualifiedName` using `UA_QualifiedName_parse()` when available.
 
 #[cfg(test)]
 mod tests {
