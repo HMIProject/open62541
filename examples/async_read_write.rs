@@ -33,12 +33,12 @@ async fn main() -> anyhow::Result<()> {
 
     println!();
 
-    let value = rand::thread_rng().gen_range(0.0..100.0);
+    let value = rand::rng().random_range(0.0..100.0);
     write_value(&client, &float_node_id, &ua::Float::new(value)).await?;
 
     println!();
 
-    let value = rand::thread_rng().gen_bool(0.5);
+    let value = rand::rng().random_bool(0.5);
     write_value(&client, &bool_node_id, &ua::Boolean::new(value)).await?;
 
     Ok(())
