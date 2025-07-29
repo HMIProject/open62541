@@ -49,6 +49,10 @@ impl ExpandedNodeId {
 impl str::FromStr for ExpandedNodeId {
     type Err = Error;
 
+    /// Parses expanded node ID from string.
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use open62541::ua;
     ///
