@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Display and parse `ua::ExpandedNodeId`.
+
 ## [0.9.2] - 2025-07-15
 
 ### Added
