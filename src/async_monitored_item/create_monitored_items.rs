@@ -225,11 +225,10 @@ unsafe extern "C" fn callback_c(
     _client: *mut UA_Client,
     userdata: *mut c_void,
     _request_id: UA_UInt32,
-    response: *mut c_void,
+    response: *mut UA_CreateMonitoredItemsResponse,
 ) {
     log::debug!("MonitoredItems_createDataChanges() completed");
 
-    let response = response.cast::<UA_CreateMonitoredItemsResponse>();
     // SAFETY: Incoming pointer is valid for access.
     // PANIC: We expect pointer to be valid when good.
     let response = unsafe { response.as_ref() }.expect("response should be set");

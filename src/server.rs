@@ -12,9 +12,11 @@ use std::{
     time::Instant,
 };
 
+use derive_more::Debug;
 use open62541_sys::{
-    UA_CertificateVerification_AcceptAll, UA_NodeId, UA_Server, UA_ServerConfig,
-    UA_Server_addDataSourceVariableNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
+    UA_CertificateGroup_AcceptAll, UA_NodeId, UA_Server, UA_ServerConfig,
+    UA_Server_addCallbackValueSourceVariableNode, UA_Server_addMethodNodeEx,
+    UA_Server_addNamespace, UA_Server_addNode_begin, UA_Server_addNode_finish,
     UA_Server_addReference, UA_Server_browse, UA_Server_browseNext, UA_Server_browseRecursive,
     UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getConfig, UA_Server_getNamespaceByIndex,
@@ -22,7 +24,7 @@ use open62541_sys::{
     UA_Server_readObjectProperty, UA_Server_runUntilInterrupt, UA_Server_run_iterate,
     UA_Server_run_shutdown, UA_Server_run_startup, UA_Server_translateBrowsePathToNodeIds,
     UA_Server_triggerEvent, UA_Server_writeDataValue, UA_Server_writeObjectProperty,
-    UA_Server_writeValue, __UA_Server_addNode, UA_STATUSCODE_BADNOTFOUND,
+    UA_Server_writeValue, UA_STATUSCODE_BADNOTFOUND,
 };
 use parking_lot::{Condvar, Mutex, MutexGuard};
 
@@ -194,8 +196,8 @@ impl ServerBuilder {
     pub fn accept_all(mut self) -> Self {
         let config = self.config_mut();
         unsafe {
-            UA_CertificateVerification_AcceptAll(&raw mut config.secureChannelPKI);
-            UA_CertificateVerification_AcceptAll(&raw mut config.sessionPKI);
+            UA_CertificateGroup_AcceptAll(&raw mut config.secureChannelPKI);
+            UA_CertificateGroup_AcceptAll(&raw mut config.sessionPKI);
         }
         self
     }
@@ -263,8 +265,8 @@ impl ServerBuilder {
         let config = self.config_mut();
 
         // PANIC: We never set lifecycle hooks elsewhere in config.
-        debug_assert!(config.nodeLifecycle.destructor.is_none());
-        config.nodeLifecycle.destructor = Some(destructor_c);
+        debug_assert!(unsafe { &*config.nodeLifecycle }.destructor.is_none());
+        unsafe { &mut *config.nodeLifecycle }.destructor = Some(destructor_c);
 
         let Self {
             config,
@@ -365,6 +367,7 @@ enum RunnerStateInner {
 
 #[derive(Debug)]
 struct ServerConfigGuard<'a> {
+    #[debug(skip)]
     config: &'a UA_ServerConfig,
     guard: RunnerStateGuard<'a>,
 }
@@ -609,21 +612,33 @@ impl Server {
         let mut out_new_node_id = ua::NodeId::null();
 
         let status_code = ua::StatusCode::new(unsafe {
-            __UA_Server_addNode(
+            UA_Server_addNode_begin(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 attributes.node_class().clone().into_raw(),
-                requested_new_node_id.as_ptr(),
-                parent_node_id.as_ptr(),
-                reference_type_id.as_ptr(),
-                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
+                DataType::to_raw_copy(&requested_new_node_id),
+                DataType::to_raw_copy(&parent_node_id),
+                DataType::to_raw_copy(&reference_type_id),
+                // TODO: Verify that `UA_Server_addNode_begin()` takes ownership.
                 browse_name.clone().into_raw(),
-                type_definition.as_ptr(),
-                attributes.as_node_attributes().as_ptr(),
+                // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
+                DataType::to_raw_copy(&type_definition),
+                attributes.as_node_attributes().as_ptr().cast(),
                 attributes.attribute_type(),
                 context.map_or(ptr::null_mut(), NodeContext::leak),
                 out_new_node_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addNode_finish(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.server.as_ptr().cast_mut(),
+                // TODO: Verify that `UA_Server_addNode_finish()` does not take ownership.
+                DataType::to_raw_copy(&out_new_node_id),
             )
         });
         Error::verify_good(&status_code)?;
@@ -656,21 +671,33 @@ impl Server {
         let mut out_new_node_id = ua::NodeId::null();
 
         let status_code = ua::StatusCode::new(unsafe {
-            __UA_Server_addNode(
+            UA_Server_addNode_begin(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 ua::NodeClass::OBJECT.into_raw(),
-                requested_new_node_id.as_ptr(),
-                parent_node_id.as_ptr(),
-                reference_type_id.as_ptr(),
-                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
+                DataType::to_raw_copy(&requested_new_node_id),
+                DataType::to_raw_copy(&parent_node_id),
+                DataType::to_raw_copy(&reference_type_id),
+                // TODO: Verify that `UA_Server_addNode_begin()` takes ownership.
                 browse_name.into_raw(),
-                type_definition.as_ptr(),
-                attributes.as_node_attributes().as_ptr(),
+                // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
+                DataType::to_raw_copy(&type_definition),
+                attributes.as_node_attributes().as_ptr().cast(),
                 ua::ObjectAttributes::data_type(),
                 ptr::null_mut(),
                 out_new_node_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addNode_finish(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.server.as_ptr().cast_mut(),
+                // TODO: Verify that `UA_Server_addNode_finish()` does not take ownership.
+                DataType::to_raw_copy(&out_new_node_id),
             )
         });
         Error::verify_good(&status_code)?;
@@ -703,21 +730,33 @@ impl Server {
         let mut out_new_node_id = ua::NodeId::null();
 
         let status_code = ua::StatusCode::new(unsafe {
-            __UA_Server_addNode(
+            UA_Server_addNode_begin(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 ua::NodeClass::VARIABLE.into_raw(),
-                requested_new_node_id.as_ptr(),
-                parent_node_id.as_ptr(),
-                reference_type_id.as_ptr(),
-                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
+                DataType::to_raw_copy(&requested_new_node_id),
+                DataType::to_raw_copy(&parent_node_id),
+                DataType::to_raw_copy(&reference_type_id),
+                // TODO: Verify that `UA_Server_addNode_begin()` takes ownership.
                 browse_name.into_raw(),
-                type_definition.as_ptr(),
-                attributes.as_node_attributes().as_ptr(),
+                // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
+                DataType::to_raw_copy(&type_definition),
+                attributes.as_node_attributes().as_ptr().cast(),
                 ua::VariableAttributes::data_type(),
                 ptr::null_mut(),
                 out_new_node_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addNode_finish(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.server.as_ptr().cast_mut(),
+                // TODO: Verify that `UA_Server_addNode_finish()` does not take ownership.
+                DataType::to_raw_copy(&out_new_node_id),
             )
         });
         Error::verify_good(&status_code)?;
@@ -756,20 +795,20 @@ impl Server {
         // SAFETY: We store `node_context` inside the node to keep `data_source` alive.
         let (data_source, node_context) = unsafe { data_source::wrap_data_source(data_source) };
         let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_addDataSourceVariableNode(
+            UA_Server_addCallbackValueSourceVariableNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
-                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 requested_new_node_id.into_raw(),
-                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 parent_node_id.into_raw(),
-                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 reference_type_id.into_raw(),
-                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 browse_name.into_raw(),
-                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 type_definition.into_raw(),
-                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 attributes.into_raw(),
                 data_source,
                 node_context.leak(),
