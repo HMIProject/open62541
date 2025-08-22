@@ -77,10 +77,16 @@ jobs:
         # Use specific Rust version that is the minimum supported `rust-version`
         # (MSRV) from `Cargo.toml`.
         uses: dtolnay/rust-toolchain@1.83
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
+          # Setting the target sets the `CARGO_BUILD_TARGET` environment variable,
+          # so there is no need for an explicit `--target` flag in each build step.
+          # This is required for both native and cross-platform builds to avoid
+          # using the default target of the runner.
           target: ${{ matrix.target }}
 
       - name: Install Cargo helpers
