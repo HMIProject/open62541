@@ -253,6 +253,7 @@ pub use self::{
         MethodCallback, MethodCallbackContext, MethodCallbackError, MethodCallbackResult,
         MethodNode, Node, ObjectNode, Server, ServerBuilder, ServerRunner, VariableNode,
     },
+    service::{ServiceRequest, ServiceResponse},
     traits::{
         Attribute, Attributes, CustomCertificateVerification, DataTypeExt, FilterOperand,
         MonitoringFilter,
@@ -263,7 +264,6 @@ pub use self::{
 pub(crate) use self::{
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
-    service::{ServiceRequest, ServiceResponse},
     value::{ArrayValue, NonScalarValue},
 };
 #[cfg(feature = "mbedtls")]

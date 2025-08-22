@@ -1,4 +1,4 @@
-use crate::{ua, ServiceRequest};
+use crate::{ua, DataType as _, ServiceRequest};
 
 crate::data_type!(WriteRequest);
 
@@ -13,4 +13,12 @@ impl WriteRequest {
 
 impl ServiceRequest for WriteRequest {
     type Response = ua::WriteResponse;
+
+    fn request_header(&self) -> &ua::RequestHeader {
+        ua::RequestHeader::raw_ref(&self.0.requestHeader)
+    }
+
+    fn request_header_mut(&mut self) -> &mut ua::RequestHeader {
+        ua::RequestHeader::raw_mut(&mut self.0.requestHeader)
+    }
 }

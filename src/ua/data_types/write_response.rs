@@ -22,7 +22,7 @@ impl WriteResponse {
 impl ServiceResponse for WriteResponse {
     type Request = ua::WriteRequest;
 
-    fn service_result(&self) -> ua::StatusCode {
-        ua::StatusCode::new(self.0.responseHeader.serviceResult)
+    fn response_header(&self) -> &ua::ResponseHeader {
+        ua::ResponseHeader::raw_ref(&self.0.responseHeader)
     }
 }
