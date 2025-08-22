@@ -1,4 +1,4 @@
-use crate::{ua, ServiceResponse};
+use crate::{ua, DataType as _, ServiceResponse};
 
 crate::data_type!(ReadResponse);
 
@@ -13,7 +13,7 @@ impl ReadResponse {
 impl ServiceResponse for ReadResponse {
     type Request = ua::ReadRequest;
 
-    fn service_result(&self) -> ua::StatusCode {
-        ua::StatusCode::new(self.0.responseHeader.serviceResult)
+    fn response_header(&self) -> &ua::ResponseHeader {
+        ua::ResponseHeader::raw_ref(&self.0.responseHeader)
     }
 }

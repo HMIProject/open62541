@@ -1,4 +1,4 @@
-use crate::{ua, ServiceRequest};
+use crate::{ua, DataType as _, ServiceRequest};
 
 crate::data_type!(CallRequest);
 
@@ -13,4 +13,12 @@ impl CallRequest {
 
 impl ServiceRequest for CallRequest {
     type Response = ua::CallResponse;
+
+    fn request_header(&self) -> &ua::RequestHeader {
+        ua::RequestHeader::raw_ref(&self.0.requestHeader)
+    }
+
+    fn request_header_mut(&mut self) -> &mut ua::RequestHeader {
+        ua::RequestHeader::raw_mut(&mut self.0.requestHeader)
+    }
 }

@@ -1,12 +1,27 @@
 use crate::{ua, DataType};
 
-pub(crate) trait ServiceRequest: DataType + 'static {
+/// A generic service request.
+///
+/// Defines methods supported by all service request types.
+pub trait ServiceRequest: DataType + 'static {
     type Response: ServiceResponse;
+
+    /// Returns the request header.
+    #[must_use]
+    fn request_header(&self) -> &ua::RequestHeader;
+
+    /// Returns the mutable request header.
+    #[must_use]
+    fn request_header_mut(&mut self) -> &mut ua::RequestHeader;
 }
 
-#[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
-pub(crate) trait ServiceResponse: DataType + 'static {
+/// A generic service response.
+///
+/// Defines methods supported by all service response types.
+pub trait ServiceResponse: DataType + 'static {
     type Request: ServiceRequest;
 
-    fn service_result(&self) -> ua::StatusCode;
+    /// Returns the response header.
+    #[must_use]
+    fn response_header(&self) -> &ua::ResponseHeader;
 }

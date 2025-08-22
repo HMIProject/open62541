@@ -67,6 +67,8 @@ mod read_value_id;
 mod reference_description;
 mod relative_path;
 mod relative_path_element;
+mod request_header;
+mod response_header;
 mod server_state;
 mod server_status_data_type;
 mod simple_attribute_operand;
@@ -153,6 +155,8 @@ pub use self::{
     reference_description::ReferenceDescription,
     relative_path::RelativePath,
     relative_path_element::RelativePathElement,
+    request_header::RequestHeader,
+    response_header::ResponseHeader,
     server_state::ServerState,
     server_status_data_type::ServerStatusDataType,
     simple_attribute_operand::SimpleAttributeOperand,
