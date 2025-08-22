@@ -268,7 +268,7 @@ impl AsyncClient {
             .with_timestamps_to_return(&ua::TimestampsToReturn::BOTH)
             .with_nodes_to_read(&nodes_to_read);
 
-        let response = service_request(&self.client, request).await?;
+        let response = self.read(request).await?;
 
         let Some(mut results) = response.results() else {
             return Err(Error::internal("read should return results"));
@@ -484,6 +484,15 @@ impl AsyncClient {
         let (_, subscription) = SubscriptionBuilder::default().create(self).await?;
 
         Ok(subscription)
+    }
+
+    /// Performs a generic read request.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the client is not connected.
+    pub async fn read(&self, request: ua::ReadRequest) -> Result<ua::ReadResponse> {
+        service_request(&self.client, request).await
     }
 
     pub(crate) const fn client(&self) -> &Arc<ua::Client> {
