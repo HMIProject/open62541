@@ -94,10 +94,6 @@ jobs:
           # The cache should not be shared between different workflows, jobs, and targets.
           shared-key: ${{ github.workflow }}-${{ github.job }}-${{ matrix.target }}-${{ matrix.runner_os }}
 
-      - name: Update Rust to latest version
-        run: >-
-          rustup update
-
       - name: Update crates to latest versions
         run: >-
           cargo update --verbose
