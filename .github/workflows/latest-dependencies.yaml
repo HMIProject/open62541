@@ -59,6 +59,14 @@ jobs:
         run: >-
           echo "CARGO_TARGET_DIR=C:\t" >> $env:GITHUB_ENV
 
+      - name: Install build tools for musl libc
+        # Otherwise the doc tests will fail for unknown reasons.
+        if: endsWith(matrix.target, '-musl')
+        # To avoid HTTP 404 when package index has been updated, we run `update` first.
+        run: |-
+          sudo apt -y update
+          sudo apt -y install musl-tools
+
       - name: Install Rust toolchain
         # Use latest stable Rust version.
         uses: dtolnay/rust-toolchain@stable
