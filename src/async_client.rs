@@ -494,7 +494,7 @@ impl AsyncClient {
     /// # Errors
     ///
     /// This fails when the client is not connected.
-    async fn service_request<R: ServiceRequest>(&self, request: R) -> Result<R::Response> {
+    pub async fn service_request<R: ServiceRequest>(&self, request: R) -> Result<R::Response> {
         type Cb<R> =
             CallbackOnce<std::result::Result<<R as ServiceRequest>::Response, ua::StatusCode>>;
 
