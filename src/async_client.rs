@@ -196,7 +196,6 @@ impl AsyncClient {
         // value.
         debug_assert_eq!(values.len(), 1);
         let Some(value) = values.pop() else {
-            // Should never occur and is already checked by `Self::read_attributes()`.
             return Err(Error::internal("should contain exactly one attribute"));
         };
 
@@ -271,7 +270,20 @@ impl AsyncClient {
 
         let response = self.service_request(request).await?;
 
-        response.eval(node_attributes.len())
+        let Some(mut results) = response.results() else {
+            return Err(Error::internal("read should return results"));
+        };
+
+        let results: Vec<DataValue<ua::Variant>> =
+            results.drain_all().map(ua::DataValue::cast).collect();
+
+        // The OPC UA specification state that the resulting list has the same number of elements as
+        // the request list. If not, we would not be able to match elements in the two lists anyway.
+        if results.len() != node_attributes.len() {
+            return Err(Error::internal("unexpected number of read results"));
+        }
+
+        Ok(results)
     }
 
     /// Writes node value.
@@ -289,7 +301,17 @@ impl AsyncClient {
 
         let response = self.service_request(request).await?;
 
-        response.eval()
+        let Some(results) = response.results() else {
+            return Err(Error::internal("write should return results"));
+        };
+
+        let Some(result) = results.as_slice().first() else {
+            return Err(Error::internal("write should return a result"));
+        };
+
+        Error::verify_good(result)?;
+
+        Ok(())
     }
 
     /// Calls specific method node at object node.
@@ -312,7 +334,24 @@ impl AsyncClient {
 
         let response = self.service_request(request).await?;
 
-        response.eval(method_id)
+        let Some(results) = response.results() else {
+            return Err(Error::internal("call should return results"));
+        };
+
+        let Some(result) = results.as_slice().first() else {
+            return Err(Error::internal("call should return a result"));
+        };
+
+        Error::verify_good(&result.status_code())?;
+
+        let output_arguments = if let Some(output_arguments) = result.output_arguments() {
+            output_arguments.into_vec()
+        } else {
+            log::debug!("Calling {method_id} returned unset output arguments, assuming none exist");
+            Vec::new()
+        };
+
+        Ok(output_arguments)
     }
 
     /// Browses specific node.
@@ -342,7 +381,15 @@ impl AsyncClient {
 
         let response = self.service_request(request).await?;
 
-        response.eval(browse_description)
+        let Some(results) = response.results() else {
+            return Err(Error::internal("browse should return results"));
+        };
+
+        let Some(result) = results.as_slice().first() else {
+            return Err(Error::internal("browse should return a result"));
+        };
+
+        to_browse_result(result, Some(browse_description.node_id()))
     }
 
     /// Browses several nodes at once.
@@ -366,7 +413,25 @@ impl AsyncClient {
 
         let response = self.service_request(request).await?;
 
-        response.eval_many(browse_descriptions)
+        let Some(results) = response.results() else {
+            return Err(Error::internal("browse should return results"));
+        };
+
+        // The OPC UA specification state that the resulting list has the same number of elements as
+        // the request list. If not, we would not be able to match elements in the two lists anyway.
+        if results.len() != browse_descriptions.len() {
+            return Err(Error::internal("unexpected number of browse results"));
+        }
+
+        let results: Vec<_> = results
+            .iter()
+            .zip(browse_descriptions)
+            .map(|(result, browse_description)| {
+                to_browse_result(result, Some(browse_description.node_id()))
+            })
+            .collect();
+
+        Ok(results)
     }
 
     /// Browses continuation points for more references.
@@ -392,7 +457,22 @@ impl AsyncClient {
 
         let response = self.service_request(request).await?;
 
-        response.eval(continuation_points)
+        let Some(results) = response.results() else {
+            return Err(Error::internal("browse should return results"));
+        };
+
+        // The OPC UA specification state that the resulting list has the same number of elements as
+        // the request list. If not, we would not be able to match elements in the two lists anyway.
+        if results.len() != continuation_points.len() {
+            return Err(Error::Internal("unexpected number of browse results"));
+        }
+
+        let results: Vec<_> = results
+            .iter()
+            .map(|result| to_browse_result(result, None))
+            .collect();
+
+        Ok(results)
     }
 
     /// Creates new [subscription](AsyncSubscription).
@@ -561,4 +641,29 @@ fn background_task(client: &ua::Client, cancelled: &AtomicBool) {
     }
 
     log::info!("Terminating cancelled background task");
+}
+
+/// Converts [`ua::BrowseResult`] to our public result type.
+fn to_browse_result(result: &ua::BrowseResult, node_id: Option<&ua::NodeId>) -> BrowseResult {
+    // Make sure to verify the inner status code inside `BrowseResult`. The service request finishes
+    // without error, even when browsing the node has failed.
+    Error::verify_good(&result.status_code())?;
+
+    let references = if let Some(references) = result.references() {
+        references.into_vec()
+    } else {
+        // When no references exist, some OPC UA servers do not return an empty references array but
+        // an invalid (unset) one instead, e.g. Siemens SIMOTION. We treat it as an empty array, and
+        // continue without error.
+        if let Some(node_id) = node_id {
+            log::debug!("Browsing {node_id} returned unset references, assuming none exist");
+        } else {
+            log::debug!(
+                "Browsing continuation point returned unset references, assuming none exist",
+            );
+        }
+        Vec::new()
+    };
+
+    Ok((references, result.continuation_point()))
 }

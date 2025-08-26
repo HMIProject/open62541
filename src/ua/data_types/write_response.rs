@@ -1,4 +1,4 @@
-use crate::{ua, DataType as _, Error, Result, ServiceResponse};
+use crate::{ua, DataType as _, ServiceResponse};
 
 crate::data_type!(WriteResponse);
 
@@ -16,20 +16,6 @@ impl WriteResponse {
                 .map(|status_code| ua::StatusCode::new(status_code.clone().into_raw()))
                 .collect(),
         )
-    }
-
-    pub fn eval(&self) -> Result<()> {
-        let Some(results) = self.results() else {
-            return Err(Error::internal("write should return results"));
-        };
-
-        let Some(result) = results.as_slice().first() else {
-            return Err(Error::internal("write should return a result"));
-        };
-
-        Error::verify_good(result)?;
-
-        Ok(())
     }
 }
 
