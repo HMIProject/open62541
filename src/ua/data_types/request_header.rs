@@ -6,11 +6,13 @@ impl RequestHeader {
     /// Gets the timeout hint.
     #[must_use]
     pub const fn timeout_hint(&self) -> Duration {
+        // Verify that `timeoutHint` is actually an `u32` before casting it.
+        let timeout_hint: u32 = self.0.timeoutHint;
         #[expect(
             clippy::as_conversions,
             reason = "infallible conversion from u32 to 64 in const fn"
         )]
-        Duration::from_millis(self.0.timeoutHint as u64)
+        Duration::from_millis(timeout_hint as u64)
     }
 
     /// Sets a custom response timeout a request.
