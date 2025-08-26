@@ -9,22 +9,14 @@ impl CallResponse {
         ua::Array::from_raw_parts(self.0.resultsSize, self.0.results)
     }
 
-    /// Evaluates the response as a [`Result`].
-    ///
-    /// # Errors
-    ///
-    /// Fails when the object or method node does not exist, the method cannot be called, or
-    /// the input arguments are unexpected.
     pub fn eval(&self, method_id: &ua::NodeId) -> Result<Vec<ua::Variant>> {
         let Some(results) = self.results() else {
             return Err(Error::internal("call should return results"));
         };
 
-        if results.as_slice().len() != 1 {
-            return Err(Error::internal("call should return a single result"));
-        }
-        #[expect(clippy::missing_panics_doc, reason = "Length has just been checked.")]
-        let result = results.as_slice().first().expect("single result");
+        let Some(result) = results.as_slice().first() else {
+            return Err(Error::internal("call should return a result"));
+        };
 
         Error::verify_good(&result.status_code())?;
 
