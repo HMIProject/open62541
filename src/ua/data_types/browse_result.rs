@@ -26,7 +26,13 @@ impl BrowseResult {
     }
 
     /// Evaluates this instance and converts it into the corresponding result type.
-    pub fn eval(&self, node_id: Option<&ua::NodeId>) -> crate::BrowseResult {
+    ///
+    /// The given `node_id` is only used for debug logs.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the node does not exist or it cannot be browsed.
+    pub fn eval(&self) -> crate::BrowseResult {
         // Make sure to verify the inner status code inside `BrowseResult`. The service request finishes
         // without error, even when browsing the node has failed.
         Error::verify_good(&self.status_code())?;
@@ -37,13 +43,9 @@ impl BrowseResult {
             // When no references exist, some OPC UA servers do not return an empty references array but
             // an invalid (unset) one instead, e.g. Siemens SIMOTION. We treat it as an empty array, and
             // continue without error.
-            if let Some(node_id) = node_id {
-                log::debug!("Browsing {node_id} returned unset references, assuming none exist");
-            } else {
-                log::debug!(
-                    "Browsing continuation point returned unset references, assuming none exist",
-                );
-            }
+            log::debug!(
+                "Browsing continuation point returned unset references, assuming none exist",
+            );
             Vec::new()
         };
 

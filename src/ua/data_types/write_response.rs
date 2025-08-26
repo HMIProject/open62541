@@ -18,14 +18,21 @@ impl WriteResponse {
         )
     }
 
+    /// Evaluates the response as a [`Result`].
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node does not exist or its value attribute cannot be written.
     pub fn eval(&self) -> Result<()> {
         let Some(results) = self.results() else {
             return Err(Error::internal("write should return results"));
         };
 
-        let Some(result) = results.as_slice().first() else {
-            return Err(Error::internal("write should return a result"));
-        };
+        if results.as_slice().len() != 1 {
+            return Err(Error::internal("write should return a single result"));
+        }
+        #[expect(clippy::missing_panics_doc, reason = "Length has just been checked.")]
+        let result = results.as_slice().first().expect("single result");
 
         Error::verify_good(result)?;
 

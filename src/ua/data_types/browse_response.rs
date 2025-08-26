@@ -9,41 +9,44 @@ impl BrowseResponse {
         ua::Array::from_raw_parts(self.0.resultsSize, self.0.results)
     }
 
-    /// Evaluates the response and converts it into the corresponding result type.
-    pub fn eval(&self, browse_description: &ua::BrowseDescription) -> crate::BrowseResult {
+    /// Evaluates the response as a [`BrowseResult`](crate::BrowseResult).
+    ///
+    /// # Errors
+    ///
+    /// Fails when the node does not exist or it cannot be browsed.
+    pub fn eval(&self) -> crate::BrowseResult {
         let Some(results) = self.results() else {
             return Err(Error::internal("browse should return results"));
         };
 
-        let Some(result) = results.as_slice().first() else {
-            return Err(Error::internal("browse should return a result"));
-        };
+        if results.as_slice().len() != 1 {
+            return Err(Error::internal("browse should return a single result"));
+        }
+        #[expect(clippy::missing_panics_doc, reason = "Length has just been checked.")]
+        let result = results.as_slice().first().expect("single result");
 
-        result.eval(Some(browse_description.node_id()))
+        result.eval()
     }
 
-    /// Evaluates the response and converts it into the corresponding result type.
-    pub fn eval_many(
-        &self,
-        browse_descriptions: &[ua::BrowseDescription],
-    ) -> Result<Vec<crate::BrowseResult>> {
+    /// Evaluates the response as a [`Result`] containing multiple [`BrowseResult`](crate::BrowseResult)s.
+    ///
+    /// # Errors
+    ///
+    /// Fails only when the entire request fails or when the number of browse results
+    /// differs from the given `expected_results_len`. When a node does not exist or
+    /// cannot be browsed an inner `Err` is returned.
+    pub fn eval_many(&self, expected_results_len: usize) -> Result<Vec<crate::BrowseResult>> {
         let Some(results) = self.results() else {
             return Err(Error::internal("browse should return results"));
         };
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
-        if results.len() != browse_descriptions.len() {
+        if results.len() != expected_results_len {
             return Err(Error::internal("unexpected number of browse results"));
         }
 
-        let results: Vec<_> = results
-            .iter()
-            .zip(browse_descriptions)
-            .map(|(result, browse_description)| result.eval(Some(browse_description.node_id())))
-            .collect();
-
-        Ok(results)
+        Ok(results.iter().map(ua::BrowseResult::eval).collect())
     }
 }
 

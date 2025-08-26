@@ -1,4 +1,4 @@
-use crate::{ua, BrowseResult, DataType as _, Error, Result, ServiceResponse};
+use crate::{ua, DataType as _, Error, Result, ServiceResponse};
 
 crate::data_type!(BrowseNextResponse);
 
@@ -9,20 +9,25 @@ impl BrowseNextResponse {
         ua::Array::from_raw_parts(self.0.resultsSize, self.0.results)
     }
 
-    pub fn eval(&self, continuation_points: &[ua::ContinuationPoint]) -> Result<Vec<BrowseResult>> {
+    /// Evaluates the response as a [`Result`] containing multiple [`BrowseResult`](crate::BrowseResult)s.
+    ///
+    /// # Errors
+    ///
+    /// Fails only when the entire request fails or when the number of browse results
+    /// differs from the given `expected_results_len`. When a continuation point is invalid
+    /// an inner `Err` is returned.
+    pub fn eval_many(&self, expected_results_len: usize) -> Result<Vec<crate::BrowseResult>> {
         let Some(results) = self.results() else {
             return Err(Error::internal("browse should return results"));
         };
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
-        if results.len() != continuation_points.len() {
+        if results.len() != expected_results_len {
             return Err(Error::Internal("unexpected number of browse results"));
         }
 
-        let results: Vec<_> = results.iter().map(|result| result.eval(None)).collect();
-
-        Ok(results)
+        Ok(results.iter().map(ua::BrowseResult::eval).collect())
     }
 }
 

@@ -159,15 +159,14 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails only when the entire request fails (e.g. communication error). When the node does
-    /// not exist or its value attribute cannot be read, the server returns a [`DataValue`] with the
-    /// appropriate [`status()`] and with [`value()`] unset.
+    /// Fails with either a communication error or a response error.
+    ///
+    /// See also: [`ReadResponse::eval_many()`]
     ///
     /// [`read_attribute()`]: Self::read_attribute
     /// [`read_attributes()`]: Self::read_attributes
     /// [`read_many_attributes()`]: Self::read_many_attributes
-    /// [`status()`]: DataValue::status
-    /// [`value()`]: DataValue::value
+    /// [`ReadResponse::eval_many()`]: ua::ReadResponse::eval_many
     pub async fn read_value(&self, node_id: &ua::NodeId) -> Result<DataValue<ua::Variant>> {
         self.read_attribute(node_id, ua::AttributeId::VALUE_T).await
     }
@@ -178,13 +177,12 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails only when the entire request fails (e.g. communication error). When the node does
-    /// not exist or the given attribute cannot be read, the server returns a [`DataValue`] with the
-    /// appropriate [`status()`] and with [`value()`] unset.
+    /// Fails with either a communication error or a response error.
+    ///
+    /// See also: [`ReadResponse::eval_many()`].
     ///
     /// [`read_value()`]: Self::read_value
-    /// [`status()`]: DataValue::status
-    /// [`value()`]: DataValue::value
+    /// [`ReadResponse::eval_many()`]: ua::ReadResponse::eval_many
     pub async fn read_attribute<T: Attribute>(
         &self,
         node_id: &ua::NodeId,
@@ -212,13 +210,12 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails only when the entire request fails (e.g. communication error). When the node does
-    /// not exist or one of the given attributes cannot be read, the server returns a corresponding
-    /// [`DataValue`] with the appropriate [`status()`] and with [`value()`] unset.
+    /// Fails with either a communication error or a response error.
+    ///
+    /// See also: [`ReadResponse::eval_many()`].
     ///
     /// [`read_attribute()`]: Self::read_attribute
-    /// [`status()`]: DataValue::status
-    /// [`value()`]: DataValue::value
+    /// [`ReadResponse::eval_many()`]: ua::ReadResponse::eval_many
     pub async fn read_attributes(
         &self,
         node_id: &ua::NodeId,
@@ -243,13 +240,12 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails only when the entire request fails (e.g. communication error). When a node does
-    /// not exist or one of the given attributes cannot be read, the server returns a corresponding
-    /// [`DataValue`] with the appropriate [`status()`] and with [`value()`] unset.
+    /// Fails with either a communication error or a response error.
+    ///
+    /// See also: [`ReadResponse::eval_many()`].
     ///
     /// [`read_attributes()`]: Self::read_attributes
-    /// [`status()`]: DataValue::status
-    /// [`value()`]: DataValue::value
+    /// [`ReadResponse::eval_many()`]: ua::ReadResponse::eval_many
     pub async fn read_many_attributes(
         &self,
         node_attributes: &[(ua::NodeId, ua::AttributeId)],
@@ -271,14 +267,18 @@ impl AsyncClient {
 
         let response = self.service_request(request).await?;
 
-        response.eval(node_attributes.len())
+        response.eval_many(node_attributes.len())
     }
 
     /// Writes node value.
     ///
     /// # Errors
     ///
-    /// This fails when the node does not exist or its value attribute cannot be written.
+    /// Fails with either a communication error or a response error.
+    ///
+    /// See also: [`WriteResponse::eval()`].
+    ///
+    /// [`WriteResponse::eval()`]: ua::WriteResponse::eval
     pub async fn write_value(&self, node_id: &ua::NodeId, value: &ua::DataValue) -> Result<()> {
         let attribute_id = ua::AttributeId::VALUE;
 
@@ -296,8 +296,11 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails when the object or method node does not exist, the method cannot be called, or
-    /// the input arguments are unexpected.
+    /// Fails with either a communication error or a response error.
+    ///
+    /// See also: [`CallResponse::eval()`].
+    ///
+    /// [`CallResponse::eval()`]: ua::CallResponse::eval
     pub async fn call_method(
         &self,
         object_id: &ua::NodeId,
@@ -317,7 +320,7 @@ impl AsyncClient {
 
     /// Browses specific node.
     ///
-    /// Use [`ua::BrowseDescription::default()`](ua::BrowseDescription) to set sensible defaults to
+    /// Use [`ua::BrowseDescription::default()`] to set sensible defaults to
     /// browse a specific node's children (forward references of the `HierarchicalReferences` type)
     /// like this:
     ///
@@ -335,14 +338,19 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails when the node does not exist or it cannot be browsed.
+    /// Fails with either a communication error or a response error.
+    ///
+    /// See also: [`BrowseResponse::eval()`].
+    ///
+    /// [`ua::BrowseDescription::default()`]: ua::BrowseDescription
+    /// [`BrowseResponse::eval()`]: ua::BrowseResponse::eval
     pub async fn browse(&self, browse_description: &ua::BrowseDescription) -> BrowseResult {
         let request =
             ua::BrowseRequest::init().with_nodes_to_browse(slice::from_ref(browse_description));
 
         let response = self.service_request(request).await?;
 
-        response.eval(browse_description)
+        response.eval()
     }
 
     /// Browses several nodes at once.
@@ -354,10 +362,12 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails only when the entire request fails. When a node does not exist or cannot be
-    /// browsed, an inner `Err` is returned.
+    /// Fails with either a communication error or a response error.
+    ///
+    /// See also: [`BrowseResponse::eval_many()`](ua::BrowseResponse::eval_many).
     ///
     /// [`browse()`]: Self::browse
+    /// [`BrowseResponse::eval_many()`]: ua::BrowseResponse::eval_many
     pub async fn browse_many(
         &self,
         browse_descriptions: &[ua::BrowseDescription],
@@ -366,7 +376,7 @@ impl AsyncClient {
 
         let response = self.service_request(request).await?;
 
-        response.eval_many(browse_descriptions)
+        response.eval_many(browse_descriptions.len())
     }
 
     /// Browses continuation points for more references.
@@ -379,11 +389,13 @@ impl AsyncClient {
     ///
     /// # Errors
     ///
-    /// This fails only when the entire request fails. When a continuation point is invalid, an
-    /// inner `Err` is returned.
+    /// Fails with either a communication error or a response error.
+    ///
+    /// See also: [`BrowseNextResponse::eval_many()`].
     ///
     /// [`browse()`]: Self::browse
     /// [`browse_many()`]: Self::browse_many
+    /// [`BrowseNextResponse::eval_many()`]: ua::BrowseNextResponse::eval_many
     pub async fn browse_next(
         &self,
         continuation_points: &[ua::ContinuationPoint],
@@ -392,7 +404,7 @@ impl AsyncClient {
 
         let response = self.service_request(request).await?;
 
-        response.eval(continuation_points)
+        response.eval_many(continuation_points.len())
     }
 
     /// Creates new [subscription](AsyncSubscription).

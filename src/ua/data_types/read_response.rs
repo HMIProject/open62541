@@ -9,21 +9,28 @@ impl ReadResponse {
         ua::Array::from_raw_parts(self.0.resultsSize, self.0.results)
     }
 
-    pub fn eval(&self, expected_len: usize) -> Result<Vec<DataValue<ua::Variant>>> {
+    /// Evaluates the response as a [`Result`] with `expected_results_len` individual read results.
+    ///
+    /// # Errors
+    ///
+    /// This fails when a node does not exist or one of the given attributes cannot be read,
+    /// the server returns a corresponding [`DataValue`] with the appropriate [`status()`]
+    /// and with [`value()`] unset.
+    ///
+    /// [`status()`]: DataValue::status
+    /// [`value()`]: DataValue::value
+    pub fn eval_many(&self, expected_results_len: usize) -> Result<Vec<DataValue<ua::Variant>>> {
         let Some(mut results) = self.results() else {
             return Err(Error::internal("read should return results"));
         };
 
-        let results: Vec<DataValue<ua::Variant>> =
-            results.drain_all().map(ua::DataValue::cast).collect();
-
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
-        if results.len() != expected_len {
+        if results.len() != expected_results_len {
             return Err(Error::internal("unexpected number of read results"));
         }
 
-        Ok(results)
+        Ok(results.drain_all().map(ua::DataValue::cast).collect())
     }
 }
 
