@@ -67,7 +67,7 @@ jobs:
 
     steps:
       - name: Adjust build settings for Windows
-        if: contains(matrix.target, '-windows-')
+        if: startsWith(matrix.runner_os, 'windows-')
         # Required for Windows builds: for version numbers with pre-release part
         # as suffix, the resulting paths would get too long to build otherwise.
         #
