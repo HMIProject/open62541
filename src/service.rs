@@ -1,6 +1,5 @@
 use crate::{ua, DataType};
 
-#[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
 pub(crate) trait ServiceRequest: DataType + 'static {
     type Response: ServiceResponse;
 }
