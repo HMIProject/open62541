@@ -10,9 +10,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Display and parse `ua::ExpandedNodeId`.
-- Added method `AsyncClient::service_request()`.
-- Added types `ua::RequestHeader` and `ua::ResponseHeader`.
-- Added traits `ua::ServiceRequest` and `ua::ServiceResponse`.
+- Add method `AsyncClient::service_request()`.
+- Add types `ua::RequestHeader` and `ua::ResponseHeader`.
+- Add traits `ServiceRequest` and `ServiceResponse`.
 
 ## [0.9.2] - 2025-07-15
 
