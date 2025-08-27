@@ -268,7 +268,7 @@ impl AsyncClient {
             .with_timestamps_to_return(&ua::TimestampsToReturn::BOTH)
             .with_nodes_to_read(&nodes_to_read);
 
-        let response = service_request(&self.client, request).await?;
+        let response = self.service_request(request).await?;
 
         let Some(mut results) = response.results() else {
             return Err(Error::internal("read should return results"));
@@ -299,7 +299,7 @@ impl AsyncClient {
             .with_attribute_id(&attribute_id)
             .with_value(value)]);
 
-        let response = service_request(&self.client, request).await?;
+        let response = self.service_request(request).await?;
 
         let Some(results) = response.results() else {
             return Err(Error::internal("write should return results"));
@@ -332,7 +332,7 @@ impl AsyncClient {
                 .with_method_id(method_id)
                 .with_input_arguments(input_arguments)]);
 
-        let response = service_request(&self.client, request).await?;
+        let response = self.service_request(request).await?;
 
         let Some(results) = response.results() else {
             return Err(Error::internal("call should return results"));
@@ -379,7 +379,7 @@ impl AsyncClient {
         let request =
             ua::BrowseRequest::init().with_nodes_to_browse(slice::from_ref(browse_description));
 
-        let response = service_request(&self.client, request).await?;
+        let response = self.service_request(request).await?;
 
         let Some(results) = response.results() else {
             return Err(Error::internal("browse should return results"));
@@ -411,7 +411,7 @@ impl AsyncClient {
     ) -> Result<Vec<BrowseResult>> {
         let request = ua::BrowseRequest::init().with_nodes_to_browse(browse_descriptions);
 
-        let response = service_request(&self.client, request).await?;
+        let response = self.service_request(request).await?;
 
         let Some(results) = response.results() else {
             return Err(Error::internal("browse should return results"));
@@ -455,7 +455,7 @@ impl AsyncClient {
     ) -> Result<Vec<BrowseResult>> {
         let request = ua::BrowseNextRequest::init().with_continuation_points(continuation_points);
 
-        let response = service_request(&self.client, request).await?;
+        let response = self.service_request(request).await?;
 
         let Some(results) = response.results() else {
             return Err(Error::internal("browse should return results"));
@@ -484,6 +484,88 @@ impl AsyncClient {
         let (_, subscription) = SubscriptionBuilder::default().create(self).await?;
 
         Ok(subscription)
+    }
+
+    /// Services a generic request.
+    ///
+    /// Could be used with [`ua::ReadRequest`]/[`ua::WriteRequest`],
+    /// [`ua::BrowseRequest`]/[`ua::BrowseNextRequest`], and [`ua::CallRequest`].
+    ///
+    /// # Errors
+    ///
+    /// This fails when the client is not connected.
+    pub async fn service_request<R: ServiceRequest>(&self, request: R) -> Result<R::Response> {
+        type Cb<R> =
+            CallbackOnce<std::result::Result<<R as ServiceRequest>::Response, ua::StatusCode>>;
+
+        unsafe extern "C" fn callback_c<R: ServiceRequest>(
+            _client: *mut UA_Client,
+            userdata: *mut c_void,
+            request_id: UA_UInt32,
+            response: *mut c_void,
+        ) {
+            log::trace!(
+                "Request ID {request_id} finished, received {}",
+                R::Response::type_name(),
+            );
+
+            // SAFETY: Incoming pointer is valid for access.
+            // PANIC: We expect pointer to be valid when good.
+            let response = unsafe { response.cast::<<R::Response as DataType>::Inner>().as_ref() }
+                .expect("response should be set");
+            let response = R::Response::clone_raw(response);
+
+            let service_result = response.response_header().service_result();
+            let result = if service_result.is_good() {
+                Ok(response)
+            } else {
+                Err(service_result)
+            };
+
+            // SAFETY: `userdata` is the result of `Cb::prepare()` and is used only once.
+            unsafe {
+                Cb::<R>::execute(userdata, result);
+            }
+        }
+
+        let (tx, rx) = oneshot::channel::<Result<R::Response>>();
+
+        let callback = |result: std::result::Result<R::Response, _>| {
+            // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
+            // care if that succeeds though: the receiver might already have gone out of scope (when its
+            // future has been cancelled) and we must not panic in FFI callbacks.
+            let _unused = tx.send(result.map_err(Error::new));
+        };
+
+        log::debug!("Running {}", R::type_name());
+
+        let mut request_id: UA_UInt32 = 0;
+        let status_code = ua::StatusCode::new(unsafe {
+            __UA_Client_AsyncService(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.client.as_ptr().cast_mut(),
+                request.as_ptr().cast::<c_void>(),
+                R::data_type(),
+                Some(callback_c::<R>),
+                R::Response::data_type(),
+                Cb::<R>::prepare(callback),
+                &raw mut request_id,
+            )
+        });
+        // The request itself fails when the client is not connected (or the secure session has not been
+        // established). In all other cases, `open62541` processes the request first and then may reject
+        // it only through the response when executing our callback above.
+        Error::verify_good(&status_code).inspect_err(|_| {
+            log::warn!("{} failed: {status_code:?}", R::type_name());
+        })?;
+
+        log::trace!("Assigned ID {request_id} to {}", R::type_name());
+
+        // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
+        // is only dropped after placing a value into the channel and `rx.await` always finds this value
+        // there.
+        rx.await
+            .unwrap_or(Err(Error::internal("callback should send result")))
     }
 
     pub(crate) const fn client(&self) -> &Arc<ua::Client> {
@@ -559,82 +641,6 @@ fn background_task(client: &ua::Client, cancelled: &AtomicBool) {
     }
 
     log::info!("Terminating cancelled background task");
-}
-
-async fn service_request<R: ServiceRequest>(
-    client: &ua::Client,
-    request: R,
-) -> Result<R::Response> {
-    type Cb<R> = CallbackOnce<std::result::Result<<R as ServiceRequest>::Response, ua::StatusCode>>;
-
-    unsafe extern "C" fn callback_c<R: ServiceRequest>(
-        _client: *mut UA_Client,
-        userdata: *mut c_void,
-        request_id: UA_UInt32,
-        response: *mut c_void,
-    ) {
-        log::trace!(
-            "Request ID {request_id} finished, received {}",
-            R::Response::type_name(),
-        );
-
-        // SAFETY: Incoming pointer is valid for access.
-        // PANIC: We expect pointer to be valid when good.
-        let response = unsafe { response.cast::<<R::Response as DataType>::Inner>().as_ref() }
-            .expect("response should be set");
-        let response = R::Response::clone_raw(response);
-
-        let status_code = response.service_result();
-        let result = if status_code.is_good() {
-            Ok(response)
-        } else {
-            Err(status_code)
-        };
-
-        // SAFETY: `userdata` is the result of `Cb::prepare()` and is used only once.
-        unsafe {
-            Cb::<R>::execute(userdata, result);
-        }
-    }
-
-    let (tx, rx) = oneshot::channel::<Result<R::Response>>();
-
-    let callback = |result: std::result::Result<R::Response, _>| {
-        // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
-        // care if that succeeds though: the receiver might already have gone out of scope (when its
-        // future has been cancelled) and we must not panic in FFI callbacks.
-        let _unused = tx.send(result.map_err(Error::new));
-    };
-
-    log::debug!("Running {}", R::type_name());
-
-    let mut request_id: UA_UInt32 = 0;
-    let status_code = ua::StatusCode::new(unsafe {
-        __UA_Client_AsyncService(
-            // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-            client.as_ptr().cast_mut(),
-            request.as_ptr().cast::<c_void>(),
-            R::data_type(),
-            Some(callback_c::<R>),
-            R::Response::data_type(),
-            Cb::<R>::prepare(callback),
-            &raw mut request_id,
-        )
-    });
-    // The request itself fails when the client is not connected (or the secure session has not been
-    // established). In all other cases, `open62541` processes the request first and then may reject
-    // it only through the response when executing our callback above.
-    Error::verify_good(&status_code).inspect_err(|_| {
-        log::warn!("{} failed: {status_code:?}", R::type_name());
-    })?;
-
-    log::trace!("Assigned ID {request_id} to {}", R::type_name());
-
-    // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
-    // is only dropped after placing a value into the channel and `rx.await` always finds this value
-    // there.
-    rx.await
-        .unwrap_or(Err(Error::internal("callback should send result")))
 }
 
 /// Converts [`ua::BrowseResult`] to our public result type.
