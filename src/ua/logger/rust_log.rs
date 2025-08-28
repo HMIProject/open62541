@@ -1,11 +1,11 @@
 use std::{
-    ffi::{c_char, c_void, CStr},
+    ffi::{c_char, c_void},
     ptr,
 };
 
-use open62541_sys::{vsnprintf_va_copy, vsnprintf_va_end, UA_LogCategory, UA_LogLevel, UA_Logger};
+use open62541_sys::{UA_LogCategory, UA_LogLevel, UA_Logger, UA_String_vformat};
 
-use crate::ua;
+use crate::{ua, DataType as _, Error, Result};
 
 const LOG_TARGET: &str = "open62541_sys";
 
@@ -21,14 +21,15 @@ pub(crate) fn logger() -> ua::Logger {
         msg: *const c_char,
         args: open62541_sys::va_list_,
     ) {
-        let Some(msg) = format_message(msg, args) else {
-            log::error!(target: LOG_TARGET, "Unknown log message");
-            return;
+        let msg = match format_message(msg, args) {
+            Ok(msg) => msg,
+            Err(error) => {
+                log::error!(target: LOG_TARGET, "Unknown log message: {error}");
+                return;
+            }
         };
 
-        let msg = CStr::from_bytes_with_nul(&msg)
-            .unwrap_or(c"Invalid log message")
-            .to_string_lossy();
+        let msg = msg.as_str().unwrap_or("Invalid log message");
 
         if level == UA_LogLevel::UA_LOGLEVEL_FATAL {
             // Without fatal level in `log`, fall back to error.
@@ -89,70 +90,35 @@ pub(crate) fn logger() -> ua::Logger {
     unsafe { ua::Logger::from_raw(logger) }
 }
 
-/// Initial buffer size when formatting messages.
-const FORMAT_MESSAGE_DEFAULT_BUFFER_LEN: usize = 128;
-
-/// Maximum buffer size when formatting messages.
-const FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN: usize = 65536;
+/// Buffer size when formatting messages.
+// This matches the limit used by default implementations `ua_log_stdout.h` and `ua_log_syslog.h`.
+const FORMAT_MESSAGE_BUFFER_LEN: usize = 512;
 
 /// Formats message with `vprintf` library calls.
 ///
-/// This returns the formatted message with a trailing NUL byte, or `None` when formatting fails. A
-/// long message may be truncated (see [`FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN`] for details); its last
-/// characters will be replaced with `...` to indicate this.
-fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<Vec<u8>> {
-    // Delegate string formatting to `vsnprintf()`, the length-checked string buffer variant of the
-    // variadic `vprintf` family.
-    //
-    // We use the custom `vsnprintf_va_copy()` provided by `open62541_sys`. This copies the va args
-    // and requires an explicit call to `vsnprintf_va_end()` afterwards.
+/// This returns the formatted message as string, or `Err` when formatting fails. A long message is
+/// truncated (see [`FORMAT_MESSAGE_BUFFER_LEN`]); its last characters will be replaced with `...`.
+fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Result<ua::String> {
+    // With non-zero length, `UA_String_vformat()` fills the given string directly. For zero length
+    // strings, the result would be dynamically allocated, but this risks handling incredibly large
+    // amounts of memory in the log handler which we want to avoid here.
+    let mut msg_buffer = ua::String::uninit(FORMAT_MESSAGE_BUFFER_LEN);
 
-    // Allocate default buffer first. Only when the message doesn't fit, we need to allocate larger
-    // buffer below.
-    let mut msg_buffer: Vec<u8> = vec![0; FORMAT_MESSAGE_DEFAULT_BUFFER_LEN];
-    loop {
-        let result = unsafe {
-            vsnprintf_va_copy(
-                msg_buffer.as_mut_ptr().cast::<c_char>(),
-                msg_buffer.len(),
-                msg,
-                args,
-            )
-        };
-        let Ok(msg_len) = usize::try_from(result) else {
-            // Negative result is an error in the format string. Nothing we can do.
-            debug_assert!(result < 0);
-            // Free the `va_list` argument that is no consumed by `vsnprintf()`!
-            unsafe { vsnprintf_va_end(args) }
-            return None;
-        };
-        let buffer_len = msg_len + 1;
-        if buffer_len > msg_buffer.len() {
-            // Last byte must always be the NUL terminator, even if the message
-            // doesn't fit into the buffer.
-            debug_assert_eq!(msg_buffer.last(), Some(&0));
-            if msg_buffer.len() < FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN {
-                // Allocate larger buffer and try again.
-                msg_buffer.resize(FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN, 0);
-                continue;
-            }
-            // Message is too large to format. Truncate the message by ending it with `...`.
-            for char in msg_buffer.iter_mut().rev().skip(1).take(3) {
+    let status_code =
+        ua::StatusCode::new(unsafe { UA_String_vformat(msg_buffer.as_mut_ptr(), msg, args) });
+    if status_code == ua::StatusCode::BADENCODINGLIMITSEXCEEDED {
+        // Message is too large to format. We could try again with a larger buffer, but since we do
+        // not know the required length (`UA_String_vformat()` doesn't return it), we would have to
+        // guess (e.g., doubling the length until the message fits). Simply truncate the message by
+        // ending it with `...` instead to ensure constant-time operation.
+        if let Some(msg_buffer) = msg_buffer.as_mut_bytes() {
+            for char in msg_buffer.iter_mut().rev().take(3) {
                 *char = b'.';
             }
-        } else {
-            // Message fits into the buffer. Make sure that `from_bytes_with_nul()`
-            // sees the expected single NUL terminator in the final position.
-            msg_buffer.truncate(buffer_len);
         }
-        break;
+    } else {
+        Error::verify_good(&status_code)?;
     }
 
-    // Free the `va_list` argument that is not consumed by `vsnprintf()`!
-    unsafe { vsnprintf_va_end(args) }
-
-    // Last byte must always be the NUL terminator.
-    debug_assert_eq!(msg_buffer.last(), Some(&0));
-
-    Some(msg_buffer)
+    Ok(msg_buffer)
 }
