@@ -69,7 +69,7 @@ async fn open_server_and_connect() {
         .contains("open62541 OPC UA Server"));
 
     // Clean up client.
-    drop(client);
+    client.disconnect().await;
 
     // Shut down server.
     running.store(false, Ordering::Relaxed);
