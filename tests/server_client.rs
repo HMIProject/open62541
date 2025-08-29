@@ -68,7 +68,7 @@ async fn open_server_and_connect() {
         .expect("is valid string")
         .contains("open62541 OPC UA Server"));
 
-    // Clean up client.
+    // Disconnect client.
     client.disconnect().await;
 
     // Shut down server.
