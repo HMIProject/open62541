@@ -3,51 +3,77 @@ use std::{
     ptr,
 };
 
+use log::Level;
 use open62541_sys::{UA_LogCategory, UA_LogLevel, UA_Logger, UA_String_vformat};
 
 use crate::{ua, DataType as _, Error, Result};
 
+// This matches the crate name.
 const LOG_TARGET: &str = "open62541_sys";
+
+// These match the category names from `ua_log_stdout.c` and `ua_log_syslog.c`.
+const LOG_CATEGORY_NETWORK: &str = "network";
+const LOG_CATEGORY_SECURECHANNEL: &str = "channel";
+const LOG_CATEGORY_SESSION: &str = "session";
+const LOG_CATEGORY_SERVER: &str = "server";
+const LOG_CATEGORY_CLIENT: &str = "client";
+const LOG_CATEGORY_USERLAND: &str = "userland";
+const LOG_CATEGORY_SECURITYPOLICY: &str = "security";
+const LOG_CATEGORY_EVENTLOOP: &str = "eventloop";
+const LOG_CATEGORY_PUBSUB: &str = "pubsub";
+const LOG_CATEGORY_DISCOVERY: &str = "discovery";
+const LOG_CATEGORY_UNKNOWN: &str = "unknown";
 
 /// Creates logger that forwards to the `log` crate.
 ///
-/// We can use this to prevent `open62541` from installing its own default logger (which outputs any
+/// We can use this to prevent `open62541` from installing its own default logger (which outputs all
 /// logs to stdout/stderr directly).
 pub(crate) fn logger() -> ua::Logger {
     unsafe extern "C" fn log_c(
         _log_context: *mut c_void,
         level: UA_LogLevel,
-        _category: UA_LogCategory,
+        category: UA_LogCategory,
         msg: *const c_char,
         args: open62541_sys::va_list_,
     ) {
-        let msg = match format_message(msg, args) {
-            Ok(msg) => msg,
-            Err(error) => {
-                log::error!(target: LOG_TARGET, "Unknown log message: {error}");
-                return;
-            }
+        let level = match level {
+            // Without fatal level in `log`, fall back to error.
+            UA_LogLevel::UA_LOGLEVEL_FATAL | UA_LogLevel::UA_LOGLEVEL_ERROR => Level::Error,
+            UA_LogLevel::UA_LOGLEVEL_WARNING => Level::Warn,
+            UA_LogLevel::UA_LOGLEVEL_INFO => Level::Info,
+            UA_LogLevel::UA_LOGLEVEL_DEBUG => Level::Debug,
+            UA_LogLevel::UA_LOGLEVEL_TRACE => Level::Trace,
+            // Handle unexpected level by escalating to error.
+            #[expect(clippy::match_same_arms, reason = "distinction of cases")]
+            _ => Level::Error,
         };
 
-        let msg = msg.as_str().unwrap_or("Invalid log message");
-
-        if level == UA_LogLevel::UA_LOGLEVEL_FATAL {
-            // Without fatal level in `log`, fall back to error.
-            log::error!(target: LOG_TARGET, "{msg}");
-        } else if level == UA_LogLevel::UA_LOGLEVEL_ERROR {
-            log::error!(target: LOG_TARGET, "{msg}");
-        } else if level == UA_LogLevel::UA_LOGLEVEL_WARNING {
-            log::warn!(target: LOG_TARGET, "{msg}");
-        } else if level == UA_LogLevel::UA_LOGLEVEL_INFO {
-            log::info!(target: LOG_TARGET, "{msg}");
-        } else if level == UA_LogLevel::UA_LOGLEVEL_DEBUG {
-            log::debug!(target: LOG_TARGET, "{msg}");
-        } else if level == UA_LogLevel::UA_LOGLEVEL_TRACE {
-            log::trace!(target: LOG_TARGET, "{msg}");
-        } else {
-            // Handle unexpected level by escalating to error.
-            log::error!(target: LOG_TARGET, "{msg}");
+        if !log::log_enabled!(target: LOG_TARGET, level) {
+            // Bail out early to skip formatting message.
+            return;
         }
+
+        let msg = format_message(msg, args);
+        let msg = match msg {
+            Ok(ref msg) => msg.as_str().unwrap_or("Invalid log message"),
+            Err(_) => "Unknown log message",
+        };
+
+        let category = match category {
+            UA_LogCategory::UA_LOGCATEGORY_NETWORK => LOG_CATEGORY_NETWORK,
+            UA_LogCategory::UA_LOGCATEGORY_SECURECHANNEL => LOG_CATEGORY_SECURECHANNEL,
+            UA_LogCategory::UA_LOGCATEGORY_SESSION => LOG_CATEGORY_SESSION,
+            UA_LogCategory::UA_LOGCATEGORY_SERVER => LOG_CATEGORY_SERVER,
+            UA_LogCategory::UA_LOGCATEGORY_CLIENT => LOG_CATEGORY_CLIENT,
+            UA_LogCategory::UA_LOGCATEGORY_USERLAND => LOG_CATEGORY_USERLAND,
+            UA_LogCategory::UA_LOGCATEGORY_SECURITYPOLICY => LOG_CATEGORY_SECURITYPOLICY,
+            UA_LogCategory::UA_LOGCATEGORY_EVENTLOOP => LOG_CATEGORY_EVENTLOOP,
+            UA_LogCategory::UA_LOGCATEGORY_PUBSUB => LOG_CATEGORY_PUBSUB,
+            UA_LogCategory::UA_LOGCATEGORY_DISCOVERY => LOG_CATEGORY_DISCOVERY,
+            _ => LOG_CATEGORY_UNKNOWN,
+        };
+
+        log::log!(target: LOG_TARGET, level, "({category}) {msg}");
     }
 
     unsafe extern "C" fn clear_c(logger: *mut UA_Logger) {
