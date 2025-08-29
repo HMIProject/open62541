@@ -264,9 +264,12 @@ impl ServerBuilder {
 
         let config = self.config_mut();
 
-        // PANIC: We never set lifecycle hooks elsewhere in config.
-        debug_assert!(unsafe { &*config.nodeLifecycle }.destructor.is_none());
-        unsafe { &mut *config.nodeLifecycle }.destructor = Some(destructor_c);
+        // FIXME: Initialize lifecycle hooks object.
+        if !config.nodeLifecycle.is_null() {
+            // PANIC: We never set lifecycle hooks elsewhere in config.
+            debug_assert!(unsafe { &*config.nodeLifecycle }.destructor.is_none());
+            unsafe { &mut *config.nodeLifecycle }.destructor = Some(destructor_c);
+        }
 
         let Self {
             config,
