@@ -1,8 +1,8 @@
 use std::ptr::NonNull;
 
 use open62541_sys::{
-    UA_Client, UA_Client_delete, UA_Client_disconnect, UA_Client_getContext, UA_Client_getState,
-    UA_Client_new, UA_Client_newWithConfig,
+    UA_Client, UA_Client_delete, UA_Client_disconnect, UA_Client_getConfig, UA_Client_getContext,
+    UA_Client_getState, UA_Client_new, UA_Client_newWithConfig,
 };
 
 use crate::{ua, ClientContext, DataType as _, Error};
@@ -125,8 +125,12 @@ impl Drop for Client {
         // by calling `disconnect()` instead of simply dropping the client.
         unsafe { UA_Client_delete(self.as_mut_ptr()) }
 
-        // Reclaim wrapped client context to avoid leaking memory. This simply drops the value.
-        let _context: Box<ClientContext> = unsafe { Box::from_raw(context) };
+        // Reclaim wrapped client context to avoid leaking memory. This simply drops the value. Note
+        // that the context may be null if (and only if) the client was default-initialized (instead
+        // of going through `ua::ClientConfig`).
+        if !context.is_null() {
+            let _context: Box<ClientContext> = unsafe { Box::from_raw(context) };
+        }
     }
 }
 
@@ -134,6 +138,14 @@ impl Default for Client {
     fn default() -> Self {
         // `UA_Client_new()` matches `UA_Client_delete()`.
         let inner = NonNull::new(unsafe { UA_Client_new() }).expect("create UA_Client");
+
+        // For default-initialized clients, context must be unset.
+        debug_assert!({
+            let config = unsafe { UA_Client_getConfig(inner.as_ptr()) };
+            let config = unsafe { config.as_mut() }.expect("client config must be set");
+            config.clientContext.is_null()
+        });
+
         Self(inner)
     }
 }
