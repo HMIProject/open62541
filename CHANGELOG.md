@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add method `ua::CertificateVerification::memory_store()` and `ua::TrustListDataType`.
+
 ### Changed
 
 - Breaking: Upgrade to open62541 version

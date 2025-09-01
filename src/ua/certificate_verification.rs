@@ -4,7 +4,12 @@ use std::{
 };
 
 use derive_more::Debug;
+#[cfg(feature = "mbedtls")]
+use open62541_sys::UA_CertificateGroup_Memorystore;
 use open62541_sys::{UA_CertificateGroup, UA_CertificateGroup_AcceptAll};
+
+#[cfg(feature = "mbedtls")]
+use crate::{ua, DataType as _};
 
 /// Wrapper for [`UA_CertificateGroup`] from [`open62541_sys`].
 #[derive(Debug)]
@@ -18,9 +23,34 @@ impl CertificateVerification {
     #[must_use]
     pub fn accept_all() -> Self {
         let mut certificate_verification = Self::init();
-        // SAFETY: Certificate verification is null, but that is valid.
+        // SAFETY: Certificate verification is uninitialized, but that is expected.
         unsafe {
             UA_CertificateGroup_AcceptAll(certificate_verification.as_mut_ptr());
+        }
+        certificate_verification
+    }
+
+    #[cfg(feature = "mbedtls")]
+    #[must_use]
+    pub fn memory_store(
+        certificate_group_id: &ua::NodeId,
+        trust_list: Option<&ua::TrustListDataType>,
+    ) -> Self {
+        let mut certificate_verification = Self::init();
+        // SAFETY: Certificate verification is uninitialized, but that is expected.
+        unsafe {
+            UA_CertificateGroup_Memorystore(
+                certificate_verification.as_mut_ptr(),
+                // SAFETY: Argument is only read, not modified or returned.
+                certificate_group_id.as_ptr().cast_mut(),
+                trust_list.map_or(ptr::null(), |trust_list| trust_list.as_ptr()),
+                // FIXME: Initialize logger.
+                ptr::null(),
+                // TODO: Allow parameters. Valid parameters are:
+                // - "max-trust-listsize"
+                // - "max-rejected-listsize"
+                ptr::null(),
+            );
         }
         certificate_verification
     }
