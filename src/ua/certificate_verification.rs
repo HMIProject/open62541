@@ -4,11 +4,7 @@ use std::{
 };
 
 use derive_more::Debug;
-use open62541_sys::{
-    UA_ByteString, UA_CertificateGroup, UA_CertificateGroup_AcceptAll, UA_StatusCode, UA_String,
-};
-
-use crate::{ua, CustomCertificateVerification, DataType, Userdata};
+use open62541_sys::{UA_CertificateGroup, UA_CertificateGroup_AcceptAll};
 
 /// Wrapper for [`UA_CertificateGroup`] from [`open62541_sys`].
 #[derive(Debug)]
@@ -27,70 +23,6 @@ impl CertificateVerification {
             UA_CertificateGroup_AcceptAll(certificate_verification.as_mut_ptr());
         }
         certificate_verification
-    }
-
-    /// Creates certificate verification with custom callbacks.
-    #[expect(dead_code, reason = "work in progress")]
-    pub fn custom(_certificate_verification: impl CustomCertificateVerification + 'static) -> Self {
-        type Ud = Userdata<Box<dyn CustomCertificateVerification>>;
-
-        unsafe extern "C" fn verify_certificate_c(
-            cv: *const UA_CertificateGroup,
-            certificate: *const UA_ByteString,
-        ) -> UA_StatusCode {
-            // SAFETY: Reference is used only for the remainder of this function.
-            let certificate = ua::ByteString::raw_ref(unsafe {
-                certificate.as_ref().expect("certificate should be set")
-            });
-
-            // SAFETY: We use the user data only when it is still alive.
-            let certificate_verification = unsafe { Ud::peek_at((*cv).context) };
-            let status_code = certificate_verification.verify_certificate(certificate);
-            status_code.into_raw()
-        }
-
-        unsafe extern "C" fn verify_application_uri_c(
-            cv: *const UA_CertificateGroup,
-            certificate: *const UA_ByteString,
-            application_uri: *const UA_String,
-        ) -> UA_StatusCode {
-            // SAFETY: References are used only for the remainder of this function.
-            let certificate = ua::ByteString::raw_ref(unsafe {
-                certificate.as_ref().expect("certificate should be set")
-            });
-            let application_uri = ua::String::raw_ref(unsafe {
-                application_uri
-                    .as_ref()
-                    .expect("application URI should be set")
-            });
-
-            // SAFETY: We use the user data only when it is still alive.
-            let certificate_verification = unsafe { Ud::peek_at((*cv).context) };
-            let status_code =
-                certificate_verification.verify_application_uri(certificate, application_uri);
-            status_code.into_raw()
-        }
-
-        unsafe extern "C" fn clear_c(cv: *mut UA_CertificateGroup) {
-            // Reclaim ownership of certificate verification and drop it.
-            // SAFETY: We use the user data only when it is still alive.
-            let _unused = unsafe { Ud::consume((*cv).context) };
-        }
-
-        // FIXME: Implement `UA_CertificateGroup`.
-        unimplemented!()
-
-        // let inner = UA_CertificateGroup {
-        //     context: Ud::prepare(Box::new(certificate_verification)),
-        //     verifyCertificate: Some(verify_certificate_c),
-        //     verifyApplicationURI: Some(verify_application_uri_c),
-        //     getExpirationDate: None,
-        //     getSubjectName: None,
-        //     clear: Some(clear_c),
-        //     logging: ptr::null_mut(),
-        // };
-
-        // unsafe { Self::from_raw(inner) }
     }
 
     /// Creates wrapper by taking ownership of value.
