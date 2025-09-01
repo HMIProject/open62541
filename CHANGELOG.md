@@ -9,6 +9,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Breaking: Upgrade to open62541 version
+  [1.5.0](https://github.com/open62541/open62541/releases/tag/v1.5.0).
+- Breaking: Remove method `ua::CertificateVerification::custom()` and trait
+  `CustomCertificateVerification`.
 - Include category ("network", "channel", ..., "discovery") in log messages.
 - Skip overhead of formatting log message when corresponding log level has been disabled.
 
