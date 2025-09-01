@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Include category ("network", "channel", ..., "discovery") in log messages.
+- Skip overhead of formatting log message when corresponding log level has been disabled.
+
 ## [0.9.3] - 2025-08-27
 
 ### Added

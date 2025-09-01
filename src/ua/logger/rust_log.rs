@@ -11,19 +11,6 @@ use crate::{ua, DataType as _, Error, Result};
 // This matches the crate name.
 const LOG_TARGET: &str = "open62541_sys";
 
-// These match the category names from `ua_log_stdout.c` and `ua_log_syslog.c`.
-const LOG_CATEGORY_NETWORK: &str = "network";
-const LOG_CATEGORY_SECURECHANNEL: &str = "channel";
-const LOG_CATEGORY_SESSION: &str = "session";
-const LOG_CATEGORY_SERVER: &str = "server";
-const LOG_CATEGORY_CLIENT: &str = "client";
-const LOG_CATEGORY_USERLAND: &str = "userland";
-const LOG_CATEGORY_SECURITYPOLICY: &str = "security";
-const LOG_CATEGORY_EVENTLOOP: &str = "eventloop";
-const LOG_CATEGORY_PUBSUB: &str = "pubsub";
-const LOG_CATEGORY_DISCOVERY: &str = "discovery";
-const LOG_CATEGORY_UNKNOWN: &str = "unknown";
-
 /// Creates logger that forwards to the `log` crate.
 ///
 /// We can use this to prevent `open62541` from installing its own default logger (which outputs all
@@ -59,19 +46,7 @@ pub(crate) fn logger() -> ua::Logger {
             Err(_) => "Unknown log message",
         };
 
-        let category = match category {
-            UA_LogCategory::UA_LOGCATEGORY_NETWORK => LOG_CATEGORY_NETWORK,
-            UA_LogCategory::UA_LOGCATEGORY_SECURECHANNEL => LOG_CATEGORY_SECURECHANNEL,
-            UA_LogCategory::UA_LOGCATEGORY_SESSION => LOG_CATEGORY_SESSION,
-            UA_LogCategory::UA_LOGCATEGORY_SERVER => LOG_CATEGORY_SERVER,
-            UA_LogCategory::UA_LOGCATEGORY_CLIENT => LOG_CATEGORY_CLIENT,
-            UA_LogCategory::UA_LOGCATEGORY_USERLAND => LOG_CATEGORY_USERLAND,
-            UA_LogCategory::UA_LOGCATEGORY_SECURITYPOLICY => LOG_CATEGORY_SECURITYPOLICY,
-            UA_LogCategory::UA_LOGCATEGORY_EVENTLOOP => LOG_CATEGORY_EVENTLOOP,
-            UA_LogCategory::UA_LOGCATEGORY_PUBSUB => LOG_CATEGORY_PUBSUB,
-            UA_LogCategory::UA_LOGCATEGORY_DISCOVERY => LOG_CATEGORY_DISCOVERY,
-            _ => LOG_CATEGORY_UNKNOWN,
-        };
+        let category = log_category(&category);
 
         log::log!(target: LOG_TARGET, level, "({category}) {msg}");
     }
@@ -147,4 +122,33 @@ fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Result<u
     }
 
     Ok(msg_buffer)
+}
+
+// These match the category names from `ua_log_stdout.c` and `ua_log_syslog.c`.
+const LOG_CATEGORY_NETWORK: &str = "network";
+const LOG_CATEGORY_SECURECHANNEL: &str = "channel";
+const LOG_CATEGORY_SESSION: &str = "session";
+const LOG_CATEGORY_SERVER: &str = "server";
+const LOG_CATEGORY_CLIENT: &str = "client";
+const LOG_CATEGORY_USERLAND: &str = "userland";
+const LOG_CATEGORY_SECURITYPOLICY: &str = "security";
+const LOG_CATEGORY_EVENTLOOP: &str = "eventloop";
+const LOG_CATEGORY_PUBSUB: &str = "pubsub";
+const LOG_CATEGORY_DISCOVERY: &str = "discovery";
+const LOG_CATEGORY_UNKNOWN: &str = "unknown";
+
+const fn log_category(category: &UA_LogCategory) -> &'static str {
+    match *category {
+        UA_LogCategory::UA_LOGCATEGORY_NETWORK => LOG_CATEGORY_NETWORK,
+        UA_LogCategory::UA_LOGCATEGORY_SECURECHANNEL => LOG_CATEGORY_SECURECHANNEL,
+        UA_LogCategory::UA_LOGCATEGORY_SESSION => LOG_CATEGORY_SESSION,
+        UA_LogCategory::UA_LOGCATEGORY_SERVER => LOG_CATEGORY_SERVER,
+        UA_LogCategory::UA_LOGCATEGORY_CLIENT => LOG_CATEGORY_CLIENT,
+        UA_LogCategory::UA_LOGCATEGORY_USERLAND => LOG_CATEGORY_USERLAND,
+        UA_LogCategory::UA_LOGCATEGORY_SECURITYPOLICY => LOG_CATEGORY_SECURITYPOLICY,
+        UA_LogCategory::UA_LOGCATEGORY_EVENTLOOP => LOG_CATEGORY_EVENTLOOP,
+        UA_LogCategory::UA_LOGCATEGORY_PUBSUB => LOG_CATEGORY_PUBSUB,
+        UA_LogCategory::UA_LOGCATEGORY_DISCOVERY => LOG_CATEGORY_DISCOVERY,
+        _ => LOG_CATEGORY_UNKNOWN,
+    }
 }
