@@ -59,7 +59,7 @@ pub(crate) fn logger() -> ua::Logger {
             Some(ref msg) => CStr::from_bytes_with_nul(msg)
                 .unwrap_or(c"Invalid log message")
                 .to_string_lossy(),
-            None => Cow::Borrowed("Unknown log messages"),
+            None => Cow::Borrowed("Unknown log message"),
         };
 
         let category = match category {
