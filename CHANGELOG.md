@@ -7,6 +7,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add method `ua::CertificateVerification::memory_store()` and `ua::TrustListDataType`.
+
+### Changed
+
+- Breaking: Upgrade to open62541 version
+  [1.5.0](https://github.com/open62541/open62541/releases/tag/v1.5.0).
+- Breaking: Remove method `ua::CertificateVerification::custom()` and trait
+  `CustomCertificateVerification`.
+
 ## [0.9.4] - 2025-09-01
 
 ### Changed

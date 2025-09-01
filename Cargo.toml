@@ -17,10 +17,12 @@ categories = ["network-programming", "embedded", "api-bindings"]
 include = ["src/", "README.md", "CHANGELOG.md"]
 
 [dependencies]
+derive_more = { version = "2.0.1", features = ["debug"] }
 futures-channel = "0.3.30"
 futures-core = { version = "0.3.30", default-features = false }
 log = "0.4.20"
-open62541-sys = "0.4.17"
+# FIXME: Revert before merge.
+open62541-sys = { git = "https://github.com/sgoll/open62541-sys.git", branch = "open62541-1.5" }
 parking_lot = "0.12.4"
 paste = "1.0.14"
 serde = { version = "1.0.194", optional = true }

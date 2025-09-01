@@ -1,8 +1,7 @@
 use std::{ffi::CString, ptr, time::Duration};
 
 use open62541_sys::{
-    UA_CertificateVerification_AcceptAll, UA_ClientConfig, UA_Client_connect,
-    UA_Client_getEndpoints,
+    UA_CertificateGroup_AcceptAll, UA_ClientConfig, UA_Client_connect, UA_Client_getEndpoints,
 };
 
 use crate::{ua, DataType as _, Error, Result};
@@ -195,7 +194,7 @@ impl ClientBuilder {
     pub fn accept_all(mut self) -> Self {
         let config = self.config_mut();
         unsafe {
-            UA_CertificateVerification_AcceptAll(&raw mut config.certificateVerification);
+            UA_CertificateGroup_AcceptAll(&raw mut config.certificateVerification);
         }
         self
     }

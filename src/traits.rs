@@ -77,19 +77,6 @@ pub trait Attributes: DataType {
     fn as_node_attributes(&self) -> &ua::NodeAttributes;
 }
 
-/// Custom certificate verification.
-///
-/// This is used to implement custom callbacks in [`ua::CertificateVerification::custom()`].
-pub trait CustomCertificateVerification {
-    fn verify_certificate(&self, certificate: &ua::ByteString) -> ua::StatusCode;
-
-    fn verify_application_uri(
-        &self,
-        certificate: &ua::ByteString,
-        application_uri: &ua::String,
-    ) -> ua::StatusCode;
-}
-
 /// Private-key password callback.
 ///
 /// This is used to fetch the password for a given client private key when establishing a connection

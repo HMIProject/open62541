@@ -76,6 +76,7 @@ mod status_code;
 mod string;
 mod structure_definition;
 mod timestamps_to_return;
+mod trust_list_data_type;
 mod user_name_identity_token;
 mod variant;
 mod write_request;
@@ -164,6 +165,7 @@ pub use self::{
     string::String,
     structure_definition::StructureDefinition,
     timestamps_to_return::TimestampsToReturn,
+    trust_list_data_type::TrustListDataType,
     user_name_identity_token::UserNameIdentityToken,
     variant::Variant,
     write_request::WriteRequest,
