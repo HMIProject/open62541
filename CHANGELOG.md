@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Implement `PartialEq` and `Eq` for `DataValue`.
+
 ## [0.9.4] - 2025-09-01
 
 ### Changed

@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use crate::{ua, DataType, DataTypeExt};
 
 /// Typed variant of [`ua::DataValue`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataValue<T> {
     data_value: ua::DataValue,
     _kind: PhantomData<T>,
