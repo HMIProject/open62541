@@ -1,12 +1,70 @@
-use std::marker::PhantomData;
+use std::{fmt, marker::PhantomData};
 
 use crate::{ua, DataType, DataTypeExt};
 
 /// Typed variant of [`ua::DataValue`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+//
+// Do not derive trait implementations to avoid depending on the
+// capabilities of the generic, marker type `T`. Instead we implement
+// all applicable traits manually by delegating to the implementations
+// for `ua::DataValue`.
 pub struct DataValue<T> {
     data_value: ua::DataValue,
     _kind: PhantomData<T>,
+}
+
+impl<T> fmt::Debug for DataValue<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            data_value,
+            _kind: _,
+        } = self;
+        data_value.fmt(f)
+    }
+}
+
+impl<T> Clone for DataValue<T> {
+    fn clone(&self) -> Self {
+        let Self {
+            data_value,
+            _kind: _,
+        } = self;
+        Self {
+            data_value: data_value.clone(),
+            _kind: PhantomData,
+        }
+    }
+}
+
+impl<T> PartialEq for DataValue<T> {
+    fn eq(&self, other: &Self) -> bool {
+        let Self {
+            data_value,
+            _kind: _,
+        } = self;
+        data_value.eq(&other.data_value)
+    }
+}
+
+impl<T> Eq for DataValue<T> {
+    // `ua::DataValue` implements `Eq`.
+    // TODO: Verify this at compile time.
+}
+
+impl<T> PartialOrd for DataValue<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<T> Ord for DataValue<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let Self {
+            data_value,
+            _kind: _,
+        } = self;
+        data_value.cmp(&other.data_value)
+    }
 }
 
 impl<T: DataTypeExt> DataValue<T> {
