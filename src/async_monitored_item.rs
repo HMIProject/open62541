@@ -335,7 +335,7 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
 /// Value emitted from monitored item notification.
 ///
 /// This depends on the attribute ID passed to [`MonitoredItemBuilder::attribute_id()`].
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MonitoredItemValue(MonitoredItemValueInner);
 
 impl MonitoredItemValue {
@@ -377,7 +377,10 @@ impl MonitoredItemValue {
     }
 }
 
-#[derive(Debug)]
+// We consider both variants as distinct by deriving `Eq`.
+// But there is no canonical ordering between those variants
+// for implementing `Ord`.
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum MonitoredItemValueInner {
     /// Data change payload.
     ///
