@@ -377,6 +377,9 @@ impl MonitoredItemValue {
     }
 }
 
+// We consider both variants as distinct by deriving `Eq`.
+// But there is no canonical ordering between those variants
+// for implementing `Ord`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum MonitoredItemValueInner {
     /// Data change payload.
