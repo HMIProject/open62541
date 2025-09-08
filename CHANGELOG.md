@@ -12,10 +12,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Implement `PartialEq`/`Eq`/`PartialOrd`/`Ord` for `DataValue`.
 - Implement `Clone`/`PartialEq`/`Eq` for `MonitoredItemValue`.
 
-### Removed
-
-- Unused type `CallbackOnce` that is only used internally.
-
 ## [0.9.4] - 2025-09-01
 
 ### Changed
