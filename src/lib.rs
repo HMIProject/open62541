@@ -216,8 +216,9 @@ mod async_monitored_item;
 mod async_subscription;
 mod attributes;
 mod browse_result;
+mod callback_fn;
 #[cfg(feature = "tokio")]
-mod callback;
+mod callback_stream;
 mod client;
 mod data_type;
 mod data_value;
@@ -239,7 +240,6 @@ pub use self::{
         MonitoredItemValue,
     },
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
-    callback::{CallbackOnce, CallbackStream},
 };
 pub use self::{
     browse_result::BrowseResult,
@@ -261,6 +261,13 @@ pub use self::{
     userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},
 };
+// TODO: Reduce visibility to `pub(crate)` (breaking change).
+#[deprecated = "Only used internally and not part of the public API."]
+pub use self::callback_fn::CallbackOnce;
+#[cfg(feature = "tokio")]
+// TODO: Reduce visibility to `pub(crate)` (breaking change).
+#[deprecated = "Only used internally and not part of the public API."]
+pub use self::callback_stream::CallbackStream;
 pub(crate) use self::{
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
