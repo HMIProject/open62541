@@ -216,6 +216,7 @@ mod async_monitored_item;
 mod async_subscription;
 mod attributes;
 mod browse_result;
+#[cfg(feature = "tokio")]
 mod callback;
 #[cfg(feature = "tokio")]
 mod callback_stream;
@@ -233,6 +234,8 @@ mod userdata;
 mod value;
 
 #[cfg(feature = "tokio")]
+pub(crate) use self::callback::CallbackOnce;
+#[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,
     async_monitored_item::{
@@ -244,7 +247,6 @@ pub use self::{
 };
 pub use self::{
     browse_result::BrowseResult,
-    callback::CallbackOnce,
     client::{Client, ClientBuilder},
     data_type::DataType,
     data_value::DataValue,

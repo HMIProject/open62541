@@ -37,7 +37,7 @@ use crate::Userdata;
 /// assert_eq!(cell.get(), 123);
 /// ```
 #[derive(Debug)]
-pub struct CallbackOnce<T: 'static>(PhantomData<T>);
+pub(crate) struct CallbackOnce<T: 'static>(PhantomData<T>);
 
 // TODO: Use inherent associated type to define this directly on `CallbackOnce`. At the moment, this
 // is not possible yet.
@@ -49,7 +49,7 @@ impl<T> CallbackOnce<T> {
     ///
     /// This allocates memory. To prevent memory leaks, call [`execute()`](CallbackOnce::execute) on
     /// the returned pointer exactly once.
-    pub fn prepare<F>(f: F) -> *mut c_void
+    pub(crate) fn prepare<F>(f: F) -> *mut c_void
     where
         F: FnOnce(T) + 'static,
     {
@@ -64,7 +64,7 @@ impl<T> CallbackOnce<T> {
     /// not have been passed into [`execute()`](CallbackOnce::execute) yet.
     ///
     /// The value type `T` must be the same as in [`prepare()`](CallbackOnce::prepare).
-    pub unsafe fn execute(data: *mut c_void, payload: T) {
+    pub(crate) unsafe fn execute(data: *mut c_void, payload: T) {
         let f = unsafe { CallbackOnceUserdata::<T>::consume(data) };
         f(payload);
     }
