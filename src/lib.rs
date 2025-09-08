@@ -244,7 +244,6 @@ pub use self::{
 };
 pub use self::{
     browse_result::BrowseResult,
-    callback_fn::CallbackOnce,
     client::{Client, ClientBuilder},
     data_type::DataType,
     data_value::DataValue,
@@ -273,6 +272,10 @@ pub use self::{
     ssl::{create_certificate, Certificate, Password, PrivateKey},
     traits::PrivateKeyPasswordCallback,
 };
+
+// TODO: Reduce visibility to `pub(crate)` (breaking change).
+#[deprecated = "Only used internally and not part of the public API."]
+pub use self::callback_fn::CallbackOnce;
 
 /// IANA-assigned OPC UA port number.
 pub const DEFAULT_PORT_NUMBER: u16 = 4840;
