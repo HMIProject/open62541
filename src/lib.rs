@@ -240,7 +240,6 @@ pub use self::{
         MonitoredItemValue,
     },
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
-    callback_stream::CallbackStream,
 };
 pub use self::{
     browse_result::BrowseResult,
@@ -265,6 +264,10 @@ pub use self::{
 // TODO: Reduce visibility to `pub(crate)` (breaking change).
 #[deprecated = "Only used internally and not part of the public API."]
 pub use self::callback_fn::CallbackOnce;
+#[cfg(feature = "tokio")]
+// TODO: Reduce visibility to `pub(crate)` (breaking change).
+#[deprecated = "Only used internally and not part of the public API."]
+pub use self::callback_stream::CallbackStream;
 pub(crate) use self::{
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
