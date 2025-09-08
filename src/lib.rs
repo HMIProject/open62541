@@ -216,7 +216,7 @@ mod async_monitored_item;
 mod async_subscription;
 mod attributes;
 mod browse_result;
-mod callback;
+mod callback_fn;
 #[cfg(feature = "tokio")]
 mod callback_stream;
 mod client;
@@ -244,7 +244,7 @@ pub use self::{
 };
 pub use self::{
     browse_result::BrowseResult,
-    callback::CallbackOnce,
+    callback_fn::CallbackOnce,
     client::{Client, ClientBuilder},
     data_type::DataType,
     data_value::DataValue,
