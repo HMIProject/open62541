@@ -262,6 +262,9 @@ pub use self::{
     userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},
 };
+// TODO: Reduce visibility to `pub(crate)` (breaking change).
+#[deprecated = "Only used internally and not part of the public API."]
+pub use self::callback_fn::CallbackOnce;
 pub(crate) use self::{
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
@@ -272,10 +275,6 @@ pub use self::{
     ssl::{create_certificate, Certificate, Password, PrivateKey},
     traits::PrivateKeyPasswordCallback,
 };
-
-// TODO: Reduce visibility to `pub(crate)` (breaking change).
-#[deprecated = "Only used internally and not part of the public API."]
-pub use self::callback_fn::CallbackOnce;
 
 /// IANA-assigned OPC UA port number.
 pub const DEFAULT_PORT_NUMBER: u16 = 4840;
