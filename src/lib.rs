@@ -294,7 +294,7 @@ pub use self::{
 
 #[cfg(feature = "tokio")]
 #[deprecated = "Replaced by `AsyncMonitoredItemBuilder`."]
-pub use crate::AsyncMonitoredItemBuilder as MonitoredItemBuild;
+pub use crate::AsyncMonitoredItemBuilder as MonitoredItemBuilder;
 
 /// IANA-assigned OPC UA port number.
 pub const DEFAULT_PORT_NUMBER: u16 = 4840;
