@@ -78,9 +78,8 @@ impl<K: MonitoredItemKind> MonitoredItemCreateRequestBuilder<K> {
     /// # async fn wrap(subscription: open62541::AsyncSubscription) -> open62541::Result<()> {
     /// let node_ids = [ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME)];
     ///
-    /// let request_builder = MonitoredItemCreateRequestBuilder::new(node_ids)
-    ///     .attribute(ua::AttributeId::BROWSENAME_T);
-    /// let mut results = AsyncMonitoredItemBuilder::from(request_builder)
+    /// let mut results = AsyncMonitoredItemBuilder::new(node_ids)
+    ///     .attribute(ua::AttributeId::BROWSENAME_T)
     ///     .create(&subscription).await?;
     /// let (_, mut monitored_item) = results.pop().unwrap()?;
     ///
@@ -139,9 +138,8 @@ impl<K: MonitoredItemKind> MonitoredItemCreateRequestBuilder<K> {
     /// let node_ids = [ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME)];
     /// let attribute_id = ua::AttributeId::BROWSENAME;
     ///
-    /// let request_builder = MonitoredItemCreateRequestBuilder::new(node_ids)
-    ///     .attribute_id(attribute_id);
-    /// let mut results = AsyncMonitoredItemBuilder::from(request_builder)
+    /// let mut results = AsyncMonitoredItemBuilder::new(node_ids)
+    ///     .attribute_id(attribute_id)
     ///     .create(&subscription).await?;
     /// let (_, mut monitored_item) = results.pop().unwrap()?;
     ///
