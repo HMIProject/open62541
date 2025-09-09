@@ -1,14 +1,43 @@
 use std::{ffi::c_void, ptr};
 
 use open62541_sys::{
-    UA_Client, UA_Client_MonitoredItems_delete_async, UA_DeleteMonitoredItemsResponse, UA_UInt32,
+    UA_Client, UA_Client_MonitoredItems_delete, UA_Client_MonitoredItems_delete_async,
+    UA_DeleteMonitoredItemsResponse, UA_UInt32,
 };
 
 use crate::{ua, DataType as _, Error};
 
-pub(super) fn call(client: &ua::Client, request: &ua::DeleteMonitoredItemsRequest) {
+pub(super) fn delete_monitored_items(
+    client: &ua::Client,
+    request: &ua::DeleteMonitoredItemsRequest,
+) {
     let status_code = ua::StatusCode::new({
         log::debug!("Calling MonitoredItems_delete()");
+
+        // SAFETY: `UA_Client_MonitoredItems_delete_async()` expects the request passed by value but
+        // does not take ownership.
+        let request = unsafe { ua::DeleteMonitoredItemsRequest::to_raw_copy(request) };
+
+        let response = unsafe {
+            UA_Client_MonitoredItems_delete(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                client.as_ptr().cast_mut(),
+                request,
+            )
+        };
+        response.responseHeader.serviceResult
+    });
+    if let Err(error) = Error::verify_good(&status_code) {
+        log::warn!("Error in request when deleting monitored items: {error}");
+    }
+}
+
+pub(super) fn delete_monitored_items_async(
+    client: &ua::Client,
+    request: &ua::DeleteMonitoredItemsRequest,
+) {
+    let status_code = ua::StatusCode::new({
+        log::debug!("Calling MonitoredItems_delete_async()");
 
         // SAFETY: `UA_Client_MonitoredItems_delete_async()` expects the request passed by value but
         // does not take ownership.
@@ -19,7 +48,7 @@ pub(super) fn call(client: &ua::Client, request: &ua::DeleteMonitoredItemsReques
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 client.as_ptr().cast_mut(),
                 request,
-                Some(callback_c),
+                Some(async_callback_c),
                 ptr::null_mut(),
                 ptr::null_mut(),
             )
@@ -30,7 +59,7 @@ pub(super) fn call(client: &ua::Client, request: &ua::DeleteMonitoredItemsReques
     }
 }
 
-unsafe extern "C" fn callback_c(
+unsafe extern "C" fn async_callback_c(
     _client: *mut UA_Client,
     _userdata: *mut c_void,
     _request_id: UA_UInt32,

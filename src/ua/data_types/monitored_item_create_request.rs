@@ -23,6 +23,12 @@ impl MonitoredItemCreateRequest {
         self
     }
 
+    /// The node ID.
+    #[must_use]
+    pub fn node_id(&self) -> &ua::NodeId {
+        ua::NodeId::raw_ref(&self.0.itemToMonitor.nodeId)
+    }
+
     /// Shortcut for setting attribute ID.
     ///
     /// See [`ua::ReadValueId::with_attribute_id()`].
@@ -90,7 +96,6 @@ impl MonitoredItemCreateRequest {
         self
     }
 
-    #[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
     #[must_use]
     pub(crate) fn attribute_id(&self) -> ua::AttributeId {
         ua::AttributeId::from_u32(self.0.itemToMonitor.attributeId)

@@ -223,6 +223,7 @@ mod client;
 mod data_type;
 mod data_value;
 mod error;
+mod monitored_item;
 mod server;
 mod service;
 #[cfg(feature = "mbedtls")]
@@ -235,10 +236,7 @@ mod value;
 #[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,
-    async_monitored_item::{
-        AsyncMonitoredItem, MonitoredItemAttribute, MonitoredItemBuilder, MonitoredItemKind,
-        MonitoredItemValue,
-    },
+    async_monitored_item::{AsyncMonitoredItem, AsyncMonitoredItemBuilder},
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
 };
 pub use self::{
@@ -247,6 +245,10 @@ pub use self::{
     data_type::DataType,
     data_value::DataValue,
     error::{Error, Result},
+    monitored_item::{
+        create_monitored_items_callback, MonitoredItemAttribute, MonitoredItemCreateRequestBuilder,
+        MonitoredItemHandle, MonitoredItemKind, MonitoredItemValue,
+    },
     server::{
         AccessControl, DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext, DefaultAccessControl, DefaultAccessControlWithLoginCallback,
@@ -269,6 +271,7 @@ pub use self::callback_fn::CallbackOnce;
 #[deprecated = "Only used internally and not part of the public API."]
 pub use self::callback_stream::CallbackStream;
 pub(crate) use self::{
+    callback_fn::CallbackMut,
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
     value::{ArrayValue, NonScalarValue},
@@ -278,6 +281,10 @@ pub use self::{
     ssl::{create_certificate, Certificate, Password, PrivateKey},
     traits::PrivateKeyPasswordCallback,
 };
+
+#[cfg(feature = "tokio")]
+#[deprecated = "Replaced by `AsyncMonitoredItemBuilder`."]
+pub use crate::AsyncMonitoredItemBuilder as MonitoredItemBuild;
 
 /// IANA-assigned OPC UA port number.
 pub const DEFAULT_PORT_NUMBER: u16 = 4840;

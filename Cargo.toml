@@ -147,6 +147,10 @@ name = "async_monitor"
 required-features = ["tokio"]
 
 [[example]]
+name = "async_monitor_callback"
+required-features = ["tokio"]
+
+[[example]]
 name = "async_read_write"
 required-features = ["tokio"]
 

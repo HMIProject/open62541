@@ -13,8 +13,8 @@ use open62541_sys::{
 };
 
 use crate::{
-    ua, AsyncClient, AsyncMonitoredItem, CallbackOnce, DataType as _, Error, MonitoredItemBuilder,
-    Result,
+    ua, AsyncClient, AsyncMonitoredItem, AsyncMonitoredItemBuilder, CallbackOnce, DataType as _,
+    Error, Result,
 };
 
 #[derive(Debug, Default)]
@@ -180,7 +180,7 @@ impl AsyncSubscription {
     ///
     /// This fails when the node does not exist.
     pub async fn create_monitored_item(&self, node_id: &ua::NodeId) -> Result<AsyncMonitoredItem> {
-        let results = MonitoredItemBuilder::new([node_id.clone()])
+        let results = AsyncMonitoredItemBuilder::new([node_id.clone()])
             .create(self)
             .await?;
 
@@ -195,8 +195,9 @@ impl AsyncSubscription {
         Ok(monitored_item)
     }
 
+    /// Gets client reference.
     #[must_use]
-    pub(crate) const fn client(&self) -> &Weak<ua::Client> {
+    pub const fn client(&self) -> &Weak<ua::Client> {
         &self.client
     }
 
