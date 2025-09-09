@@ -53,9 +53,15 @@ repos:
     hooks:
       - id: fmt
         args: [--all, --]
+      # Default features.
+      - id: clippy
+        name: clippy
+        args: [--locked, --all-features, --all-targets, --, -D, warnings]
+      # All features.
       - id: clippy
         name: clippy --all-features
         args: [--locked, --all-features, --all-targets, --, -D, warnings]
+      # Minimal features.
       - id: clippy
         name: clippy --no-default-features
         args: [--locked, --no-default-features, --all-targets, --, -D, warnings]

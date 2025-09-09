@@ -1,3 +1,11 @@
+#![cfg_attr(
+    not(any(feature = "tokio", feature = "experimental-monitored-item-callback")),
+    expect(
+        dead_code,
+        reason = "Some methods are only used when at least one of the features is enabled."
+    )
+)]
+
 use crate::ua;
 
 crate::data_type!(CreateMonitoredItemsRequest);

@@ -51,6 +51,7 @@ time = ["dep:time"]
 tokio = ["dep:tokio"]
 uuid = ["dep:uuid"]
 x509 = ["dep:x509-certificate"]
+experimental-monitored-item-callback = []
 
 [lints.rust]
 future_incompatible = { level = "warn", priority = -1 }
@@ -148,7 +149,7 @@ required-features = ["tokio"]
 
 [[example]]
 name = "async_monitor_callback"
-required-features = ["tokio"]
+required-features = ["tokio", "experimental-monitored-item-callback"]
 
 [[example]]
 name = "async_read_write"

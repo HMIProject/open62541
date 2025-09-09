@@ -1,16 +1,22 @@
+#![cfg_attr(
+    not(any(feature = "tokio", feature = "experimental-monitored-item-callback")),
+    expect(
+        dead_code,
+        reason = "Some code is only needed when at least one of the features is enabled."
+    )
+)]
+
 use std::{
     marker::PhantomData,
     sync::{Arc, Weak},
     time::Duration,
 };
 
-use crate::{
-    attributes,
-    ua::{self, SubscriptionId},
-    Attribute, DataType as _, DataValue, Error, MonitoringFilter, Result,
-};
+use crate::{attributes, ua, Attribute, DataType as _, DataValue, MonitoringFilter};
 
+#[cfg(any(feature = "tokio", feature = "experimental-monitored-item-callback"))]
 mod create_monitored_items;
+#[cfg(any(feature = "tokio", feature = "experimental-monitored-item-callback"))]
 use self::create_monitored_items::create_monitored_items;
 
 mod delete_monitored_items;
@@ -585,12 +591,21 @@ impl Drop for MonitoredItemHandle {
 ///
 /// This fails when the entire request is not successful. Errors for individual node IDs are
 /// returned as error elements inside the resulting list.
+#[cfg(any(feature = "tokio", feature = "experimental-monitored-item-callback"))]
+// Only pub(crate) is needed for internal usage.
+#[cfg_attr(
+    all(
+        feature = "tokio",
+        not(feature = "experimental-monitored-item-callback")
+    ),
+    expect(unreachable_pub)
+)]
 pub async fn create_monitored_items_callback<K: MonitoredItemKind, F>(
     client: &Arc<ua::Client>,
-    subscription_id: SubscriptionId,
+    subscription_id: ua::SubscriptionId,
     request_builder: MonitoredItemCreateRequestBuilder<K>,
     create_value_callback_fn: impl FnMut(usize) -> F,
-) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, MonitoredItemHandle)>>>
+) -> crate::Result<Vec<crate::Result<(ua::MonitoredItemCreateResult, MonitoredItemHandle)>>>
 where
     F: FnMut(MonitoredItemValue) + 'static,
 {
@@ -599,7 +614,7 @@ where
     let response = create_monitored_items(client, &request, create_value_callback_fn).await?;
 
     let Some(mut results) = response.into_results() else {
-        return Err(Error::internal("expected monitoring item results"));
+        return Err(crate::Error::internal("expected monitoring item results"));
     };
 
     if results.len() != result_count {
@@ -617,13 +632,15 @@ where
         // This request is processed asynchronously. Errors are logged asynchronously too.
         delete_monitored_items_async(client, &request);
 
-        return Err(Error::internal("unexpected number of monitored items"));
+        return Err(crate::Error::internal(
+            "unexpected number of monitored items",
+        ));
     }
 
     let results = results
         .drain_all()
         .map(|result| {
-            Error::verify_good(&result.status_code())?;
+            crate::Error::verify_good(&result.status_code())?;
 
             let handle =
                 MonitoredItemHandle::new(client, subscription_id, result.monitored_item_id());

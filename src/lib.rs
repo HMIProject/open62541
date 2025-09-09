@@ -233,6 +233,16 @@ pub mod ua;
 mod userdata;
 mod value;
 
+#[cfg(any(feature = "tokio", feature = "experimental-monitored-item-callback"))]
+pub(crate) use self::callback_fn::CallbackMut;
+#[cfg(feature = "experimental-monitored-item-callback")]
+pub use self::monitored_item::create_monitored_items_callback;
+#[cfg(all(
+    feature = "tokio",
+    not(feature = "experimental-monitored-item-callback")
+))]
+pub(crate) use self::monitored_item::create_monitored_items_callback;
+
 #[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,
@@ -246,8 +256,8 @@ pub use self::{
     data_value::DataValue,
     error::{Error, Result},
     monitored_item::{
-        create_monitored_items_callback, MonitoredItemAttribute, MonitoredItemCreateRequestBuilder,
-        MonitoredItemHandle, MonitoredItemKind, MonitoredItemValue,
+        MonitoredItemAttribute, MonitoredItemCreateRequestBuilder, MonitoredItemHandle,
+        MonitoredItemKind, MonitoredItemValue,
     },
     server::{
         AccessControl, DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
@@ -271,7 +281,6 @@ pub use self::callback_fn::CallbackOnce;
 #[deprecated = "Only used internally and not part of the public API."]
 pub use self::callback_stream::CallbackStream;
 pub(crate) use self::{
-    callback_fn::CallbackMut,
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
     value::{ArrayValue, NonScalarValue},
