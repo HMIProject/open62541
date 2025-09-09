@@ -235,13 +235,17 @@ mod value;
 
 #[cfg(any(feature = "tokio", feature = "experimental-monitored-item-callback"))]
 pub(crate) use self::callback_fn::CallbackMut;
-#[cfg(feature = "experimental-monitored-item-callback")]
-pub use self::monitored_item::create_monitored_items_callback;
 #[cfg(all(
     feature = "tokio",
     not(feature = "experimental-monitored-item-callback")
 ))]
-pub(crate) use self::monitored_item::create_monitored_items_callback;
+pub(crate) use self::monitored_item::{
+    create_monitored_items_callback, MonitoredItemCreateRequestBuilder, MonitoredItemHandle,
+};
+#[cfg(feature = "experimental-monitored-item-callback")]
+pub use self::monitored_item::{
+    create_monitored_items_callback, MonitoredItemCreateRequestBuilder, MonitoredItemHandle,
+};
 
 #[cfg(feature = "tokio")]
 pub use self::{
@@ -255,10 +259,7 @@ pub use self::{
     data_type::DataType,
     data_value::DataValue,
     error::{Error, Result},
-    monitored_item::{
-        MonitoredItemAttribute, MonitoredItemCreateRequestBuilder, MonitoredItemHandle,
-        MonitoredItemKind, MonitoredItemValue,
-    },
+    monitored_item::{MonitoredItemAttribute, MonitoredItemKind, MonitoredItemValue},
     server::{
         AccessControl, DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext, DefaultAccessControl, DefaultAccessControlWithLoginCallback,

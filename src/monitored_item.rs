@@ -1,8 +1,15 @@
 #![cfg_attr(
-    not(any(feature = "tokio", feature = "experimental-monitored-item-callback")),
+    not(feature = "experimental-monitored-item-callback"),
     expect(
         dead_code,
-        reason = "Some code is only needed when at least one of the features is enabled."
+        reason = "Some methods are only used when this features is enabled."
+    )
+)]
+#![cfg_attr(
+    not(feature = "experimental-monitored-item-callback"),
+    expect(
+        unreachable_pub,
+        reason = "Some types/methods only need to be public when this features is enabled."
     )
 )]
 
