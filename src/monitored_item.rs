@@ -62,13 +62,6 @@ impl MonitoredItemCreateRequestBuilder<DataChange<attributes::Value>> {
 //
 // All builder methods are deliberately non-const to avoid breaking changes in the future.
 impl<K: MonitoredItemKind> MonitoredItemCreateRequestBuilder<K> {
-    /// Gets all node ids.
-    #[must_use]
-    // TODO: Change to const fn after bumping MSRV from 1.83 to 1.87.
-    pub fn node_ids(&self) -> &[ua::NodeId] {
-        self.node_ids.as_slice()
-    }
-
     /// Sets attribute.
     ///
     /// By default, monitored items emit [`DataValue`] of the appropriate subtype matching the given
@@ -255,6 +248,13 @@ impl<K: MonitoredItemKind> MonitoredItemCreateRequestBuilder<K> {
     pub fn discard_oldest(mut self, discard_oldest: bool) -> Self {
         self.discard_oldest = Some(discard_oldest);
         self
+    }
+
+    /// Gets all node ids.
+    #[must_use]
+    // TODO: Change to const fn after bumping MSRV from 1.83 to 1.87.
+    pub fn node_ids(&self) -> &[ua::NodeId] {
+        self.node_ids.as_slice()
     }
 
     #[must_use]
