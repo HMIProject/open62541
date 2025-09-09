@@ -1,41 +1,12 @@
 use std::{ffi::c_void, ptr};
 
 use open62541_sys::{
-    UA_Client, UA_Client_MonitoredItems_delete, UA_Client_MonitoredItems_delete_async,
-    UA_DeleteMonitoredItemsResponse, UA_UInt32,
+    UA_Client, UA_Client_MonitoredItems_delete_async, UA_DeleteMonitoredItemsResponse, UA_UInt32,
 };
 
 use crate::{ua, DataType as _, Error};
 
-pub(super) fn delete_monitored_items(
-    client: &ua::Client,
-    request: &ua::DeleteMonitoredItemsRequest,
-) {
-    let status_code = ua::StatusCode::new({
-        log::debug!("Calling MonitoredItems_delete()");
-
-        // SAFETY: `UA_Client_MonitoredItems_delete()` expects the request passed by value but
-        // does not take ownership.
-        let request = unsafe { ua::DeleteMonitoredItemsRequest::to_raw_copy(request) };
-
-        let response = unsafe {
-            UA_Client_MonitoredItems_delete(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                client.as_ptr().cast_mut(),
-                request,
-            )
-        };
-        response.responseHeader.serviceResult
-    });
-    if let Err(error) = Error::verify_good(&status_code) {
-        log::warn!("Error in request when deleting monitored items: {error}");
-    }
-}
-
-pub(super) fn delete_monitored_items_async(
-    client: &ua::Client,
-    request: &ua::DeleteMonitoredItemsRequest,
-) {
+pub(super) fn call(client: &ua::Client, request: &ua::DeleteMonitoredItemsRequest) {
     let status_code = ua::StatusCode::new({
         log::debug!("Calling MonitoredItems_delete_async()");
 
@@ -65,7 +36,7 @@ unsafe extern "C" fn async_callback_c(
     _request_id: UA_UInt32,
     response: *mut c_void,
 ) {
-    log::debug!("MonitoredItems_delete() completed");
+    log::debug!("MonitoredItems_delete_async() completed");
 
     let response = response.cast::<UA_DeleteMonitoredItemsResponse>();
     // SAFETY: Incoming pointer is valid for access.

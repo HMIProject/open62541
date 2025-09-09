@@ -21,7 +21,7 @@ struct Context(*mut c_void);
 // SAFETY: As long as payload is `Send`, wrapper is `Send`.
 unsafe impl Send for Context where CbValue: Send + Sync {}
 
-pub(super) async fn create_monitored_items<F>(
+pub(super) async fn call<F>(
     client: &ua::Client,
     request: &ua::CreateMonitoredItemsRequest,
     mut create_value_callback_fn: impl FnMut(usize) -> F,

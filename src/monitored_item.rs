@@ -1,8 +1,8 @@
 #![cfg_attr(
-    not(feature = "experimental-monitored-item-callback"),
+    not(any(feature = "tokio", feature = "experimental-monitored-item-callback")),
     expect(
         dead_code,
-        reason = "Some methods are only used when this features is enabled."
+        reason = "Some methods are only used when at least one of the features is enabled."
     )
 )]
 #![cfg_attr(
@@ -23,11 +23,8 @@ use crate::{attributes, ua, Attribute, DataType as _, DataValue, MonitoringFilte
 
 #[cfg(any(feature = "tokio", feature = "experimental-monitored-item-callback"))]
 mod create_monitored_items;
-#[cfg(any(feature = "tokio", feature = "experimental-monitored-item-callback"))]
-use self::create_monitored_items::create_monitored_items;
 
 mod delete_monitored_items;
-use self::delete_monitored_items::{delete_monitored_items, delete_monitored_items_async};
 
 #[derive(Debug)]
 pub struct MonitoredItemCreateRequestBuilder<K: MonitoredItemKind> {
@@ -542,25 +539,6 @@ impl MonitoredItemHandle {
         }
     }
 
-    /// Deletes the monitored item at the server.
-    ///
-    /// Executed synchronously and blocks the current thread.
-    pub fn delete_blocking(&mut self) {
-        let Some(client) = self.client.upgrade() else {
-            return;
-        };
-
-        let Some(monitored_item_id) = self.monitored_item_id.take() else {
-            // Already deleted.
-            return;
-        };
-        let request = ua::DeleteMonitoredItemsRequest::init()
-            .with_subscription_id(self.subscription_id)
-            .with_monitored_item_ids(&[monitored_item_id]);
-
-        delete_monitored_items(&client, &request);
-    }
-
     /// Deletes the monitored item at the server (non-blocking).
     ///
     /// Executed asynchronously in the background.
@@ -577,7 +555,8 @@ impl MonitoredItemHandle {
             .with_subscription_id(self.subscription_id)
             .with_monitored_item_ids(&[monitored_item_id]);
 
-        delete_monitored_items_async(&client, &request);
+        // Executed asynchronously (non-blocking) in the background.
+        delete_monitored_items::call(&client, &request);
     }
 }
 
@@ -620,7 +599,8 @@ where
 {
     let request = request_builder.build(subscription_id);
     let result_count = request.items_to_create().map_or(0, <[_]>::len);
-    let response = create_monitored_items(client, &request, create_value_callback_fn).await?;
+    let response =
+        self::create_monitored_items::call(client, &request, create_value_callback_fn).await?;
 
     let Some(mut results) = response.into_results() else {
         return Err(crate::Error::internal("expected monitoring item results"));
@@ -639,7 +619,7 @@ where
             .with_subscription_id(subscription_id)
             .with_monitored_item_ids(&monitored_item_ids);
         // This request is processed asynchronously. Errors are logged asynchronously too.
-        delete_monitored_items_async(client, &request);
+        self::delete_monitored_items::call(client, &request);
 
         return Err(crate::Error::internal(
             "unexpected number of monitored items",
