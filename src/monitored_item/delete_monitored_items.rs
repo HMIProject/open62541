@@ -14,7 +14,7 @@ pub(super) fn delete_monitored_items(
     let status_code = ua::StatusCode::new({
         log::debug!("Calling MonitoredItems_delete()");
 
-        // SAFETY: `UA_Client_MonitoredItems_delete_async()` expects the request passed by value but
+        // SAFETY: `UA_Client_MonitoredItems_delete()` expects the request passed by value but
         // does not take ownership.
         let request = unsafe { ua::DeleteMonitoredItemsRequest::to_raw_copy(request) };
 

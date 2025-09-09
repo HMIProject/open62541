@@ -545,7 +545,7 @@ impl MonitoredItemHandle {
     /// Deletes the monitored item at the server.
     ///
     /// Executed synchronously and blocks the current thread.
-    pub fn delete(&mut self) {
+    pub fn delete_blocking(&mut self) {
         let Some(client) = self.client.upgrade() else {
             return;
         };
@@ -561,10 +561,10 @@ impl MonitoredItemHandle {
         delete_monitored_items(&client, &request);
     }
 
-    /// Deletes the monitored item at the server.
+    /// Deletes the monitored item at the server (non-blocking).
     ///
     /// Executed asynchronously in the background.
-    pub fn delete_async(&mut self) {
+    pub fn delete(&mut self) {
         let Some(client) = self.client.upgrade() else {
             return;
         };
@@ -583,7 +583,7 @@ impl MonitoredItemHandle {
 
 impl Drop for MonitoredItemHandle {
     fn drop(&mut self) {
-        self.delete_async();
+        self.delete();
     }
 }
 

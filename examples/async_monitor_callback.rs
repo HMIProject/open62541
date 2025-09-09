@@ -166,7 +166,7 @@ async fn monitor_background_task(
         .unwrap_or_else(|_: Elapsed| Ok(()))?;
 
     println!("Deleting monitored item for node {node_id} on server");
-    handle.delete_async();
+    handle.delete();
 
     Ok(())
 }
