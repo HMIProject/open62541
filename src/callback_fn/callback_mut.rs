@@ -38,7 +38,7 @@ impl<T> CallbackMut<T> {
     /// # Safety
     ///
     /// The given pointer must have been returned from [`prepare()`](CallbackMut::prepare) and must
-    /// not have been passed into [`execute()`](CallbackMut::delete) yet.
+    /// not have been passed into [`delete()`](CallbackMut::delete) yet.
     ///
     /// The value type `T` must be the same as in [`prepare()`](CallbackMut::prepare).
     pub(crate) unsafe fn execute(data: *mut c_void, payload: T) {
