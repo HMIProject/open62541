@@ -19,14 +19,6 @@ pub struct AsyncMonitoredItemBuilder<K: MonitoredItemKind> {
     create_request: MonitoredItemCreateRequestBuilder<K>,
 }
 
-impl<K: MonitoredItemKind> From<MonitoredItemCreateRequestBuilder<K>>
-    for AsyncMonitoredItemBuilder<K>
-{
-    fn from(create_request: MonitoredItemCreateRequestBuilder<K>) -> Self {
-        Self { create_request }
-    }
-}
-
 impl AsyncMonitoredItemBuilder<DataChange<attributes::Value>> {
     pub fn new(node_ids: impl IntoIterator<Item = ua::NodeId>) -> Self {
         Self {
@@ -75,7 +67,9 @@ impl<K: MonitoredItemKind> AsyncMonitoredItemBuilder<K> {
         attribute: T,
     ) -> AsyncMonitoredItemBuilder<T::Kind> {
         let Self { create_request } = self;
-        create_request.attribute(attribute).into()
+        AsyncMonitoredItemBuilder {
+            create_request: create_request.attribute(attribute),
+        }
     }
 
     /// Sets attribute ID.
@@ -114,7 +108,9 @@ impl<K: MonitoredItemKind> AsyncMonitoredItemBuilder<K> {
     #[must_use]
     pub fn attribute_id(self, attribute_id: ua::AttributeId) -> AsyncMonitoredItemBuilder<Unknown> {
         let Self { create_request } = self;
-        create_request.attribute_id(attribute_id).into()
+        AsyncMonitoredItemBuilder {
+            create_request: create_request.attribute_id(attribute_id),
+        }
     }
 }
 
@@ -126,9 +122,9 @@ impl<K: MonitoredItemKind> AsyncMonitoredItemBuilder<K> {
     ///
     /// See [`ua::MonitoredItemCreateRequest::with_monitoring_mode()`].
     #[must_use]
-    pub fn monitoring_mode(self, monitoring_mode: ua::MonitoringMode) -> Self {
-        let Self { create_request } = self;
-        create_request.monitoring_mode(monitoring_mode).into()
+    pub fn monitoring_mode(mut self, monitoring_mode: ua::MonitoringMode) -> Self {
+        self.create_request = self.create_request.monitoring_mode(monitoring_mode);
+        self
     }
 
     /// Sets sampling interval.
@@ -137,9 +133,9 @@ impl<K: MonitoredItemKind> AsyncMonitoredItemBuilder<K> {
     ///
     /// See [`ua::MonitoringParameters::with_sampling_interval()`].
     #[must_use]
-    pub fn sampling_interval(self, sampling_interval: Option<Duration>) -> Self {
-        let Self { create_request } = self;
-        create_request.sampling_interval(sampling_interval).into()
+    pub fn sampling_interval(mut self, sampling_interval: Option<Duration>) -> Self {
+        self.create_request = self.create_request.sampling_interval(sampling_interval);
+        self
     }
 
     /// Sets filter.
@@ -148,9 +144,9 @@ impl<K: MonitoredItemKind> AsyncMonitoredItemBuilder<K> {
     ///
     /// See [`ua::MonitoringParameters::with_filter()`].
     #[must_use]
-    pub fn filter(self, filter: impl MonitoringFilter) -> Self {
-        let Self { create_request } = self;
-        create_request.filter(filter).into()
+    pub fn filter(mut self, filter: impl MonitoringFilter) -> Self {
+        self.create_request = self.create_request.filter(filter);
+        self
     }
 
     /// Sets requested size of the monitored item queue.
@@ -159,9 +155,9 @@ impl<K: MonitoredItemKind> AsyncMonitoredItemBuilder<K> {
     ///
     /// See [`ua::MonitoringParameters::with_queue_size()`].
     #[must_use]
-    pub fn queue_size(self, queue_size: u32) -> Self {
-        let Self { create_request } = self;
-        create_request.queue_size(queue_size).into()
+    pub fn queue_size(mut self, queue_size: u32) -> Self {
+        self.create_request = self.create_request.queue_size(queue_size);
+        self
     }
 
     /// Sets discard policy.
@@ -170,9 +166,9 @@ impl<K: MonitoredItemKind> AsyncMonitoredItemBuilder<K> {
     ///
     /// See [`ua::MonitoringParameters::with_discard_oldest()`].
     #[must_use]
-    pub fn discard_oldest(self, discard_oldest: bool) -> Self {
-        let Self { create_request } = self;
-        create_request.discard_oldest(discard_oldest).into()
+    pub fn discard_oldest(mut self, discard_oldest: bool) -> Self {
+        self.create_request = self.create_request.discard_oldest(discard_oldest);
+        self
     }
 
     /// Creates monitored items.
