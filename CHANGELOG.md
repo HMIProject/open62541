@@ -13,7 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Implement `Clone`/`PartialEq`/`Eq` for `MonitoredItemValue`.
 - Experimental: New function `create_monitored_items_callback()` with types
   `MonitoredItemCreateRequestBuilder` and `MonitoredItemHandle`. Hidden behind the optional feature
-  "experimental-monitored-item-callback" for stabilizing the public API.
+  `experimental-monitored-item-callback` for stabilizing the public API.
 
 ### Changed
 
