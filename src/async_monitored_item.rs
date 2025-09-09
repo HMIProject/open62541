@@ -208,7 +208,7 @@ impl<K: MonitoredItemKind> AsyncMonitoredItemBuilder<K> {
                             // We cannot blockingly wait, because that would block `UA_Client_run_iterate()`
                             // in our event loop, potentially preventing the receiver from clearing the stream.
                             // The monitored value might contain sensitive information and must not be logged!
-                            log::error!("Discarding monitored item value: Stream buffer (size = {buffer_size}) is full", buffer_size = tx.capacity());
+                            log::error!("Discarding monitored item value: stream buffer (size = {buffer_size}) is full", buffer_size = tx.capacity());
                         }
                         TrySendError::Closed(_) => {
                             // Received has disappeared and the value is no longer needed.
