@@ -56,7 +56,7 @@ repos:
       # Default features.
       - id: clippy
         name: clippy
-        args: [--locked, --all-features, --all-targets, --, -D, warnings]
+        args: [--locked, --all-targets, --, -D, warnings]
       # All features.
       - id: clippy
         name: clippy --all-features

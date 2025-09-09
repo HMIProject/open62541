@@ -599,13 +599,15 @@ impl Drop for MonitoredItemHandle {
 /// This fails when the entire request is not successful. Errors for individual node IDs are
 /// returned as error elements inside the resulting list.
 #[cfg(any(feature = "tokio", feature = "experimental-monitored-item-callback"))]
-// Only pub(crate) is needed for internal usage.
 #[cfg_attr(
     all(
         feature = "tokio",
         not(feature = "experimental-monitored-item-callback")
     ),
-    expect(unreachable_pub)
+    expect(
+        unreachable_pub,
+        reason = "Only pub(crate) is needed for internal usage."
+    )
 )]
 pub async fn create_monitored_items_callback<K: MonitoredItemKind, F>(
     client: &Arc<ua::Client>,
