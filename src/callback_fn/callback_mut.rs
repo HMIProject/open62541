@@ -24,7 +24,7 @@ type CallbackMutUserdata<T> = Userdata<Box<dyn FnMut(T) + 'static>>;
 impl<T> CallbackMut<T> {
     /// Prepares closure for later call.
     ///
-    /// This allocates memory. To prevent memory leaks, call [`execute()`](CallbackMut::delete) on
+    /// This allocates memory. To prevent memory leaks, call [`delete()`](CallbackMut::delete) on
     /// the returned pointer exactly once.
     pub(crate) fn prepare<F>(f: F) -> *mut c_void
     where
