@@ -11,7 +11,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Implement `PartialEq`/`Eq`/`PartialOrd`/`Ord` for `DataValue`.
 - Implement `Clone`/`PartialEq`/`Eq` for `MonitoredItemValue`.
-- New function `create_monitored_items_callback()`. Hidden behind the optional feature
+- Experimental: New function `create_monitored_items_callback()` with types
+  `MonitoredItemCreateRequestBuilder` and `MonitoredItemHandle`. Hidden behind the optional feature
   "experimental-monitored-item-callback" for stabilizing the public API.
 
 ### Changed
