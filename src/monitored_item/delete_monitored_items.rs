@@ -40,7 +40,7 @@ pub(crate) async fn call(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 client.as_ptr().cast_mut(),
                 request,
-                Some(callback_c_execute_response),
+                Some(callback_execute_response_c),
                 CbResponse::prepare(response_callback),
                 ptr::null_mut(),
             )
@@ -56,7 +56,7 @@ pub(crate) async fn call(
         .map(|response| (response, status_code))
 }
 
-unsafe extern "C" fn callback_c_execute_response(
+unsafe extern "C" fn callback_execute_response_c(
     _client: *mut UA_Client,
     userdata: *mut c_void,
     _request_id: UA_UInt32,
@@ -103,7 +103,7 @@ pub(crate) fn send_request(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 client.as_ptr().cast_mut(),
                 request,
-                Some(callback_c_log_response),
+                Some(callback_log_response_c),
                 ptr::null_mut(),
                 ptr::null_mut(),
             )
@@ -114,7 +114,7 @@ pub(crate) fn send_request(
     Ok(status_code)
 }
 
-unsafe extern "C" fn callback_c_log_response(
+unsafe extern "C" fn callback_log_response_c(
     _client: *mut UA_Client,
     _userdata: *mut c_void,
     _request_id: UA_UInt32,
