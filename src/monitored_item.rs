@@ -13,11 +13,109 @@
     )
 )]
 
+// TODO: Remove pub(crate).
 pub(crate) mod delete_monitored_items;
 
-use std::marker::PhantomData;
+use std::{
+    marker::PhantomData,
+    sync::{Arc, Weak},
+};
 
-use crate::{attributes, ua, Attribute, DataValue};
+use crate::{attributes, ua, Attribute, DataType as _, DataValue, Error, Result};
+
+/// Handle for a single monitored item.
+///
+/// Keeps the monitored item at the server alive until either deleted or dropped.
+#[derive(Debug)]
+pub(crate) struct MonitoredItemHandle {
+    client: Weak<ua::Client>,
+    subscription_id: ua::SubscriptionId,
+    monitored_item_id: Option<ua::MonitoredItemId>,
+}
+
+impl MonitoredItemHandle {
+    pub(crate) fn new(
+        client: &Arc<ua::Client>,
+        subscription_id: ua::SubscriptionId,
+        monitored_item_id: ua::MonitoredItemId,
+    ) -> Self {
+        Self {
+            client: Arc::downgrade(client),
+            subscription_id,
+            monitored_item_id: Some(monitored_item_id),
+        }
+    }
+
+    fn before_delete(&mut self) -> Result<(ua::DeleteMonitoredItemsRequest, ua::MonitoredItemId)> {
+        let Some(monitored_item_id) = self.monitored_item_id.take() else {
+            return Err(Error::internal("already deleted"));
+        };
+        let request = ua::DeleteMonitoredItemsRequest::init()
+            .with_subscription_id(self.subscription_id)
+            .with_monitored_item_ids(&[monitored_item_id]);
+
+        Ok((request, monitored_item_id))
+    }
+
+    /// Reverts the changes of [`before_delete()`](Self::before_delete) for retrying.
+    ///
+    /// This is unlikely to happen.
+    fn after_delete_failed(&mut self, monitored_item_id: ua::MonitoredItemId) {
+        debug_assert!(self.monitored_item_id.is_none());
+        // Put the id back for a retry.
+        self.monitored_item_id = Some(monitored_item_id);
+    }
+
+    /// Deletes the monitored item at the server.
+    ///
+    /// No new notifications will be received after the invocation succeeded.
+    ///
+    /// This method should only be called once. After it succeeded
+    /// any subsequent invocation will fail with an internal error.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the monitored item has already been deleted before,
+    /// when connection is interrupted, or when the server returns an error.
+    pub(crate) async fn delete(&mut self) -> Result<ua::DeleteMonitoredItemsResponse> {
+        // Consume the `Option` field first to ensure that this method
+        // could never be called twice.
+        let (request, monitored_item_id) = self.before_delete()?;
+
+        let Some(client) = self.client.upgrade() else {
+            // No rollback, because the client is gone forever.
+            return Err(Error::internal("no client"));
+        };
+
+        delete_monitored_items::call(&client, &request)
+            .await
+            .inspect_err(|_| {
+                // Rollback, i.e. revert changes on invocation error.
+                self.after_delete_failed(monitored_item_id);
+            })
+    }
+}
+
+impl Drop for MonitoredItemHandle {
+    fn drop(&mut self) {
+        let Ok((request, _monitored_item_id)) = self.before_delete() else {
+            // Already deleted before.
+            return;
+        };
+
+        let Some(client) = self.client.upgrade() else {
+            log::debug!("Cannot delete monitored_item {request:?} on drop without client");
+            return;
+        };
+
+        // Response errors will only be logged.
+        if let Err(err) = delete_monitored_items::send_request(&client, &request) {
+            log::warn!(
+                "Failed to sent request for deleting monitored item {request:?} on drop: {err:#}"
+            );
+        }
+    }
+}
 
 /// Value emitted from monitored item notification.
 ///

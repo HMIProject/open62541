@@ -1,12 +1,6 @@
 mod create_monitored_items;
 
-use std::{
-    marker::PhantomData,
-    pin::Pin,
-    sync::{Arc, Weak},
-    task::{self, Poll},
-    time::Duration,
-};
+use std::{marker::PhantomData, pin::Pin, task, time::Duration};
 
 use futures_core::Stream;
 use tokio::sync::mpsc;
@@ -14,8 +8,8 @@ use tokio::sync::mpsc;
 use crate::{
     attributes,
     monitored_item::{DataChange, Unknown},
-    ua, AsyncSubscription, DataType as _, Error, MonitoredItemAttribute, MonitoredItemKind,
-    MonitoredItemValue, MonitoringFilter, Result,
+    ua, AsyncSubscription, DataType as _, Error, MonitoredItemAttribute, MonitoredItemHandle,
+    MonitoredItemKind, MonitoredItemValue, MonitoringFilter, Result,
 };
 
 #[derive(Debug)]
@@ -277,12 +271,9 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
             .map(|(result, rx)| {
                 Error::verify_good(&result.status_code())?;
 
-                let monitored_item = AsyncMonitoredItem::new(
-                    client,
-                    subscription_id,
-                    result.monitored_item_id(),
-                    rx,
-                );
+                let handle =
+                    MonitoredItemHandle::new(client, subscription_id, result.monitored_item_id());
+                let monitored_item = AsyncMonitoredItem::new(handle, rx);
 
                 Ok((result, monitored_item))
             })
@@ -339,24 +330,15 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
 /// Monitored item (with asynchronous API).
 #[derive(Debug)]
 pub struct AsyncMonitoredItem<K: MonitoredItemKind = DataChange<attributes::Value>> {
-    client: Weak<ua::Client>,
-    subscription_id: ua::SubscriptionId,
-    monitored_item_id: ua::MonitoredItemId,
+    handle: MonitoredItemHandle,
     rx: mpsc::Receiver<MonitoredItemValue>,
     _kind: PhantomData<K>,
 }
 
 impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
-    fn new(
-        client: &Arc<ua::Client>,
-        subscription_id: ua::SubscriptionId,
-        monitored_item_id: ua::MonitoredItemId,
-        rx: mpsc::Receiver<MonitoredItemValue>,
-    ) -> Self {
+    const fn new(handle: MonitoredItemHandle, rx: mpsc::Receiver<MonitoredItemValue>) -> Self {
         Self {
-            client: Arc::downgrade(client),
-            subscription_id,
-            monitored_item_id,
+            handle,
             rx,
             _kind: PhantomData,
         }
@@ -379,28 +361,32 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
     pub fn into_stream(self) -> impl Stream<Item = K::Value> + Send + Sync + 'static {
         self
     }
-}
 
-impl<K: MonitoredItemKind> Drop for AsyncMonitoredItem<K> {
-    fn drop(&mut self) {
-        let Some(client) = self.client.upgrade() else {
-            return;
-        };
-
-        let request = ua::DeleteMonitoredItemsRequest::init()
-            .with_subscription_id(self.subscription_id)
-            .with_monitored_item_ids(&[self.monitored_item_id]);
-
-        if let Err(err) = crate::delete_monitored_items::send_request(&client, &request) {
-            log::warn!("Failed to send monitored item delete request: {err:#}");
-        }
+    /// Deletes the monitored item at the server.
+    ///
+    /// No new notifications will be received after the invocation succeeded.
+    ///
+    /// This method should only be called once. After it succeeded
+    /// any subsequent invocation will fail with an internal error.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the monitored item has already been deleted before,
+    /// when connection is interrupted, or when the server returns an error.
+    //
+    // TODO: Docs are redundant with MonitoredItemHandle::delete().
+    pub async fn delete(&mut self) -> Result<ua::DeleteMonitoredItemsResponse> {
+        self.handle.delete().await
     }
 }
 
 impl<K: MonitoredItemKind> Stream for AsyncMonitoredItem<K> {
     type Item = K::Value;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        cx: &mut task::Context<'_>,
+    ) -> task::Poll<Option<Self::Item>> {
         // This mirrors `AsyncMonitoredItem::next()` and implements the `Stream` trait.
         self.as_mut()
             .rx

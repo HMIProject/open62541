@@ -84,8 +84,7 @@ unsafe extern "C" fn callback_execute_response_c(
 /// after sending the request and does not await the response.
 ///
 /// Only supposed to be used in implementations of `Drop`.
-// TODO: Reduce visibility to pub(super).
-pub(crate) fn send_request(
+pub(super) fn send_request(
     client: &ua::Client,
     request: &ua::DeleteMonitoredItemsRequest,
 ) -> Result<()> {

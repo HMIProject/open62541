@@ -11,6 +11,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Implement `PartialEq`/`Eq`/`PartialOrd`/`Ord` for `DataValue`.
 - Implement `Clone`/`PartialEq`/`Eq` for `MonitoredItemValue`.
+- Add method `AsyncMonitoredItem::delete()` to release server resources in a controlled manner
+  asynchronously before dropping.
 
 ### Changed
 
