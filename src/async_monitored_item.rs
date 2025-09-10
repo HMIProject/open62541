@@ -396,13 +396,8 @@ impl<K: MonitoredItemKind> Drop for AsyncMonitoredItem<K> {
             .with_subscription_id(self.subscription_id)
             .with_monitored_item_ids(&[self.monitored_item_id]);
 
-        match crate::delete_monitored_items::send_request(&client, &request) {
-            Ok(status_code) => {
-                debug_assert!(status_code.is_good());
-            }
-            Err(err) => {
-                log::warn!("Failed to send monitored item delete request: {err:#}");
-            }
+        if let Err(err) = crate::delete_monitored_items::send_request(&client, &request) {
+            log::warn!("Failed to send monitored item delete request: {err:#}");
         }
     }
 }
