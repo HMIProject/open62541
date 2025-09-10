@@ -33,9 +33,6 @@ pub(crate) async fn call(
 
         log::debug!("Calling MonitoredItems_delete_async()");
         unsafe {
-            // This handles both data change and event notifications as determined by the monitored
-            // attribute ID, delegating to `createDataChanges_async()` in both cases. We must still
-            // make sure to pass the expected callback function in `notification_callbacks` above.
             UA_Client_MonitoredItems_delete_async(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 client.as_ptr().cast_mut(),
