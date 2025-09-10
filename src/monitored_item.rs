@@ -5,13 +5,9 @@
         reason = "Some methods are only used when this feature is enabled."
     )
 )]
-#![cfg_attr(
-    not(feature = "tokio"),
-    expect(
-        unreachable_pub,
-        reason = "Some types/methods only need to be public when this features is enabled."
-    )
-)]
+
+mod create_request_builder;
+pub use self::create_request_builder::MonitoredItemCreateRequestBuilder;
 
 // TODO: Remove pub(crate).
 pub(crate) mod delete_monitored_items;

@@ -13,6 +13,7 @@ use crate::{
 };
 
 #[derive(Debug)]
+// TODO: Merge with or replace by MonitoredItemCreateRequestBuilder.
 pub struct MonitoredItemBuilder<K: MonitoredItemKind> {
     node_ids: Vec<ua::NodeId>,
     attribute_id: ua::AttributeId,

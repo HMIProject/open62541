@@ -247,7 +247,10 @@ pub use self::{
     data_type::DataType,
     data_value::DataValue,
     error::{Error, Result},
-    monitored_item::{MonitoredItemAttribute, MonitoredItemKind, MonitoredItemValue},
+    monitored_item::{
+        MonitoredItemAttribute, MonitoredItemCreateRequestBuilder, MonitoredItemKind,
+        MonitoredItemValue,
+    },
     server::{
         AccessControl, DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext, DefaultAccessControl, DefaultAccessControlWithLoginCallback,
