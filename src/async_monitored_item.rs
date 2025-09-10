@@ -1,16 +1,18 @@
-mod create_monitored_items;
-
 use std::{marker::PhantomData, pin::Pin, task, time::Duration};
 
 use futures_core::Stream;
-use tokio::sync::mpsc;
+use tokio::sync::mpsc::{self, error::TrySendError};
 
 use crate::{
-    attributes,
+    attributes, create_monitored_items, delete_monitored_items,
     monitored_item::{DataChange, Unknown},
     ua, AsyncSubscription, DataType as _, Error, MonitoredItemAttribute, MonitoredItemHandle,
     MonitoredItemKind, MonitoredItemValue, MonitoringFilter, Result,
 };
+
+/// Maximum number of buffered values.
+// TODO: Think about appropriate buffer size or let the caller decide.
+const DEFAULT_STREAM_BUFFER_SIZE: usize = 3;
 
 #[derive(Debug)]
 pub struct MonitoredItemBuilder<K: MonitoredItemKind> {
@@ -238,7 +240,31 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
 
         let request = self.into_request(subscription_id);
         let result_count = request.items_to_create().map_or(0, <[_]>::len);
-        let (response, rxs) = create_monitored_items::call(client, &request).await?;
+        let mut rxs = Vec::with_capacity(result_count);
+        let response = {
+            let create_value_callback_fn = |index: usize| {
+                debug_assert_eq!(index, rxs.len());
+                let (tx, rx) = mpsc::channel(DEFAULT_STREAM_BUFFER_SIZE);
+                rxs.push(rx);
+                debug_assert_eq!(index, rxs.len());
+                move |monitored_item_value| {
+                    if let Err(err) = tx.try_send(monitored_item_value) {
+                        match err {
+                            TrySendError::Full(_value) => {
+                                // We cannot blockingly wait, because that would block `UA_Client_run_iterate()`
+                                // in our event loop, potentially preventing the receiver from clearing the stream.
+                                // The monitored value might contain sensitive information and must not be logged!
+                                log::error!("Discarding monitored item value: stream buffer (size = {buffer_size}) is full", buffer_size = tx.capacity());
+                            }
+                            TrySendError::Closed(_) => {
+                                // Received has disappeared and the value is no longer needed.
+                            }
+                        }
+                    }
+                }
+            };
+            create_monitored_items::call(client, &request, create_value_callback_fn).await?
+        };
 
         let Some(mut results) = response.into_results() else {
             return Err(Error::internal("expected monitoring item results"));
@@ -258,7 +284,7 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
                 .with_monitored_item_ids(&monitored_item_ids);
             // Await the response to ensure that all previously created monitored items
             // have been deleted at the server before returning control back to the caller.
-            if let Err(err) = crate::delete_monitored_items::call(client, &request).await {
+            if let Err(err) = delete_monitored_items::call(client, &request).await {
                 log::warn!("Failed to delete monitored items when cleaning up: {err:#}");
             }
 

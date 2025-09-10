@@ -1,8 +1,7 @@
+mod callback_mut;
 mod callback_once;
-//mod callback_mut;
+
+pub(crate) use self::callback_mut::CallbackMut;
 
 // TODO: Reduce visibility to pub(crate).
-pub use callback_once::CallbackOnce;
-
-// TODO: Add CallbackMut.
-//pub(crate) use callback_mut::CallbackMut;
+pub use self::callback_once::CallbackOnce;
