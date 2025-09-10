@@ -1,3 +1,5 @@
+mod create_monitored_items;
+
 use std::{
     marker::PhantomData,
     pin::Pin,
@@ -15,8 +17,6 @@ use crate::{
     ua, AsyncSubscription, DataType as _, Error, MonitoredItemAttribute, MonitoredItemKind,
     MonitoredItemValue, MonitoringFilter, Result,
 };
-
-mod create_monitored_items;
 
 #[derive(Debug)]
 pub struct MonitoredItemBuilder<K: MonitoredItemKind> {

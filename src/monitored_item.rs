@@ -13,11 +13,11 @@
     )
 )]
 
+pub(crate) mod delete_monitored_items;
+
 use std::marker::PhantomData;
 
 use crate::{attributes, ua, Attribute, DataValue};
-
-pub(crate) mod delete_monitored_items;
 
 /// Value emitted from monitored item notification.
 ///
