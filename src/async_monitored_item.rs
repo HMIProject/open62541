@@ -264,13 +264,8 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
                 .with_monitored_item_ids(&monitored_item_ids);
             // Await the response to ensure that all previously created monitored items
             // have been deleted at the server before returning control back to the caller.
-            match crate::delete_monitored_items::call(client, &request).await {
-                Ok((_response, status_code)) => {
-                    debug_assert!(status_code.is_good());
-                }
-                Err(err) => {
-                    log::warn!("Failed to delete monitored items when cleaning up: {err:#}");
-                }
+            if let Err(err) = crate::delete_monitored_items::call(client, &request).await {
+                log::warn!("Failed to delete monitored items when cleaning up: {err:#}");
             }
 
             return Err(Error::internal("unexpected number of monitored items"));
