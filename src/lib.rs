@@ -234,6 +234,8 @@ mod userdata;
 mod value;
 
 #[cfg(feature = "tokio")]
+pub(crate) use self::monitored_item::MonitoredItemHandle;
+#[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,
     async_monitored_item::{AsyncMonitoredItem, MonitoredItemBuilder},
