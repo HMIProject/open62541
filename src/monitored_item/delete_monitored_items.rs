@@ -15,7 +15,7 @@ type CbResponse =
 pub(crate) async fn call(
     client: &ua::Client,
     request: &ua::DeleteMonitoredItemsRequest,
-) -> Result<(ua::DeleteMonitoredItemsResponse, ua::StatusCode)> {
+) -> Result<ua::DeleteMonitoredItemsResponse> {
     let (tx, rx) = oneshot::channel::<Result<ua::DeleteMonitoredItemsResponse>>();
 
     let status_code = ua::StatusCode::new({
@@ -53,7 +53,6 @@ pub(crate) async fn call(
     // there.
     rx.await
         .unwrap_or(Err(Error::internal("callback should send result")))
-        .map(|response| (response, status_code))
 }
 
 unsafe extern "C" fn callback_execute_response_c(
@@ -92,7 +91,7 @@ unsafe extern "C" fn callback_execute_response_c(
 pub(crate) fn send_request(
     client: &ua::Client,
     request: &ua::DeleteMonitoredItemsRequest,
-) -> Result<ua::StatusCode> {
+) -> Result<()> {
     let status_code = ua::StatusCode::new({
         // SAFETY: `UA_Client_MonitoredItems_delete_async()` expects the request passed by value but
         // does not take ownership.
@@ -112,7 +111,7 @@ pub(crate) fn send_request(
     });
     Error::verify_good(&status_code)?;
 
-    Ok(status_code)
+    Ok(())
 }
 
 unsafe extern "C" fn callback_log_response_c(
