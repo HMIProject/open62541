@@ -20,6 +20,17 @@ struct Context(*mut c_void);
 // SAFETY: As long as payload is `Send`, wrapper is `Send`.
 unsafe impl Send for Context where CbValue: Send + Sync {}
 
+/// Creates monitored items.
+///
+/// Notifications for monitored are handled by callback closures. The callback
+/// closure are created by invoking `create_value_callback_fn` repeatedly while
+/// preparing the items to create for the request. The argument of `create_value_callback_fn`
+/// is the `index` that starts at 0 and is incremented consecutively.
+//
+// TODO: How to pass `&ua::MonitoredItemCreateRequest` as a second argument to
+// `create_value_callback_fn`? `impl for<'a> FnMut(usize, &'a ua::MonitoredItemCreateRequest) -> F`
+// doesn't work.
+// See also: https://rust-lang.github.io/rfcs/3216-closure-lifetime-binder.html
 pub(crate) async fn call<F>(
     client: &ua::Client,
     request: &ua::CreateMonitoredItemsRequest,
@@ -50,6 +61,7 @@ where
         // item in the request.
         let notification_callback = NotificationCallback::new(item_to_create);
         let delete_callback: UA_Client_DeleteMonitoredItemCallback = Some(delete_callback_c);
+        // TODO: let value_callback = create_value_callback_fn(item_index, item_to_create);
         let value_callback = create_value_callback_fn(item_index);
         let context = Context(CbValue::prepare(value_callback));
 
