@@ -66,16 +66,17 @@ impl MonitoredItemHandle {
         self.monitored_item_id = Some(monitored_item_id);
     }
 
-    /// Deletes the single monitored item at the server.
+    /// Deletes the monitored item at the server.
     ///
-    /// No new data will be received after the invocation succeeded.
+    /// No new notifications will be received after the invocation succeeded.
     ///
-    /// This method will only succeed once. It always fails after receiving
-    /// the first successful response. Retrying in case of network errors is possible.
+    /// This method should only be called once. After it succeeded
+    /// any subsequent invocation will fail with an internal error.
     ///
     /// # Errors
     ///
-    /// This fails when the connection is interrupted or when the server returns an error.
+    /// This fails when the monitored item has already been deleted before,
+    /// when connection is interrupted, or when the server returns an error.
     pub(crate) async fn delete(&mut self) -> Result<ua::DeleteMonitoredItemsResponse> {
         // Consume the `Option` field first to ensure that this method
         // could never be called twice.
