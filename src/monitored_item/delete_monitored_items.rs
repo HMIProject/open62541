@@ -62,12 +62,13 @@ unsafe extern "C" fn callback_execute_response_c(
     _request_id: UA_UInt32,
     response: *mut c_void,
 ) {
+    log::debug!("MonitoredItems_delete_async() completed");
+
     let response = response.cast::<UA_DeleteMonitoredItemsResponse>();
     // SAFETY: Incoming pointer is valid for access.
     // PANIC: We expect pointer to be valid when good.
     let response = unsafe { response.as_ref() }.expect("response should be set");
     let status_code = ua::StatusCode::new(response.responseHeader.serviceResult);
-    log::debug!("MonitoredItems_delete_async() completed with status code {status_code}");
 
     let result = if status_code.is_good() {
         Ok(ua::DeleteMonitoredItemsResponse::clone_raw(response))
@@ -120,12 +121,13 @@ unsafe extern "C" fn callback_log_response_c(
     _request_id: UA_UInt32,
     response: *mut c_void,
 ) {
+    log::debug!("MonitoredItems_delete_async() completed");
+
     let response = response.cast::<UA_DeleteMonitoredItemsResponse>();
     // SAFETY: Incoming pointer is valid for access.
     // PANIC: We expect pointer to be valid when good.
     let response = unsafe { response.as_ref() }.expect("response should be set");
     let status_code = ua::StatusCode::new(response.responseHeader.serviceResult);
-    log::debug!("MonitoredItems_delete_async() completed with status code {status_code}");
 
     if let Err(error) = Error::verify_good(&status_code) {
         log::warn!("Error in response when deleting monitored items: {error}");
