@@ -223,6 +223,7 @@ mod client;
 mod data_type;
 mod data_value;
 mod error;
+mod monitored_item;
 mod server;
 mod service;
 #[cfg(feature = "mbedtls")]
@@ -235,10 +236,7 @@ mod value;
 #[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,
-    async_monitored_item::{
-        AsyncMonitoredItem, MonitoredItemAttribute, MonitoredItemBuilder, MonitoredItemKind,
-        MonitoredItemValue,
-    },
+    async_monitored_item::{AsyncMonitoredItem, MonitoredItemBuilder},
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
 };
 pub use self::{
@@ -247,6 +245,7 @@ pub use self::{
     data_type::DataType,
     data_value::DataValue,
     error::{Error, Result},
+    monitored_item::{MonitoredItemAttribute, MonitoredItemKind, MonitoredItemValue},
     server::{
         AccessControl, DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext, DefaultAccessControl, DefaultAccessControlWithLoginCallback,
@@ -268,6 +267,8 @@ pub use self::callback_fn::CallbackOnce;
 // TODO: Reduce visibility to `pub(crate)` (breaking change).
 #[deprecated = "Only used internally and not part of the public API."]
 pub use self::callback_stream::CallbackStream;
+#[cfg(feature = "tokio")]
+use self::monitored_item::delete_monitored_items;
 pub(crate) use self::{
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},

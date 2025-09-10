@@ -6,9 +6,9 @@ use open62541_sys::{
 
 use crate::{ua, DataType as _, Error};
 
-pub(super) fn call(client: &ua::Client, request: &ua::DeleteMonitoredItemsRequest) {
+pub(crate) fn call(client: &ua::Client, request: &ua::DeleteMonitoredItemsRequest) {
     let status_code = ua::StatusCode::new({
-        log::debug!("Calling MonitoredItems_delete()");
+        log::debug!("Calling MonitoredItems_delete_async()");
 
         // SAFETY: `UA_Client_MonitoredItems_delete_async()` expects the request passed by value but
         // does not take ownership.
@@ -36,7 +36,7 @@ unsafe extern "C" fn callback_c(
     _request_id: UA_UInt32,
     response: *mut c_void,
 ) {
-    log::debug!("MonitoredItems_delete() completed");
+    log::debug!("MonitoredItems_delete_async() completed");
 
     let response = response.cast::<UA_DeleteMonitoredItemsResponse>();
     // SAFETY: Incoming pointer is valid for access.

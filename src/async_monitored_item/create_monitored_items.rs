@@ -1,3 +1,7 @@
+// TODO: Decouple from `tokio` and move generic, callback-based implementation
+// into `crate::monitored_item::create_monitored_items` right next to
+// `crate::monitored_item::delete_monitored_items`.
+
 use std::{ffi::c_void, mem, ptr};
 
 use futures_channel::oneshot;
