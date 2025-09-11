@@ -198,12 +198,46 @@ impl<K: MonitoredItemKind> AsyncMonitoredItemBuilder<K> {
         self,
         subscription: &AsyncSubscription,
     ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem<K>)>>> {
+        let Self { create_request } = self;
+        AsyncMonitoredItem::create(subscription, create_request).await
+    }
+}
+
+/// Monitored item (with asynchronous API).
+#[derive(Debug)]
+pub struct AsyncMonitoredItem<K: MonitoredItemKind = DataChange<attributes::Value>> {
+    handle: MonitoredItemHandle,
+    rx: mpsc::Receiver<MonitoredItemValue>,
+    _kind: PhantomData<K>,
+}
+
+impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
+    const fn new(handle: MonitoredItemHandle, rx: mpsc::Receiver<MonitoredItemValue>) -> Self {
+        Self {
+            handle,
+            rx,
+            _kind: PhantomData,
+        }
+    }
+
+    /// Creates monitored items.
+    ///
+    /// This creates one or more new monitored items. Returns one result for each node ID.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the entire request is not successful. Errors for individual node IDs are
+    /// returned as error elements inside the resulting list.
+    pub async fn create(
+        subscription: &AsyncSubscription,
+        request_builder: MonitoredItemCreateRequestBuilder<K>,
+    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem<K>)>>> {
         let Some(client) = &subscription.client().upgrade() else {
             return Err(Error::internal("client should not be dropped"));
         };
         let subscription_id = subscription.subscription_id();
 
-        let request = self.create_request.build(subscription_id);
+        let request = request_builder.build(subscription_id);
         let result_count = request.items_to_create().map_or(0, <[_]>::len);
         let mut rxs = Vec::with_capacity(result_count);
         let response = {
@@ -270,24 +304,6 @@ impl<K: MonitoredItemKind> AsyncMonitoredItemBuilder<K> {
             .collect();
 
         Ok(results)
-    }
-}
-
-/// Monitored item (with asynchronous API).
-#[derive(Debug)]
-pub struct AsyncMonitoredItem<K: MonitoredItemKind = DataChange<attributes::Value>> {
-    handle: MonitoredItemHandle,
-    rx: mpsc::Receiver<MonitoredItemValue>,
-    _kind: PhantomData<K>,
-}
-
-impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
-    const fn new(handle: MonitoredItemHandle, rx: mpsc::Receiver<MonitoredItemValue>) -> Self {
-        Self {
-            handle,
-            rx,
-            _kind: PhantomData,
-        }
     }
 
     /// Waits for next value from server.
