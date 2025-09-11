@@ -18,7 +18,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Mark unused types `CallbackOnce` and `CallbackStream` as deprecated.
-- Deprecated `MonitoredItemBuilder`. Replaced by `MonitoredItemCreateRequestBuilder` and
+- Deprecate `MonitoredItemBuilder`. Replaced by `MonitoredItemCreateRequestBuilder` and
   `AsyncMonitoredItem::create()`.
 
 ## [0.9.4] - 2025-09-01
