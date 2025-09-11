@@ -195,7 +195,13 @@ impl AsyncSubscription {
     }
 
     #[must_use]
+    #[cfg(not(feature = "experimental-monitored-item-callback"))]
     pub(crate) const fn client(&self) -> &Weak<ua::Client> {
+        &self.client
+    }
+    #[must_use]
+    #[cfg(feature = "experimental-monitored-item-callback")]
+    pub const fn client(&self) -> &Weak<ua::Client> {
         &self.client
     }
 

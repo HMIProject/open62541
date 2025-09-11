@@ -45,6 +45,7 @@ tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
 
 [features]
 default = ["serde", "time", "tokio", "uuid"]
+experimental-monitored-item-callback = []
 mbedtls = ["dep:zeroize", "open62541-sys/mbedtls"]
 serde = ["dep:serde", "dep:serde_json", "time?/formatting", "time?/serde", "uuid?/serde"]
 time = ["dep:time"]

@@ -12,7 +12,7 @@ type CbResponse =
 
 /// Sends request and awaits response.
 // TODO: Reduce visibility to pub(super).
-pub(crate) async fn call(
+pub(super) async fn call(
     client: &ua::Client,
     request: &ua::DeleteMonitoredItemsRequest,
 ) -> Result<ua::DeleteMonitoredItemsResponse> {
