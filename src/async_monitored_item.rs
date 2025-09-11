@@ -8,62 +8,48 @@ use tokio::sync::mpsc;
 use crate::{
     attributes,
     monitored_item::{DataChange, Unknown},
-    ua, AsyncSubscription, DataType as _, Error, MonitoredItemAttribute, MonitoredItemHandle,
-    MonitoredItemKind, MonitoredItemValue, MonitoringFilter, Result,
+    ua, AsyncSubscription, DataType as _, Error, MonitoredItemAttribute,
+    MonitoredItemCreateRequestBuilder, MonitoredItemHandle, MonitoredItemKind, MonitoredItemValue,
+    MonitoringFilter, Result,
 };
 
 #[derive(Debug)]
-// TODO: Merge with or replace by MonitoredItemCreateRequestBuilder.
-pub struct MonitoredItemBuilder<K: MonitoredItemKind> {
-    node_ids: Vec<ua::NodeId>,
-    attribute_id: ua::AttributeId,
-    monitoring_mode: Option<ua::MonitoringMode>,
-    #[expect(clippy::option_option, reason = "implied default vs. unset")]
-    sampling_interval: Option<Option<Duration>>,
-    filter: Option<Box<dyn MonitoringFilter>>,
-    queue_size: Option<u32>,
-    discard_oldest: Option<bool>,
-    _kind: PhantomData<K>,
+pub struct AsyncMonitoredItemBuilder<K: MonitoredItemKind> {
+    create_request: MonitoredItemCreateRequestBuilder<K>,
 }
 
-impl MonitoredItemBuilder<DataChange<attributes::Value>> {
+impl AsyncMonitoredItemBuilder<DataChange<attributes::Value>> {
     pub fn new(node_ids: impl IntoIterator<Item = ua::NodeId>) -> Self {
         Self {
-            node_ids: node_ids.into_iter().collect(),
-            // Use explicit default to uphold invariant of typestate.
-            attribute_id: ua::AttributeId::VALUE,
-            monitoring_mode: None,
-            sampling_interval: None,
-            filter: None,
-            queue_size: None,
-            discard_oldest: None,
-            _kind: PhantomData,
+            create_request: MonitoredItemCreateRequestBuilder::new(node_ids),
         }
     }
 }
 
 // Note: The default values in the docs below come from `UA_MonitoredItemCreateRequest_default()`.
-impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
+impl<K: MonitoredItemKind> AsyncMonitoredItemBuilder<K> {
     /// Sets attribute.
     ///
-    /// By default, monitored items emit [`DataValue`](crate::DataValue) of the appropriate subtype matching the given
-    /// attribute. If the attribute is set to [`ua::AttributeId::EVENTNOTIFIER_T`], they emit
-    /// `ua::Array<ua::Variant>` instead.
+    /// By default, monitored items emit [`DataValue`](crate::DataValue) of the appropriate subtype
+    /// matching the given attribute. If the attribute is set to [`ua::AttributeId::EVENTNOTIFIER_T`],
+    /// they emit `ua::Array<ua::Variant>` instead.
     ///
     /// Default value is [`ua::AttributeId::VALUE_T`].
     ///
     /// See [`Self::attribute_id()`] to set the attribute ID at runtime.
     ///
+    /// See [`MonitoredItemCreateRequestBuilder::attribute()`].
+    ///
     /// # Examples
     ///
     /// ```
-    /// use open62541::{DataValue, MonitoredItemBuilder, MonitoredItemValue, ua};
+    /// use open62541::{DataValue, AsyncMonitoredItemBuilder, MonitoredItemValue, ua};
     /// use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME;
     ///
     /// # async fn wrap(subscription: open62541::AsyncSubscription) -> open62541::Result<()> {
     /// let node_ids = [ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME)];
     ///
-    /// let mut results = MonitoredItemBuilder::new(node_ids)
+    /// let mut results = AsyncMonitoredItemBuilder::new(node_ids)
     ///     .attribute(ua::AttributeId::BROWSENAME_T)
     ///     .create(&subscription)
     ///     .await?;
@@ -80,27 +66,10 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     pub fn attribute<T: MonitoredItemAttribute>(
         self,
         attribute: T,
-    ) -> MonitoredItemBuilder<T::Kind> {
-        let Self {
-            node_ids,
-            attribute_id: _,
-            monitoring_mode,
-            sampling_interval,
-            filter,
-            queue_size,
-            discard_oldest,
-            _kind,
-        } = self;
-
-        MonitoredItemBuilder {
-            node_ids,
-            attribute_id: attribute.id(),
-            monitoring_mode,
-            sampling_interval,
-            filter,
-            queue_size,
-            discard_oldest,
-            _kind: PhantomData,
+    ) -> AsyncMonitoredItemBuilder<T::Kind> {
+        let Self { create_request } = self;
+        AsyncMonitoredItemBuilder {
+            create_request: create_request.attribute(attribute),
         }
     }
 
@@ -112,19 +81,21 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     ///
     /// Default value is [`ua::AttributeId::VALUE`].
     ///
-    /// See [`ua::MonitoredItemCreateRequest::with_attribute_id()`].
+    /// See:
+    ///   - [`MonitoredItemCreateRequestBuilder::attribute_id()`]
+    ///   - [`ua::MonitoredItemCreateRequest::with_attribute_id()`]
     ///
     /// # Examples
     ///
     /// ```
-    /// use open62541::{DataValue, MonitoredItemBuilder, MonitoredItemValue, ua};
+    /// use open62541::{DataValue, AsyncMonitoredItemBuilder, MonitoredItemValue, ua};
     /// use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME;
     ///
     /// # async fn wrap(subscription: open62541::AsyncSubscription) -> open62541::Result<()> {
     /// let node_ids = [ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME)];
     /// let attribute_id = ua::AttributeId::BROWSENAME;
     ///
-    /// let mut results = MonitoredItemBuilder::new(node_ids)
+    /// let mut results = AsyncMonitoredItemBuilder::new(node_ids)
     ///     .attribute_id(attribute_id)
     ///     .create(&subscription)
     ///     .await?;
@@ -138,41 +109,26 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     /// # }
     /// ```
     #[must_use]
-    pub fn attribute_id(self, attribute_id: ua::AttributeId) -> MonitoredItemBuilder<Unknown> {
-        let Self {
-            node_ids,
-            attribute_id: _,
-            monitoring_mode,
-            sampling_interval,
-            filter,
-            queue_size,
-            discard_oldest,
-            _kind,
-        } = self;
-
-        MonitoredItemBuilder {
-            node_ids,
-            attribute_id,
-            monitoring_mode,
-            sampling_interval,
-            filter,
-            queue_size,
-            discard_oldest,
-            _kind: PhantomData,
+    pub fn attribute_id(self, attribute_id: ua::AttributeId) -> AsyncMonitoredItemBuilder<Unknown> {
+        let Self { create_request } = self;
+        AsyncMonitoredItemBuilder {
+            create_request: create_request.attribute_id(attribute_id),
         }
     }
 }
 
 // Note: The default values in the docs below come from `UA_MonitoredItemCreateRequest_default()`.
-impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
+impl<K: MonitoredItemKind> AsyncMonitoredItemBuilder<K> {
     /// Sets monitoring mode.
     ///
     /// Default value is [`ua::MonitoringMode::REPORTING`].
     ///
-    /// See [`ua::MonitoredItemCreateRequest::with_monitoring_mode()`].
+    /// See:
+    ///   - [`MonitoredItemCreateRequestBuilder::monitoring_mode()`]
+    ///   - [`ua::MonitoredItemCreateRequest::with_monitoring_mode()`]
     #[must_use]
     pub fn monitoring_mode(mut self, monitoring_mode: ua::MonitoringMode) -> Self {
-        self.monitoring_mode = Some(monitoring_mode);
+        self.create_request = self.create_request.monitoring_mode(monitoring_mode);
         self
     }
 
@@ -180,10 +136,12 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     ///
     /// Default value is 250.0 ms.
     ///
-    /// See [`ua::MonitoringParameters::with_sampling_interval()`].
+    /// See:
+    ///   - [`MonitoredItemCreateRequestBuilder::sampling_interval()`]
+    ///   - [`ua::MonitoredItemCreateRequest::with_sampling_interval()`]
     #[must_use]
-    pub const fn sampling_interval(mut self, sampling_interval: Option<Duration>) -> Self {
-        self.sampling_interval = Some(sampling_interval);
+    pub fn sampling_interval(mut self, sampling_interval: Option<Duration>) -> Self {
+        self.create_request = self.create_request.sampling_interval(sampling_interval);
         self
     }
 
@@ -191,10 +149,12 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     ///
     /// Default value is no filter.
     ///
-    /// See [`ua::MonitoringParameters::with_filter()`].
+    /// See:
+    ///   - [`MonitoredItemCreateRequestBuilder::filter()`]
+    ///   - [`ua::MonitoredItemCreateRequest::with_filter()`]
     #[must_use]
     pub fn filter(mut self, filter: impl MonitoringFilter) -> Self {
-        self.filter = Some(Box::new(filter));
+        self.create_request = self.create_request.filter(filter);
         self
     }
 
@@ -202,10 +162,12 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     ///
     /// Default value is 1.
     ///
-    /// See [`ua::MonitoringParameters::with_queue_size()`].
+    /// See:
+    ///   - [`MonitoredItemCreateRequestBuilder::queue_size()`]
+    ///   - [`ua::MonitoredItemCreateRequest::with_queue_size()`]
     #[must_use]
-    pub const fn queue_size(mut self, queue_size: u32) -> Self {
-        self.queue_size = Some(queue_size);
+    pub fn queue_size(mut self, queue_size: u32) -> Self {
+        self.create_request = self.create_request.queue_size(queue_size);
         self
     }
 
@@ -213,10 +175,12 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     ///
     /// Default value is `true`.
     ///
-    /// See [`ua::MonitoringParameters::with_discard_oldest()`].
+    /// See:
+    ///   - [`MonitoredItemCreateRequestBuilder::discard_oldest()`]
+    ///   - [`ua::MonitoredItemCreateRequest::with_discard_oldest()`]
     #[must_use]
-    pub const fn discard_oldest(mut self, discard_oldest: bool) -> Self {
-        self.discard_oldest = Some(discard_oldest);
+    pub fn discard_oldest(mut self, discard_oldest: bool) -> Self {
+        self.create_request = self.create_request.discard_oldest(discard_oldest);
         self
     }
 
@@ -237,7 +201,7 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
         };
         let subscription_id = subscription.subscription_id();
 
-        let request = self.into_request(subscription_id);
+        let request = self.create_request.build(subscription_id);
         let result_count = request.items_to_create().map_or(0, <[_]>::len);
         let (response, rxs) = create_monitored_items::call(client, &request).await?;
 
@@ -275,56 +239,11 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
                 let handle =
                     MonitoredItemHandle::new(client, subscription_id, result.monitored_item_id());
                 let monitored_item = AsyncMonitoredItem::new(handle, rx);
-
                 Ok((result, monitored_item))
             })
             .collect();
 
         Ok(results)
-    }
-
-    fn into_request(self, subscription_id: ua::SubscriptionId) -> ua::CreateMonitoredItemsRequest {
-        let Self {
-            node_ids,
-            attribute_id,
-            monitoring_mode,
-            sampling_interval,
-            filter,
-            queue_size,
-            discard_oldest,
-            _kind: _,
-        } = self;
-
-        let items_to_create = node_ids
-            .into_iter()
-            .map(|node_id| {
-                let mut request = ua::MonitoredItemCreateRequest::default()
-                    .with_node_id(&node_id)
-                    .with_attribute_id(&attribute_id);
-
-                if let Some(monitoring_mode) = monitoring_mode.as_ref() {
-                    request = request.with_monitoring_mode(monitoring_mode);
-                }
-                if let Some(&sampling_interval) = sampling_interval.as_ref() {
-                    request = request.with_sampling_interval(sampling_interval);
-                }
-                if let Some(filter) = filter.as_ref() {
-                    request = request.with_filter(filter);
-                }
-                if let Some(&queue_size) = queue_size.as_ref() {
-                    request = request.with_queue_size(queue_size);
-                }
-                if let Some(&discard_oldest) = discard_oldest.as_ref() {
-                    request = request.with_discard_oldest(discard_oldest);
-                }
-
-                request
-            })
-            .collect::<Vec<_>>();
-
-        ua::CreateMonitoredItemsRequest::init()
-            .with_subscription_id(subscription_id)
-            .with_items_to_create(&items_to_create)
     }
 }
 

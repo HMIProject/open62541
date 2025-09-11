@@ -234,11 +234,13 @@ mod userdata;
 mod value;
 
 #[cfg(feature = "tokio")]
+use self::monitored_item::delete_monitored_items;
+#[cfg(feature = "tokio")]
 pub(crate) use self::monitored_item::MonitoredItemHandle;
 #[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,
-    async_monitored_item::{AsyncMonitoredItem, MonitoredItemBuilder},
+    async_monitored_item::{AsyncMonitoredItem, AsyncMonitoredItemBuilder},
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
 };
 pub use self::{
@@ -265,15 +267,6 @@ pub use self::{
     userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},
 };
-// TODO: Reduce visibility to `pub(crate)` (breaking change).
-#[deprecated = "Only used internally and not part of the public API."]
-pub use self::callback_fn::CallbackOnce;
-#[cfg(feature = "tokio")]
-// TODO: Reduce visibility to `pub(crate)` (breaking change).
-#[deprecated = "Only used internally and not part of the public API."]
-pub use self::callback_stream::CallbackStream;
-#[cfg(feature = "tokio")]
-use self::monitored_item::delete_monitored_items;
 pub(crate) use self::{
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
@@ -284,6 +277,20 @@ pub use self::{
     ssl::{create_certificate, Certificate, Password, PrivateKey},
     traits::PrivateKeyPasswordCallback,
 };
+
+// TODO: Reduce visibility to `pub(crate)` (breaking change).
+#[deprecated = "Only used internally and not part of the public API."]
+pub use self::callback_fn::CallbackOnce;
+
+#[cfg(feature = "tokio")]
+// TODO: Reduce visibility to `pub(crate)` (breaking change).
+#[deprecated = "Only used internally and not part of the public API."]
+pub use self::callback_stream::CallbackStream;
+
+#[cfg(feature = "tokio")]
+// TODO: Remove type alias (breaking change).
+#[deprecated = "Replaced by `AsyncMonitoredItemBuilder`."]
+pub use crate::AsyncMonitoredItemBuilder as MonitoredItemBuilder;
 
 /// IANA-assigned OPC UA port number.
 pub const DEFAULT_PORT_NUMBER: u16 = 4840;

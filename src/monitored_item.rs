@@ -116,7 +116,8 @@ impl Drop for MonitoredItemHandle {
 
 /// Value emitted from monitored item notification.
 ///
-/// This depends on the attribute ID passed to [`MonitoredItemBuilder::attribute_id()`](crate::MonitoredItemBuilder::attribute_id).
+/// This depends on the attribute ID passed to
+/// [`MonitoredItemCreateRequestBuilder::attribute_id()`](crate::MonitoredItemCreateRequestBuilder::attribute_id).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MonitoredItemValue(MonitoredItemValueInner);
 
@@ -237,7 +238,7 @@ impl MonitoredItemKind for Unknown {
 /// This is implemented for all attributes except [`ua::AttributeId::EVENTNOTIFIER_T`].
 trait DataChangeAttribute: Attribute {}
 
-/// Attribute for [`MonitoredItemBuilder::attribute()`](crate::MonitoredItemBuilder::attribute).
+/// Attribute for [`MonitoredItemCreateRequestBuilder::attribute()`](crate::MonitoredItemCreateRequestBuilder::attribute).
 pub trait MonitoredItemAttribute: Attribute {
     /// Matching [`MonitoredItemKind`] implementation for attribute.
     type Kind: MonitoredItemKind;

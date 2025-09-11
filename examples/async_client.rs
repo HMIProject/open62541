@@ -3,7 +3,7 @@ use std::{num::NonZero, time::Duration};
 use anyhow::{bail, Context as _};
 use futures::future;
 use open62541::{
-    ua, AsyncClient, ClientBuilder, DataType, MonitoredItemBuilder, SubscriptionBuilder,
+    ua, AsyncClient, AsyncMonitoredItemBuilder, ClientBuilder, DataType, SubscriptionBuilder,
 };
 use open62541_sys::{
     UA_NS0ID_BASEEVENTTYPE, UA_NS0ID_BASEMODELCHANGEEVENTTYPE, UA_NS0ID_SERVER,
@@ -98,7 +98,7 @@ async fn subscribe_node_events(client: &AsyncClient) -> anyhow::Result<()> {
 
     let node_id = ua::NodeId::ns0(UA_NS0ID_SERVER);
 
-    let results = MonitoredItemBuilder::new([node_id.clone()])
+    let results = AsyncMonitoredItemBuilder::new([node_id.clone()])
         .attribute(ua::AttributeId::EVENTNOTIFIER_T)
         .filter(
             ua::EventFilter::init()
@@ -181,7 +181,7 @@ async fn subscribe_node_with_options(client: &AsyncClient) -> anyhow::Result<()>
         ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_STARTTIME),
     ];
 
-    let results = MonitoredItemBuilder::new(node_ids.clone())
+    let results = AsyncMonitoredItemBuilder::new(node_ids.clone())
         .monitoring_mode(ua::MonitoringMode::REPORTING)
         .sampling_interval(Some(Duration::from_millis(100)))
         .queue_size(3)
