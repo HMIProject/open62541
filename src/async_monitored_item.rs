@@ -317,8 +317,17 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
             )
             .await?
         };
-        debug_assert_eq!(results.len(), result_count);
-        debug_assert_eq!(results.len(), rxs.len());
+        debug_assert_eq!(
+            results.len(),
+            result_count,
+            "guaranteed by create_monitored_items_callback() on success"
+        );
+        // Precondition for the following zip() operation.
+        debug_assert_eq!(
+            results.len(),
+            rxs.len(),
+            "guaranteed by create_monitored_items_callback() on success"
+        );
 
         let results = results
             .into_iter()
