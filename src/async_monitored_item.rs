@@ -107,9 +107,9 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
 
     /// Sets attribute ID.
     ///
-    /// When using this method, monitored items emit [`MonitoredItemValue`] instead of the specific
-    /// type. See [`Self::attribute()`] for a type-safe alternative that yields appropriately typed
-    /// values for the given monitored attribute directly.
+    /// When using this method, monitored items emit [`MonitoredItemValue`](crate::MonitoredItemValue)
+    /// instead of the specific) instead of the specific type. See [`Self::attribute()`] for a type-safe
+    /// alternative that yields appropriately typed values for the given monitored attribute directly.
     ///
     /// Default value is [`ua::AttributeId::VALUE`].
     ///
