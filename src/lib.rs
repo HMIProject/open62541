@@ -280,14 +280,12 @@ pub use self::{
 // TODO: Reduce visibility to `pub(crate)` (breaking change).
 #[deprecated = "Only used internally and not part of the public API."]
 pub use self::callback_fn::CallbackOnce;
-
-#[cfg(feature = "tokio")]
 // TODO: Reduce visibility to `pub(crate)` (breaking change).
+#[cfg(feature = "tokio")]
 #[deprecated = "Only used internally and not part of the public API."]
 pub use self::callback_stream::CallbackStream;
-
-#[cfg(feature = "tokio")]
 // TODO: Remove.
+#[cfg(feature = "tokio")]
 #[deprecated = "Replaced by `MonitoredItemCreateRequestBuilder` and `AsyncMonitoredItem::create()`."]
 pub use self::async_monitored_item::MonitoredItemBuilder;
 
