@@ -8,7 +8,7 @@ use crate::Userdata;
 /// pointer as user data to an external library. Later, when this `extern` callback is run with that
 /// data, we may unwrap it and can thus call our initial closure.
 //
-// The implementation uses associated methods:
+// The implementation uses (non-public) associated methods:
 //
 // - [`CallbackMut::prepare()`] to wrap the closure and get the [`c_void`] pointer
 // - [`CallbackMut::execute()`] to unwrap the [`c_void`] pointer and call the closure repeatedly
