@@ -270,8 +270,9 @@ pub use self::callback_fn::CallbackOnce;
 #[deprecated = "Only used internally and not part of the public API."]
 pub use self::callback_stream::CallbackStream;
 #[cfg(feature = "tokio")]
-use self::monitored_item::delete_monitored_items;
+use self::monitored_item::{create_monitored_items, delete_monitored_items};
 pub(crate) use self::{
+    callback_fn::CallbackMut,
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
     value::{ArrayValue, NonScalarValue},
