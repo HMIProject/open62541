@@ -237,3 +237,32 @@ impl<K: MonitoredItemKind> MonitoredItemCreateRequestBuilder<K> {
             .with_items_to_create(&items_to_create)
     }
 }
+
+// TODO: Remove with deprecated `MonitoredItemBuilder`.
+#[cfg(feature = "tokio")]
+impl<K: MonitoredItemKind> From<crate::async_monitored_item::MonitoredItemBuilder<K>>
+    for MonitoredItemCreateRequestBuilder<K>
+{
+    fn from(deprecated: crate::async_monitored_item::MonitoredItemBuilder<K>) -> Self {
+        let crate::async_monitored_item::MonitoredItemBuilder {
+            node_ids,
+            attribute_id,
+            monitoring_mode,
+            sampling_interval,
+            filter,
+            queue_size,
+            discard_oldest,
+            _kind: _,
+        } = deprecated;
+        Self {
+            node_ids,
+            attribute_id,
+            monitoring_mode,
+            sampling_interval,
+            filter,
+            queue_size,
+            discard_oldest,
+            _kind: PhantomData,
+        }
+    }
+}

@@ -238,7 +238,7 @@ use self::monitored_item::{create_monitored_items, delete_monitored_items, Monit
 #[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,
-    async_monitored_item::{AsyncMonitoredItem, AsyncMonitoredItemBuilder},
+    async_monitored_item::AsyncMonitoredItem,
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
 };
 pub use self::{
@@ -287,9 +287,9 @@ pub use self::callback_fn::CallbackOnce;
 pub use self::callback_stream::CallbackStream;
 
 #[cfg(feature = "tokio")]
-// TODO: Remove type alias (breaking change).
-#[deprecated = "Replaced by `AsyncMonitoredItemBuilder`."]
-pub use AsyncMonitoredItemBuilder as MonitoredItemBuilder;
+// TODO: Remove.
+#[deprecated = "Replaced by `MonitoredItemCreateRequestBuilder` and `AsyncMonitoredItem::create()`."]
+pub use self::async_monitored_item::MonitoredItemBuilder;
 
 /// IANA-assigned OPC UA port number.
 pub const DEFAULT_PORT_NUMBER: u16 = 4840;
