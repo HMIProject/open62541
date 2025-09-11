@@ -15,7 +15,6 @@
 
 // TODO: Remove pub(crate).
 pub(crate) mod create_monitored_items;
-
 // TODO: Remove pub(crate).
 pub(crate) mod delete_monitored_items;
 
