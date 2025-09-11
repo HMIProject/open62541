@@ -7,7 +7,6 @@
 )]
 
 mod create_request_builder;
-pub use self::create_request_builder::MonitoredItemCreateRequestBuilder;
 
 // TODO: Remove pub(crate).
 pub(crate) mod delete_monitored_items;
@@ -18,6 +17,8 @@ use std::{
 };
 
 use crate::{attributes, ua, Attribute, DataType as _, DataValue, Error, Result};
+
+pub use self::create_request_builder::MonitoredItemCreateRequestBuilder;
 
 /// Handle for a single monitored item.
 ///
