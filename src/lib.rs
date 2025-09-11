@@ -234,11 +234,11 @@ mod userdata;
 mod value;
 
 #[cfg(feature = "tokio")]
-pub(crate) use self::monitored_item::MonitoredItemHandle;
+use self::monitored_item::{create_monitored_items, delete_monitored_items, MonitoredItemHandle};
 #[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,
-    async_monitored_item::{AsyncMonitoredItem, MonitoredItemBuilder},
+    async_monitored_item::AsyncMonitoredItem,
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
 };
 pub use self::{
@@ -247,7 +247,10 @@ pub use self::{
     data_type::DataType,
     data_value::DataValue,
     error::{Error, Result},
-    monitored_item::{MonitoredItemAttribute, MonitoredItemKind, MonitoredItemValue},
+    monitored_item::{
+        MonitoredItemAttribute, MonitoredItemCreateRequestBuilder, MonitoredItemKind,
+        MonitoredItemValue,
+    },
     server::{
         AccessControl, DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
         DataSourceWriteContext, DefaultAccessControl, DefaultAccessControlWithLoginCallback,
@@ -262,16 +265,7 @@ pub use self::{
     userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},
 };
-// TODO: Reduce visibility to `pub(crate)` (breaking change).
-#[deprecated = "Only used internally and not part of the public API."]
-pub use self::callback_fn::CallbackOnce;
-#[cfg(feature = "tokio")]
-// TODO: Reduce visibility to `pub(crate)` (breaking change).
-#[deprecated = "Only used internally and not part of the public API."]
-pub use self::callback_stream::CallbackStream;
-#[cfg(feature = "tokio")]
-use self::monitored_item::{create_monitored_items, delete_monitored_items};
-pub(crate) use self::{
+use self::{
     callback_fn::CallbackMut,
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
@@ -282,6 +276,18 @@ pub use self::{
     ssl::{create_certificate, Certificate, Password, PrivateKey},
     traits::PrivateKeyPasswordCallback,
 };
+
+// TODO: Reduce visibility to `pub(crate)` (breaking change).
+#[deprecated = "Only used internally and not part of the public API."]
+pub use self::callback_fn::CallbackOnce;
+// TODO: Reduce visibility to `pub(crate)` (breaking change).
+#[cfg(feature = "tokio")]
+#[deprecated = "Only used internally and not part of the public API."]
+pub use self::callback_stream::CallbackStream;
+// TODO: Remove.
+#[cfg(feature = "tokio")]
+#[deprecated = "Replaced by `MonitoredItemCreateRequestBuilder` and `AsyncMonitoredItem::create()`."]
+pub use self::async_monitored_item::MonitoredItemBuilder;
 
 /// IANA-assigned OPC UA port number.
 pub const DEFAULT_PORT_NUMBER: u16 = 4840;

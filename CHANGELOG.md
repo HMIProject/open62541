@@ -13,10 +13,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Implement `Clone`/`PartialEq`/`Eq` for `MonitoredItemValue`.
 - Add method `AsyncMonitoredItem::delete()` to release server resources in a controlled manner
   asynchronously before dropping.
+- Add `MonitoredItemCreateRequestBuilder`.
 
 ### Changed
 
 - Mark unused types `CallbackOnce` and `CallbackStream` as deprecated.
+- Deprecate `MonitoredItemBuilder`. Use `MonitoredItemCreateRequestBuilder` and
+  `AsyncMonitoredItem::create()` instead.
 
 ## [0.9.4] - 2025-09-01
 
