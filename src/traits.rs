@@ -46,7 +46,7 @@ impl<T: DataType> DataTypeExt for T {
 // FIXME: Turn into sealed trait.
 pub trait Attribute: Debug + Copy {
     /// Attribute data type.
-    type Value: DataTypeExt;
+    type Value: DataTypeExt + Send;
 
     /// Gets attribute ID.
     fn id(&self) -> ua::AttributeId;

@@ -7,8 +7,8 @@ use crate::{
     attributes, create_monitored_items, delete_monitored_items,
     monitored_item::{DataChange, Unknown},
     ua, AsyncSubscription, DataType as _, Error, MonitoredItemAttribute,
-    MonitoredItemCreateRequestBuilder, MonitoredItemHandle, MonitoredItemKind, MonitoredItemValue,
-    MonitoringFilter, Result,
+    MonitoredItemCreateRequestBuilder, MonitoredItemHandle, MonitoredItemKind, MonitoringFilter,
+    Result,
 };
 
 /// Maximum number of buffered values.
@@ -110,9 +110,9 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
 
     /// Sets attribute ID.
     ///
-    /// When using this method, monitored items emit [`MonitoredItemValue`] instead of the specific
-    /// type. See [`Self::attribute()`] for a type-safe alternative that yields appropriately typed
-    /// values for the given monitored attribute directly.
+    /// When using this method, monitored items emit [`MonitoredItemValue`](crate::MonitoredItemValue)
+    /// instead of the specific type. See [`Self::attribute()`] for a type-safe alternative that yields
+    /// appropriately typed values for the given monitored attribute directly.
     ///
     /// Default value is [`ua::AttributeId::VALUE`].
     ///
@@ -256,12 +256,12 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
 #[derive(Debug)]
 pub struct AsyncMonitoredItem<K: MonitoredItemKind = DataChange<attributes::Value>> {
     handle: MonitoredItemHandle,
-    rx: mpsc::Receiver<MonitoredItemValue>,
+    rx: mpsc::Receiver<K::Value>,
     _kind: PhantomData<K>,
 }
 
 impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
-    const fn new(handle: MonitoredItemHandle, rx: mpsc::Receiver<MonitoredItemValue>) -> Self {
+    const fn new(handle: MonitoredItemHandle, rx: mpsc::Receiver<K::Value>) -> Self {
         Self {
             handle,
             rx,
@@ -295,8 +295,8 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
                 let (tx, rx) = mpsc::channel(DEFAULT_STREAM_BUFFER_SIZE);
                 rxs.push(rx);
                 debug_assert_eq!(index, rxs.len());
-                move |monitored_item_value| {
-                    if let Err(err) = tx.try_send(monitored_item_value) {
+                move |value| {
+                    if let Err(err) = tx.try_send(value) {
                         match err {
                             TrySendError::Full(_value) => {
                                 // We cannot blockingly wait, because that would block `UA_Client_run_iterate()`
@@ -311,7 +311,7 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
                     }
                 }
             };
-            create_monitored_items::call(client, &request, create_value_callback_fn).await?
+            create_monitored_items::call::<K, _>(client, &request, create_value_callback_fn).await?
         };
 
         let Some(mut results) = response.into_results() else {
@@ -361,7 +361,7 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
     /// been closed and no more updates will be received.
     pub async fn next(&mut self) -> Option<K::Value> {
         // This mirrors `<Self as Stream>::poll_next()` but does not require `self` to be pinned.
-        self.rx.recv().await.map(K::map_value)
+        self.rx.recv().await
     }
 
     /// Turns monitored item into stream.
@@ -399,10 +399,7 @@ impl<K: MonitoredItemKind> Stream for AsyncMonitoredItem<K> {
         cx: &mut task::Context<'_>,
     ) -> task::Poll<Option<Self::Item>> {
         // This mirrors `AsyncMonitoredItem::next()` and implements the `Stream` trait.
-        self.as_mut()
-            .rx
-            .poll_recv(cx)
-            .map(|value| value.map(K::map_value))
+        self.as_mut().rx.poll_recv(cx)
     }
 }
 

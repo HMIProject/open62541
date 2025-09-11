@@ -180,7 +180,7 @@ enum MonitoredItemValueInner {
 
 /// Sealed typestate trait.
 pub trait MonitoredItemKind: sealed::MonitoredItemKind + Send + Sync + 'static {
-    type Value;
+    type Value: Send;
 
     fn map_value(value: MonitoredItemValue) -> Self::Value;
 }
