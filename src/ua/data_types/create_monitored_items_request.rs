@@ -19,7 +19,6 @@ impl CreateMonitoredItemsRequest {
         self
     }
 
-    #[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
     #[must_use]
     pub(crate) fn items_to_create(&self) -> Option<&[ua::MonitoredItemCreateRequest]> {
         unsafe { ua::Array::slice_from_raw_parts(self.0.itemsToCreateSize, self.0.itemsToCreate) }

@@ -234,9 +234,7 @@ mod userdata;
 mod value;
 
 #[cfg(feature = "tokio")]
-use self::monitored_item::delete_monitored_items;
-#[cfg(feature = "tokio")]
-pub(crate) use self::monitored_item::MonitoredItemHandle;
+use self::monitored_item::{create_monitored_items, delete_monitored_items, MonitoredItemHandle};
 #[cfg(feature = "tokio")]
 pub use self::{
     async_client::AsyncClient,
@@ -267,7 +265,8 @@ pub use self::{
     userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},
 };
-pub(crate) use self::{
+use self::{
+    callback_fn::CallbackMut,
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
     value::{ArrayValue, NonScalarValue},
@@ -290,7 +289,7 @@ pub use self::callback_stream::CallbackStream;
 #[cfg(feature = "tokio")]
 // TODO: Remove type alias (breaking change).
 #[deprecated = "Replaced by `AsyncMonitoredItemBuilder`."]
-pub use crate::AsyncMonitoredItemBuilder as MonitoredItemBuilder;
+pub use AsyncMonitoredItemBuilder as MonitoredItemBuilder;
 
 /// IANA-assigned OPC UA port number.
 pub const DEFAULT_PORT_NUMBER: u16 = 4840;
