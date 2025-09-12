@@ -208,11 +208,9 @@
 //! # }
 //! ```
 
-#[cfg(feature = "tokio")]
 mod async_client;
 #[cfg(feature = "tokio")]
 mod async_monitored_item;
-#[cfg(feature = "tokio")]
 mod async_subscription;
 mod attributes;
 mod browse_result;
@@ -234,14 +232,12 @@ mod userdata;
 mod value;
 
 #[cfg(feature = "tokio")]
-use self::monitored_item::{create_monitored_items, delete_monitored_items, MonitoredItemHandle};
+pub use self::async_monitored_item::AsyncMonitoredItem;
 #[cfg(feature = "tokio")]
+use self::monitored_item::{create_monitored_items, delete_monitored_items, MonitoredItemHandle};
 pub use self::{
     async_client::AsyncClient,
-    async_monitored_item::AsyncMonitoredItem,
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
-};
-pub use self::{
     browse_result::BrowseResult,
     client::{Client, ClientBuilder},
     data_type::DataType,
