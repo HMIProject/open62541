@@ -14,7 +14,6 @@ use open62541_sys::{
     UA_Client, UA_Client_disconnectAsync, UA_Client_run_iterate, UA_UInt32,
     __UA_Client_AsyncService, UA_STATUSCODE_BADCONNECTIONCLOSED, UA_STATUSCODE_BADDISCONNECT,
 };
-use tokio::task;
 
 use crate::{
     ua, AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataValue, Error,
@@ -45,6 +44,7 @@ pub struct AsyncClient {
     client: Arc<ua::Client>,
     background_cancelled: Arc<AtomicBool>,
     background_handle: Option<JoinHandle<()>>,
+    background_done_rx: Option<oneshot::Receiver<()>>,
 }
 
 impl AsyncClient {
@@ -72,6 +72,7 @@ impl AsyncClient {
         let client = Arc::new(client);
 
         let background_cancelled = Arc::new(AtomicBool::new(false));
+        let (background_done_tx, background_done_rx) = oneshot::channel();
 
         // Run the event loop concurrently. We do so on a thread where we may block: we need to call
         // `UA_Client_run_iterate()` and this method blocks for up to `RUN_ITERATE_TIMEOUT`.
@@ -82,41 +83,18 @@ impl AsyncClient {
         let background_handle = {
             let client = Arc::clone(&client);
             let cancelled = Arc::clone(&background_cancelled);
-            thread::spawn(move || background_task(&client, &cancelled))
+            thread::spawn(move || {
+                background_task(&client, &cancelled);
+                let _unused = background_done_tx.send(());
+            })
         };
 
         Self {
             client,
             background_cancelled,
             background_handle: Some(background_handle),
+            background_done_rx: Some(background_done_rx),
         }
-    }
-
-    /// Waits for background task to finish.
-    ///
-    /// Note: This _blocks_ the current thread while waiting for the thread that runs the background
-    /// task to finish. Either use `cancel` to set the cancellation token or make sure to disconnect
-    /// client first so that the task eventually finishes on its own.
-    fn join_background_task(&mut self, cancel: bool) {
-        // We only take the handle when we join. So if handle has already been taken, the background
-        // task is not running anymore. This usually happens in `drop()` after `disconnect()`.
-        let Some(background_handle) = self.background_handle.take() else {
-            return;
-        };
-
-        if cancel {
-            log::info!("Cancelling background task");
-            self.background_cancelled.store(true, Ordering::Relaxed);
-        }
-
-        // TODO: Use `tracing` and span to group log messages.
-        log::info!("Waiting for background task to finish");
-
-        // This call blocks. We ignore the result because we do not care if the thread panicked (and
-        // there is nothing that we could do anyway in that case).
-        let _unused = background_handle.join();
-
-        log::info!("Background task finished");
     }
 
     /// Gets current channel and session state, and connect status.
@@ -130,6 +108,7 @@ impl AsyncClient {
     /// This consumes the client and handles the graceful shutdown of the connection. This should be
     /// preferred over simply dropping the instance to give the server a chance to clean up and also
     /// to avoid blocking unexpectedly when the client is being dropped without calling this method.
+    #[expect(clippy::missing_panics_doc, reason = "implementation invariant")]
     pub async fn disconnect(mut self) {
         log::info!("Disconnecting from endpoint");
 
@@ -143,14 +122,20 @@ impl AsyncClient {
             log::warn!("Error while disconnecting client: {error}");
         }
 
-        // Wait for background task to complete. Since `join_background_task()` blocks, we must wait
-        // in a separate tokio task. We ignore the result (since we do not care if the task panicked
-        // and there is nothing else it returns).
+        // PANIC: We only take the receiver in this method. Since it consumes `self`, the value must
+        // still be present when we reach this. Do so only right before awaiting to uphold invariant
+        // in `Drop` implementation which allows us to take an early return path there.
+        let background_done_rx = self.background_done_rx.take().expect("no done receiver");
+
+        // Asynchronously wait for the background task running in the background thread to complete.
         //
         // Note: We do _not_ cancel the background task before blocking: we require the asynchronous
         // handling to keep on running until the connection has been taken down which then makes the
         // task finish by itself.
-        let _unused = task::spawn_blocking(move || self.join_background_task(false)).await;
+        //
+        // We ignore the result: the sender is only dropped when the background thread has finished,
+        // which is exactly what we are waiting for anyway.
+        let _unused = background_done_rx.await;
     }
 
     /// Reads node value.
@@ -576,13 +561,36 @@ impl AsyncClient {
 
 impl Drop for AsyncClient {
     fn drop(&mut self) {
-        // We need to wait for the task to finish and must do so blockingly. `UA_Client_delete()` is
-        // not safe run concurrently while `UA_Client_run_iterate()` is still running.
-        //
+        // If `disconnect()` has been called before (either run to completion or cancelled), all has
+        // been done to shut down the background thread. The only thing that may be left is properly
+        // joining the background thread. We don't do that here to avoid the amount of blocking that
+        // this could involve. By dropping the handle, the OS is able to release all resources soon,
+        // i.e., when the thread has actually run to completion (if it hasn't done so already).
+        if self.background_done_rx.is_none() {
+            return;
+        }
+
+        log::info!("Cancelling background task");
+
         // Notify background task to cancel itself, even when [`UA_Client_run_iterate()`] would want
         // to keep on running. This is okay: we are not issuing asynchronous requests anymore anyway
         // (the only other call will be `UA_Client_delete()` when inner client drops).
-        self.join_background_task(true);
+        self.background_cancelled.store(true, Ordering::Relaxed);
+
+        // TODO: Use `tracing` and span to group log messages.
+        log::info!("Waiting for background task to finish");
+
+        // PANIC: We only take the handle here, dropping `self`, So, the value must still be present
+        // when we reach this.
+        let background_handle = self.background_handle.take().expect("no handle");
+
+        // We need to wait for the task to finish and must do so blockingly. `UA_Client_delete()` is
+        // not safe run concurrently while `UA_Client_run_iterate()` is still running. We ignore the
+        // result, because we do not care if the thread panicked (and there is nothing that we could
+        // do anyway in that case).
+        let _unused = background_handle.join();
+
+        log::info!("Background task finished");
     }
 }
 
