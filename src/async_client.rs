@@ -608,6 +608,7 @@ impl BackgroundThread {
 
     async fn wait_until_done(self) {
         let Self { done_rx, .. } = self;
+
         // We ignore the result: the sender is only dropped when the background thread has finished,
         // which is exactly what we are waiting for anyway.
         let _unused = done_rx.await;
