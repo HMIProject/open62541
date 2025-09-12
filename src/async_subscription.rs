@@ -12,7 +12,10 @@ use open62541_sys::{
     UA_CreateSubscriptionResponse, UA_DeleteSubscriptionsResponse, UA_UInt32,
 };
 
-use crate::{ua, AsyncClient, CallbackOnce, DataType as _, Error, Result};
+use crate::{
+    create_monitored_items_callback, ua, AsyncClient, CallbackOnce, DataType as _, Error,
+    MonitoredItemCreateRequestBuilder, MonitoredItemHandle, MonitoredItemKind, Result,
+};
 
 #[derive(Debug, Default)]
 pub struct SubscriptionBuilder {
@@ -196,17 +199,7 @@ impl AsyncSubscription {
     }
 
     #[must_use]
-    #[cfg(all(
-        feature = "tokio",
-        not(feature = "experimental-monitored-item-callback")
-    ))]
     pub(crate) const fn client(&self) -> &Weak<ua::Client> {
-        &self.client
-    }
-
-    #[must_use]
-    #[cfg(feature = "experimental-monitored-item-callback")]
-    pub const fn client(&self) -> &Weak<ua::Client> {
         &self.client
     }
 
@@ -214,6 +207,38 @@ impl AsyncSubscription {
     #[must_use]
     pub const fn subscription_id(&self) -> ua::SubscriptionId {
         self.subscription_id
+    }
+
+    /// Creates one or more monitored items.
+    ///
+    /// Monitored item values are forwarded to the callback closures that
+    /// are created on-the-fly for each item in the request.
+    ///
+    /// Returns one result for each node ID.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the entire request is not successful. Errors for individual node IDs are
+    /// returned as error elements inside the resulting list.
+    pub async fn create_monitored_items_callback<K: MonitoredItemKind, F>(
+        &self,
+        request_builder: MonitoredItemCreateRequestBuilder<K>,
+        create_value_callback_fn: impl FnMut(usize) -> F,
+    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, MonitoredItemHandle)>>>
+    where
+        F: FnMut(K::Value) + 'static,
+    {
+        let Some(client) = self.client().upgrade() else {
+            return Err(Error::internal("not connected"));
+        };
+        let subscription_id = self.subscription_id();
+        create_monitored_items_callback(
+            &client,
+            subscription_id,
+            request_builder,
+            create_value_callback_fn,
+        )
+        .await
     }
 }
 

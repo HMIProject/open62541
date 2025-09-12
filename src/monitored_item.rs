@@ -1,18 +1,3 @@
-#![cfg_attr(
-    not(feature = "tokio"),
-    expect(
-        dead_code,
-        reason = "Some methods are only used when this feature is enabled."
-    )
-)]
-#![cfg_attr(
-    not(feature = "experimental-monitored-item-callback"),
-    expect(
-        unreachable_pub,
-        reason = "Some types/methods only need to be public when this features is enabled."
-    )
-)]
-
 mod create_request_builder;
 
 // TODO: Remove pub(crate).
@@ -317,19 +302,7 @@ mod sealed {
     impl MonitoredItemKind for super::Unknown {}
 }
 
-/// Creates one or more monitored items.
-///
-/// Monitored item values are forwarded to the callback closures that
-/// are created on-the-fly for each item in the request.
-///
-/// Returns one result for each node ID.
-///
-/// # Errors
-///
-/// This fails when the entire request is not successful. Errors for individual node IDs are
-/// returned as error elements inside the resulting list.
-#[cfg(any(feature = "tokio", feature = "experimental-monitored-item-callback"))]
-pub async fn create_monitored_items_callback<K: MonitoredItemKind, F>(
+pub(crate) async fn create_monitored_items_callback<K: MonitoredItemKind, F>(
     client: &Arc<ua::Client>,
     subscription_id: ua::SubscriptionId,
     request_builder: MonitoredItemCreateRequestBuilder<K>,

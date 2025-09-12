@@ -15,9 +15,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   asynchronously before dropping.
 - Add `MonitoredItemCreateRequestBuilder`.
 - `AsyncClient` and `AsyncSubscription` no longer depend on the `tokio` feature.
-- Experimental: New function `create_monitored_items_callback()` with accompanying type
-  `MonitoredItemHandle`. Hidden behind the optional feature `experimental-monitored-item-callback`
-  for stabilizing the public API.
+- Add method `AsyncSubscription::create_monitored_items_callback()` with accompanying type
+  `MonitoredItemHandle`.
 
 ### Changed
 

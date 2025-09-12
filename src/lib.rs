@@ -231,15 +231,6 @@ pub mod ua;
 mod userdata;
 mod value;
 
-// Experimental feature "experimental-monitored-item-callback".
-#[cfg(all(
-    feature = "tokio",
-    not(feature = "experimental-monitored-item-callback")
-))]
-use self::monitored_item::{create_monitored_items_callback, MonitoredItemHandle};
-#[cfg(feature = "experimental-monitored-item-callback")]
-pub use self::monitored_item::{create_monitored_items_callback, MonitoredItemHandle};
-
 #[cfg(feature = "tokio")]
 pub use self::async_monitored_item::AsyncMonitoredItem;
 pub use self::{
@@ -251,8 +242,8 @@ pub use self::{
     data_value::DataValue,
     error::{Error, Result},
     monitored_item::{
-        MonitoredItemAttribute, MonitoredItemCreateRequestBuilder, MonitoredItemKind,
-        MonitoredItemValue,
+        MonitoredItemAttribute, MonitoredItemCreateRequestBuilder, MonitoredItemHandle,
+        MonitoredItemKind, MonitoredItemValue,
     },
     server::{
         AccessControl, DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
@@ -272,6 +263,7 @@ use self::{
     callback_fn::CallbackMut,
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
+    monitored_item::create_monitored_items_callback,
     value::{ArrayValue, NonScalarValue},
 };
 #[cfg(feature = "mbedtls")]
