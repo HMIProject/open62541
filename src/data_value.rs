@@ -137,7 +137,6 @@ impl DataValue<ua::Variant> {
     /// This adjusts the target type of `self`, casting the inner value to the specified data type
     /// when read with [`Self::value()`]. This should be used in situations when the expected type
     /// can be deduced from circumstances and typed data values can be returned for convenience.
-    #[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
     pub(crate) fn cast<T: DataTypeExt>(self) -> DataValue<T> {
         let Self { data_value, _kind } = self;
 
