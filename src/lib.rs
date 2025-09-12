@@ -232,18 +232,13 @@ mod userdata;
 mod value;
 
 // Experimental feature "experimental-monitored-item-callback".
-#[cfg(not(feature = "experimental-monitored-item-callback"))]
-use self::callback_fn::CallbackMut;
 #[cfg(all(
     feature = "tokio",
     not(feature = "experimental-monitored-item-callback")
 ))]
 use self::monitored_item::{create_monitored_items_callback, MonitoredItemHandle};
 #[cfg(feature = "experimental-monitored-item-callback")]
-pub use self::{
-    callback_fn::CallbackMut,
-    monitored_item::{create_monitored_items_callback, MonitoredItemHandle},
-};
+pub use self::monitored_item::{create_monitored_items_callback, MonitoredItemHandle};
 
 #[cfg(feature = "tokio")]
 pub use self::async_monitored_item::AsyncMonitoredItem;
@@ -274,6 +269,7 @@ pub use self::{
     value::{ScalarValue, ValueType, VariantValue},
 };
 use self::{
+    callback_fn::CallbackMut,
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
     value::{ArrayValue, NonScalarValue},

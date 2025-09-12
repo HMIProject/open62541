@@ -7,21 +7,14 @@ use crate::Userdata;
 /// Use this to wrap an [`FnMut`] closure into a data structure that may be passed via a [`c_void`]
 /// pointer as user data to an external library. Later, when this `extern` callback is run with that
 /// data, we may unwrap it and can thus call our initial closure.
-//
-// The implementation uses (non-public) associated methods:
-//
-// - [`CallbackMut::prepare()`] to wrap the closure and get the [`c_void`] pointer
-// - [`CallbackMut::execute()`] to unwrap the [`c_void`] pointer and call the closure repeatedly
-// - [`CallbackMut::delete()`] to drop the closure and free all memory
+///
+/// The implementation uses (non-public) associated methods:
+///
+/// - [`CallbackMut::prepare()`] to wrap the closure and get the [`c_void`] pointer
+/// - [`CallbackMut::execute()`] to unwrap the [`c_void`] pointer and call the closure repeatedly
+/// - [`CallbackMut::delete()`] to drop the closure and free all memory
 #[derive(Debug)]
-#[cfg_attr(
-    not(feature = "experimental-monitored-item-callback"),
-    expect(
-        unreachable_pub,
-        reason = "Only needs to be public when this features is enabled."
-    )
-)]
-pub struct CallbackMut<T: 'static>(PhantomData<T>);
+pub(crate) struct CallbackMut<T: 'static>(PhantomData<T>);
 
 // TODO: Use inherent associated type to define this directly on `CallbackOnce`. At the moment, this
 // is not possible yet.
