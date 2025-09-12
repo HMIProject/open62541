@@ -12,10 +12,7 @@ use open62541_sys::{
     UA_CreateSubscriptionResponse, UA_DeleteSubscriptionsResponse, UA_UInt32,
 };
 
-use crate::{
-    ua, AsyncClient, AsyncMonitoredItem, CallbackOnce, DataType as _, Error,
-    MonitoredItemCreateRequestBuilder, Result,
-};
+use crate::{ua, AsyncClient, CallbackOnce, DataType as _, Error, Result};
 
 #[derive(Debug, Default)]
 pub struct SubscriptionBuilder {
@@ -172,16 +169,20 @@ pub struct AsyncSubscription {
 }
 
 impl AsyncSubscription {
-    /// Creates [monitored item](AsyncMonitoredItem).
+    /// Creates [monitored item](crate::AsyncMonitoredItem).
     ///
     /// This creates a new monitored item for the given node.
     ///
     /// # Errors
     ///
     /// This fails when the node does not exist.
-    pub async fn create_monitored_item(&self, node_id: &ua::NodeId) -> Result<AsyncMonitoredItem> {
-        let request_builder = MonitoredItemCreateRequestBuilder::new([node_id.clone()]);
-        let results = AsyncMonitoredItem::create(self, request_builder).await?;
+    #[cfg(feature = "tokio")]
+    pub async fn create_monitored_item(
+        &self,
+        node_id: &ua::NodeId,
+    ) -> Result<crate::AsyncMonitoredItem> {
+        let request_builder = crate::MonitoredItemCreateRequestBuilder::new([node_id.clone()]);
+        let results = crate::AsyncMonitoredItem::create(self, request_builder).await?;
 
         // We expect exactly one result for the single monitored item we requested above.
         let Ok::<[_; 1], _>([result]) = results.try_into() else {
@@ -195,7 +196,10 @@ impl AsyncSubscription {
     }
 
     #[must_use]
-    #[cfg(not(feature = "experimental-monitored-item-callback"))]
+    #[cfg(all(
+        feature = "tokio",
+        not(feature = "experimental-monitored-item-callback")
+    ))]
     pub(crate) const fn client(&self) -> &Weak<ua::Client> {
         &self.client
     }

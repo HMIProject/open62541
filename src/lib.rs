@@ -208,11 +208,9 @@
 //! # }
 //! ```
 
-#[cfg(feature = "tokio")]
 mod async_client;
 #[cfg(feature = "tokio")]
 mod async_monitored_item;
-#[cfg(feature = "tokio")]
 mod async_subscription;
 mod attributes;
 mod browse_result;
@@ -248,12 +246,10 @@ pub use self::{
 };
 
 #[cfg(feature = "tokio")]
+pub use self::async_monitored_item::AsyncMonitoredItem;
 pub use self::{
     async_client::AsyncClient,
-    async_monitored_item::AsyncMonitoredItem,
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
-};
-pub use self::{
     browse_result::BrowseResult,
     client::{Client, ClientBuilder},
     data_type::DataType,
