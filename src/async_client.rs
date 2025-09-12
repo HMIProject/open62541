@@ -6,14 +6,15 @@ use std::{
         Arc,
     },
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
+use futures_channel::oneshot;
 use open62541_sys::{
     UA_Client, UA_Client_disconnectAsync, UA_Client_run_iterate, UA_UInt32,
     __UA_Client_AsyncService, UA_STATUSCODE_BADCONNECTIONCLOSED, UA_STATUSCODE_BADDISCONNECT,
 };
-use tokio::{sync::oneshot, task, time::Instant};
+use tokio::task;
 
 use crate::{
     ua, AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataValue, Error,
