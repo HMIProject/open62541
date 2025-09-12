@@ -14,6 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add method `AsyncMonitoredItem::delete()` to release server resources in a controlled manner
   asynchronously before dropping.
 - Add `MonitoredItemCreateRequestBuilder`.
+- `AsyncClient` and `AsyncSubscription` no longer depend on the `tokio` feature.
 
 ### Changed
 

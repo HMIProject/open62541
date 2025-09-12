@@ -376,7 +376,6 @@ impl Client {
     /// The [`AsyncClient`] can be used to access methods in an asynchronous way.
     ///
     /// [`AsyncClient`]: crate::AsyncClient
-    #[cfg(feature = "tokio")]
     #[must_use]
     pub fn into_async(self) -> crate::AsyncClient {
         crate::AsyncClient::from_sync(self.0)
