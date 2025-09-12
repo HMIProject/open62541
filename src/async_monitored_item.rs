@@ -1,12 +1,12 @@
 use std::{marker::PhantomData, pin::Pin, task, time::Duration};
 
 use futures_core::Stream;
-use tokio::sync::mpsc::{self, error::TrySendError};
+use tokio::sync::mpsc;
 
 use crate::{
     attributes, create_monitored_items_callback,
     monitored_item::{DataChange, Unknown},
-    ua, AsyncSubscription, Error, MonitoredItemAttribute, MonitoredItemCreateRequestBuilder,
+    ua, AsyncClient, AsyncSubscription, MonitoredItemAttribute, MonitoredItemCreateRequestBuilder,
     MonitoredItemHandle, MonitoredItemKind, MonitoringFilter, Result,
 };
 
@@ -280,9 +280,7 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
         subscription: &AsyncSubscription,
         request_builder: MonitoredItemCreateRequestBuilder<K>,
     ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem<K>)>>> {
-        let Some(client) = &subscription.client().upgrade() else {
-            return Err(Error::internal("client should not be dropped"));
-        };
+        let client = AsyncClient::upgrade_weak(subscription.client())?;
         let subscription_id = subscription.subscription_id();
 
         let result_count = request_builder.node_ids().len();
@@ -296,13 +294,13 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
                 move |value| {
                     if let Err(err) = tx.try_send(value) {
                         match err {
-                            TrySendError::Full(_value) => {
+                            mpsc::error::TrySendError::Full(_value) => {
                                 // We cannot blockingly wait, because that would block `UA_Client_run_iterate()`
                                 // in our event loop, potentially preventing the receiver from clearing the stream.
                                 // The monitored value might contain sensitive information and must not be logged!
                                 log::error!("Discarding monitored item value: stream buffer (size = {buffer_size}) is full", buffer_size = tx.capacity());
                             }
-                            TrySendError::Closed(_) => {
+                            mpsc::error::TrySendError::Closed(_) => {
                                 // Received has disappeared and the value is no longer needed.
                             }
                         }
@@ -310,7 +308,7 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
                 }
             };
             create_monitored_items_callback(
-                client,
+                &client,
                 subscription_id,
                 request_builder,
                 create_value_callback_fn,

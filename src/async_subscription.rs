@@ -228,9 +228,7 @@ impl AsyncSubscription {
     where
         F: FnMut(K::Value) + 'static,
     {
-        let Some(client) = self.client().upgrade() else {
-            return Err(Error::internal("not connected"));
-        };
+        let client = AsyncClient::upgrade_weak(self.client())?;
         let subscription_id = self.subscription_id();
         create_monitored_items_callback(
             &client,

@@ -10,7 +10,7 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use crate::{attributes, ua, Attribute, DataType as _, DataValue, Error, Result};
+use crate::{attributes, ua, AsyncClient, Attribute, DataType as _, DataValue, Error, Result};
 
 pub use self::create_request_builder::MonitoredItemCreateRequestBuilder;
 
@@ -73,10 +73,7 @@ impl MonitoredItemHandle {
         // could never be called twice.
         let (request, monitored_item_id) = self.before_delete()?;
 
-        let Some(client) = self.client.upgrade() else {
-            // No rollback, because the client is gone forever.
-            return Err(Error::internal("no client"));
-        };
+        let client = AsyncClient::upgrade_weak(&self.client)?;
 
         delete_monitored_items::call(&client, &request)
             .await
