@@ -556,8 +556,8 @@ impl Drop for AsyncClient {
 #[derive(Debug)]
 struct BackgroundThread {
     cancelled: Arc<AtomicBool>,
-    handle: JoinHandle<()>,
     done_rx: oneshot::Receiver<()>,
+    handle: JoinHandle<()>,
 }
 
 impl BackgroundThread {
@@ -581,9 +581,9 @@ impl BackgroundThread {
         };
 
         Self {
-            cancelled: Arc::new(AtomicBool::new(false)),
-            handle,
+            cancelled,
             done_rx,
+            handle,
         }
     }
 
