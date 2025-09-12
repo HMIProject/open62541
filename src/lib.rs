@@ -288,14 +288,14 @@ pub use self::{
     traits::PrivateKeyPasswordCallback,
 };
 
-// TODO: Reduce visibility to `pub(crate)` (breaking change).
-#[deprecated = "Only used internally and not part of the public API."]
+// TODO: Reduce visibility to `pub(crate)`.
+#[deprecated = "Unused."]
 pub use self::callback_fn::CallbackOnce;
-// TODO: Reduce visibility to `pub(crate)` (breaking change).
+// TODO: Remove this type.
 #[cfg(feature = "tokio")]
-#[deprecated = "Only used internally and not part of the public API."]
+#[deprecated = "Unused."]
 pub use self::callback_stream::CallbackStream;
-// TODO: Remove.
+// TODO: Remove this type.
 #[cfg(feature = "tokio")]
 #[deprecated = "Replaced by `MonitoredItemCreateRequestBuilder` and `AsyncMonitoredItem::create()`."]
 pub use self::async_monitored_item::MonitoredItemBuilder;
