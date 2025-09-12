@@ -35,7 +35,7 @@ unsafe impl Send for Context where CbNotification: Send + Sync {}
 // `create_value_callback_fn`? `impl for<'a> FnMut(usize, &'a ua::MonitoredItemCreateRequest) -> F`
 // doesn't work.
 // See also: <https://rust-lang.github.io/rfcs/3216-closure-lifetime-binder.html>
-pub(crate) async fn call<K: MonitoredItemKind, F>(
+pub(super) async fn call<K: MonitoredItemKind, F>(
     client: &ua::Client,
     request: &ua::CreateMonitoredItemsRequest,
     mut create_value_callback_fn: impl FnMut(usize) -> F,

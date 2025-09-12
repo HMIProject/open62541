@@ -3,7 +3,7 @@ use std::{
     slice,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Weak,
     },
     thread::{self, JoinHandle},
     time::{Duration, Instant},
@@ -73,6 +73,12 @@ impl AsyncClient {
             client,
             background_thread: Some(background_thread),
         }
+    }
+
+    pub(crate) fn upgrade_weak(client: &Weak<ua::Client>) -> Result<Arc<ua::Client>> {
+        client
+            .upgrade()
+            .ok_or(Error::internal("client has been dropped"))
     }
 
     /// Gets current channel and session state, and connect status.

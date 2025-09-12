@@ -1,11 +1,3 @@
-#![cfg_attr(
-    not(feature = "tokio"),
-    expect(
-        dead_code,
-        reason = "Some methods are only used when this feature is enabled."
-    )
-)]
-
 mod create_request_builder;
 
 // TODO: Remove pub(crate).
@@ -18,7 +10,7 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use crate::{attributes, ua, Attribute, DataType as _, DataValue, Error, Result};
+use crate::{attributes, ua, AsyncClient, Attribute, DataType as _, DataValue, Error, Result};
 
 pub use self::create_request_builder::MonitoredItemCreateRequestBuilder;
 
@@ -26,7 +18,7 @@ pub use self::create_request_builder::MonitoredItemCreateRequestBuilder;
 ///
 /// Keeps the monitored item at the server alive until either deleted or dropped.
 #[derive(Debug)]
-pub(crate) struct MonitoredItemHandle {
+pub struct MonitoredItemHandle {
     client: Weak<ua::Client>,
     subscription_id: ua::SubscriptionId,
     monitored_item_id: Option<ua::MonitoredItemId>,
@@ -76,15 +68,12 @@ impl MonitoredItemHandle {
     ///
     /// This fails when the monitored item has already been deleted before,
     /// when connection is interrupted, or when the server returns an error.
-    pub(crate) async fn delete(&mut self) -> Result<ua::DeleteMonitoredItemsResponse> {
+    pub async fn delete(&mut self) -> Result<ua::DeleteMonitoredItemsResponse> {
         // Consume the `Option` field first to ensure that this method
         // could never be called twice.
         let (request, monitored_item_id) = self.before_delete()?;
 
-        let Some(client) = self.client.upgrade() else {
-            // No rollback, because the client is gone forever.
-            return Err(Error::internal("no client"));
-        };
+        let client = AsyncClient::upgrade_weak(&self.client)?;
 
         delete_monitored_items::call(&client, &request)
             .await
@@ -308,4 +297,60 @@ mod sealed {
     impl MonitoredItemKind for super::Event {}
 
     impl MonitoredItemKind for super::Unknown {}
+}
+
+pub(crate) async fn create_monitored_items_callback<K: MonitoredItemKind, F>(
+    client: &Arc<ua::Client>,
+    subscription_id: ua::SubscriptionId,
+    request_builder: MonitoredItemCreateRequestBuilder<K>,
+    create_value_callback_fn: impl FnMut(usize) -> F,
+) -> crate::Result<Vec<crate::Result<(ua::MonitoredItemCreateResult, MonitoredItemHandle)>>>
+where
+    F: FnMut(K::Value) + 'static,
+{
+    let request = request_builder.build(subscription_id);
+    let result_count = request.items_to_create().map_or(0, <[_]>::len);
+    let response =
+        create_monitored_items::call::<K, _>(client, &request, create_value_callback_fn).await?;
+
+    let Some(mut results) = response.into_results() else {
+        return Err(crate::Error::internal("expected monitoring item results"));
+    };
+
+    if results.len() != result_count {
+        // This should not happen. In any case, we cannot associate returned items with their
+        // incoming node IDs. Clean up the items that we received to not leave them dangling.
+        //
+        let monitored_item_ids = results
+            .iter()
+            .filter(|result| result.status_code().is_good())
+            .map(ua::MonitoredItemCreateResult::monitored_item_id)
+            .collect::<Vec<_>>();
+        let request = ua::DeleteMonitoredItemsRequest::init()
+            .with_subscription_id(subscription_id)
+            .with_monitored_item_ids(&monitored_item_ids);
+        // Await the response to ensure that all previously created monitored items
+        // have been deleted at the server before returning control back to the caller.
+        if let Err(err) = delete_monitored_items::call(client, &request).await {
+            log::warn!("Failed to delete monitored items when cleaning up: {err:#}");
+        }
+
+        return Err(crate::Error::internal(
+            "unexpected number of monitored items",
+        ));
+    }
+
+    let results = results
+        .drain_all()
+        .map(|result| {
+            crate::Error::verify_good(&result.status_code())?;
+
+            let handle =
+                MonitoredItemHandle::new(client, subscription_id, result.monitored_item_id());
+
+            Ok((result, handle))
+        })
+        .collect();
+
+    Ok(results)
 }
