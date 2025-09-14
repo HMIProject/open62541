@@ -64,17 +64,22 @@ where
     for (item_index, item_to_create) in items_to_create.iter().enumerate() {
         // `open62541` requires one set of notification/delete callback and context per monitored
         // item in the request.
-        let notification_callback = NotificationCallback::new(item_to_create);
+        let notification_callback = NotificationCallback::for_request(item_to_create);
         let delete_notification_callback: UA_Client_DeleteMonitoredItemCallback =
             Some(delete_notification_callback_c);
 
-        // TODO: let value_callback = create_value_callback_fn(item_index, item_to_create);
-        let mut value_callback = create_value_callback_fn(item_index);
-        let notication_callback = move |value| {
-            // TODO: How to get rid of the intermediate, internal mapping into `MonitoredItemValue`?
-            value_callback(K::map_value(value));
+        // Compose context in a separate scope to avoid shadowing local bindings
+        // of callbacks. Callbacks (= function pointers) are not type-safe and could
+        // easily get mixed up without any compile-time errors!!
+        let context = {
+            // TODO: let typed_value_callback = create_value_callback_fn(item_index, item_to_create);
+            let mut typed_value_callback: F = create_value_callback_fn(item_index);
+            let value_callback = move |value| {
+                // TODO: How to get rid of the intermediate, internal mapping into `MonitoredItemValue`?
+                typed_value_callback(K::map_value(value));
+            };
+            Context(CbNotification::prepare(value_callback))
         };
-        let context = Context(CbNotification::prepare(notication_callback));
 
         // SAFETY: This cast is possible because `UA_Client_MonitoredItems_createDataChanges_async`
         // internally casts the function pointer back to the appropriate type before calling (union
@@ -126,7 +131,7 @@ enum NotificationCallback {
 }
 
 impl NotificationCallback {
-    fn new(request: &ua::MonitoredItemCreateRequest) -> Self {
+    fn for_request(request: &ua::MonitoredItemCreateRequest) -> Self {
         if request.attribute_id() == ua::AttributeId::EVENTNOTIFIER {
             Self::Event
         } else {
