@@ -89,6 +89,10 @@ impl MonitoredItemHandle {
 
         let client = AsyncClient::upgrade_weak(&self.client)?;
 
+        log::debug!(
+            "Delete monitored item {monitored_item_id} of subscription {subscription_id}",
+            subscription_id = self.subscription_id
+        );
         delete_monitored_items::call(&client, &request)
             .await
             .inspect_err(|_| {
@@ -100,7 +104,7 @@ impl MonitoredItemHandle {
 
 impl Drop for MonitoredItemHandle {
     fn drop(&mut self) {
-        let Ok((request, _monitored_item_id)) = self.before_delete() else {
+        let Ok((request, monitored_item_id)) = self.before_delete() else {
             // Already deleted before.
             return;
         };
@@ -111,6 +115,10 @@ impl Drop for MonitoredItemHandle {
         };
 
         // Response errors will only be logged.
+        log::debug!(
+            "Delete monitored item {monitored_item_id} of subscription {subscription_id} on drop",
+            subscription_id = self.subscription_id
+        );
         if let Err(err) = delete_monitored_items::send_request(&client, &request) {
             log::warn!(
                 "Failed to sent request for deleting monitored item {request:?} on drop: {err:#}"
