@@ -45,7 +45,7 @@ where
 {
     let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse>>();
 
-    let response_callback = |result: std::result::Result<ua::CreateMonitoredItemsResponse, _>| {
+    let response_callback = move |result: std::result::Result<ua::CreateMonitoredItemsResponse, _>| {
         // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
         // care if that succeeds though: the receiver might already have gone out of scope (when its
         // future has been cancelled) and we must not panic in FFI callbacks.
