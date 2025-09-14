@@ -37,6 +37,20 @@ impl MonitoredItemHandle {
         }
     }
 
+    /// Gets the [subscription id](ua::SubscriptionId).
+    #[must_use]
+    pub const fn subscription_id(&self) -> ua::SubscriptionId {
+        self.subscription_id
+    }
+
+    /// Gets the [monitored item id](ua::MonitoredItemId).
+    ///
+    /// Returns `None` if the monitored item has been deleted.
+    #[must_use]
+    pub const fn monitored_item_id(&self) -> Option<ua::MonitoredItemId> {
+        self.monitored_item_id
+    }
+
     fn before_delete(&mut self) -> Result<(ua::DeleteMonitoredItemsRequest, ua::MonitoredItemId)> {
         let Some(monitored_item_id) = self.monitored_item_id.take() else {
             return Err(Error::internal("already deleted"));
