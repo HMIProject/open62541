@@ -35,7 +35,7 @@ unsafe impl Send for Context where CbNotification: Send + Sync {}
 // `create_value_callback_fn`? `impl for<'a> FnMut(usize, &'a ua::MonitoredItemCreateRequest) -> F`
 // doesn't work.
 // See also: <https://rust-lang.github.io/rfcs/3216-closure-lifetime-binder.html>
-pub(crate) async fn call<K: MonitoredItemKind, F>(
+pub(super) async fn call<K: MonitoredItemKind, F>(
     client: &ua::Client,
     request: &ua::CreateMonitoredItemsRequest,
     mut create_value_callback_fn: impl FnMut(usize) -> F,
@@ -45,12 +45,13 @@ where
 {
     let (tx, rx) = oneshot::channel::<Result<ua::CreateMonitoredItemsResponse>>();
 
-    let response_callback = |result: std::result::Result<ua::CreateMonitoredItemsResponse, _>| {
-        // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
-        // care if that succeeds though: the receiver might already have gone out of scope (when its
-        // future has been cancelled) and we must not panic in FFI callbacks.
-        let _unused = tx.send(result.map_err(Error::new));
-    };
+    let response_callback =
+        move |result: std::result::Result<ua::CreateMonitoredItemsResponse, _>| {
+            // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
+            // care if that succeeds though: the receiver might already have gone out of scope (when its
+            // future has been cancelled) and we must not panic in FFI callbacks.
+            let _unused = tx.send(result.map_err(Error::new));
+        };
 
     let items_to_create = request.items_to_create().unwrap_or_default();
 
@@ -63,7 +64,7 @@ where
     for (item_index, item_to_create) in items_to_create.iter().enumerate() {
         // `open62541` requires one set of notification/delete callback and context per monitored
         // item in the request.
-        let notification_callback = NotificationCallback::new(item_to_create);
+        let notification_callback = NotificationCallback::for_request(item_to_create);
         let delete_notification_callback: UA_Client_DeleteMonitoredItemCallback =
             Some(delete_notification_callback_c);
 
@@ -125,7 +126,7 @@ enum NotificationCallback {
 }
 
 impl NotificationCallback {
-    fn new(request: &ua::MonitoredItemCreateRequest) -> Self {
+    fn for_request(request: &ua::MonitoredItemCreateRequest) -> Self {
         if request.attribute_id() == ua::AttributeId::EVENTNOTIFIER {
             Self::Event
         } else {

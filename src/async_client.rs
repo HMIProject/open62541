@@ -3,7 +3,7 @@ use std::{
     slice,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Weak,
     },
     thread::{self, JoinHandle},
     time::{Duration, Instant},
@@ -73,6 +73,12 @@ impl AsyncClient {
             client,
             background_thread: Some(background_thread),
         }
+    }
+
+    pub(crate) fn upgrade_weak(client: &Weak<ua::Client>) -> Result<Arc<ua::Client>> {
+        client
+            .upgrade()
+            .ok_or(Error::internal("client has been dropped"))
     }
 
     /// Gets current channel and session state, and connect status.
@@ -491,7 +497,7 @@ impl AsyncClient {
 
         let (tx, rx) = oneshot::channel::<Result<R::Response>>();
 
-        let callback = |result: std::result::Result<R::Response, _>| {
+        let callback = move |result: std::result::Result<R::Response, _>| {
             // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
             // care if that succeeds though: the receiver might already have gone out of scope (when its
             // future has been cancelled) and we must not panic in FFI callbacks.

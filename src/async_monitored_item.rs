@@ -1,14 +1,13 @@
 use std::{marker::PhantomData, pin::Pin, task, time::Duration};
 
 use futures_core::Stream;
-use tokio::sync::mpsc::{self, error::TrySendError};
+use tokio::sync::mpsc;
 
 use crate::{
-    attributes, create_monitored_items, delete_monitored_items,
+    attributes, create_monitored_items_callback,
     monitored_item::{DataChange, Unknown},
-    ua, AsyncSubscription, DataType as _, Error, MonitoredItemAttribute,
-    MonitoredItemCreateRequestBuilder, MonitoredItemHandle, MonitoredItemKind, MonitoringFilter,
-    Result,
+    ua, AsyncClient, AsyncSubscription, MonitoredItemAttribute, MonitoredItemCreateRequestBuilder,
+    MonitoredItemHandle, MonitoredItemKind, MonitoringFilter, Result,
 };
 
 /// Maximum number of buffered values.
@@ -281,15 +280,12 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
         subscription: &AsyncSubscription,
         request_builder: MonitoredItemCreateRequestBuilder<K>,
     ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem<K>)>>> {
-        let Some(client) = &subscription.client().upgrade() else {
-            return Err(Error::internal("client should not be dropped"));
-        };
+        let client = AsyncClient::upgrade_weak(subscription.client())?;
         let subscription_id = subscription.subscription_id();
 
-        let request = request_builder.build(subscription_id);
-        let result_count = request.items_to_create().map_or(0, <[_]>::len);
+        let result_count = request_builder.node_ids().len();
         let mut rxs = Vec::with_capacity(result_count);
-        let response = {
+        let results = {
             let create_value_callback_fn = |index: usize| {
                 debug_assert_eq!(index, rxs.len());
                 let (tx, rx) = mpsc::channel(DEFAULT_STREAM_BUFFER_SIZE);
@@ -297,55 +293,44 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
                 move |value| {
                     if let Err(err) = tx.try_send(value) {
                         match err {
-                            TrySendError::Full(_value) => {
+                            mpsc::error::TrySendError::Full(_value) => {
                                 // We cannot blockingly wait, because that would block `UA_Client_run_iterate()`
                                 // in our event loop, potentially preventing the receiver from clearing the stream.
                                 // The monitored value might contain sensitive information and must not be logged!
                                 log::error!("Discarding monitored item value: stream buffer (size = {buffer_size}) is full", buffer_size = tx.capacity());
                             }
-                            TrySendError::Closed(_) => {
+                            mpsc::error::TrySendError::Closed(_) => {
                                 // Received has disappeared and the value is no longer needed.
                             }
                         }
                     }
                 }
             };
-            create_monitored_items::call::<K, _>(client, &request, create_value_callback_fn).await?
+            create_monitored_items_callback(
+                &client,
+                subscription_id,
+                request_builder,
+                create_value_callback_fn,
+            )
+            .await?
         };
-
-        let Some(mut results) = response.into_results() else {
-            return Err(Error::internal("expected monitoring item results"));
-        };
-
-        if results.len() != result_count || rxs.len() != result_count {
-            // This should not happen. In any case, we cannot associate returned items with their
-            // incoming node IDs. Clean up the items that we received to not leave them dangling.
-            //
-            let monitored_item_ids = results
-                .iter()
-                .filter(|result| result.status_code().is_good())
-                .map(ua::MonitoredItemCreateResult::monitored_item_id)
-                .collect::<Vec<_>>();
-            let request = ua::DeleteMonitoredItemsRequest::init()
-                .with_subscription_id(subscription_id)
-                .with_monitored_item_ids(&monitored_item_ids);
-            // Await the response to ensure that all previously created monitored items
-            // have been deleted at the server before returning control back to the caller.
-            if let Err(err) = delete_monitored_items::call(client, &request).await {
-                log::warn!("Failed to delete monitored items when cleaning up: {err:#}");
-            }
-
-            return Err(Error::internal("unexpected number of monitored items"));
-        }
+        debug_assert_eq!(
+            results.len(),
+            result_count,
+            "guaranteed by create_monitored_items_callback() on success"
+        );
+        // Precondition for the following zip() operation.
+        debug_assert_eq!(
+            results.len(),
+            rxs.len(),
+            "guaranteed by create_monitored_items_callback() on success"
+        );
 
         let results = results
-            .drain_all()
+            .into_iter()
             .zip(rxs)
             .map(|(result, rx)| {
-                Error::verify_good(&result.status_code())?;
-
-                let handle =
-                    MonitoredItemHandle::new(client, subscription_id, result.monitored_item_id());
+                let (result, handle) = result?;
                 let monitored_item = AsyncMonitoredItem::new(handle, rx);
                 Ok((result, monitored_item))
             })
