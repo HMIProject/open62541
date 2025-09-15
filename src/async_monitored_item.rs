@@ -290,7 +290,6 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
                 debug_assert_eq!(index, rxs.len());
                 let (tx, rx) = mpsc::channel(DEFAULT_STREAM_BUFFER_SIZE);
                 rxs.push(rx);
-                debug_assert_eq!(index, rxs.len());
                 move |value| {
                     if let Err(err) = tx.try_send(value) {
                         match err {
