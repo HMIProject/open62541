@@ -43,7 +43,7 @@ impl MonitoredItemHandle {
         self.subscription_id
     }
 
-    /// Gets the [monitored item id](ua::MonitoredItemId).
+    /// Gets the [monitored item ID](ua::MonitoredItemId).
     ///
     /// Returns `None` if the monitored item has been deleted.
     #[must_use]
