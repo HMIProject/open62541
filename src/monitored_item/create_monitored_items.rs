@@ -68,12 +68,12 @@ where
             Some(delete_notification_callback_c);
 
         // TODO: let value_callback = create_value_callback_fn(item_index, item_to_create);
-        let mut value_callback = create_value_callback_fn(item_index);
-        let notication_callback = move |value| {
+        let mut value_callback: F = create_value_callback_fn(item_index);
+        let map_value_callback = move |value| {
             // TODO: How to get rid of the intermediate, internal mapping into `MonitoredItemValue`?
             value_callback(K::map_value(value));
         };
-        let context = Context(CbNotification::prepare(notication_callback));
+        let context = Context(CbNotification::prepare(map_value_callback));
 
         // SAFETY: This cast is possible because `UA_Client_MonitoredItems_createDataChanges_async`
         // internally casts the function pointer back to the appropriate type before calling (union
