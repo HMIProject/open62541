@@ -339,11 +339,6 @@ where
         return Err(crate::Error::internal("expected monitoring item results"));
     };
 
-    debug_assert_eq!(
-        results.len(),
-        result_count,
-        "the number of items in the response should always equal the number of items in the request"
-    );
     if results.len() != result_count {
         // This should not happen. In any case, we cannot associate returned items with their
         // incoming node IDs. Clean up the items that we received to not leave them dangling.
