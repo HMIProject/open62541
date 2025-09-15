@@ -37,7 +37,7 @@ impl MonitoredItemHandle {
         }
     }
 
-    /// Gets the [subscription id](ua::SubscriptionId).
+    /// Gets the [subscription ID](ua::SubscriptionId).
     #[must_use]
     pub const fn subscription_id(&self) -> ua::SubscriptionId {
         self.subscription_id
