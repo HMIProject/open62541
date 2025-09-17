@@ -7,21 +7,22 @@ use open62541_sys::{
     UA_DataValue, UA_UInt32, UA_Variant,
 };
 
-use crate::{
-    ua, CallbackMut, CallbackOnce, DataType as _, Error, MonitoredItemKind, MonitoredItemValue,
-    Result,
-};
+use crate::{ua, CallbackMut, CallbackOnce, DataType as _, Error, MonitoredItemKind, Result};
 
 type CbResponse =
     CallbackOnce<std::result::Result<ua::CreateMonitoredItemsResponse, ua::StatusCode>>;
-type CbNotification = CallbackMut<MonitoredItemValue>;
 
 // Wrapper type so that we can mark `*mut c_void` for callbacks as safe to send.
 #[repr(transparent)]
 struct Context(*mut c_void);
 
 // SAFETY: As long as payload is `Send`, wrapper is `Send`.
-unsafe impl Send for Context where CbNotification: Send + Sync {}
+unsafe impl Send for Context
+where
+    CallbackMut<ua::DataValue>: Send + Sync,
+    CallbackMut<ua::Array<ua::Variant>>: Send + Sync,
+{
+}
 
 /// Creates monitored items.
 ///
@@ -64,23 +65,32 @@ where
     for (item_index, item_to_create) in items_to_create.iter().enumerate() {
         // `open62541` requires one set of notification/delete callback and context per monitored
         // item in the request.
-        let notification_callback = NotificationCallback::for_request(item_to_create);
-        let delete_notification_callback: UA_Client_DeleteMonitoredItemCallback =
-            Some(delete_notification_callback_c);
+        let notification_type = NotificationType::for_request(item_to_create);
+        let notification_callback = unsafe { notification_type.to_notification_callback() };
+        let delete_notification_callback = notification_type.to_delete_notification_callback();
 
         // TODO: let value_callback = create_value_callback_fn(item_index, item_to_create);
         let mut value_callback: F = create_value_callback_fn(item_index);
-        let map_value_callback = move |value| {
-            // TODO: How to get rid of the intermediate, internal mapping into `MonitoredItemValue`?
-            value_callback(K::map_value(value));
+        let context = match notification_type {
+            NotificationType::DataChange => {
+                let data_change_callback = move |value| {
+                    value_callback(K::map_data_change(value));
+                };
+                Context(CallbackMut::prepare(data_change_callback))
+            }
+            NotificationType::Event => {
+                let event_callback = move |value| {
+                    value_callback(K::map_event(value));
+                };
+                Context(CallbackMut::prepare(event_callback))
+            }
         };
-        let context = Context(CbNotification::prepare(map_value_callback));
 
         // SAFETY: This cast is possible because `UA_Client_MonitoredItems_createDataChanges_async`
         // internally casts the function pointer back to the appropriate type before calling (union
         // type of attribute `handler` in `UA_Client_MonitoredItem`).
-        notification_callbacks.push(Some(unsafe { notification_callback.into_data_change() }));
-        delete_notification_callbacks.push(delete_notification_callback);
+        notification_callbacks.push(Some(notification_callback));
+        delete_notification_callbacks.push(Some(delete_notification_callback));
         contexts.push(context);
     }
 
@@ -120,12 +130,12 @@ where
         .unwrap_or(Err(Error::internal("callback should send result")))
 }
 
-enum NotificationCallback {
+enum NotificationType {
     DataChange,
     Event,
 }
 
-impl NotificationCallback {
+impl NotificationType {
     fn for_request(request: &ua::MonitoredItemCreateRequest) -> Self {
         if request.attribute_id() == ua::AttributeId::EVENTNOTIFIER {
             Self::Event
@@ -141,7 +151,7 @@ impl NotificationCallback {
     /// This always returns a function pointer for [`UA_Client_DataChangeNotificationCallback`], for
     /// both data change _and_ event callbacks. Care must be taken to only pass the expected handler
     /// to the corresponding [`ua::MonitoredItemCreateRequest`], depending on the attribute ID.
-    unsafe fn into_data_change(self) -> DataChangeNotificationCallbackC {
+    unsafe fn to_notification_callback(&self) -> DataChangeCallbackC {
         match self {
             Self::DataChange => data_change_notification_callback_c,
 
@@ -152,15 +162,22 @@ impl NotificationCallback {
             // apart from the fact that open62541 does some `void` pointer magic, the transmute here
             // is safe (at least not more unsafe/unportable than the underlying C code already is).
             Self::Event => unsafe {
-                mem::transmute::<EventNotificationCallbackC, DataChangeNotificationCallbackC>(
+                mem::transmute::<EventNotificationCallbackC, DataChangeCallbackC>(
                     event_notification_callback_c,
                 )
             },
         }
     }
+
+    fn to_delete_notification_callback(&self) -> DeleteNotificationCallbackC {
+        match self {
+            Self::DataChange => delete_data_change_notification_callback_c,
+            Self::Event => delete_event_notification_callback_c,
+        }
+    }
 }
 
-type DataChangeNotificationCallbackC = unsafe extern "C" fn(
+type DataChangeCallbackC = unsafe extern "C" fn(
     client: *mut UA_Client,
     sub_id: UA_UInt32,
     sub_context: *mut c_void,
@@ -186,7 +203,7 @@ unsafe extern "C" fn data_change_notification_callback_c(
 
     // SAFETY: `mon_context` is result of `CbNotification::prepare()` and is used only before `delete()`.
     unsafe {
-        CbNotification::execute(mon_context, MonitoredItemValue::data_change(value));
+        CallbackMut::execute(mon_context, value);
     }
 }
 
@@ -212,16 +229,24 @@ unsafe extern "C" fn event_notification_callback_c(
     log::debug!("EventNotificationCallback() was called");
 
     // PANIC: We expect pointer to be valid when called.
-    let fields = ua::Array::from_raw_parts(n_event_fields, event_fields)
+    let fields = ua::Array::<ua::Variant>::from_raw_parts(n_event_fields, event_fields)
         .expect("event fields should be set");
 
     // SAFETY: `mon_context` is result of `CbNotification::prepare()` and is used only before `delete()`.
     unsafe {
-        CbNotification::execute(mon_context, MonitoredItemValue::event(fields));
+        CallbackMut::execute(mon_context, fields);
     }
 }
 
-unsafe extern "C" fn delete_notification_callback_c(
+type DeleteNotificationCallbackC = unsafe extern "C" fn(
+    client: *mut UA_Client,
+    sub_id: UA_UInt32,
+    sub_context: *mut c_void,
+    mon_id: UA_UInt32,
+    mon_context: *mut c_void,
+);
+
+unsafe extern "C" fn delete_data_change_notification_callback_c(
     _client: *mut UA_Client,
     _sub_id: UA_UInt32,
     _sub_context: *mut c_void,
@@ -232,7 +257,22 @@ unsafe extern "C" fn delete_notification_callback_c(
 
     // SAFETY: `mon_context` is result of `CbNotification::prepare()` and is used only before `delete()`.
     unsafe {
-        CbNotification::delete(mon_context);
+        CallbackMut::<ua::DataValue>::delete(mon_context);
+    }
+}
+
+unsafe extern "C" fn delete_event_notification_callback_c(
+    _client: *mut UA_Client,
+    _sub_id: UA_UInt32,
+    _sub_context: *mut c_void,
+    _mon_id: UA_UInt32,
+    mon_context: *mut c_void,
+) {
+    log::debug!("DeleteMonitoredItemCallback() was called");
+
+    // SAFETY: `mon_context` is result of `CbNotification::prepare()` and is used only before `delete()`.
+    unsafe {
+        CallbackMut::<ua::Array<ua::Variant>>::delete(mon_context);
     }
 }
 
