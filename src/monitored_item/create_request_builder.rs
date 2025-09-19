@@ -187,7 +187,7 @@ impl<K: MonitoredItemKind> MonitoredItemCreateRequestBuilder<K> {
 
     /// Gets all node ids.
     #[must_use]
-    // TODO: Change to const fn after bumping MSRV from 1.83 to 1.87.
+    // TODO: Change to const fn after bumping MSRV from 1.85 to 1.87.
     pub fn node_ids(&self) -> &[ua::NodeId] {
         self.node_ids.as_slice()
     }

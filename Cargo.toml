@@ -2,10 +2,9 @@
 name = "open62541"
 version = "0.9.4"
 authors = ["HMI Project"]
-edition = "2021"
-# Keep the MSRV number here in sync with `test.yaml`. We require Rust 1.82 for the following reason:
-# we want to use `&raw const` and `&raw mut` for creating pointers.
-rust-version = "1.83"
+edition = "2024"
+# Keep the MSRV number here in sync with `test.yaml`.
+rust-version = "1.85"
 description = "High-level, safe bindings for the C99 library open62541, an open source and free implementation of OPC UA (OPC Unified Architecture)."
 documentation = "https://docs.rs/open62541"
 readme = "README.md"
@@ -29,7 +28,7 @@ thiserror = "2.0.3"
 time = { version = "0.3.38", optional = true }
 tokio = { version = "1.38.2", optional = true, features = ["rt", "sync", "time"] }
 uuid = { version = "1.16.0", optional = true }
-x509-certificate = { version = "0.24.0", optional = true }
+x509-certificate = { version = "0.25.0", optional = true }
 zeroize = { version = "1.8.1", optional = true }
 
 [dev-dependencies]
