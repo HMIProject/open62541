@@ -20,6 +20,26 @@ capabilities to an existing program.
 You can find examples in our [documentation](https://docs.rs/open62541) and in the `examples/`
 folder in our repository.
 
+## Known Issues
+
+### Rust 1.90 / x86_64-unknown-linux-gnu
+
+Linking with `rust-lld` fails with unresolved symbols. As a workaround add the following entry to
+your `.cargo/config.toml`:
+
+```toml
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-Clinker-features=-lld"]
+```
+
+Alternatively set the corresponding environment variable
+`CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS` to `-Clinker-features=-lld`.
+
+See also:
+
+- [Announcing Rust 1.90.0](https://blog.rust-lang.org/2025/09/18/Rust-1.90.0/#lld-is-now-the-default-linker-on-x86-64-unknown-linux-gnu)
+- [GitHub Issue \#288](https://github.com/HMIProject/open62541/issues/288)
+
 ## Contributing
 
 Make sure to use `LF` line endings and run `just pre-commit` before committing your changes.
