@@ -107,6 +107,11 @@ jobs:
         # Disable tests for musl libc target(s) due to build failure for unknown reasons.
         # TODO: Try to re-enable this step regardless of the build target in the future.
         if: ${{ !endsWith(matrix.target, '-musl') }}
+        # TODO: Remove custom RUSTFLAGS for x86_64-unknown-linux-gnu after linking issues
+        # with rust-lld have been resolved.
+        # See also: <https://github.com/HMIProject/open62541/issues/288>
+        env:
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS: "-Clinker-features=-lld"
         run: >-
           cargo hack --each-feature
           test --locked
