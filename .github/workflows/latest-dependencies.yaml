@@ -125,9 +125,10 @@ jobs:
         # TODO: Remove custom RUSTFLAGS for x86_64-unknown-linux-gnu after linking issues
         # with rust-lld have been resolved.
         # See also: <https://github.com/HMIProject/open62541/issues/288>
+        env:
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS: "-Clinker-features=-lld"
         run: >-
           cargo test
-          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS="-Clinker-features=-lld"
           --locked --all-features
           --doc
 
