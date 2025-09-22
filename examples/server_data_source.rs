@@ -2,8 +2,8 @@ use std::thread;
 
 use anyhow::Context as _;
 use open62541::{
-    ua, DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
-    DataSourceWriteContext, ObjectNode, Server, VariableNode,
+    DataSource, DataSourceError, DataSourceReadContext, DataSourceResult, DataSourceWriteContext,
+    ObjectNode, Server, VariableNode, ua,
 };
 use open62541_sys::{
     UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,

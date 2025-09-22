@@ -23,6 +23,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Mark unused types `CallbackOnce` and `CallbackStream` as deprecated.
 - Deprecate `MonitoredItemBuilder`. Use `MonitoredItemCreateRequestBuilder` and
   `AsyncMonitoredItem::create()` instead.
+- Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.85 (Edition 2024).
 
 ## [0.9.4] - 2025-09-01
 

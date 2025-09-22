@@ -1,6 +1,6 @@
 use std::{
     ffi::c_void,
-    panic::{catch_unwind, AssertUnwindSafe},
+    panic::{AssertUnwindSafe, catch_unwind},
     ptr::NonNull,
 };
 
@@ -9,7 +9,7 @@ use open62541_sys::{
 };
 use thiserror::Error;
 
-use crate::{server::NodeContext, ua, DataType as _, Error};
+use crate::{DataType as _, Error, server::NodeContext, ua};
 
 /// Result from [`DataSource`] operations.
 ///

@@ -7,7 +7,7 @@ pub struct SecureChannelStatistics(UA_SecureChannelStatistics);
 impl SecureChannelStatistics {
     /// Creates wrapper reference from value.
     #[must_use]
-    pub(crate) fn raw_ref(src: &UA_SecureChannelStatistics) -> &Self {
+    pub(crate) const fn raw_ref(src: &UA_SecureChannelStatistics) -> &Self {
         let src: *const UA_SecureChannelStatistics = src;
         // This transmutes between the inner type and `Self` through `cast()`. This is okay because
         // we are using `#[repr(transparent)]`.

@@ -2,8 +2,8 @@ use std::{
     ffi::c_void,
     slice,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc, Weak,
+        atomic::{AtomicBool, Ordering},
     },
     thread::{self, JoinHandle},
     time::{Duration, Instant},
@@ -11,13 +11,13 @@ use std::{
 
 use futures_channel::oneshot;
 use open62541_sys::{
-    UA_Client, UA_Client_disconnectAsync, UA_Client_run_iterate, UA_UInt32,
-    __UA_Client_AsyncService, UA_STATUSCODE_BADCONNECTIONCLOSED, UA_STATUSCODE_BADDISCONNECT,
+    __UA_Client_AsyncService, UA_Client, UA_Client_disconnectAsync, UA_Client_run_iterate,
+    UA_STATUSCODE_BADCONNECTIONCLOSED, UA_STATUSCODE_BADDISCONNECT, UA_UInt32,
 };
 
 use crate::{
-    ua, AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataValue, Error,
-    Result, ServiceRequest, ServiceResponse, SubscriptionBuilder,
+    AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataValue, Error, Result,
+    ServiceRequest, ServiceResponse, SubscriptionBuilder, ua,
 };
 
 /// Timeout for `UA_Client_run_iterate()`.

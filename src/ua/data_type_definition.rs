@@ -1,6 +1,6 @@
 use open62541_sys::{UA_NS0ID_ENUMDEFINITION, UA_NS0ID_STRUCTUREDEFINITION};
 
-use crate::{ua, DataTypeExt};
+use crate::{DataTypeExt, ua};
 
 #[derive(Debug, Clone)]
 #[non_exhaustive]

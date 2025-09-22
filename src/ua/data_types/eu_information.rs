@@ -2,7 +2,7 @@
 //!
 //! See also: <https://reference.opcfoundation.org/Core/Part8/v104/docs/5.6.3>
 
-use crate::{ua, DataType as _};
+use crate::{DataType as _, ua};
 
 crate::data_type!(EUInformation);
 

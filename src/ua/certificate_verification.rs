@@ -8,7 +8,7 @@ use open62541_sys::{
     UA_String,
 };
 
-use crate::{ua, CustomCertificateVerification, DataType, Userdata};
+use crate::{CustomCertificateVerification, DataType, Userdata, ua};
 
 /// Wrapper for [`UA_CertificateVerification`] from [`open62541_sys`].
 #[derive(Debug)]

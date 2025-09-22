@@ -1,11 +1,11 @@
 use std::{fmt, str};
 
 use open62541_sys::{
-    UA_ExpandedNodeId_parse, UA_ExpandedNodeId_print, UA_NodeIdType, UA_EXPANDEDNODEID_NODEID,
-    UA_EXPANDEDNODEID_NUMERIC,
+    UA_EXPANDEDNODEID_NODEID, UA_EXPANDEDNODEID_NUMERIC, UA_ExpandedNodeId_parse,
+    UA_ExpandedNodeId_print, UA_NodeIdType,
 };
 
-use crate::{ua, DataType as _, Error};
+use crate::{DataType as _, Error, ua};
 
 crate::data_type!(ExpandedNodeId);
 

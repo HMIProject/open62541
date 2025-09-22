@@ -5,7 +5,7 @@ use open62541_sys::{
     UA_Client_getState, UA_Client_new, UA_Client_newWithConfig,
 };
 
-use crate::{ua, ClientContext, DataType as _, Error};
+use crate::{ClientContext, DataType as _, Error, ua};
 
 /// Combined state for [`Client`] and [`AsyncClient`].
 ///

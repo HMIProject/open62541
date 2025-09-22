@@ -1,4 +1,4 @@
-use crate::{ua, DataType as _, FilterOperand};
+use crate::{DataType as _, FilterOperand, ua};
 
 crate::data_type!(LiteralOperand);
 

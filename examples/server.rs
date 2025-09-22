@@ -1,13 +1,13 @@
 use std::{
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     thread,
     time::Duration,
 };
 
-use open62541::{ua, Attribute, ObjectNode, Server, ServerRunner, VariableNode};
+use open62541::{Attribute, ObjectNode, Server, ServerRunner, VariableNode, ua};
 use open62541_sys::{
     UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,
     UA_NS0ID_STRING,

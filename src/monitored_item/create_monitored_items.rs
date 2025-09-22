@@ -7,7 +7,7 @@ use open62541_sys::{
     UA_DataValue, UA_UInt32, UA_Variant,
 };
 
-use crate::{ua, CallbackMut, CallbackOnce, DataType as _, Error, MonitoredItemKind, Result};
+use crate::{CallbackMut, CallbackOnce, DataType as _, Error, MonitoredItemKind, Result, ua};
 
 type CbResponse =
     CallbackOnce<std::result::Result<ua::CreateMonitoredItemsResponse, ua::StatusCode>>;

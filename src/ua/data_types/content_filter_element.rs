@@ -1,4 +1,4 @@
-use crate::{ua, DataType, FilterOperand};
+use crate::{DataType, FilterOperand, ua};
 
 crate::data_type!(ContentFilterElement);
 

@@ -1,9 +1,9 @@
 use open62541_sys::{
-    UA_EventNotifierType, UA_EVENTNOTIFIERTYPE_HISTORYREAD, UA_EVENTNOTIFIERTYPE_HISTORYWRITE,
-    UA_EVENTNOTIFIERTYPE_SUBSCRIBETOEVENTS,
+    UA_EVENTNOTIFIERTYPE_HISTORYREAD, UA_EVENTNOTIFIERTYPE_HISTORYWRITE,
+    UA_EVENTNOTIFIERTYPE_SUBSCRIBETOEVENTS, UA_EventNotifierType,
 };
 
-use crate::{ua, DataTypeExt};
+use crate::{DataTypeExt, ua};
 
 /// Wrapper for [`UA_EventNotifierType`] from [`open62541_sys`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

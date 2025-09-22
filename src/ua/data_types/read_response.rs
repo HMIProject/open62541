@@ -1,4 +1,4 @@
-use crate::{ua, DataType as _, ServiceResponse};
+use crate::{DataType as _, ServiceResponse, ua};
 
 crate::data_type!(ReadResponse);
 
