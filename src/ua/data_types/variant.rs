@@ -5,7 +5,7 @@ use open62541_sys::{
     UA_Variant_isScalar, UA_Variant_setArray, UA_Variant_setScalar, UA_Variant_setScalarCopy,
 };
 
-use crate::{ua, DataType, NonScalarValue, ScalarValue, ValueType, VariantValue};
+use crate::{DataType, NonScalarValue, ScalarValue, ValueType, VariantValue, ua};
 
 crate::data_type!(Variant);
 
@@ -281,7 +281,7 @@ mod tests {
         UA_NS0ID_BOOLEAN, UA_NS0ID_BYTE, UA_NS0ID_INT16, UA_NS0ID_INT64, UA_NS0ID_UINT32,
     };
 
-    use crate::{ua, DataType as _, ValueType};
+    use crate::{DataType as _, ValueType, ua};
 
     #[test]
     fn type_empty() {

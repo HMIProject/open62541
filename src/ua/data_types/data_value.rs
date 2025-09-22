@@ -1,4 +1,4 @@
-use crate::{ua, DataType, DataTypeExt};
+use crate::{DataType, DataTypeExt, ua};
 
 crate::data_type!(DataValue);
 

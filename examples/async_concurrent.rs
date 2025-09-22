@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Context as _;
-use open62541::{ua, AsyncClient};
+use open62541::{AsyncClient, ua};
 use open62541_sys::{UA_NS0ID_SERVER, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME};
 use tokio::task::JoinSet;
 

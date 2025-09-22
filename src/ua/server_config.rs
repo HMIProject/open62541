@@ -2,7 +2,7 @@ use std::{fmt, mem::MaybeUninit, ptr};
 
 use open62541_sys::{UA_ServerConfig, UA_ServerConfig_clean, UA_ServerConfig_setMinimal};
 
-use crate::{ua, DataType as _, Error};
+use crate::{DataType as _, Error, ua};
 
 pub(crate) struct ServerConfig(Option<UA_ServerConfig>);
 

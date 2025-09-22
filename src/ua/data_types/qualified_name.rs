@@ -1,8 +1,8 @@
 use std::{ffi::CString, fmt, hash};
 
-use open62541_sys::{UA_QualifiedName_hash, UA_QUALIFIEDNAME_ALLOC};
+use open62541_sys::{UA_QUALIFIEDNAME_ALLOC, UA_QualifiedName_hash};
 
-use crate::{ua, DataType as _};
+use crate::{DataType as _, ua};
 
 crate::data_type!(QualifiedName);
 

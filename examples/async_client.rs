@@ -1,10 +1,10 @@
 use std::{num::NonZero, time::Duration};
 
-use anyhow::{bail, Context as _};
+use anyhow::{Context as _, bail};
 use futures::future;
 use open62541::{
-    ua, AsyncClient, AsyncMonitoredItem, ClientBuilder, DataType,
-    MonitoredItemCreateRequestBuilder, SubscriptionBuilder,
+    AsyncClient, AsyncMonitoredItem, ClientBuilder, DataType, MonitoredItemCreateRequestBuilder,
+    SubscriptionBuilder, ua,
 };
 use open62541_sys::{
     UA_NS0ID_BASEEVENTTYPE, UA_NS0ID_BASEMODELCHANGEEVENTTYPE, UA_NS0ID_SERVER,

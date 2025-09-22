@@ -1,11 +1,11 @@
 use std::{ffi::CString, fmt, hash, str};
 
 use open62541_sys::{
-    UA_NodeIdType, UA_NodeId_hash, UA_NodeId_parse, UA_NodeId_print, UA_NODEID_NULL,
-    UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC,
+    UA_NODEID_NULL, UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC, UA_NodeId_hash, UA_NodeId_parse,
+    UA_NodeId_print, UA_NodeIdType,
 };
 
-use crate::{ua, DataType, Error};
+use crate::{DataType, Error, ua};
 
 crate::data_type!(NodeId);
 

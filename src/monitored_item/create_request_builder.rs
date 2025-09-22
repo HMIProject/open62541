@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, time::Duration};
 
 use crate::{
-    attributes, ua, DataType as _, MonitoredItemAttribute, MonitoredItemKind, MonitoringFilter,
+    DataType as _, MonitoredItemAttribute, MonitoredItemKind, MonitoringFilter, attributes, ua,
 };
 
 use super::{DataChange, Unknown};

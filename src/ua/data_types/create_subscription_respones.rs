@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::{ua, Error, Result};
+use crate::{Error, Result, ua};
 
 crate::data_type!(CreateSubscriptionResponse);
 

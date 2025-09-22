@@ -1,13 +1,13 @@
 use std::{
-    ffi::{c_void, CStr},
+    ffi::{CStr, c_void},
     fmt::Debug,
     mem::{self, MaybeUninit},
     ptr,
 };
 
 use open62541_sys::{
-    UA_DataType, UA_Order, UA_clear, UA_copy, UA_init, UA_new, UA_order, UA_print,
-    UA_STATUSCODE_GOOD,
+    UA_DataType, UA_Order, UA_STATUSCODE_GOOD, UA_clear, UA_copy, UA_init, UA_new, UA_order,
+    UA_print,
 };
 
 use crate::ua;

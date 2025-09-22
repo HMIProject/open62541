@@ -2,7 +2,7 @@ use std::ptr::NonNull;
 
 use open62541_sys::{UA_Server, UA_Server_delete, UA_Server_newWithConfig};
 
-use crate::{ua, Error};
+use crate::{Error, ua};
 
 /// Wrapper for [`UA_Server`] from [`open62541_sys`].
 ///

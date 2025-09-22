@@ -1,8 +1,8 @@
 use std::ffi::c_void;
 
-use open62541_sys::{UA_ExtensionObjectEncoding, UA_ExtensionObject_setValueCopy};
+use open62541_sys::{UA_ExtensionObject_setValueCopy, UA_ExtensionObjectEncoding};
 
-use crate::{ua, DataType};
+use crate::{DataType, ua};
 
 crate::data_type!(ExtensionObject);
 

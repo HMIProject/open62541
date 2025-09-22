@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{ua, DataType, DataTypeExt};
+use crate::{DataType, DataTypeExt, ua};
 
 /// Typed variant of [`ua::DataValue`].
 //

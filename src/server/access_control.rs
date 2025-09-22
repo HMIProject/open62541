@@ -2,11 +2,11 @@ use std::{ffi::c_void, ptr};
 
 use open62541_sys::{
     UA_AccessControl_default, UA_AccessControl_defaultWithLoginCallback, UA_ByteString,
-    UA_ServerConfig, UA_StatusCode, UA_String, UA_UsernamePasswordLogin,
-    UA_STATUSCODE_BADINTERNALERROR,
+    UA_STATUSCODE_BADINTERNALERROR, UA_ServerConfig, UA_StatusCode, UA_String,
+    UA_UsernamePasswordLogin,
 };
 
-use crate::{ua, userdata::UserdataSentinel, DataType, Error, Result, Userdata};
+use crate::{DataType, Error, Result, Userdata, ua, userdata::UserdataSentinel};
 
 /// Server access control.
 ///

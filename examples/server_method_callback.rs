@@ -2,8 +2,8 @@ use std::thread;
 
 use anyhow::Context as _;
 use open62541::{
-    ua, Attributes, DataType, MethodCallback, MethodCallbackContext, MethodCallbackError,
-    MethodCallbackResult, MethodNode, Server,
+    Attributes, DataType, MethodCallback, MethodCallbackContext, MethodCallbackError,
+    MethodCallbackResult, MethodNode, Server, ua,
 };
 use open62541_sys::{UA_NS0ID_HASCOMPONENT, UA_NS0ID_OBJECTSFOLDER};
 

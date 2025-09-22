@@ -1,4 +1,4 @@
-use crate::{ua, Attribute};
+use crate::{Attribute, ua};
 
 macro_rules! attribute_impl {
     ($( ($name:ident, $value:ident) ),* $(,)?) => {

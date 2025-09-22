@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{ua, Attributes, DataType};
+use crate::{Attributes, DataType, ua};
 
 use crate::server::NodeContext;
 

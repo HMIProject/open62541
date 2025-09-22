@@ -13,8 +13,8 @@ use open62541_sys::{
 };
 
 use crate::{
-    create_monitored_items_callback, ua, AsyncClient, CallbackOnce, DataType as _, Error,
-    MonitoredItemCreateRequestBuilder, MonitoredItemHandle, MonitoredItemKind, Result,
+    AsyncClient, CallbackOnce, DataType as _, Error, MonitoredItemCreateRequestBuilder,
+    MonitoredItemHandle, MonitoredItemKind, Result, create_monitored_items_callback, ua,
 };
 
 #[derive(Debug, Default)]

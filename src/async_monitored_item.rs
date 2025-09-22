@@ -4,10 +4,11 @@ use futures_core::Stream;
 use tokio::sync::mpsc;
 
 use crate::{
-    attributes, create_monitored_items_callback,
+    AsyncClient, AsyncSubscription, MonitoredItemAttribute, MonitoredItemCreateRequestBuilder,
+    MonitoredItemHandle, MonitoredItemKind, MonitoringFilter, Result, attributes,
+    create_monitored_items_callback,
     monitored_item::{DataChange, Unknown},
-    ua, AsyncClient, AsyncSubscription, MonitoredItemAttribute, MonitoredItemCreateRequestBuilder,
-    MonitoredItemHandle, MonitoredItemKind, MonitoringFilter, Result,
+    ua,
 };
 
 /// Maximum number of buffered values.
@@ -297,7 +298,10 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
                                 // We cannot blockingly wait, because that would block `UA_Client_run_iterate()`
                                 // in our event loop, potentially preventing the receiver from clearing the stream.
                                 // The monitored value might contain sensitive information and must not be logged!
-                                log::error!("Discarding monitored item value: stream buffer (size = {buffer_size}) is full", buffer_size = tx.capacity());
+                                log::error!(
+                                    "Discarding monitored item value: stream buffer (size = {buffer_size}) is full",
+                                    buffer_size = tx.capacity()
+                                );
                             }
                             mpsc::error::TrySendError::Closed(_) => {
                                 // Received has disappeared and the value is no longer needed.
