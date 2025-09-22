@@ -263,7 +263,7 @@ unsafe extern "C" fn delete_data_change_notification_callback_c(
     _mon_id: UA_UInt32,
     mon_context: *mut c_void,
 ) {
-    log::debug!("DeleteMonitoredItemCallback() was called");
+    log::debug!("DeleteMonitoredItemCallback() for data change was called");
 
     // SAFETY: `mon_context` is result of `CbDataChange::prepare()` and is used only before `delete()`.
     unsafe {
@@ -278,7 +278,7 @@ unsafe extern "C" fn delete_event_notification_callback_c(
     _mon_id: UA_UInt32,
     mon_context: *mut c_void,
 ) {
-    log::debug!("DeleteMonitoredItemCallback() was called");
+    log::debug!("DeleteMonitoredItemCallback() for event was called");
 
     // SAFETY: `mon_context` is result of `CbEvent::prepare()` and is used only before `delete()`.
     unsafe {
