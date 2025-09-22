@@ -239,7 +239,7 @@ unsafe extern "C" fn event_notification_callback_c(
     log::debug!("EventNotificationCallback() was called");
 
     // PANIC: We expect pointer to be valid when called.
-    let fields = ua::Array::<ua::Variant>::from_raw_parts(n_event_fields, event_fields)
+    let fields = ua::Array::from_raw_parts(n_event_fields, event_fields)
         .expect("event fields should be set");
 
     // SAFETY: `mon_context` is result of `CbEvent::prepare()` and is used only before `delete()`.
