@@ -98,7 +98,7 @@ async fn monitor_background_untyped(
     node_ids: impl IntoIterator<Item = ua::NodeId>,
 ) -> anyhow::Result<impl Future<Output = anyhow::Result<()>> + Send> {
     // Use attribute_id() to check the behavior for an `Unknown` monitored item kind
-    // who's value type is unknown at compile time.
+    // whose value type is unknown at compile time.
     let create_request_builder =
         MonitoredItemCreateRequestBuilder::new(node_ids).attribute_id(ua::AttributeId::VALUE);
 
