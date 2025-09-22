@@ -11,6 +11,8 @@ use crate::{CallbackMut, CallbackOnce, DataType as _, Error, MonitoredItemKind, 
 
 type CbResponse =
     CallbackOnce<std::result::Result<ua::CreateMonitoredItemsResponse, ua::StatusCode>>;
+type CbDataChange = CallbackMut<ua::DataValue>;
+type CbEvent = CallbackMut<ua::Array<ua::Variant>>;
 
 // Wrapper type so that we can mark `*mut c_void` for callbacks as safe to send.
 #[repr(transparent)]
@@ -19,8 +21,8 @@ struct Context(*mut c_void);
 // SAFETY: As long as payload is `Send`, wrapper is `Send`.
 unsafe impl Send for Context
 where
-    CallbackMut<ua::DataValue>: Send + Sync,
-    CallbackMut<ua::Array<ua::Variant>>: Send + Sync,
+    CbDataChange: Send + Sync,
+    CbEvent: Send + Sync,
 {
 }
 
@@ -265,7 +267,7 @@ unsafe extern "C" fn delete_data_change_notification_callback_c(
 
     // SAFETY: `mon_context` is result of `CbNotification::prepare()` and is used only before `delete()`.
     unsafe {
-        CallbackMut::<ua::DataValue>::delete(mon_context);
+        CbDataChange::delete(mon_context);
     }
 }
 
@@ -280,7 +282,7 @@ unsafe extern "C" fn delete_event_notification_callback_c(
 
     // SAFETY: `mon_context` is result of `CbNotification::prepare()` and is used only before `delete()`.
     unsafe {
-        CallbackMut::<ua::Array<ua::Variant>>::delete(mon_context);
+        CbEvent::delete(mon_context);
     }
 }
 
