@@ -161,6 +161,10 @@ name = "client_encryption"
 required-features = ["mbedtls"]
 
 [[example]]
+name = "monitored_item_callback"
+required-features = ["tokio"]
+
+[[example]]
 name = "server"
 required-features = ["time"]
 

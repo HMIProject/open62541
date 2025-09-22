@@ -67,10 +67,10 @@ pub(crate) fn logger() -> ua::Logger {
         let logger = unsafe { Box::from_raw(logger) };
 
         // Run some sanity checks. We should only ever be called on our own data structure.
-        #[expect(
-            unpredictable_function_pointer_comparisons,
-            reason = "TODO: Use std::ptr::fn_addr_eq() instead!?"
-        )]
+        #[expect(unpredictable_function_pointer_comparisons, reason = "extern 'C'")]
+        // In fact, the above lint is a false positive: we are in the same code generation unit when
+        // the function pointer was set, so the risk of (a) one function having two memory addresses
+        // or (b) two functions having the same memory address doesn't apply here.
         {
             debug_assert!(logger.log.is_some_and(|log| log == log_c));
             debug_assert!(logger.clear.is_some_and(|clear| clear == clear_c));
