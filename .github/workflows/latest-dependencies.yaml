@@ -23,6 +23,11 @@ env:
   CARGO_INCREMENTAL: 0
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: short
+  # TODO: Remove custom RUSTFLAGS for x86_64-unknown-linux-gnu after linking issues
+  # with rust-lld have been resolved.
+  # See also: <https://github.com/HMIProject/open62541/issues/288>
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS: "-Clinker-features=-lld"
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTDOCFLAGS: "-Clinker-features=-lld"
 
 jobs:
   run:
