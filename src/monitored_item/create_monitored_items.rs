@@ -211,9 +211,9 @@ unsafe extern "C" fn data_change_notification_callback_c(
     let value = unsafe { value.as_ref() }.expect("value should be set");
     let value = ua::DataValue::clone_raw(value);
 
-    // SAFETY: `mon_context` is result of `CbNotification::prepare()` and is used only before `delete()`.
+    // SAFETY: `mon_context` is result of `CbDataChange::prepare()` and is used only before `delete()`.
     unsafe {
-        CallbackMut::execute(mon_context, value);
+        CbDataChange::execute(mon_context, value);
     }
 }
 
@@ -242,9 +242,9 @@ unsafe extern "C" fn event_notification_callback_c(
     let fields = ua::Array::<ua::Variant>::from_raw_parts(n_event_fields, event_fields)
         .expect("event fields should be set");
 
-    // SAFETY: `mon_context` is result of `CbNotification::prepare()` and is used only before `delete()`.
+    // SAFETY: `mon_context` is result of `CbEvent::prepare()` and is used only before `delete()`.
     unsafe {
-        CallbackMut::execute(mon_context, fields);
+        CbEvent::execute(mon_context, fields);
     }
 }
 
@@ -265,9 +265,9 @@ unsafe extern "C" fn delete_data_change_notification_callback_c(
 ) {
     log::debug!("DeleteMonitoredItemCallback() was called");
 
-    // SAFETY: `mon_context` is result of `CbNotification::prepare()` and is used only before `delete()`.
+    // SAFETY: `mon_context` is result of `CbEvent::prepare()` and is used only before `delete()`.
     unsafe {
-        CbDataChange::delete(mon_context);
+        CbEvent::delete(mon_context);
     }
 }
 
@@ -280,7 +280,7 @@ unsafe extern "C" fn delete_event_notification_callback_c(
 ) {
     log::debug!("DeleteMonitoredItemCallback() was called");
 
-    // SAFETY: `mon_context` is result of `CbNotification::prepare()` and is used only before `delete()`.
+    // SAFETY: `mon_context` is result of `CbEvent::prepare()` and is used only before `delete()`.
     unsafe {
         CbEvent::delete(mon_context);
     }
