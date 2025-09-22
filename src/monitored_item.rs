@@ -166,11 +166,6 @@ impl MonitoredItemValue {
             MonitoredItemValueInner::Event { fields } => Some(fields.as_slice()),
         }
     }
-
-    #[must_use]
-    fn into_inner(self) -> MonitoredItemValueInner {
-        self.0
-    }
 }
 
 // We consider both variants as distinct by deriving `Eq`.
@@ -193,7 +188,8 @@ enum MonitoredItemValueInner {
 pub trait MonitoredItemKind: sealed::MonitoredItemKind + Send + Sync + 'static {
     type Value: Send;
 
-    fn map_value(value: MonitoredItemValue) -> Self::Value;
+    fn map_data_change(value: ua::DataValue) -> Self::Value;
+    fn map_event(fields: ua::Array<ua::Variant>) -> Self::Value;
 }
 
 /// Typestate for [`MonitoredItemKind`] that yields data change notifications.
@@ -203,14 +199,13 @@ pub struct DataChange<T: Attribute>(PhantomData<T>);
 impl<T: DataChangeAttribute + Send + Sync + 'static> MonitoredItemKind for DataChange<T> {
     type Value = DataValue<T::Value>;
 
-    fn map_value(value: MonitoredItemValue) -> Self::Value {
-        match value.into_inner() {
-            MonitoredItemValueInner::DataChange { value } => value.cast(),
-            MonitoredItemValueInner::Event { fields: _ } => {
-                // PANIC: Typestate uses attribute ID to enforce callback method.
-                unreachable!("unexpected event payload in data change notification");
-            }
-        }
+    fn map_data_change(value: ua::DataValue) -> Self::Value {
+        value.cast()
+    }
+
+    fn map_event(_fields: ua::Array<ua::Variant>) -> Self::Value {
+        // PANIC: Typestate uses attribute ID to enforce callback method.
+        unreachable!("unexpected event payload in data change notification");
     }
 }
 
@@ -221,14 +216,13 @@ pub struct Event;
 impl MonitoredItemKind for Event {
     type Value = ua::Array<ua::Variant>;
 
-    fn map_value(value: MonitoredItemValue) -> Self::Value {
-        match value.into_inner() {
-            MonitoredItemValueInner::DataChange { value: _ } => {
-                // PANIC: Typestate uses attribute ID to enforce callback method.
-                unreachable!("unexpected data change payload in event notification");
-            }
-            MonitoredItemValueInner::Event { fields } => fields,
-        }
+    fn map_data_change(_value: ua::DataValue) -> Self::Value {
+        // PANIC: Typestate uses attribute ID to enforce callback method.
+        unreachable!("unexpected data change payload in event notification");
+    }
+
+    fn map_event(fields: ua::Array<ua::Variant>) -> Self::Value {
+        fields
     }
 }
 
@@ -241,8 +235,12 @@ pub struct Unknown;
 impl MonitoredItemKind for Unknown {
     type Value = MonitoredItemValue;
 
-    fn map_value(value: MonitoredItemValue) -> Self::Value {
-        value
+    fn map_data_change(value: ua::DataValue) -> Self::Value {
+        Self::Value::data_change(value)
+    }
+
+    fn map_event(fields: ua::Array<ua::Variant>) -> Self::Value {
+        Self::Value::event(fields)
     }
 }
 
