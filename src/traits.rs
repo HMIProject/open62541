@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use open62541_sys::UA_DataType;
 
-use crate::{ua, DataType};
+use crate::{DataType, ua};
 
 /// Extended values.
 ///

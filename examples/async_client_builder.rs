@@ -1,5 +1,5 @@
 use anyhow::Context as _;
-use open62541::{ua, ClientBuilder, DataType as _};
+use open62541::{ClientBuilder, DataType as _, ua};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

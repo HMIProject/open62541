@@ -268,7 +268,7 @@ use self::{
 };
 #[cfg(feature = "mbedtls")]
 pub use self::{
-    ssl::{create_certificate, Certificate, Password, PrivateKey},
+    ssl::{Certificate, Password, PrivateKey, create_certificate},
     traits::PrivateKeyPasswordCallback,
 };
 

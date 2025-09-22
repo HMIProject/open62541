@@ -5,7 +5,7 @@ use open62541_sys::{
     UA_KeyValueMap_new, UA_KeyValueMap_remove, UA_KeyValueMap_set,
 };
 
-use crate::{ua, DataType, Error};
+use crate::{DataType, Error, ua};
 
 /// Wrapper for [`UA_KeyValueMap`] from [`open62541_sys`].
 #[derive(Debug)]

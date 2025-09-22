@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use open62541_sys::{UA_MonitoredItemCreateRequest_default, UA_NODEID_NUMERIC};
 
-use crate::{ua, DataType as _, MonitoringFilter};
+use crate::{DataType as _, MonitoringFilter, ua};
 
 crate::data_type!(MonitoredItemCreateRequest);
 

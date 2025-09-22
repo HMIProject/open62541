@@ -1,4 +1,4 @@
-use crate::{ua, DataType};
+use crate::{DataType, ua};
 
 crate::data_type!(StructureDefinition);
 

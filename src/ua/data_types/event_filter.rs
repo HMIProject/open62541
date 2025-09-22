@@ -1,4 +1,4 @@
-use crate::{ua, DataType as _, MonitoringFilter};
+use crate::{DataType as _, MonitoringFilter, ua};
 
 crate::data_type!(EventFilter);
 

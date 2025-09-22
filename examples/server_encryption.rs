@@ -1,5 +1,5 @@
 use anyhow::Context as _;
-use open62541::{Certificate, PrivateKey, ServerBuilder, DEFAULT_PORT_NUMBER};
+use open62541::{Certificate, DEFAULT_PORT_NUMBER, PrivateKey, ServerBuilder};
 
 // These files have been created with `server_ssl.sh`.
 const CERTIFICATE_PEM: &[u8] = include_bytes!("server_certificate.pem");

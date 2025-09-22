@@ -1,11 +1,13 @@
 use std::{
     borrow::Cow,
-    ffi::{c_char, c_void, CStr},
+    ffi::{CStr, c_char, c_void},
     ptr,
 };
 
 use log::Level;
-use open62541_sys::{vsnprintf_va_copy, vsnprintf_va_end, UA_LogCategory, UA_LogLevel, UA_Logger};
+use open62541_sys::{
+    UA_LogCategory, UA_LogLevel, UA_Logger, va_list_, vsnprintf_va_copy, vsnprintf_va_end,
+};
 
 use crate::ua;
 
@@ -22,7 +24,7 @@ pub(crate) fn logger() -> ua::Logger {
         level: UA_LogLevel,
         category: UA_LogCategory,
         msg: *const c_char,
-        args: open62541_sys::va_list_,
+        args: va_list_,
     ) {
         let level = match level {
             // Without fatal level in `log`, fall back to error.
@@ -65,12 +67,13 @@ pub(crate) fn logger() -> ua::Logger {
         let logger = unsafe { Box::from_raw(logger) };
 
         // Run some sanity checks. We should only ever be called on our own data structure.
-        //
-        // TODO: Use `std::ptr::fn_addr_eq()` when MSRV has been upgraded to Rust 1.85.
-        #[expect(unpredictable_function_pointer_comparisons, reason = "MSRV 1.83")]
+        #[expect(
+            unpredictable_function_pointer_comparisons,
+            reason = "TODO: Use std::ptr::fn_addr_eq() instead!?"
+        )]
         {
-            debug_assert!(logger.log == Some(log_c));
-            debug_assert!(logger.clear == Some(clear_c));
+            debug_assert!(logger.log.is_some_and(|log| log == log_c));
+            debug_assert!(logger.clear.is_some_and(|clear| clear == clear_c));
         }
 
         // As long as we do not carry data, there is nothing to clean up here.
@@ -105,7 +108,7 @@ const FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN: usize = 65536;
 /// This returns the formatted message with a trailing NUL byte, or `None` when formatting fails. A
 /// long message may be truncated (see [`FORMAT_MESSAGE_MAXIMUM_BUFFER_LEN`] for details); its last
 /// characters will be replaced with `...` to indicate this.
-fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Option<Vec<u8>> {
+fn format_message(msg: *const c_char, args: va_list_) -> Option<Vec<u8>> {
     // Delegate string formatting to `vsnprintf()`, the length-checked string buffer variant of the
     // variadic `vprintf` family.
     //

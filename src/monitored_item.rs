@@ -10,7 +10,7 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use crate::{attributes, ua, AsyncClient, Attribute, DataType as _, DataValue, Error, Result};
+use crate::{AsyncClient, Attribute, DataType as _, DataValue, Error, Result, attributes, ua};
 
 pub use self::create_request_builder::MonitoredItemCreateRequestBuilder;
 

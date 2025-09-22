@@ -1,4 +1,4 @@
-use crate::{ua, DataType as _};
+use crate::{DataType as _, ua};
 
 impl super::VariableAttributes {
     #[must_use]

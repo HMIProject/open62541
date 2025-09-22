@@ -8,8 +8,8 @@ use open62541_sys::{
 };
 
 use crate::{
-    ua, CallbackMut, CallbackOnce, DataType as _, Error, MonitoredItemKind, MonitoredItemValue,
-    Result,
+    CallbackMut, CallbackOnce, DataType as _, Error, MonitoredItemKind, MonitoredItemValue, Result,
+    ua,
 };
 
 type CbResponse =

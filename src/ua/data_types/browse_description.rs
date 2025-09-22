@@ -1,6 +1,6 @@
 use open62541_sys::UA_NS0ID_HIERARCHICALREFERENCES;
 
-use crate::{ua, DataType};
+use crate::{DataType, ua};
 
 crate::data_type!(BrowseDescription);
 

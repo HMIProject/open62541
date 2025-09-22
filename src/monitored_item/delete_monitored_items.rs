@@ -5,7 +5,7 @@ use open62541_sys::{
     UA_Client, UA_Client_MonitoredItems_delete_async, UA_DeleteMonitoredItemsResponse, UA_UInt32,
 };
 
-use crate::{ua, CallbackOnce, DataType as _, Error, Result};
+use crate::{CallbackOnce, DataType as _, Error, Result, ua};
 
 type CbResponse =
     CallbackOnce<std::result::Result<ua::DeleteMonitoredItemsResponse, ua::StatusCode>>;

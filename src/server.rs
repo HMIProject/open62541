@@ -6,29 +6,29 @@ mod node_types;
 
 use std::{
     any::Any,
-    ffi::{c_void, CString},
+    ffi::{CString, c_void},
     ptr,
     sync::Arc,
     time::Instant,
 };
 
 use open62541_sys::{
-    UA_CertificateVerification_AcceptAll, UA_NodeId, UA_Server, UA_ServerConfig,
-    UA_Server_addDataSourceVariableNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
-    UA_Server_addReference, UA_Server_browse, UA_Server_browseNext, UA_Server_browseRecursive,
-    UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
-    UA_Server_deleteReference, UA_Server_getConfig, UA_Server_getNamespaceByIndex,
-    UA_Server_getNamespaceByName, UA_Server_getStatistics, UA_Server_read,
-    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt, UA_Server_run_iterate,
-    UA_Server_run_shutdown, UA_Server_run_startup, UA_Server_translateBrowsePathToNodeIds,
+    __UA_Server_addNode, UA_CertificateVerification_AcceptAll, UA_NodeId,
+    UA_STATUSCODE_BADNOTFOUND, UA_Server, UA_Server_addDataSourceVariableNode,
+    UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse,
+    UA_Server_browseNext, UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath,
+    UA_Server_createEvent, UA_Server_deleteNode, UA_Server_deleteReference, UA_Server_getConfig,
+    UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName, UA_Server_getStatistics,
+    UA_Server_read, UA_Server_readObjectProperty, UA_Server_run_iterate, UA_Server_run_shutdown,
+    UA_Server_run_startup, UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds,
     UA_Server_triggerEvent, UA_Server_writeDataValue, UA_Server_writeObjectProperty,
-    UA_Server_writeValue, __UA_Server_addNode, UA_STATUSCODE_BADNOTFOUND,
+    UA_Server_writeValue, UA_ServerConfig,
 };
 use parking_lot::{Condvar, Mutex, MutexGuard};
 
 use crate::{
-    ua, Attribute, Attributes, BrowseResult, DataType, DataValue, Error, Result,
-    DEFAULT_PORT_NUMBER,
+    Attribute, Attributes, BrowseResult, DEFAULT_PORT_NUMBER, DataType, DataValue, Error, Result,
+    ua,
 };
 
 pub(crate) use self::node_context::NodeContext;

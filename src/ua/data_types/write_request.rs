@@ -1,4 +1,4 @@
-use crate::{ua, DataType as _, ServiceRequest};
+use crate::{DataType as _, ServiceRequest, ua};
 
 crate::data_type!(WriteRequest);
 
