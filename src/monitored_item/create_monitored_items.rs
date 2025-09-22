@@ -265,9 +265,9 @@ unsafe extern "C" fn delete_data_change_notification_callback_c(
 ) {
     log::debug!("DeleteMonitoredItemCallback() was called");
 
-    // SAFETY: `mon_context` is result of `CbEvent::prepare()` and is used only before `delete()`.
+    // SAFETY: `mon_context` is result of `CbDataChange::prepare()` and is used only before `delete()`.
     unsafe {
-        CbEvent::delete(mon_context);
+        CbDataChange::delete(mon_context);
     }
 }
 
