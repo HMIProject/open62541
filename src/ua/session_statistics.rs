@@ -7,7 +7,7 @@ pub struct SessionStatistics(UA_SessionStatistics);
 impl SessionStatistics {
     /// Creates wrapper reference from value.
     #[must_use]
-    pub(crate) fn raw_ref(src: &UA_SessionStatistics) -> &Self {
+    pub(crate) const fn raw_ref(src: &UA_SessionStatistics) -> &Self {
         let src: *const UA_SessionStatistics = src;
         // This transmutes between the inner type and `Self` through `cast()`. This is okay because
         // we are using `#[repr(transparent)]`.
