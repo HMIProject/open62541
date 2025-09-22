@@ -9,6 +9,9 @@ use crate::{ua, DataType, DataTypeExt};
 // Instead we implement all applicable traits manually by delegating
 // to the implementations for `ua::DataValue` (see below).
 #[derive(Debug)]
+// ABI must match that of the the untyped variant ua::DataValue.
+// Required to safely transmute both types.
+#[repr(transparent)]
 pub struct DataValue<T> {
     data_value: ua::DataValue,
     _kind: PhantomData<T>,
