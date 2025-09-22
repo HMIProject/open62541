@@ -3,8 +3,8 @@ use std::{future::Future, sync::Arc, time::Duration};
 use anyhow::Context as _;
 use futures::future::try_join3;
 use open62541::{
-    ua, AsyncClient, AsyncSubscription, DataValue, MonitoredItemCreateRequestBuilder,
-    MonitoredItemValue,
+    AsyncClient, AsyncSubscription, DataValue, MonitoredItemCreateRequestBuilder,
+    MonitoredItemValue, ua,
 };
 use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
