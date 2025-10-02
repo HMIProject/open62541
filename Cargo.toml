@@ -13,7 +13,7 @@ repository = "https://github.com/HMIProject/open62541.git"
 license = "MPL-2.0"
 keywords = ["opcua", "plc", "automation", "hardware", "protocol"]
 categories = ["network-programming", "embedded", "api-bindings"]
-include = ["src/", "README.md", "CHANGELOG.md"]
+include = ["src/", "README.md", "CHANGELOG.md", "LICENSES/MPL-2.0.txt"]
 
 [dependencies]
 futures-channel = "0.3.30"
