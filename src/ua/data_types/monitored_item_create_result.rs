@@ -12,7 +12,7 @@ impl MonitoredItemCreateResult {
 
     #[must_use]
     pub(crate) const fn monitored_item_id(&self) -> ua::MonitoredItemId {
-        ua::MonitoredItemId::new(self.0.monitoredItemId)
+        ua::MonitoredItemId::new(ua::IntegerId::new(self.0.monitoredItemId))
     }
 
     /// Gets revised sampling interval.

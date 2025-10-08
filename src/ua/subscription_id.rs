@@ -3,21 +3,24 @@ use std::fmt;
 use crate::ua;
 
 /// Wrapper for subscription ID from [`open62541_sys`].
+///
+/// Newtype wrapper for [`ua::IntegerId`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SubscriptionId(u32);
+pub struct SubscriptionId(ua::IntegerId);
 
 impl SubscriptionId {
     #[must_use]
-    pub(crate) const fn new(id: u32) -> Self {
+    pub(crate) const fn new(id: ua::IntegerId) -> Self {
         Self(id)
     }
 
-    pub(crate) const fn as_u32(self) -> u32 {
+    pub(crate) const fn as_id(self) -> ua::IntegerId {
         self.0
     }
 
-    pub(crate) const fn to_uint32(self) -> ua::UInt32 {
-        ua::UInt32::new(self.as_u32())
+    #[must_use]
+    pub const fn is_valid(self) -> bool {
+        self.0.is_valid()
     }
 }
 
