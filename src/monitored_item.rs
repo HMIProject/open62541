@@ -10,7 +10,10 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use crate::{AsyncClient, Attribute, DataType as _, DataValue, Error, Result, attributes, ua};
+use crate::{
+    AsyncClient, Attribute, DataType as _, DataValue, Error, Result, attributes,
+    ua::{self, IntegerId, MonitoredItemId},
+};
 
 pub use self::create_request_builder::MonitoredItemCreateRequestBuilder;
 
@@ -21,7 +24,8 @@ pub use self::create_request_builder::MonitoredItemCreateRequestBuilder;
 pub struct MonitoredItemHandle {
     client: Weak<ua::Client>,
     subscription_id: ua::SubscriptionId,
-    monitored_item_id: Option<ua::MonitoredItemId>,
+    // monitored_item_id is invalidated on deletion to send the delete request only once.
+    monitored_item_id: ua::MonitoredItemId,
 }
 
 impl MonitoredItemHandle {
@@ -30,10 +34,12 @@ impl MonitoredItemHandle {
         subscription_id: ua::SubscriptionId,
         monitored_item_id: ua::MonitoredItemId,
     ) -> Self {
+        debug_assert!(subscription_id.as_id().is_valid());
+        debug_assert!(monitored_item_id.as_id().is_valid());
         Self {
             client: Arc::downgrade(client),
             subscription_id,
-            monitored_item_id: Some(monitored_item_id),
+            monitored_item_id,
         }
     }
 
@@ -45,16 +51,21 @@ impl MonitoredItemHandle {
 
     /// Gets the [monitored item ID](ua::MonitoredItemId).
     ///
-    /// Returns `None` if the monitored item has been deleted.
+    /// Returns an invalid id if the monitored item has been deleted.
     #[must_use]
-    pub const fn monitored_item_id(&self) -> Option<ua::MonitoredItemId> {
+    pub const fn monitored_item_id(&self) -> ua::MonitoredItemId {
         self.monitored_item_id
     }
 
     fn before_delete(&mut self) -> Result<(ua::DeleteMonitoredItemsRequest, ua::MonitoredItemId)> {
-        let Some(monitored_item_id) = self.monitored_item_id.take() else {
+        if !self.monitored_item_id.as_id().is_valid() {
             return Err(Error::internal("already deleted"));
-        };
+        }
+
+        let monitored_item_id = std::mem::replace(
+            &mut self.monitored_item_id,
+            MonitoredItemId::new(IntegerId::INVALID),
+        );
         let request = ua::DeleteMonitoredItemsRequest::init()
             .with_subscription_id(self.subscription_id)
             .with_monitored_item_ids(&[monitored_item_id]);
@@ -66,9 +77,10 @@ impl MonitoredItemHandle {
     ///
     /// This is unlikely to happen.
     fn after_delete_failed(&mut self, monitored_item_id: ua::MonitoredItemId) {
-        debug_assert!(self.monitored_item_id.is_none());
+        debug_assert!(monitored_item_id.as_id().is_valid());
+        debug_assert!(!self.monitored_item_id.as_id().is_valid());
         // Put the id back for a retry.
-        self.monitored_item_id = Some(monitored_item_id);
+        self.monitored_item_id = monitored_item_id;
     }
 
     /// Deletes the monitored item at the server.
@@ -343,7 +355,7 @@ where
         //
         let monitored_item_ids = results
             .iter()
-            .filter(|result| result.status_code().is_good())
+            .filter(|result| result.monitored_item_id().as_id().is_valid())
             .map(ua::MonitoredItemCreateResult::monitored_item_id)
             .collect::<Vec<_>>();
         let request = ua::DeleteMonitoredItemsRequest::init()
@@ -363,10 +375,15 @@ where
     let results = results
         .drain_all()
         .map(|result| {
-            crate::Error::verify_good(&result.status_code())?;
+            let monitored_item_id = result.monitored_item_id();
+            if !monitored_item_id.as_id().is_valid() {
+                // The monitored item has not been created on the server.
+                // We can safely discard the contents of the result and
+                // map the status code to an error.
+                crate::Error::verify_good(&result.status_code())?;
+            }
 
-            let handle =
-                MonitoredItemHandle::new(client, subscription_id, result.monitored_item_id());
+            let handle = MonitoredItemHandle::new(client, subscription_id, monitored_item_id);
 
             Ok((result, handle))
         })

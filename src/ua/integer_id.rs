@@ -7,7 +7,7 @@ use crate::ua;
 pub struct IntegerId(u32);
 
 impl IntegerId {
-    const INVALID: Self = Self(0);
+    pub(crate) const INVALID: Self = Self(0);
 
     #[must_use]
     pub(crate) const fn new(id: u32) -> Self {

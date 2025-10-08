@@ -28,6 +28,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `AsyncMonitoredItem::create()` instead.
 - Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.85 (Edition 2024).
 
+### Fixed
+
+- Do not leak monitored items with bad/uncertain status on creation.
+
 ## [0.9.4] - 2025-09-01
 
 ### Changed
