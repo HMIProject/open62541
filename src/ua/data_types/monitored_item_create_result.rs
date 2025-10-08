@@ -5,8 +5,9 @@ use crate::{Error, Result, ua};
 crate::data_type!(MonitoredItemCreateResult);
 
 impl MonitoredItemCreateResult {
+    /// Gets status code.
     #[must_use]
-    pub(crate) const fn status_code(&self) -> ua::StatusCode {
+    pub const fn status_code(&self) -> ua::StatusCode {
         ua::StatusCode::new(self.0.statusCode)
     }
 

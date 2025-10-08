@@ -20,6 +20,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add type `IntegerId`.
 - Add method `SubscriptionId::as_id()`.
 - Add method `MonitoredItemId::as_id()`.
+- Add method `MonitoredItemCreateResult::status_code()`.
 
 ### Changed
 
