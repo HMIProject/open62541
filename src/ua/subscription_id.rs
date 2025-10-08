@@ -14,13 +14,10 @@ impl SubscriptionId {
         Self(id)
     }
 
-    pub(crate) const fn as_id(self) -> ua::IntegerId {
-        self.0
-    }
-
+    /// Gets the generic [`ua::IntegerId`].
     #[must_use]
-    pub const fn is_valid(self) -> bool {
-        self.0.is_valid()
+    pub const fn as_id(self) -> ua::IntegerId {
+        self.0
     }
 }
 

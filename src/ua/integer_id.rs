@@ -24,8 +24,9 @@ impl IntegerId {
         ua::UInt32::new(self.as_u32())
     }
 
+    /// Checks if the id is either valid or invalid/undefined.
     #[must_use]
-    pub(crate) const fn is_valid(self) -> bool {
+    pub const fn is_valid(self) -> bool {
         self.0 != Self::INVALID.0
     }
 }
