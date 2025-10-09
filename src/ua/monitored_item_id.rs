@@ -3,8 +3,8 @@ use std::fmt;
 use crate::ua;
 
 /// Wrapper for monitored item ID from [`open62541_sys`].
-///
-/// Newtype wrapper for [`ua::IntegerId`].
+//
+// Newtype wrapper for [`ua::IntegerId`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MonitoredItemId(ua::IntegerId);
 
