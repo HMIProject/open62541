@@ -17,7 +17,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `AsyncClient` and `AsyncSubscription` no longer depend on the `tokio` feature.
 - Add method `AsyncSubscription::create_monitored_items_callback()` with accompanying type
   `MonitoredItemHandle`.
-- Add type `IntegerId`.
 
 ### Changed
 

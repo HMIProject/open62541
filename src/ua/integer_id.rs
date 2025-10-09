@@ -6,7 +6,7 @@ use crate::ua;
 ///
 /// Only stores valid, non-zero values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct IntegerId(NonZeroU32);
+pub(crate) struct IntegerId(NonZeroU32);
 
 impl IntegerId {
     #[must_use]
