@@ -120,10 +120,15 @@ impl SubscriptionBuilder {
         let client = client.client();
 
         let response = create_subscription(client, &self.into_request()).await?;
+        let Some(subscription_id) = response.subscription_id() else {
+            // Should never occur if creating the subscription succeeded.
+            // Otherwise unsubscribing would not be possible.
+            return Err(Error::Internal("invalid subscription id"));
+        };
 
         let subscription = AsyncSubscription {
             client: Arc::downgrade(client),
-            subscription_id: response.subscription_id(),
+            subscription_id,
         };
 
         Ok((response, subscription))

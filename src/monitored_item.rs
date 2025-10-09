@@ -344,7 +344,7 @@ where
         let monitored_item_ids = results
             .iter()
             .filter(|result| result.status_code().is_good())
-            .map(ua::MonitoredItemCreateResult::monitored_item_id)
+            .filter_map(ua::MonitoredItemCreateResult::monitored_item_id)
             .collect::<Vec<_>>();
         let request = ua::DeleteMonitoredItemsRequest::init()
             .with_subscription_id(subscription_id)
@@ -362,13 +362,18 @@ where
 
     let results = results
         .drain_all()
-        .map(|result| {
-            crate::Error::verify_good(&result.status_code())?;
+        .filter_map(|result| {
+            if let Err(err) = crate::Error::verify_good(&result.status_code()) {
+                return Some(Err(err));
+            }
 
-            let handle =
-                MonitoredItemHandle::new(client, subscription_id, result.monitored_item_id());
+            // The id should always be valid if creating the monitored item succeeded.
+            // Otherwise deleting the monitored item would not be possible.
+            let monitored_item_id = result.monitored_item_id()?;
 
-            Ok((result, handle))
+            let handle = MonitoredItemHandle::new(client, subscription_id, monitored_item_id);
+
+            Some(Ok((result, handle)))
         })
         .collect();
 
