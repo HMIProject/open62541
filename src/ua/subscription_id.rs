@@ -16,7 +16,7 @@ impl SubscriptionId {
 
     /// Gets the generic [`ua::IntegerId`].
     #[must_use]
-    pub const fn as_id(self) -> ua::IntegerId {
+    pub(crate) const fn as_id(self) -> ua::IntegerId {
         self.0
     }
 }
