@@ -18,8 +18,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add method `AsyncSubscription::create_monitored_items_callback()` with accompanying type
   `MonitoredItemHandle`.
 - Add type `IntegerId`.
-- Add method `SubscriptionId::as_id()`.
-- Add method `MonitoredItemId::as_id()`.
 
 ### Changed
 
