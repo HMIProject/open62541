@@ -53,6 +53,7 @@ pub use self::{
     duration::Duration,
     event_id::EventId,
     event_notifier_type::EventNotifierType,
+    integer_id::IntegerId,
     key_value_map::KeyValueMap,
     monitored_item_id::MonitoredItemId,
     node_class_mask::NodeClassMask,
@@ -68,6 +69,4 @@ pub use self::{
     unit_id::UnitId,
     user_identity_token::UserIdentityToken,
 };
-pub(crate) use self::{
-    client_config::ClientConfig, integer_id::IntegerId, logger::Logger, server_config::ServerConfig,
-};
+pub(crate) use self::{client_config::ClientConfig, logger::Logger, server_config::ServerConfig};
