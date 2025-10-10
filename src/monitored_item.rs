@@ -367,7 +367,7 @@ where
                 return Some(Err(err));
             }
 
-            // The id should always be valid if creating the monitored item succeeded.
+            // The ID should always be valid if creating the monitored item succeeded.
             // Otherwise deleting the monitored item would not be possible.
             let monitored_item_id = result.monitored_item_id()?;
 
