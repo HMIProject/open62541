@@ -123,7 +123,7 @@ impl SubscriptionBuilder {
         let Some(subscription_id) = response.subscription_id() else {
             // Should never occur if creating the subscription succeeded.
             // Otherwise unsubscribing would not be possible.
-            return Err(Error::Internal("invalid subscription id"));
+            return Err(Error::Internal("invalid subscription ID"));
         };
 
         let subscription = AsyncSubscription {
