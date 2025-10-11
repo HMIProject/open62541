@@ -11,8 +11,12 @@ impl MonitoredItemCreateResult {
     }
 
     #[must_use]
-    pub(crate) const fn monitored_item_id(&self) -> ua::MonitoredItemId {
-        ua::MonitoredItemId::new(self.0.monitoredItemId)
+    pub(crate) const fn monitored_item_id(&self) -> Option<ua::MonitoredItemId> {
+        if let Some(id) = ua::IntegerId::from_u32(self.0.monitoredItemId) {
+            Some(ua::MonitoredItemId::new(id))
+        } else {
+            None
+        }
     }
 
     /// Gets revised sampling interval.
