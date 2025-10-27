@@ -59,7 +59,7 @@ pub(crate) fn logger() -> ua::Logger {
     unsafe extern "C" fn clear_c(logger: *mut UA_Logger) {
         log::debug!("Clearing `log` logger");
 
-        // This consumes the `UA_Logger` structure itself, invalidating the pointer `Creating `log` logger`
+        // This consumes the `UA_Logger` structure itself, invalidating the pointer `logger`
         // and thereby releasing all allocated resources.
         let logger = unsafe { Box::from_raw(logger) };
 
