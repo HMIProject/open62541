@@ -60,7 +60,8 @@ pub(crate) fn logger() -> ua::Logger {
         log::debug!("Clearing `log` logger");
 
         // This consumes the `UA_Logger` structure itself, invalidating the pointer `logger`
-        // and thereby releasing all allocated resources.
+        // and thereby releasing all allocated resources. Afterwards the pointer is dangling
+        // and the caller must not use it again.
         let logger = unsafe { Box::from_raw(logger) };
 
         // Run some sanity checks. We should only ever be called on our own data structure.
