@@ -59,11 +59,9 @@ pub(crate) fn logger() -> ua::Logger {
     unsafe extern "C" fn clear_c(logger: *mut UA_Logger) {
         log::debug!("Clearing `log` logger");
 
-        // This consumes the `UA_Logger` structure itself, invalidating the pointer `config.logging`
-        // and thereby releasing all allocated resources.
-        //
-        // This is in line with the contract that `config.logging` may not be used anymore after its
-        // `clear()` method has been called.
+        // This consumes the `UA_Logger` structure itself, invalidating the pointer `logger`
+        // and thereby releasing all allocated resources. Afterwards the pointer is dangling
+        // and the caller must not use it again.
         let logger = unsafe { Box::from_raw(logger) };
 
         // Run some sanity checks. We should only ever be called on our own data structure.
