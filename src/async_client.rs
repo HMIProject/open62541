@@ -618,28 +618,29 @@ impl BackgroundThread {
         // The `AsyncClient` is supposed to be used in asynchronous contexts.
         // Blocking an executor thread could cause deadlocks and must be avoided.
         #[cfg(feature = "tokio")]
-        if let Ok(rt) = &tokio::runtime::Handle::try_current()
-            && !matches!(
+        if let Ok(rt) = &tokio::runtime::Handle::try_current() {
+            // Asynchronous context.
+            if matches!(
                 rt.runtime_flavor(),
                 tokio::runtime::RuntimeFlavor::CurrentThread
-            )
-        {
-            // Asynchronous context: Offload the synchronous invocation from
-            // the executor thread onto a worker thread.
-            let join_handle = rt.spawn_blocking(move || {
-                let _unused = handle.join();
-            });
-            // Re-enter the asynchronous context to join the worker thread.
-            tokio::task::block_in_place(|| {
-                rt.block_on(async move {
-                    let _unused = join_handle.await;
+            ) {
+                tokio::task::block_in_place(move || {
+                    let _unused = handle.join();
                 });
-            });
-        } else {
-            // Synchronous context or single threaded runtime.
-            let _unused = handle.join();
+            } else {
+                // Offload the synchronous invocation from the executor thread onto a worker thread.
+                let join_handle = rt.spawn_blocking(move || {
+                    let _unused = handle.join();
+                });
+                // Re-enter the asynchronous context for joining the worker thread.
+                tokio::task::block_in_place(move || {
+                    rt.block_on(async move {
+                        let _unused = join_handle.await;
+                    });
+                });
+            }
+            return;
         }
-        #[cfg(not(feature = "tokio"))]
         let _unused = handle.join();
     }
 
