@@ -10,7 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - `AsyncClient`: Prevent deadlocks when dropping instances within an asynchronous context. This only
-  works when the feature `"tokio"` is enabled.
+  works when the feature `"tokio"` is enabled and only for multi-threaded runtimes.
 
 ## [0.10.0] - 2025-10-14
 

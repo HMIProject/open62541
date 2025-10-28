@@ -40,8 +40,9 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 ///
 /// With the feature `"tokio"` enabled the blocking invocations in [`AsyncClient::drop()`]
 /// will be offloaded from executor to worker threads as needed to prevent deadlocks.
-/// When using alternative asynchronous runtimes users of this crate are responsible for
-/// taking precautions to not invoke [`AsyncClient::drop()`] within an asynchronous context!
+/// But only for multi-threaded runtimes! When using the single-thread runtime or alternative
+/// asynchronous runtimes users of this crate are responsible for taking precautions
+/// to not invoke [`AsyncClient::drop()`] within an asynchronous context!
 ///
 /// See [Client](crate::Client) for more details.
 #[derive(Debug)]
@@ -617,19 +618,25 @@ impl BackgroundThread {
         // The `AsyncClient` is supposed to be used in asynchronous contexts.
         // Blocking an executor thread could cause deadlocks and must be avoided.
         #[cfg(feature = "tokio")]
-        if let Ok(rt) = &tokio::runtime::Handle::try_current() {
+        if let Ok(rt) = &tokio::runtime::Handle::try_current()
+            && !matches!(
+                rt.runtime_flavor(),
+                tokio::runtime::RuntimeFlavor::CurrentThread
+            )
+        {
             // Asynchronous context: Offload the synchronous invocation from
             // the executor thread onto a worker thread.
-            //
-            // `block_on()/spawn_blocking()` works for any `RuntimeFlavor` while
-            // `block_in_place()` would not work for `RuntimeFlavor::CurrentThread`.
-            rt.block_on(async move {
-                let _unused = rt.spawn_blocking(move || {
-                    let _unused = handle.join();
+            let join_handle = rt.spawn_blocking(move || {
+                let _unused = handle.join();
+            });
+            // Re-enter the asynchronous context to join the worker thread.
+            tokio::task::block_in_place(|| {
+                rt.block_on(async move {
+                    let _unused = join_handle.await;
                 });
             });
         } else {
-            // Synchronous context.
+            // Synchronous context or single threaded runtime.
             let _unused = handle.join();
         }
         #[cfg(not(feature = "tokio"))]
