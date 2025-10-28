@@ -553,7 +553,9 @@ impl Drop for AsyncClient {
         };
 
         log::info!("Cancelling background task when dropping client");
-        background_thread.cancel_and_join();
+        // The `AsyncClient` is supposed to be used in asynchronous contexts.
+        // Blocking an executor thread could cause deadlocks and must be avoided.
+        tokio::task::block_in_place(move || background_thread.cancel_and_join());
 
         log::info!("Background task finished when dropping client");
     }

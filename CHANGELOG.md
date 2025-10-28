@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `AsyncClient`: Prevent deadlocks when dropping instances within an asynchronous context.
+
 ## [0.10.0] - 2025-10-14
 
 ### Added
