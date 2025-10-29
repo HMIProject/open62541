@@ -38,13 +38,14 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 /// is dropped when still connected, it will _synchronously_ clean up after itself, thereby blocking
 /// while being dropped. In most cases, this is not the desired behavior.
 ///
-/// With the feature `"tokio"` enabled the blocking invocations in [`AsyncClient::drop()`]
-/// will be offloaded from executor to worker threads as needed to prevent deadlocks.
-/// But only for multi-threaded runtimes! When using the single-thread runtime or alternative
-/// asynchronous runtimes users of this crate are responsible for taking precautions
-/// to not invoke [`AsyncClient::drop()`] within an asynchronous context!
+/// With feature `tokio` enabled, blocking invocations in [`AsyncClient::drop()`] might be offloaded
+/// from executor to worker threads as needed to prevent deadlocks. However, this can be implemented
+/// only when running in [multi-threaded runtimes]. When using current-thread runtime (or some other
+/// asynchronous runtime), make sure to not invoke [`AsyncClient::drop()`] in asynchronous contexts.
 ///
 /// See [Client](crate::Client) for more details.
+///
+/// [multi-threaded runtimes]: https://docs.rs/tokio/latest/tokio/runtime/index.html
 #[derive(Debug)]
 pub struct AsyncClient {
     client: Arc<ua::Client>,
@@ -615,15 +616,16 @@ impl BackgroundThread {
         // do anyway in that case).
         // TODO: Use `tracing` and span to group log messages.
         log::info!("Waiting for background task to finish after cancelling");
-        // The `AsyncClient` is supposed to be used in asynchronous contexts.
-        // Blocking an executor thread could cause deadlocks and must be avoided.
+
+        // `AsyncClient` is supposed to be used in asynchronous context. Note that blocking executor
+        // threads may cause deadlocks and must be avoided.
         #[cfg(feature = "tokio")]
         if let Ok(rt) = &tokio::runtime::Handle::try_current() {
-            // Asynchronous context.
             if matches!(
                 rt.runtime_flavor(),
                 tokio::runtime::RuntimeFlavor::CurrentThread
             ) {
+                // Do not spawn new thread, because we do not have multiple threads in this runtime.
                 tokio::task::block_in_place(move || {
                     let _unused = handle.join();
                 });
@@ -641,6 +643,7 @@ impl BackgroundThread {
             }
             return;
         }
+
         let _unused = handle.join();
     }
 
