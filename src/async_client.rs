@@ -38,6 +38,12 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 /// is dropped when still connected, it will _synchronously_ clean up after itself, thereby blocking
 /// while being dropped. In most cases, this is not the desired behavior.
 ///
+/// With the feature `"tokio"` enabled the blocking invocations in [`AsyncClient::drop()`]
+/// will be offloaded from executor to worker threads as needed to prevent deadlocks.
+/// But only for multi-threaded runtimes! When using the single-thread runtime or alternative
+/// asynchronous runtimes users of this crate are responsible for taking precautions
+/// to not invoke [`AsyncClient::drop()`] within an asynchronous context!
+///
 /// See [Client](crate::Client) for more details.
 #[derive(Debug)]
 pub struct AsyncClient {
@@ -552,7 +558,7 @@ impl Drop for AsyncClient {
             return;
         };
 
-        log::info!("Cancelling background task when dropping client");
+        log::info!("Cancelling and joining background task when dropping client");
         background_thread.cancel_and_join();
 
         log::info!("Background task finished when dropping client");
@@ -609,6 +615,32 @@ impl BackgroundThread {
         // do anyway in that case).
         // TODO: Use `tracing` and span to group log messages.
         log::info!("Waiting for background task to finish after cancelling");
+        // The `AsyncClient` is supposed to be used in asynchronous contexts.
+        // Blocking an executor thread could cause deadlocks and must be avoided.
+        #[cfg(feature = "tokio")]
+        if let Ok(rt) = &tokio::runtime::Handle::try_current() {
+            // Asynchronous context.
+            if matches!(
+                rt.runtime_flavor(),
+                tokio::runtime::RuntimeFlavor::CurrentThread
+            ) {
+                tokio::task::block_in_place(move || {
+                    let _unused = handle.join();
+                });
+            } else {
+                // Offload the synchronous invocation from the executor thread onto a worker thread.
+                let join_handle = rt.spawn_blocking(move || {
+                    let _unused = handle.join();
+                });
+                // Re-enter the asynchronous context for joining the worker thread.
+                tokio::task::block_in_place(move || {
+                    rt.block_on(async move {
+                        let _unused = join_handle.await;
+                    });
+                });
+            }
+            return;
+        }
         let _unused = handle.join();
     }
 
