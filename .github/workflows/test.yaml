@@ -102,7 +102,7 @@ jobs:
       # Check out the repository before the remaining steps that depend on it.
       # All preceding steps are independent of the repository contents.
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
 
