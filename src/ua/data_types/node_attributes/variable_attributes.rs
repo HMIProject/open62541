@@ -22,6 +22,7 @@ impl super::VariableAttributes {
             self.0.arrayDimensions,
         ));
         (self.0.arrayDimensionsSize, self.0.arrayDimensions) = array_dimensions.into_raw_parts();
+        self.0.specifiedAttributes |= ua::SpecifiedAttributes::ARRAYDIMENSIONS.as_u32();
         self
     }
 
