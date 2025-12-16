@@ -144,3 +144,12 @@ pub struct MethodNode {
     pub output_arguments: ua::Array<ua::Argument>,
     pub output_arguments_requested_new_node_id: Option<ua::NodeId>,
 }
+
+#[derive(Debug, Clone)]
+pub struct DataTypeNode {
+    pub requested_new_node_id: Option<ua::NodeId>,
+    pub parent_node_id: ua::NodeId,
+    pub reference_type_id: ua::NodeId,
+    pub browse_name: ua::QualifiedName,
+    pub attributes: ua::DataTypeAttributes,
+}

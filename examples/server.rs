@@ -7,10 +7,10 @@ use std::{
     time::Duration,
 };
 
-use open62541::{Attribute, ObjectNode, Server, ServerRunner, VariableNode, ua};
+use open62541::{Attribute, DataTypeNode, ObjectNode, Server, ServerRunner, VariableNode, ua};
 use open62541_sys::{
-    UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES,
-    UA_NS0ID_STRING,
+    UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_FOLDERTYPE, UA_NS0ID_HASSUBTYPE,
+    UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_ORGANIZES, UA_NS0ID_STRING,
 };
 use time::macros::utc_datetime;
 
@@ -56,6 +56,16 @@ fn main() -> anyhow::Result<()> {
         read_attribute(&server, &value_node_id, &attribute);
     }
 
+    println!("Adding server custom string type node");
+    let custom_string_type_node = DataTypeNode {
+        requested_new_node_id: Some(ua::NodeId::string(1, "my.string")),
+        parent_node_id: ua::NodeId::ns0(UA_NS0ID_STRING),
+        reference_type_id: ua::NodeId::ns0(UA_NS0ID_HASSUBTYPE),
+        browse_name: ua::QualifiedName::new(1, "my.string"),
+        attributes: ua::DataTypeAttributes::default(),
+    };
+    let custom_string_type_id = server.add_data_type_node(custom_string_type_node)?;
+
     println!("Adding server data value nodes");
 
     let data_value_node = VariableNode {
@@ -64,8 +74,7 @@ fn main() -> anyhow::Result<()> {
         reference_type_id: ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
         browse_name: ua::QualifiedName::new(1, "the answer.data.value"),
         type_definition: ua::NodeId::ns0(UA_NS0ID_BASEDATAVARIABLETYPE),
-        attributes: ua::VariableAttributes::default()
-            .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING)),
+        attributes: ua::VariableAttributes::default().with_data_type(&custom_string_type_id),
     };
 
     let data_value_node_id = server.add_variable_node(data_value_node)?;
