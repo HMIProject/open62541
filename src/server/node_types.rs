@@ -113,15 +113,6 @@ impl<T: Attributes> fmt::Debug for Node<T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct DataTypeNode {
-    pub requested_new_node_id: Option<ua::NodeId>,
-    pub parent_node_id: ua::NodeId,
-    pub reference_type_id: ua::NodeId,
-    pub browse_name: ua::QualifiedName,
-    pub attributes: ua::DataTypeAttributes,
-}
-
-#[derive(Debug, Clone)]
 pub struct ObjectNode {
     pub requested_new_node_id: Option<ua::NodeId>,
     pub parent_node_id: ua::NodeId,
@@ -152,4 +143,13 @@ pub struct MethodNode {
     pub input_arguments_requested_new_node_id: Option<ua::NodeId>,
     pub output_arguments: ua::Array<ua::Argument>,
     pub output_arguments_requested_new_node_id: Option<ua::NodeId>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DataTypeNode {
+    pub requested_new_node_id: Option<ua::NodeId>,
+    pub parent_node_id: ua::NodeId,
+    pub reference_type_id: ua::NodeId,
+    pub browse_name: ua::QualifiedName,
+    pub attributes: ua::DataTypeAttributes,
 }
