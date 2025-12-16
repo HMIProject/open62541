@@ -15,11 +15,12 @@ use std::{
 use open62541_sys::{
     __UA_Server_addNode, UA_CertificateVerification_AcceptAll, UA_NodeId,
     UA_STATUSCODE_BADNOTFOUND, UA_Server, UA_Server_addDataSourceVariableNode,
-    UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addReference, UA_Server_browse,
-    UA_Server_browseNext, UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath,
-    UA_Server_createEvent, UA_Server_deleteNode, UA_Server_deleteReference, UA_Server_getConfig,
-    UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName, UA_Server_getStatistics,
-    UA_Server_read, UA_Server_readObjectProperty, UA_Server_run_iterate, UA_Server_run_shutdown,
+    UA_Server_addDataTypeNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
+    UA_Server_addReference, UA_Server_browse, UA_Server_browseNext, UA_Server_browseRecursive,
+    UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
+    UA_Server_deleteReference, UA_Server_getConfig, UA_Server_getNamespaceByIndex,
+    UA_Server_getNamespaceByName, UA_Server_getStatistics, UA_Server_read,
+    UA_Server_readObjectProperty, UA_Server_run_iterate, UA_Server_run_shutdown,
     UA_Server_run_startup, UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds,
     UA_Server_triggerEvent, UA_Server_writeDataValue, UA_Server_writeObjectProperty,
     UA_Server_writeValue, UA_ServerConfig,
@@ -41,7 +42,7 @@ pub use self::{
     method_callback::{
         MethodCallback, MethodCallbackContext, MethodCallbackError, MethodCallbackResult,
     },
-    node_types::{MethodNode, Node, ObjectNode, VariableNode},
+    node_types::{DataTypeNode, MethodNode, Node, ObjectNode, VariableNode},
 };
 
 /// Builder for [`Server`].
@@ -866,6 +867,52 @@ impl Server {
                 output_arguments_out_new_node_id,
             ),
         ))
+    }
+
+    /// Adds data type node to address space.
+    ///
+    /// This returns the node ID that was actually inserted (when no explicit requested new node ID
+    /// was given in `node`).
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node cannot be added.
+    pub fn add_data_type_node(&self, data_type_node: DataTypeNode) -> Result<ua::NodeId> {
+        let DataTypeNode {
+            requested_new_node_id,
+            parent_node_id,
+            reference_type_id,
+            browse_name,
+            attributes,
+        } = data_type_node;
+
+        let requested_new_node_id = requested_new_node_id.unwrap_or(ua::NodeId::null());
+
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
+        let mut out_new_node_id = ua::NodeId::null();
+
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addDataTypeNode(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.server.as_ptr().cast_mut(),
+                // TODO: Verify that `UA_Server_addDataTypeNode()` takes ownership.
+                requested_new_node_id.into_raw(),
+                // TODO: Verify that `UA_Server_addDataTypeNode()` takes ownership.
+                parent_node_id.into_raw(),
+                // TODO: Verify that `UA_Server_addDataTypeNode()` takes ownership.
+                reference_type_id.into_raw(),
+                // TODO: Verify that `UA_Server_addDataTypeNode()` takes ownership.
+                browse_name.into_raw(),
+                // TODO: Verify that `UA_Server_addDataTypeNode()` takes ownership.
+                attributes.into_raw(),
+                ptr::null_mut(),
+                out_new_node_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        Ok(out_new_node_id)
     }
 
     /// Deletes node from address space.

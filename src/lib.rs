@@ -247,9 +247,10 @@ pub use self::{
     },
     server::{
         AccessControl, DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
-        DataSourceWriteContext, DefaultAccessControl, DefaultAccessControlWithLoginCallback,
-        MethodCallback, MethodCallbackContext, MethodCallbackError, MethodCallbackResult,
-        MethodNode, Node, ObjectNode, Server, ServerBuilder, ServerRunner, VariableNode,
+        DataSourceWriteContext, DataTypeNode, DefaultAccessControl,
+        DefaultAccessControlWithLoginCallback, MethodCallback, MethodCallbackContext,
+        MethodCallbackError, MethodCallbackResult, MethodNode, Node, ObjectNode, Server,
+        ServerBuilder, ServerRunner, VariableNode,
     },
     service::{ServiceRequest, ServiceResponse},
     traits::{

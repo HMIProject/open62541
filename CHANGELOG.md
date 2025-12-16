@@ -10,6 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Add method `ua::VariableAttributes::with_array_dimensions()`.
+- Add method `Server::add_data_type_node()` and type `DataTypeNode`.
 
 ## [0.10.1] - 2025-10-29
 
