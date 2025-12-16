@@ -35,6 +35,8 @@ jobs:
             runner_os: macos-14
           - target: aarch64-apple-darwin
             runner_os: macos-15
+          - target: aarch64-apple-darwin
+            runner_os: macos-26
 
           - target: armv7-unknown-linux-gnueabihf
             runner_os: ubuntu-22.04
@@ -42,11 +44,11 @@ jobs:
             runner_os: ubuntu-24.04
 
           - target: x86_64-apple-darwin
-            runner_os: macos-13
-          - target: x86_64-apple-darwin
             runner_os: macos-14
           - target: x86_64-apple-darwin
             runner_os: macos-15
+          - target: x86_64-apple-darwin
+            runner_os: macos-26
 
           - target: x86_64-pc-windows-msvc
             runner_os: windows-2022
