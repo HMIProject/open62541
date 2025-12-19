@@ -126,6 +126,10 @@ name = "async_browse"
 required-features = ["tokio"]
 
 [[example]]
+name = "async_translate_browse_path"
+required-features = ["tokio"]
+
+[[example]]
 name = "async_call"
 required-features = ["tokio"]
 
