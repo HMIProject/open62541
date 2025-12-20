@@ -1,7 +1,7 @@
-use anyhow::{anyhow, Context as _};
-use open62541_sys::{UA_NS0ID_HIERARCHICALREFERENCES, UA_NS0ID_ROOTFOLDER};
-use open62541::{AsyncClient, DataType, ua};
+use anyhow::{Context as _, anyhow};
 use open62541::ua::{BrowsePath, RelativePath, RelativePathElement};
+use open62541::{AsyncClient, DataType, ua};
+use open62541_sys::{UA_NS0ID_HIERARCHICALREFERENCES, UA_NS0ID_ROOTFOLDER};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -12,22 +12,20 @@ async fn main() -> anyhow::Result<()> {
     let paths = vec![
         "/Root/0:Objects/2:DeviceSet/1:CoffeeMachineA/7:Parameters/17:CoffeeBeanLevel",
         "/Root/0:Objects/1:MyDevices/1:Pressure",
-        "/Root/0:Objects/2:DeviceSet/1:RFIDScanner/4:ScanActive"
+        "/Root/0:Objects/2:DeviceSet/1:RFIDScanner/4:ScanActive",
     ];
 
     // translate single browse path
-    let path_with_expected_nodes = paths.iter()
-        .zip(vec![
-            ua::NodeId::numeric(1, 1068),
-            ua::NodeId::string(1, "Pressure"),
-            ua::NodeId::string(1, "RFIDScanner-ScanActive")
-        ]);
+    let path_with_expected_nodes = paths.iter().zip(vec![
+        ua::NodeId::numeric(1, 1068),
+        ua::NodeId::string(1, "Pressure"),
+        ua::NodeId::string(1, "RFIDScanner-ScanActive"),
+    ]);
 
     for (path, expected_node_id) in path_with_expected_nodes {
         let result_node_id = translate_browse_path(&client, path).await?;
         assert_eq!(result_node_id.node_id(), &expected_node_id);
     }
-
 
     // translate many browse paths
     translate_many_browse_path(&client, paths).await?;
@@ -38,7 +36,10 @@ async fn main() -> anyhow::Result<()> {
 async fn translate_many_browse_path(client: &AsyncClient, paths: Vec<&str>) -> anyhow::Result<()> {
     println!("\ntranslate_many_browse_paths: ");
 
-    let browse_paths: Vec<BrowsePath> = paths.iter().map(|p| create_browse_path(p)).collect::<Result<_, _>>()?;
+    let browse_paths: Vec<BrowsePath> = paths
+        .iter()
+        .map(|p| create_browse_path(p))
+        .collect::<Result<_, _>>()?;
 
     let browse_results = client.translate_many_browse_paths(&browse_paths).await?;
 
@@ -48,8 +49,10 @@ async fn translate_many_browse_path(client: &AsyncClient, paths: Vec<&str>) -> a
     Ok(())
 }
 
-async fn translate_browse_path(client: &AsyncClient, path: &str) -> anyhow::Result<ua::ExpandedNodeId> {
-
+async fn translate_browse_path(
+    client: &AsyncClient,
+    path: &str,
+) -> anyhow::Result<ua::ExpandedNodeId> {
     let browse_path = create_browse_path(path)?;
     let browse_targets = client.translate_browse_path(&browse_path).await?;
 
@@ -58,11 +61,17 @@ async fn translate_browse_path(client: &AsyncClient, path: &str) -> anyhow::Resu
     };
 
     if let Some(remaining) = target.remaining_path_index() {
-        Err(anyhow!("Expected remaining path index to be None, got {}", remaining))?
+        Err(anyhow!(
+            "Expected remaining path index to be None, got {}",
+            remaining
+        ))?
     }
 
     let node_id = target.target_id();
-    println!("translated browse path: {:?} to node_id: {:?}", path, node_id);
+    println!(
+        "translated browse path: {:?} to node_id: {:?}",
+        path, node_id
+    );
 
     Ok(node_id.clone())
 }
@@ -71,10 +80,11 @@ fn create_browse_path(path: &str) -> anyhow::Result<BrowsePath> {
     let objects_path = if path.starts_with("/Root") {
         path.strip_prefix("/Root").unwrap()
     } else {
-        Err(anyhow!("Invalid browse. Must start with /Root"))?
+        Err(anyhow!("Invalid browse path must start with /Root"))?
     };
 
-    let elements = objects_path.split('/')
+    let elements = objects_path
+        .split('/')
         .filter(|seg| !seg.is_empty())
         .filter_map(|seg| seg.split_once(':'))
         .filter_map(|(ns, name)| ns.parse::<u16>().ok().map(|ns| (ns, name)))

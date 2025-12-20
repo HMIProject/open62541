@@ -366,64 +366,6 @@ impl AsyncClient {
         to_browse_result(result, Some(browse_description.node_id()))
     }
 
-    /// Translates a given browse path into a vector of `BrowsePathTarget` objects
-    /// using the OPC UA TranslateBrowsePathsToNodeIds service.
-    ///
-    /// This function takes a reference to a `ua::BrowsePath` and sends a request to the OPC UA server
-    /// to translate the browse path into corresponding `BrowsePathTarget` objects.
-    ///
-    pub async fn translate_browse_path(&self, browse_path: &ua::BrowsePath) -> Result<Vec<ua::BrowsePathTarget>> {
-        let request = ua::TranslateBrowsePathsToNodeIdsRequest::init()
-            .with_browse_paths(slice::from_ref(browse_path));
-
-        let response = self.service_request(request).await?;
-
-        let Some(results) = response.results() else {
-            return Err(Error::internal("translate_browse_path should return results"));
-        };
-
-        let Some(result) = results.as_slice().first() else {
-            return Err(Error::internal("translate_browse_path should return a result"));
-        };
-
-        let targets = to_browse_path_result(result)?;
-
-        Ok(targets)
-    }
-
-    /// Translates multiple OPC UA browse paths into corresponding node IDs, if applicable.
-    ///
-    /// This issues only a single request to the OPC UA server (and should be preferred over several
-    /// individual requests with [`translate_browse_path()`] when browsing multiple paths).
-    ///
-    /// The size and order of the result list matches the size and order of the given paths list.
-    ///
-    /// # Errors
-    /// This fails only when the entire request fails. When a node does not exist or cannot be
-    /// browsed, an inner `Err` is returned.
-    ///
-    pub async fn translate_many_browse_paths(&self, browse_paths: &[ua::BrowsePath]) -> Result<Vec<Result<Vec<ua::BrowsePathTarget>>>> {
-        let request = ua::TranslateBrowsePathsToNodeIdsRequest::init()
-            .with_browse_paths(browse_paths);
-
-        let response = self.service_request(request).await?;
-
-        let Some(results) = response.results() else {
-            return Err(Error::internal("translate_browse_path should return results"));
-        };
-
-        if results.len() != browse_paths.len() {
-            return Err(Error::internal("unexpected number of browse path results"));
-        }
-
-        let targets: Vec<_> = results
-            .iter()
-            .map(to_browse_path_result)
-            .collect();
-
-        Ok(targets)
-    }
-
     /// Browses several nodes at once.
     ///
     /// This issues only a single request to the OPC UA server (and should be preferred over several
@@ -505,6 +447,77 @@ impl AsyncClient {
             .collect();
 
         Ok(results)
+    }
+
+    /// Translates a given browse path into a vector of `BrowsePathTarget` objects
+    /// using the OPC UA `TranslateBrowsePathsToNodeIds` service.
+    ///
+    /// This function takes a reference to a `ua::BrowsePath` and sends a request to the OPC UA server
+    /// to translate the browse path into corresponding `BrowsePathTarget` objects.
+    ///
+    /// # Errors
+    /// This fails only when the entire request fails. When a path does not exist or cannot be
+    /// translated, an inner `Err` is returned.
+    pub async fn translate_browse_path(
+        &self,
+        browse_path: &ua::BrowsePath,
+    ) -> Result<Vec<ua::BrowsePathTarget>> {
+        let request = ua::TranslateBrowsePathsToNodeIdsRequest::init()
+            .with_browse_paths(slice::from_ref(browse_path));
+
+        let response = self.service_request(request).await?;
+
+        let Some(results) = response.results() else {
+            return Err(Error::internal(
+                "translate_browse_path should return results",
+            ));
+        };
+
+        let Some(result) = results.as_slice().first() else {
+            return Err(Error::internal(
+                "translate_browse_path should return a result",
+            ));
+        };
+
+        let targets = to_browse_path_result(result)?;
+
+        Ok(targets)
+    }
+
+    /// Translates multiple OPC UA browse paths into corresponding node IDs, if applicable.
+    ///
+    /// This issues only a single request to the OPC UA server (and should be preferred over several
+    /// individual requests with [`translate_browse_path()`] when browsing multiple paths).
+    ///
+    /// The size and order of the result list matches the size and order of the given paths list.
+    ///
+    /// # Errors
+    /// This fails only when the entire request fails. When a node does not exist or cannot be
+    /// browsed, an inner `Err` is returned.
+    ///
+    /// [`translate_browse_path()`]: Self::translate_browse_path
+    pub async fn translate_many_browse_paths(
+        &self,
+        browse_paths: &[ua::BrowsePath],
+    ) -> Result<Vec<Result<Vec<ua::BrowsePathTarget>>>> {
+        let request =
+            ua::TranslateBrowsePathsToNodeIdsRequest::init().with_browse_paths(browse_paths);
+
+        let response = self.service_request(request).await?;
+
+        let Some(results) = response.results() else {
+            return Err(Error::internal(
+                "translate_browse_path should return results",
+            ));
+        };
+
+        if results.len() != browse_paths.len() {
+            return Err(Error::internal("unexpected number of browse path results"));
+        }
+
+        let targets: Vec<_> = results.iter().map(to_browse_path_result).collect();
+
+        Ok(targets)
     }
 
     /// Creates new [subscription](AsyncSubscription).
@@ -806,9 +819,7 @@ fn to_browse_path_result(result: &ua::BrowsePathResult) -> Result<Vec<ua::Browse
     let targets = if let Some(targets) = result.targets() {
         targets.into_vec()
     } else {
-        log::debug!(
-            "Translate browse paths returned unset targets, assuming none exist",
-        );
+        log::debug!("Translate browse paths returned unset targets, assuming none exist",);
         Vec::new()
     };
 
