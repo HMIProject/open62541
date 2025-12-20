@@ -24,7 +24,14 @@ async fn main() -> anyhow::Result<()> {
 
     for (path, expected_node_id) in path_with_expected_nodes {
         let result_node_id = translate_browse_path(&client, path).await?;
-        assert_eq!(result_node_id.node_id(), &expected_node_id);
+        if result_node_id.node_id() != &expected_node_id {
+            Err(anyhow!(
+                "Expected browse path {:?} to resolve to node_id {:?}, got {:?}",
+                path,
+                expected_node_id,
+                result_node_id
+            ))?;
+        }
     }
 
     // translate many browse paths
@@ -44,7 +51,7 @@ async fn translate_many_browse_path(client: &AsyncClient, paths: Vec<&str>) -> a
     let browse_results = client.translate_many_browse_paths(&browse_paths).await?;
 
     for (i, browse_result) in browse_results.into_iter().enumerate() {
-        println!("path: {:?} resulted in: {:?}", paths[i], browse_result);
+        println!("path: {:?} resulted in: {:?}", paths.get(i), browse_result);
     }
     Ok(())
 }
@@ -62,16 +69,12 @@ async fn translate_browse_path(
 
     if let Some(remaining) = target.remaining_path_index() {
         Err(anyhow!(
-            "Expected remaining path index to be None, got {}",
-            remaining
-        ))?
+            "Expected remaining path index to be None, got {remaining}"
+        ))?;
     }
 
     let node_id = target.target_id();
-    println!(
-        "translated browse path: {:?} to node_id: {:?}",
-        path, node_id
-    );
+    println!("translated browse path: {path:?} to node_id: {node_id:?}");
 
     Ok(node_id.clone())
 }
