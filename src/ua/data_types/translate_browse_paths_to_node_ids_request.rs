@@ -4,10 +4,7 @@ crate::data_type!(TranslateBrowsePathsToNodeIdsRequest);
 
 impl TranslateBrowsePathsToNodeIdsRequest {
     #[must_use]
-    pub fn with_browse_paths(
-        mut self,
-        browse_paths: &[ua::BrowsePath]
-    ) -> Self {
+    pub fn with_browse_paths(mut self, browse_paths: &[ua::BrowsePath]) -> Self {
         let array = ua::Array::from_slice(browse_paths);
         array.move_into_raw(&mut self.0.browsePathsSize, &mut self.0.browsePaths);
         self
