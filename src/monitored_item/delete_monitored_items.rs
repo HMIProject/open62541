@@ -60,7 +60,6 @@ unsafe extern "C" fn callback_execute_response_c(
 ) {
     log::debug!("MonitoredItems_delete_async() completed");
 
-    let response = response.cast::<UA_DeleteMonitoredItemsResponse>();
     // SAFETY: Incoming pointer is valid for access.
     // PANIC: We expect pointer to be valid when good.
     let response = unsafe { response.as_ref() }.expect("response should be set");
@@ -118,7 +117,6 @@ unsafe extern "C" fn callback_log_response_c(
 ) {
     log::debug!("MonitoredItems_delete_async() completed");
 
-    let response = response.cast::<UA_DeleteMonitoredItemsResponse>();
     // SAFETY: Incoming pointer is valid for access.
     // PANIC: We expect pointer to be valid when good.
     let response = unsafe { response.as_ref() }.expect("response should be set");

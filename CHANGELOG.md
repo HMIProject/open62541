@@ -48,7 +48,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Deprecate `MonitoredItemBuilder`. Use `MonitoredItemCreateRequestBuilder` and
   `AsyncMonitoredItem::create()` instead.
 - Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.85 (Edition 2024).
->>>>>>> origin/main
 
 ## [0.9.4] - 2025-09-01
 
