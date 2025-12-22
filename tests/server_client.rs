@@ -1,12 +1,12 @@
 use std::{
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     thread,
 };
 
-use open62541::{ua, ClientBuilder, ServerBuilder};
+use open62541::{ClientBuilder, ServerBuilder, ua};
 use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME;
 
 // This mirrors test `create_and_destroy_client()` in `open62541-sys`.
@@ -63,10 +63,12 @@ async fn open_server_and_connect() {
         .into_scalar()
         .expect("has string value");
 
-    assert!(value
-        .as_str()
-        .expect("is valid string")
-        .contains("open62541 OPC UA Server"));
+    assert!(
+        value
+            .as_str()
+            .expect("is valid string")
+            .contains("open62541 OPC UA Server")
+    );
 
     // Disconnect client.
     client.disconnect().await;

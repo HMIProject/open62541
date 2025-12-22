@@ -3,7 +3,7 @@ use std::{fmt, ptr};
 use open62541_sys::UA_CreateCertificate;
 use zeroize::Zeroizing;
 
-use crate::{ua, DataType, Error};
+use crate::{DataType, Error, ua};
 
 /// Secret password.
 ///

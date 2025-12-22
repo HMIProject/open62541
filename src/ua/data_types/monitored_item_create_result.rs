@@ -1,20 +1,22 @@
 use std::time::Duration;
 
-use crate::{ua, Error, Result};
+use crate::{Error, Result, ua};
 
 crate::data_type!(MonitoredItemCreateResult);
 
 impl MonitoredItemCreateResult {
-    #[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
     #[must_use]
     pub(crate) const fn status_code(&self) -> ua::StatusCode {
         ua::StatusCode::new(self.0.statusCode)
     }
 
-    #[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
     #[must_use]
-    pub(crate) const fn monitored_item_id(&self) -> ua::MonitoredItemId {
-        ua::MonitoredItemId::new(self.0.monitoredItemId)
+    pub(crate) const fn monitored_item_id(&self) -> Option<ua::MonitoredItemId> {
+        if let Some(id) = ua::IntegerId::from_u32(self.0.monitoredItemId) {
+            Some(ua::MonitoredItemId::new(id))
+        } else {
+            None
+        }
     }
 
     /// Gets revised sampling interval.

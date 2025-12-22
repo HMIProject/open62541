@@ -4,9 +4,9 @@ use std::{
 };
 
 use log::Level;
-use open62541_sys::{UA_LogCategory, UA_LogLevel, UA_Logger, UA_String_vformat};
+use open62541_sys::{UA_LogCategory, UA_LogLevel, UA_Logger, UA_String_vformat, va_list_};
 
-use crate::{ua, DataType as _, Error, Result};
+use crate::{DataType as _, Error, Result, ua};
 
 // This matches the crate name.
 const LOG_TARGET: &str = "open62541_sys";
@@ -21,7 +21,7 @@ pub(crate) fn logger() -> ua::Logger {
         level: UA_LogLevel,
         category: UA_LogCategory,
         msg: *const c_char,
-        args: open62541_sys::va_list_,
+        args: va_list_,
     ) {
         let level = match level {
             // Without fatal level in `log`, fall back to error.
@@ -54,20 +54,19 @@ pub(crate) fn logger() -> ua::Logger {
     unsafe extern "C" fn clear_c(logger: *mut UA_Logger) {
         log::debug!("Clearing `log` logger");
 
-        // This consumes the `UA_Logger` structure itself, invalidating the pointer `config.logging`
-        // and thereby releasing all allocated resources.
-        //
-        // This is in line with the contract that `config.logging` may not be used anymore after its
-        // `clear()` method has been called.
+        // This consumes the `UA_Logger` structure itself, invalidating the pointer `logger`
+        // and thereby releasing all allocated resources. Afterwards the pointer is dangling
+        // and the caller must not use it again.
         let logger = unsafe { Box::from_raw(logger) };
 
         // Run some sanity checks. We should only ever be called on our own data structure.
-        //
-        // TODO: Use `std::ptr::fn_addr_eq()` when MSRV has been upgraded to Rust 1.85.
-        #[expect(unpredictable_function_pointer_comparisons, reason = "MSRV 1.83")]
+        #[expect(unpredictable_function_pointer_comparisons, reason = "extern 'C'")]
+        // In fact, the above lint is a false positive: we are in the same code generation unit when
+        // the function pointer was set, so the risk of (a) one function having two memory addresses
+        // or (b) two functions having the same memory address doesn't apply here.
         {
-            debug_assert!(logger.log == Some(log_c));
-            debug_assert!(logger.clear == Some(clear_c));
+            debug_assert!(logger.log.is_some_and(|log| log == log_c));
+            debug_assert!(logger.clear.is_some_and(|clear| clear == clear_c));
         }
 
         // As long as we do not carry data, there is nothing to clean up here.

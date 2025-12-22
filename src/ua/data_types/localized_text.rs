@@ -1,4 +1,4 @@
-use crate::{ua, DataType as _, Error};
+use crate::{DataType as _, Error, ua};
 
 crate::data_type!(LocalizedText);
 

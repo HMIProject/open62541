@@ -1,5 +1,5 @@
-use anyhow::{anyhow, Context as _};
-use open62541::{ua, AsyncClient, DataValue, ValueType};
+use anyhow::{Context as _, anyhow};
+use open62541::{AsyncClient, DataValue, ValueType, ua};
 use open62541_sys::{UA_NS0ID_HASPROPERTY, UA_NS0ID_PROPERTYTYPE};
 
 #[tokio::main]

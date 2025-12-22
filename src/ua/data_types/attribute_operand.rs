@@ -1,4 +1,4 @@
-use crate::{ua, FilterOperand};
+use crate::{FilterOperand, ua};
 
 crate::data_type!(AttributeOperand);
 

@@ -9,6 +9,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Add method `ua::VariableAttributes::with_array_dimensions()`.
+- Add method `Server::add_data_type_node()` and type `DataTypeNode`.
 - Add method `ua::CertificateVerification::memory_store()` and `ua::TrustListDataType`.
 
 ### Changed
@@ -17,6 +19,36 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   [1.5.0](https://github.com/open62541/open62541/releases/tag/v1.5.0).
 - Breaking: Remove method `ua::CertificateVerification::custom()` and trait
   `CustomCertificateVerification`.
+
+## [0.10.1] - 2025-10-29
+
+### Fixed
+
+- Prevent deadlocks when dropping instances of `AsyncClient` that have not been disconnected before
+  from within an asynchronous context. This only works when the `tokio` feature is enabled and only
+  for [multi-threaded Tokio runtimes](https://docs.rs/tokio/latest/tokio/runtime/index.html).
+
+## [0.10.0] - 2025-10-14
+
+### Added
+
+- Implement `PartialEq`/`Eq`/`PartialOrd`/`Ord` for `DataValue`.
+- Implement `Clone`/`PartialEq`/`Eq` for `MonitoredItemValue`.
+- Add method `AsyncMonitoredItem::delete()` to release server resources in a controlled manner
+  asynchronously before dropping.
+- Add `MonitoredItemCreateRequestBuilder`.
+- `AsyncClient` and `AsyncSubscription` no longer depend on the `tokio` feature.
+- Add method `AsyncSubscription::create_monitored_items_callback()` with accompanying type
+  `MonitoredItemHandle`.
+- Add type `IntegerId`.
+
+### Changed
+
+- Mark unused types `CallbackOnce` and `CallbackStream` as deprecated.
+- Deprecate `MonitoredItemBuilder`. Use `MonitoredItemCreateRequestBuilder` and
+  `AsyncMonitoredItem::create()` instead.
+- Breaking: Bump Minimum Supported Rust Version (MSRV) to 1.85 (Edition 2024).
+>>>>>>> origin/main
 
 ## [0.9.4] - 2025-09-01
 
@@ -537,7 +569,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
-[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.9.4...HEAD
+[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/HMIProject/open62541/compare/v0.10.0...v0.10.1
+[0.10.0]: https://github.com/HMIProject/open62541/compare/v0.9.4...v0.10.0
 [0.9.4]: https://github.com/HMIProject/open62541/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/HMIProject/open62541/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/HMIProject/open62541/compare/v0.9.1...v0.9.2

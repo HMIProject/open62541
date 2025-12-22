@@ -1,10 +1,10 @@
 use std::{
-    collections::{hash_map::Entry, HashMap, VecDeque},
+    collections::{HashMap, VecDeque, hash_map::Entry},
     mem,
 };
 
 use anyhow::Context as _;
-use open62541::{ua, AsyncClient, DataType as _, Result};
+use open62541::{AsyncClient, DataType as _, Result, ua};
 use open62541_sys::UA_NS0ID_SERVERTYPE;
 
 #[tokio::main]

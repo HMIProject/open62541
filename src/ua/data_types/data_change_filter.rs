@@ -1,4 +1,4 @@
-use crate::{ua, MonitoringFilter};
+use crate::{MonitoringFilter, ua};
 
 crate::data_type!(DataChangeFilter);
 

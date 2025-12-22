@@ -3,23 +3,21 @@ use std::fmt;
 use crate::ua;
 
 /// Wrapper for monitored item ID from [`open62541_sys`].
+//
+// Newtype wrapper for [`ua::IntegerId`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MonitoredItemId(u32);
+pub struct MonitoredItemId(ua::IntegerId);
 
 impl MonitoredItemId {
     #[must_use]
-    pub(crate) const fn new(id: u32) -> Self {
+    pub(crate) const fn new(id: ua::IntegerId) -> Self {
         Self(id)
     }
 
+    /// Gets the generic [`ua::IntegerId`].
     #[must_use]
-    pub(crate) const fn as_u32(self) -> u32 {
+    pub(crate) const fn as_id(self) -> ua::IntegerId {
         self.0
-    }
-
-    #[must_use]
-    pub(crate) const fn to_uint32(self) -> ua::UInt32 {
-        ua::UInt32::new(self.as_u32())
     }
 }
 

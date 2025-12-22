@@ -1,5 +1,5 @@
 use anyhow::Context as _;
-use open62541::{ua, ClientBuilder, DataType as _};
+use open62541::{ClientBuilder, DataType as _, ua};
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();

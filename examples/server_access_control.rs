@@ -1,6 +1,6 @@
 use anyhow::Context as _;
 use open62541::{
-    ua, Certificate, DefaultAccessControl, PrivateKey, ServerBuilder, DEFAULT_PORT_NUMBER,
+    Certificate, DEFAULT_PORT_NUMBER, DefaultAccessControl, PrivateKey, ServerBuilder, ua,
 };
 
 // These files have been created with `server_ssl.sh`.

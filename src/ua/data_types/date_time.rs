@@ -106,8 +106,8 @@ impl serde::Serialize for DateTime {
 #[cfg(all(test, feature = "time"))]
 mod tests {
     use time::{
-        macros::{datetime, offset},
         OffsetDateTime, UtcDateTime,
+        macros::{datetime, offset},
     };
 
     use crate::ua;

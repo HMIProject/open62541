@@ -1,10 +1,10 @@
 use std::{ffi::CString, ptr, time::Duration};
 
 use open62541_sys::{
-    UA_CertificateGroup_AcceptAll, UA_ClientConfig, UA_Client_connect, UA_Client_getEndpoints,
+    UA_CertificateGroup_AcceptAll, UA_Client_connect, UA_Client_getEndpoints, UA_ClientConfig,
 };
 
-use crate::{ua, DataType as _, Error, Result};
+use crate::{DataType as _, Error, Result, ua};
 
 /// Builder for [`Client`].
 ///
@@ -375,7 +375,6 @@ impl Client {
     /// The [`AsyncClient`] can be used to access methods in an asynchronous way.
     ///
     /// [`AsyncClient`]: crate::AsyncClient
-    #[cfg(feature = "tokio")]
     #[must_use]
     pub fn into_async(self) -> crate::AsyncClient {
         crate::AsyncClient::from_sync(self.0)

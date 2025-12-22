@@ -13,8 +13,8 @@ use open62541_sys::{
 };
 
 use crate::{
-    ua, AsyncClient, AsyncMonitoredItem, CallbackOnce, DataType as _, Error, MonitoredItemBuilder,
-    Result,
+    AsyncClient, CallbackOnce, DataType as _, Error, MonitoredItemCreateRequestBuilder,
+    MonitoredItemHandle, MonitoredItemKind, Result, create_monitored_items_callback, ua,
 };
 
 #[derive(Debug, Default)]
@@ -120,10 +120,15 @@ impl SubscriptionBuilder {
         let client = client.client();
 
         let response = create_subscription(client, &self.into_request()).await?;
+        let Some(subscription_id) = response.subscription_id() else {
+            // Should never occur if creating the subscription succeeded.
+            // Otherwise unsubscribing would not be possible.
+            return Err(Error::Internal("invalid subscription ID"));
+        };
 
         let subscription = AsyncSubscription {
             client: Arc::downgrade(client),
-            subscription_id: response.subscription_id(),
+            subscription_id,
         };
 
         Ok((response, subscription))
@@ -172,17 +177,20 @@ pub struct AsyncSubscription {
 }
 
 impl AsyncSubscription {
-    /// Creates [monitored item](AsyncMonitoredItem).
+    /// Creates [monitored item](crate::AsyncMonitoredItem).
     ///
     /// This creates a new monitored item for the given node.
     ///
     /// # Errors
     ///
     /// This fails when the node does not exist.
-    pub async fn create_monitored_item(&self, node_id: &ua::NodeId) -> Result<AsyncMonitoredItem> {
-        let results = MonitoredItemBuilder::new([node_id.clone()])
-            .create(self)
-            .await?;
+    #[cfg(feature = "tokio")]
+    pub async fn create_monitored_item(
+        &self,
+        node_id: &ua::NodeId,
+    ) -> Result<crate::AsyncMonitoredItem> {
+        let request_builder = crate::MonitoredItemCreateRequestBuilder::new([node_id.clone()]);
+        let results = crate::AsyncMonitoredItem::create(self, request_builder).await?;
 
         // We expect exactly one result for the single monitored item we requested above.
         let Ok::<[_; 1], _>([result]) = results.try_into() else {
@@ -204,6 +212,36 @@ impl AsyncSubscription {
     #[must_use]
     pub const fn subscription_id(&self) -> ua::SubscriptionId {
         self.subscription_id
+    }
+
+    /// Creates one or more monitored items.
+    ///
+    /// Monitored item values are forwarded to the callback closures that
+    /// are created on-the-fly for each item in the request.
+    ///
+    /// Returns one result for each node ID.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the entire request is not successful. Errors for individual node IDs are
+    /// returned as error elements inside the resulting list.
+    pub async fn create_monitored_items_callback<K: MonitoredItemKind, F>(
+        &self,
+        request_builder: MonitoredItemCreateRequestBuilder<K>,
+        create_value_callback_fn: impl FnMut(usize) -> F,
+    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, MonitoredItemHandle)>>>
+    where
+        F: FnMut(K::Value) + 'static,
+    {
+        let client = AsyncClient::upgrade_weak(self.client())?;
+        let subscription_id = self.subscription_id();
+        create_monitored_items_callback(
+            &client,
+            subscription_id,
+            request_builder,
+            create_value_callback_fn,
+        )
+        .await
     }
 }
 
@@ -253,7 +291,7 @@ async fn create_subscription(
 
     let (tx, rx) = oneshot::channel::<Result<ua::CreateSubscriptionResponse>>();
 
-    let callback = |result: std::result::Result<ua::CreateSubscriptionResponse, _>| {
+    let callback = move |result: std::result::Result<ua::CreateSubscriptionResponse, _>| {
         // We always send a result back via `tx` (in fact, `rx.await` below expects this). We do not
         // care if that succeeds though: the receiver might already have gone out of scope (when its
         // future has been cancelled) and we must not panic in FFI callbacks.

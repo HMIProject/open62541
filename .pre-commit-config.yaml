@@ -5,7 +5,7 @@ default_stages:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-case-conflict
       - id: check-json
@@ -32,7 +32,7 @@ repos:
     hooks:
       - id: codespell
   - repo: https://github.com/sirosen/check-jsonschema
-    rev: 0.33.2
+    rev: 0.34.0
     hooks:
       - id: check-github-actions
       - id: check-github-workflows
@@ -53,9 +53,15 @@ repos:
     hooks:
       - id: fmt
         args: [--all, --]
+      # Default features.
+      - id: clippy
+        name: clippy
+        args: [--locked, --all-targets, --, -D, warnings]
+      # All features.
       - id: clippy
         name: clippy --all-features
         args: [--locked, --all-features, --all-targets, --, -D, warnings]
+      # Minimal features.
       - id: clippy
         name: clippy --no-default-features
         args: [--locked, --no-default-features, --all-targets, --, -D, warnings]

@@ -1,4 +1,4 @@
-use crate::{ua, DataType};
+use crate::{DataType, ua};
 
 /// A generic service request.
 ///

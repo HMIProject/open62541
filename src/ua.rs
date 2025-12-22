@@ -17,6 +17,7 @@ mod data_types;
 mod duration;
 mod event_id;
 mod event_notifier_type;
+mod integer_id;
 mod key_value_map;
 mod logger;
 mod monitored_item_id;
@@ -53,6 +54,7 @@ pub use self::{
     duration::Duration,
     event_id::EventId,
     event_notifier_type::EventNotifierType,
+    integer_id::IntegerId,
     key_value_map::KeyValueMap,
     monitored_item_id::MonitoredItemId,
     node_class_mask::NodeClassMask,

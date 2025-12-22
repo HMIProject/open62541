@@ -1,15 +1,15 @@
 use ::core::ffi::c_void;
 use std::{
-    panic::{catch_unwind, AssertUnwindSafe},
+    panic::{AssertUnwindSafe, catch_unwind},
     ptr::NonNull,
 };
 
 use open62541_sys::{
-    UA_MethodCallback, UA_NodeId, UA_Server, UA_StatusCode, UA_Variant, UA_EMPTY_ARRAY_SENTINEL,
+    UA_EMPTY_ARRAY_SENTINEL, UA_MethodCallback, UA_NodeId, UA_Server, UA_StatusCode, UA_Variant,
 };
 use thiserror::Error;
 
-use crate::{server::NodeContext, ua, DataType as _, Error};
+use crate::{DataType as _, Error, server::NodeContext, ua};
 
 /// Result from [`MethodCallback`] operations.
 ///

@@ -2,7 +2,7 @@ use std::slice;
 
 use open62541_sys::{UA_ByteString_clear, UA_ByteString_copy, UA_ByteString_memZero, UA_String};
 
-use crate::{ua, ArrayValue, DataType};
+use crate::{ArrayValue, DataType, ua};
 
 // Technically, `open62541_sys::ByteString` is an alias for `open62541_sys::String`. But we treat it
 // as a distinct type to improve type safety. The difference is that `String` contains valid Unicode

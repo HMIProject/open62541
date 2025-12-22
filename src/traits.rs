@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use open62541_sys::UA_DataType;
 
-use crate::{ua, DataType};
+use crate::{DataType, ua};
 
 /// Extended values.
 ///
@@ -46,7 +46,7 @@ impl<T: DataType> DataTypeExt for T {
 // FIXME: Turn into sealed trait.
 pub trait Attribute: Debug + Copy {
     /// Attribute data type.
-    type Value: DataTypeExt;
+    type Value: DataTypeExt + Send;
 
     /// Gets attribute ID.
     fn id(&self) -> ua::AttributeId;

@@ -6,7 +6,7 @@ mod node_types;
 
 use std::{
     any::Any,
-    ffi::{c_void, CString},
+    ffi::{CString, c_void},
     mem, ptr,
     sync::Arc,
     time::Instant,
@@ -14,23 +14,22 @@ use std::{
 
 use derive_more::Debug;
 use open62541_sys::{
-    UA_CertificateGroup_AcceptAll, UA_GlobalNodeLifecycle, UA_NodeId, UA_Server, UA_ServerConfig,
-    UA_Server_addCallbackValueSourceVariableNode, UA_Server_addMethodNodeEx,
-    UA_Server_addNamespace, UA_Server_addNode_begin, UA_Server_addNode_finish,
-    UA_Server_addReference, UA_Server_browse, UA_Server_browseNext, UA_Server_browseRecursive,
-    UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
+    UA_CertificateGroup_AcceptAll, UA_GlobalNodeLifecycle, UA_NodeId, UA_STATUSCODE_BADNOTFOUND,
+    UA_Server, UA_Server_addCallbackValueSourceVariableNode, UA_Server_addDataTypeNode,
+    UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addNode_begin,
+    UA_Server_addNode_finish, UA_Server_addReference, UA_Server_browse, UA_Server_browseNext,
+    UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getConfig, UA_Server_getNamespaceByIndex,
     UA_Server_getNamespaceByName, UA_Server_getStatistics, UA_Server_read,
-    UA_Server_readObjectProperty, UA_Server_runUntilInterrupt, UA_Server_run_iterate,
-    UA_Server_run_shutdown, UA_Server_run_startup, UA_Server_translateBrowsePathToNodeIds,
-    UA_Server_triggerEvent, UA_Server_writeDataValue, UA_Server_writeObjectProperty,
-    UA_Server_writeValue, UA_STATUSCODE_BADNOTFOUND,
+    UA_Server_readObjectProperty, UA_Server_run_iterate, UA_Server_run_shutdown,
+    UA_Server_run_startup, UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds,
+    UA_Server_writeDataValue, UA_Server_writeObjectProperty, UA_Server_writeValue, UA_ServerConfig,
 };
 use parking_lot::{Condvar, Mutex, MutexGuard};
 
 use crate::{
-    ua, Attribute, Attributes, BrowseResult, DataType, DataValue, Error, Result,
-    DEFAULT_PORT_NUMBER,
+    Attribute, Attributes, BrowseResult, DEFAULT_PORT_NUMBER, DataType, DataValue, Error, Result,
+    ua,
 };
 
 pub(crate) use self::node_context::NodeContext;
@@ -43,7 +42,7 @@ pub use self::{
     method_callback::{
         MethodCallback, MethodCallbackContext, MethodCallbackError, MethodCallbackResult,
     },
-    node_types::{MethodNode, Node, ObjectNode, VariableNode},
+    node_types::{DataTypeNode, MethodNode, Node, ObjectNode, VariableNode},
 };
 
 /// Builder for [`Server`].
@@ -914,6 +913,52 @@ impl Server {
         ))
     }
 
+    /// Adds data type node to address space.
+    ///
+    /// This returns the node ID that was actually inserted (when no explicit requested new node ID
+    /// was given in `node`).
+    ///
+    /// # Errors
+    ///
+    /// This fails when the node cannot be added.
+    pub fn add_data_type_node(&self, data_type_node: DataTypeNode) -> Result<ua::NodeId> {
+        let DataTypeNode {
+            requested_new_node_id,
+            parent_node_id,
+            reference_type_id,
+            browse_name,
+            attributes,
+        } = data_type_node;
+
+        let requested_new_node_id = requested_new_node_id.unwrap_or(ua::NodeId::null());
+
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
+        let mut out_new_node_id = ua::NodeId::null();
+
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addDataTypeNode(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.server.as_ptr().cast_mut(),
+                // TODO: Verify that `UA_Server_addDataTypeNode()` takes ownership.
+                requested_new_node_id.into_raw(),
+                // TODO: Verify that `UA_Server_addDataTypeNode()` takes ownership.
+                parent_node_id.into_raw(),
+                // TODO: Verify that `UA_Server_addDataTypeNode()` takes ownership.
+                reference_type_id.into_raw(),
+                // TODO: Verify that `UA_Server_addDataTypeNode()` takes ownership.
+                browse_name.into_raw(),
+                // TODO: Verify that `UA_Server_addDataTypeNode()` takes ownership.
+                attributes.into_raw(),
+                ptr::null_mut(),
+                out_new_node_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        Ok(out_new_node_id)
+    }
+
     /// Deletes node from address space.
     ///
     /// This also deletes all references leading to the node.
@@ -1048,65 +1093,69 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Creates an event.
-    ///
-    /// This returns the [`ua::NodeId`] of the created event.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the event could not be created.
-    pub fn create_event(&self, event_type: &ua::NodeId) -> Result<ua::NodeId> {
-        // This out variable must be initialized without memory allocation because the call below
-        // overwrites it in place, without releasing any held data first.
-        let mut out_node_id = ua::NodeId::init();
-        let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_createEvent(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
-                // SAFETY: Passing as value is okay here, as event_type is only used for the scope
-                // of the function and does not get modified.
-                DataType::to_raw_copy(event_type),
-                out_node_id.as_mut_ptr(),
-            )
-        });
-        Error::verify_good(&status_code)?;
-        Ok(out_node_id)
-    }
+    // FIXME: Fix implementation and add back.
+    //
+    // /// Creates an event.
+    // ///
+    // /// This returns the [`ua::NodeId`] of the created event.
+    // ///
+    // /// # Errors
+    // ///
+    // /// This fails when the event could not be created.
+    // pub fn create_event(&self, event_type: &ua::NodeId) -> Result<ua::NodeId> {
+    //     // This out variable must be initialized without memory allocation because the call below
+    //     // overwrites it in place, without releasing any held data first.
+    //     let mut out_node_id = ua::NodeId::init();
+    //     let status_code = ua::StatusCode::new(unsafe {
+    //         UA_Server_createEvent(
+    //             // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+    //             self.server.as_ptr().cast_mut(),
+    //             // SAFETY: Passing as value is okay here, as event_type is only used for the scope
+    //             // of the function and does not get modified.
+    //             DataType::to_raw_copy(event_type),
+    //             out_node_id.as_mut_ptr(),
+    //         )
+    //     });
+    //     Error::verify_good(&status_code)?;
+    //     Ok(out_node_id)
+    // }
 
-    /// Triggers an event.
-    ///
-    /// This returns the [`ua::EventId`] of the new event.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the event could not be triggered.
-    pub fn trigger_event(
-        &self,
-        event_node_id: &ua::NodeId,
-        origin_id: &ua::NodeId,
-        delete_event_node: bool,
-    ) -> Result<ua::EventId> {
-        // This out variable must be initialized without memory allocation because the call below
-        // overwrites it in place, without releasing any held data first.
-        let mut out_event_id = ua::ByteString::init();
-        let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_triggerEvent(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
-                // SAFETY: Passing as value is okay here, as the variables are only used for the
-                // scope of the function and do not get modified.
-                DataType::to_raw_copy(event_node_id),
-                DataType::to_raw_copy(origin_id),
-                out_event_id.as_mut_ptr(),
-                delete_event_node,
-            )
-        });
-        Error::verify_good(&status_code)?;
-        let Some(event_id) = ua::EventId::new(out_event_id) else {
-            return Err(Error::internal("trigger should return event ID"));
-        };
-        Ok(event_id)
-    }
+    // FIXME: Fix implementation and add back.
+    //
+    // /// Triggers an event.
+    // ///
+    // /// This returns the [`ua::EventId`] of the new event.
+    // ///
+    // /// # Errors
+    // ///
+    // /// This fails when the event could not be triggered.
+    // pub fn trigger_event(
+    //     &self,
+    //     event_node_id: &ua::NodeId,
+    //     origin_id: &ua::NodeId,
+    //     delete_event_node: bool,
+    // ) -> Result<ua::EventId> {
+    //     // This out variable must be initialized without memory allocation because the call below
+    //     // overwrites it in place, without releasing any held data first.
+    //     let mut out_event_id = ua::ByteString::init();
+    //     let status_code = ua::StatusCode::new(unsafe {
+    //         UA_Server_triggerEvent(
+    //             // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+    //             self.server.as_ptr().cast_mut(),
+    //             // SAFETY: Passing as value is okay here, as the variables are only used for the
+    //             // scope of the function and do not get modified.
+    //             DataType::to_raw_copy(event_node_id),
+    //             DataType::to_raw_copy(origin_id),
+    //             out_event_id.as_mut_ptr(),
+    //             delete_event_node,
+    //         )
+    //     });
+    //     Error::verify_good(&status_code)?;
+    //     let Some(event_id) = ua::EventId::new(out_event_id) else {
+    //         return Err(Error::internal("trigger should return event ID"));
+    //     };
+    //     Ok(event_id)
+    // }
 
     /// Browses specific node.
     ///

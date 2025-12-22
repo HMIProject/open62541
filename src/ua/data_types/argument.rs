@@ -1,4 +1,4 @@
-use crate::{ua, DataType, ValueType};
+use crate::{DataType, ValueType, ua};
 
 crate::data_type!(Argument);
 

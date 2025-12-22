@@ -26,7 +26,7 @@ impl Logger {
     /// # Panics
     ///
     /// The given pointer must be valid.
-    pub(crate) unsafe fn from_raw(logger: *mut UA_Logger) -> Self {
+    pub(crate) const unsafe fn from_raw(logger: *mut UA_Logger) -> Self {
         Self(NonNull::new(logger).expect("pointer must be non-null"))
     }
 

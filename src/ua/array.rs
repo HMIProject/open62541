@@ -10,7 +10,7 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_Array_delete, UA_Array_new, UA_copy, UA_init, UA_EMPTY_ARRAY_SENTINEL, UA_STATUSCODE_GOOD,
+    UA_Array_delete, UA_Array_new, UA_EMPTY_ARRAY_SENTINEL, UA_STATUSCODE_GOOD, UA_copy, UA_init,
 };
 
 use crate::DataType;

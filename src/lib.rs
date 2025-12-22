@@ -208,20 +208,20 @@
 //! # }
 //! ```
 
-#[cfg(feature = "tokio")]
 mod async_client;
 #[cfg(feature = "tokio")]
 mod async_monitored_item;
-#[cfg(feature = "tokio")]
 mod async_subscription;
 mod attributes;
 mod browse_result;
+mod callback_fn;
 #[cfg(feature = "tokio")]
-mod callback;
+mod callback_stream;
 mod client;
 mod data_type;
 mod data_value;
 mod error;
+mod monitored_item;
 mod server;
 mod service;
 #[cfg(feature = "mbedtls")]
@@ -232,42 +232,55 @@ mod userdata;
 mod value;
 
 #[cfg(feature = "tokio")]
+pub use self::async_monitored_item::AsyncMonitoredItem;
 pub use self::{
     async_client::AsyncClient,
-    async_monitored_item::{
-        AsyncMonitoredItem, MonitoredItemAttribute, MonitoredItemBuilder, MonitoredItemKind,
-        MonitoredItemValue,
-    },
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
-    callback::{CallbackOnce, CallbackStream},
-};
-pub use self::{
     browse_result::BrowseResult,
     client::{Client, ClientBuilder},
     data_type::DataType,
     data_value::DataValue,
     error::{Error, Result},
+    monitored_item::{
+        MonitoredItemAttribute, MonitoredItemCreateRequestBuilder, MonitoredItemHandle,
+        MonitoredItemKind, MonitoredItemValue,
+    },
     server::{
         AccessControl, DataSource, DataSourceError, DataSourceReadContext, DataSourceResult,
-        DataSourceWriteContext, DefaultAccessControl, DefaultAccessControlWithLoginCallback,
-        MethodCallback, MethodCallbackContext, MethodCallbackError, MethodCallbackResult,
-        MethodNode, Node, ObjectNode, Server, ServerBuilder, ServerRunner, VariableNode,
+        DataSourceWriteContext, DataTypeNode, DefaultAccessControl,
+        DefaultAccessControlWithLoginCallback, MethodCallback, MethodCallbackContext,
+        MethodCallbackError, MethodCallbackResult, MethodNode, Node, ObjectNode, Server,
+        ServerBuilder, ServerRunner, VariableNode,
     },
     service::{ServiceRequest, ServiceResponse},
     traits::{Attribute, Attributes, DataTypeExt, FilterOperand, MonitoringFilter},
     userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},
 };
-pub(crate) use self::{
+use self::{
+    callback_fn::CallbackMut,
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
+    monitored_item::create_monitored_items_callback,
     value::{ArrayValue, NonScalarValue},
 };
 #[cfg(feature = "mbedtls")]
 pub use self::{
-    ssl::{create_certificate, Certificate, Password, PrivateKey},
+    ssl::{Certificate, Password, PrivateKey, create_certificate},
     traits::PrivateKeyPasswordCallback,
 };
+
+// TODO: Reduce visibility to `pub(crate)`.
+#[deprecated = "Unused."]
+pub use self::callback_fn::CallbackOnce;
+// TODO: Remove this type.
+#[cfg(feature = "tokio")]
+#[deprecated = "Unused."]
+pub use self::callback_stream::CallbackStream;
+// TODO: Remove this type.
+#[cfg(feature = "tokio")]
+#[deprecated = "Replaced by `MonitoredItemCreateRequestBuilder` and `AsyncMonitoredItem::create()`."]
+pub use self::async_monitored_item::MonitoredItemBuilder;
 
 /// IANA-assigned OPC UA port number.
 pub const DEFAULT_PORT_NUMBER: u16 = 4840;

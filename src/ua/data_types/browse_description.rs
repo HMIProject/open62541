@@ -1,6 +1,6 @@
 use open62541_sys::UA_NS0ID_HIERARCHICALREFERENCES;
 
-use crate::{ua, DataType};
+use crate::{DataType, ua};
 
 crate::data_type!(BrowseDescription);
 
@@ -41,7 +41,6 @@ impl BrowseDescription {
         self
     }
 
-    #[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
     #[must_use]
     pub(crate) fn node_id(&self) -> &ua::NodeId {
         ua::NodeId::raw_ref(&self.0.nodeId)

@@ -5,7 +5,7 @@ crate::data_type!(CreateMonitoredItemsRequest);
 impl CreateMonitoredItemsRequest {
     #[must_use]
     pub const fn with_subscription_id(mut self, subscription_id: ua::SubscriptionId) -> Self {
-        self.0.subscriptionId = subscription_id.as_u32();
+        self.0.subscriptionId = subscription_id.as_id().as_u32();
         self
     }
 
@@ -19,7 +19,6 @@ impl CreateMonitoredItemsRequest {
         self
     }
 
-    #[cfg_attr(not(feature = "tokio"), expect(dead_code, reason = "unused"))]
     #[must_use]
     pub(crate) fn items_to_create(&self) -> Option<&[ua::MonitoredItemCreateRequest]> {
         unsafe { ua::Array::slice_from_raw_parts(self.0.itemsToCreateSize, self.0.itemsToCreate) }

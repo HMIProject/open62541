@@ -2,7 +2,7 @@ use std::{ffi::CString, fmt, ptr, slice, str};
 
 use open62541_sys::{UA_ByteString_allocBuffer, UA_String_fromChars};
 
-use crate::{ua, ArrayValue, DataType as _, Error};
+use crate::{ArrayValue, DataType as _, Error, ua};
 
 crate::data_type!(String);
 

@@ -1,6 +1,6 @@
 use open62541_sys::UA_Duration;
 
-use crate::{ua, DataTypeExt};
+use crate::{DataTypeExt, ua};
 
 /// Wrapper for [`UA_Duration`] from [`open62541_sys`].
 #[derive(Debug, Clone)]

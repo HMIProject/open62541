@@ -1,33 +1,31 @@
-mod create_monitored_items;
-mod delete_monitored_items;
-
-use std::{
-    marker::PhantomData,
-    pin::Pin,
-    sync::{Arc, Weak},
-    task::{self, Poll},
-    time::Duration,
-};
+use std::{marker::PhantomData, pin::Pin, task, time::Duration};
 
 use futures_core::Stream;
 use tokio::sync::mpsc;
 
 use crate::{
-    attributes, ua, AsyncSubscription, Attribute, DataType as _, DataValue, Error,
-    MonitoringFilter, Result,
+    AsyncClient, AsyncSubscription, MonitoredItemAttribute, MonitoredItemCreateRequestBuilder,
+    MonitoredItemHandle, MonitoredItemKind, MonitoringFilter, Result, attributes,
+    create_monitored_items_callback,
+    monitored_item::{DataChange, Unknown},
+    ua,
 };
+
+/// Maximum number of buffered values.
+// TODO: Think about appropriate buffer size or let the caller decide.
+const DEFAULT_STREAM_BUFFER_SIZE: usize = 3;
 
 #[derive(Debug)]
 pub struct MonitoredItemBuilder<K: MonitoredItemKind> {
-    node_ids: Vec<ua::NodeId>,
-    attribute_id: ua::AttributeId,
-    monitoring_mode: Option<ua::MonitoringMode>,
+    pub(crate) node_ids: Vec<ua::NodeId>,
+    pub(crate) attribute_id: ua::AttributeId,
+    pub(crate) monitoring_mode: Option<ua::MonitoringMode>,
     #[expect(clippy::option_option, reason = "implied default vs. unset")]
-    sampling_interval: Option<Option<Duration>>,
-    filter: Option<Box<dyn MonitoringFilter>>,
-    queue_size: Option<u32>,
-    discard_oldest: Option<bool>,
-    _kind: PhantomData<K>,
+    pub(crate) sampling_interval: Option<Option<Duration>>,
+    pub(crate) filter: Option<Box<dyn MonitoringFilter>>,
+    pub(crate) queue_size: Option<u32>,
+    pub(crate) discard_oldest: Option<bool>,
+    pub(crate) _kind: PhantomData<K>,
 }
 
 impl MonitoredItemBuilder<DataChange<attributes::Value>> {
@@ -50,13 +48,15 @@ impl MonitoredItemBuilder<DataChange<attributes::Value>> {
 impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     /// Sets attribute.
     ///
-    /// By default, monitored items emit [`DataValue`] of the appropriate subtype matching the given
-    /// attribute. If the attribute is set to [`ua::AttributeId::EVENTNOTIFIER_T`], they emit
-    /// `ua::Array<ua::Variant>` instead.
+    /// By default, monitored items emit [`DataValue`](crate::DataValue) of the appropriate subtype
+    /// matching the given attribute. If the attribute is set to [`ua::AttributeId::EVENTNOTIFIER_T`],
+    /// they emit `ua::Array<ua::Variant>` instead.
     ///
     /// Default value is [`ua::AttributeId::VALUE_T`].
     ///
     /// See [`Self::attribute_id()`] to set the attribute ID at runtime.
+    ///
+    /// See [`MonitoredItemCreateRequestBuilder::attribute()`].
     ///
     /// # Examples
     ///
@@ -110,13 +110,15 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
 
     /// Sets attribute ID.
     ///
-    /// When using this method, monitored items emit [`MonitoredItemValue`] instead of the specific
-    /// type. See [`Self::attribute()`] for a type-safe alternative that yields appropriately typed
-    /// values for the given monitored attribute directly.
+    /// When using this method, monitored items emit [`MonitoredItemValue`](crate::MonitoredItemValue)
+    /// instead of the specific type. See [`Self::attribute()`] for a type-safe alternative that yields
+    /// appropriately typed values for the given monitored attribute directly.
     ///
     /// Default value is [`ua::AttributeId::VALUE`].
     ///
-    /// See [`ua::MonitoredItemCreateRequest::with_attribute_id()`].
+    /// See:
+    ///   - [`MonitoredItemCreateRequestBuilder::attribute_id()`]
+    ///   - [`ua::MonitoredItemCreateRequest::with_attribute_id()`]
     ///
     /// # Examples
     ///
@@ -173,7 +175,9 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     ///
     /// Default value is [`ua::MonitoringMode::REPORTING`].
     ///
-    /// See [`ua::MonitoredItemCreateRequest::with_monitoring_mode()`].
+    /// See:
+    ///   - [`MonitoredItemCreateRequestBuilder::monitoring_mode()`]
+    ///   - [`ua::MonitoredItemCreateRequest::with_monitoring_mode()`]
     #[must_use]
     pub fn monitoring_mode(mut self, monitoring_mode: ua::MonitoringMode) -> Self {
         self.monitoring_mode = Some(monitoring_mode);
@@ -184,7 +188,9 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     ///
     /// Default value is 250.0 ms.
     ///
-    /// See [`ua::MonitoringParameters::with_sampling_interval()`].
+    /// See:
+    ///   - [`MonitoredItemCreateRequestBuilder::sampling_interval()`]
+    ///   - [`ua::MonitoredItemCreateRequest::with_sampling_interval()`]
     #[must_use]
     pub const fn sampling_interval(mut self, sampling_interval: Option<Duration>) -> Self {
         self.sampling_interval = Some(sampling_interval);
@@ -195,7 +201,9 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     ///
     /// Default value is no filter.
     ///
-    /// See [`ua::MonitoringParameters::with_filter()`].
+    /// See:
+    ///   - [`MonitoredItemCreateRequestBuilder::filter()`]
+    ///   - [`ua::MonitoredItemCreateRequest::with_filter()`]
     #[must_use]
     pub fn filter(mut self, filter: impl MonitoringFilter) -> Self {
         self.filter = Some(Box::new(filter));
@@ -206,7 +214,9 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     ///
     /// Default value is 1.
     ///
-    /// See [`ua::MonitoringParameters::with_queue_size()`].
+    /// See:
+    ///   - [`MonitoredItemCreateRequestBuilder::queue_size()`]
+    ///   - [`ua::MonitoredItemCreateRequest::with_queue_size()`]
     #[must_use]
     pub const fn queue_size(mut self, queue_size: u32) -> Self {
         self.queue_size = Some(queue_size);
@@ -217,7 +227,9 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
     ///
     /// Default value is `true`.
     ///
-    /// See [`ua::MonitoringParameters::with_discard_oldest()`].
+    /// See:
+    ///   - [`MonitoredItemCreateRequestBuilder::discard_oldest()`]
+    ///   - [`ua::MonitoredItemCreateRequest::with_discard_oldest()`]
     #[must_use]
     pub const fn discard_oldest(mut self, discard_oldest: bool) -> Self {
         self.discard_oldest = Some(discard_oldest);
@@ -236,184 +248,99 @@ impl<K: MonitoredItemKind> MonitoredItemBuilder<K> {
         self,
         subscription: &AsyncSubscription,
     ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem<K>)>>> {
-        let Some(client) = &subscription.client().upgrade() else {
-            return Err(Error::internal("client should not be dropped"));
-        };
-        let subscription_id = subscription.subscription_id();
-
-        let request = self.into_request(subscription_id);
-        let result_count = request.items_to_create().map_or(0, <[_]>::len);
-        let (response, rxs) = create_monitored_items::call(client, &request).await?;
-
-        let Some(mut results) = response.into_results() else {
-            return Err(Error::internal("expected monitoring item results"));
-        };
-
-        if results.len() != result_count || rxs.len() != result_count {
-            // This should not happen. In any case, we cannot associate returned items with their
-            // incoming node IDs. Clean up the items that we received to not leave them dangling.
-            //
-            let monitored_item_ids = results
-                .iter()
-                .filter(|result| result.status_code().is_good())
-                .map(ua::MonitoredItemCreateResult::monitored_item_id)
-                .collect::<Vec<_>>();
-            let request = ua::DeleteMonitoredItemsRequest::init()
-                .with_subscription_id(subscription_id)
-                .with_monitored_item_ids(&monitored_item_ids);
-            // This request is processed asynchronously. Errors are logged asynchronously too.
-            delete_monitored_items::call(client, &request);
-
-            return Err(Error::internal("unexpected number of monitored items"));
-        }
-
-        let results = results
-            .drain_all()
-            .zip(rxs)
-            .map(|(result, rx)| {
-                Error::verify_good(&result.status_code())?;
-
-                let monitored_item = AsyncMonitoredItem::new(
-                    client,
-                    subscription_id,
-                    result.monitored_item_id(),
-                    rx,
-                );
-
-                Ok((result, monitored_item))
-            })
-            .collect();
-
-        Ok(results)
+        AsyncMonitoredItem::create(subscription, self.into()).await
     }
-
-    fn into_request(self, subscription_id: ua::SubscriptionId) -> ua::CreateMonitoredItemsRequest {
-        let Self {
-            node_ids,
-            attribute_id,
-            monitoring_mode,
-            sampling_interval,
-            filter,
-            queue_size,
-            discard_oldest,
-            _kind: _,
-        } = self;
-
-        let items_to_create = node_ids
-            .into_iter()
-            .map(|node_id| {
-                let mut request = ua::MonitoredItemCreateRequest::default()
-                    .with_node_id(&node_id)
-                    .with_attribute_id(&attribute_id);
-
-                if let Some(monitoring_mode) = monitoring_mode.as_ref() {
-                    request = request.with_monitoring_mode(monitoring_mode);
-                }
-                if let Some(&sampling_interval) = sampling_interval.as_ref() {
-                    request = request.with_sampling_interval(sampling_interval);
-                }
-                if let Some(filter) = filter.as_ref() {
-                    request = request.with_filter(filter);
-                }
-                if let Some(&queue_size) = queue_size.as_ref() {
-                    request = request.with_queue_size(queue_size);
-                }
-                if let Some(&discard_oldest) = discard_oldest.as_ref() {
-                    request = request.with_discard_oldest(discard_oldest);
-                }
-
-                request
-            })
-            .collect::<Vec<_>>();
-
-        ua::CreateMonitoredItemsRequest::init()
-            .with_subscription_id(subscription_id)
-            .with_items_to_create(&items_to_create)
-    }
-}
-
-/// Value emitted from monitored item notification.
-///
-/// This depends on the attribute ID passed to [`MonitoredItemBuilder::attribute_id()`].
-#[derive(Debug)]
-pub struct MonitoredItemValue(MonitoredItemValueInner);
-
-impl MonitoredItemValue {
-    #[must_use]
-    const fn data_change(value: ua::DataValue) -> Self {
-        Self(MonitoredItemValueInner::DataChange { value })
-    }
-
-    #[must_use]
-    const fn event(fields: ua::Array<ua::Variant>) -> Self {
-        Self(MonitoredItemValueInner::Event { fields })
-    }
-
-    /// Gets data change payload.
-    ///
-    /// This returns `None` for event monitored items.
-    #[must_use]
-    pub const fn value(&self) -> Option<&ua::DataValue> {
-        match &self.0 {
-            MonitoredItemValueInner::DataChange { value } => Some(value),
-            MonitoredItemValueInner::Event { fields: _ } => None,
-        }
-    }
-
-    /// Gets event payload.
-    ///
-    /// This returns `None` for data change monitored items.
-    #[must_use]
-    pub const fn fields(&self) -> Option<&[ua::Variant]> {
-        match &self.0 {
-            MonitoredItemValueInner::DataChange { value: _ } => None,
-            MonitoredItemValueInner::Event { fields } => Some(fields.as_slice()),
-        }
-    }
-
-    #[must_use]
-    fn into_inner(self) -> MonitoredItemValueInner {
-        self.0
-    }
-}
-
-#[derive(Debug)]
-enum MonitoredItemValueInner {
-    /// Data change payload.
-    ///
-    /// This is emitted for attribute IDs other than [`ua::AttributeId::EVENTNOTIFIER`].
-    DataChange { value: ua::DataValue },
-
-    /// Event payload.
-    ///
-    /// This is emitted for attribute ID [`ua::AttributeId::EVENTNOTIFIER`].
-    Event { fields: ua::Array<ua::Variant> },
 }
 
 /// Monitored item (with asynchronous API).
 #[derive(Debug)]
 pub struct AsyncMonitoredItem<K: MonitoredItemKind = DataChange<attributes::Value>> {
-    client: Weak<ua::Client>,
-    subscription_id: ua::SubscriptionId,
-    monitored_item_id: ua::MonitoredItemId,
-    rx: mpsc::Receiver<MonitoredItemValue>,
+    handle: MonitoredItemHandle,
+    rx: mpsc::Receiver<K::Value>,
     _kind: PhantomData<K>,
 }
 
 impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
-    fn new(
-        client: &Arc<ua::Client>,
-        subscription_id: ua::SubscriptionId,
-        monitored_item_id: ua::MonitoredItemId,
-        rx: mpsc::Receiver<MonitoredItemValue>,
-    ) -> Self {
+    const fn new(handle: MonitoredItemHandle, rx: mpsc::Receiver<K::Value>) -> Self {
         Self {
-            client: Arc::downgrade(client),
-            subscription_id,
-            monitored_item_id,
+            handle,
             rx,
             _kind: PhantomData,
         }
+    }
+
+    /// Creates monitored items.
+    ///
+    /// This creates one or more new monitored items. Returns one result for each node ID.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the entire request is not successful. Errors for individual node IDs are
+    /// returned as error elements inside the resulting list.
+    pub async fn create(
+        subscription: &AsyncSubscription,
+        request_builder: MonitoredItemCreateRequestBuilder<K>,
+    ) -> Result<Vec<Result<(ua::MonitoredItemCreateResult, AsyncMonitoredItem<K>)>>> {
+        let client = AsyncClient::upgrade_weak(subscription.client())?;
+        let subscription_id = subscription.subscription_id();
+
+        let result_count = request_builder.node_ids().len();
+        let mut rxs = Vec::with_capacity(result_count);
+        let results = {
+            let create_value_callback_fn = |index: usize| {
+                debug_assert_eq!(index, rxs.len());
+                let (tx, rx) = mpsc::channel(DEFAULT_STREAM_BUFFER_SIZE);
+                rxs.push(rx);
+                move |value| {
+                    if let Err(err) = tx.try_send(value) {
+                        match err {
+                            mpsc::error::TrySendError::Full(_value) => {
+                                // We cannot blockingly wait, because that would block `UA_Client_run_iterate()`
+                                // in our event loop, potentially preventing the receiver from clearing the stream.
+                                // The monitored value might contain sensitive information and must not be logged!
+                                log::error!(
+                                    "Discarding monitored item value: stream buffer (size = {buffer_size}) is full",
+                                    buffer_size = tx.capacity()
+                                );
+                            }
+                            mpsc::error::TrySendError::Closed(_) => {
+                                // Received has disappeared and the value is no longer needed.
+                            }
+                        }
+                    }
+                }
+            };
+            create_monitored_items_callback(
+                &client,
+                subscription_id,
+                request_builder,
+                create_value_callback_fn,
+            )
+            .await?
+        };
+        debug_assert_eq!(
+            results.len(),
+            result_count,
+            "guaranteed by create_monitored_items_callback() on success"
+        );
+        // Precondition for the following zip() operation.
+        debug_assert_eq!(
+            results.len(),
+            rxs.len(),
+            "guaranteed by create_monitored_items_callback() on success"
+        );
+
+        let results = results
+            .into_iter()
+            .zip(rxs)
+            .map(|(result, rx)| {
+                let (result, handle) = result?;
+                let monitored_item = AsyncMonitoredItem::new(handle, rx);
+                Ok((result, monitored_item))
+            })
+            .collect();
+
+        Ok(results)
     }
 
     /// Waits for next value from server.
@@ -422,7 +349,7 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
     /// been closed and no more updates will be received.
     pub async fn next(&mut self) -> Option<K::Value> {
         // This mirrors `<Self as Stream>::poll_next()` but does not require `self` to be pinned.
-        self.rx.recv().await.map(K::map_value)
+        self.rx.recv().await
     }
 
     /// Turns monitored item into stream.
@@ -433,164 +360,35 @@ impl<K: MonitoredItemKind> AsyncMonitoredItem<K> {
     pub fn into_stream(self) -> impl Stream<Item = K::Value> + Send + Sync + 'static {
         self
     }
-}
 
-impl<K: MonitoredItemKind> Drop for AsyncMonitoredItem<K> {
-    fn drop(&mut self) {
-        let Some(client) = self.client.upgrade() else {
-            return;
-        };
-
-        let request = ua::DeleteMonitoredItemsRequest::init()
-            .with_subscription_id(self.subscription_id)
-            .with_monitored_item_ids(&[self.monitored_item_id]);
-
-        delete_monitored_items::call(&client, &request);
+    /// Deletes the monitored item at the server.
+    ///
+    /// No new notifications will be received after the invocation succeeded.
+    ///
+    /// This method should only be called once. After it succeeded
+    /// any subsequent invocation will fail with an internal error.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the monitored item has already been deleted before,
+    /// when connection is interrupted, or when the server returns an error.
+    //
+    // TODO: Docs are redundant with MonitoredItemHandle::delete().
+    pub async fn delete(&mut self) -> Result<ua::DeleteMonitoredItemsResponse> {
+        self.handle.delete().await
     }
 }
 
 impl<K: MonitoredItemKind> Stream for AsyncMonitoredItem<K> {
     type Item = K::Value;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        cx: &mut task::Context<'_>,
+    ) -> task::Poll<Option<Self::Item>> {
         // This mirrors `AsyncMonitoredItem::next()` and implements the `Stream` trait.
-        self.as_mut()
-            .rx
-            .poll_recv(cx)
-            .map(|value| value.map(K::map_value))
+        self.as_mut().rx.poll_recv(cx)
     }
 }
 
 impl<K: MonitoredItemKind> Unpin for AsyncMonitoredItem<K> {}
-
-/// Sealed typestate used in [`MonitoredItemBuilder`].
-pub trait MonitoredItemKind: sealed::MonitoredItemKind + Send + Sync + 'static {
-    type Value;
-
-    fn map_value(value: MonitoredItemValue) -> Self::Value;
-}
-
-/// Typestate for [`MonitoredItemKind`] that yields data change notifications.
-#[derive(Debug)]
-pub struct DataChange<T: Attribute>(PhantomData<T>);
-
-impl<T: DataChangeAttribute + Send + Sync + 'static> MonitoredItemKind for DataChange<T> {
-    type Value = DataValue<T::Value>;
-
-    fn map_value(value: MonitoredItemValue) -> Self::Value {
-        match value.into_inner() {
-            MonitoredItemValueInner::DataChange { value } => value.cast(),
-            MonitoredItemValueInner::Event { fields: _ } => {
-                // PANIC: Typestate uses attribute ID to enforce callback method.
-                unreachable!("unexpected event payload in data change notification");
-            }
-        }
-    }
-}
-
-/// Typestate for [`MonitoredItemKind`] that yields event notifications.
-#[derive(Debug)]
-pub struct Event;
-
-impl MonitoredItemKind for Event {
-    type Value = ua::Array<ua::Variant>;
-
-    fn map_value(value: MonitoredItemValue) -> Self::Value {
-        match value.into_inner() {
-            MonitoredItemValueInner::DataChange { value: _ } => {
-                // PANIC: Typestate uses attribute ID to enforce callback method.
-                unreachable!("unexpected data change payload in event notification");
-            }
-            MonitoredItemValueInner::Event { fields } => fields,
-        }
-    }
-}
-
-/// Typestate for [`MonitoredItemKind`] that yields notifications.
-///
-/// This is used for runtime and/or mixed-type notifications.
-#[derive(Debug)]
-pub struct Unknown;
-
-impl MonitoredItemKind for Unknown {
-    type Value = MonitoredItemValue;
-
-    fn map_value(value: MonitoredItemValue) -> Self::Value {
-        value
-    }
-}
-
-/// Attribute that yields data change notifications.
-///
-/// This is implemented for all attributes except [`ua::AttributeId::EVENTNOTIFIER_T`].
-trait DataChangeAttribute: Attribute {}
-
-/// Attribute for [`MonitoredItemBuilder::attribute()`].
-pub trait MonitoredItemAttribute: Attribute {
-    /// Matching [`MonitoredItemKind`] implementation for attribute.
-    type Kind: MonitoredItemKind;
-}
-
-macro_rules! data_change_impl {
-    ($($name:ident),* $(,)?) => {
-        $(
-            impl DataChangeAttribute for $crate::attributes::$name {}
-
-            impl MonitoredItemAttribute for $crate::attributes::$name {
-                type Kind = DataChange<$crate::attributes::$name>;
-            }
-        )*
-    };
-}
-
-// Note: Array values are not supported yet in their typed form: previously, any such attempt would
-// fail, because converting to `DataValue` expects scalar values.
-//
-// To give us some time to think about the best, typed representation of such non-scalar values, we
-// remove their `impl` for now. Access is still possible with the non-typed attribute methods.
-data_change_impl!(
-    NodeId,
-    NodeClass,
-    BrowseName,
-    DisplayName,
-    Description,
-    WriteMask,
-    UserWriteMask,
-    IsAbstract,
-    Symmetric,
-    InverseName,
-    ContainsNoLoops,
-    // We to _not_ implement `DataChange` kind for `EventNotifier`, because the attribute uses a
-    // dedicated callback function yielding `ua::Array<ua::Variant>` instead of `ua::DataValue`.
-    Value,
-    DataType,
-    ValueRank,
-    // ArrayDimensions,
-    AccessLevel,
-    UserAccessLevel,
-    MinimumSamplingInterval,
-    Historizing,
-    Executable,
-    UserExecutable,
-    DataTypeDefinition,
-    // RolePermissions,
-    // UserRolePermissions,
-    AccessRestrictions,
-    AccessLevelEx,
-);
-
-impl MonitoredItemAttribute for attributes::EventNotifier {
-    type Kind = Event;
-}
-
-mod sealed {
-    use crate::Attribute;
-
-    pub trait MonitoredItemKind {}
-
-    impl<T: Attribute> MonitoredItemKind for super::DataChange<T> {}
-
-    impl MonitoredItemKind for super::Event {}
-
-    impl MonitoredItemKind for super::Unknown {}
-}

@@ -9,7 +9,7 @@ use open62541_sys::UA_CertificateGroup_Memorystore;
 use open62541_sys::{UA_CertificateGroup, UA_CertificateGroup_AcceptAll};
 
 #[cfg(feature = "mbedtls")]
-use crate::{ua, DataType as _};
+use crate::{DataType as _, ua};
 
 /// Wrapper for [`UA_CertificateGroup`] from [`open62541_sys`].
 #[derive(Debug)]

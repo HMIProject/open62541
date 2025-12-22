@@ -20,12 +20,12 @@ impl ServerStatistics {
     }
 
     #[must_use]
-    pub fn scs(&self) -> &ua::SecureChannelStatistics {
+    pub const fn scs(&self) -> &ua::SecureChannelStatistics {
         ua::SecureChannelStatistics::raw_ref(&self.0.scs)
     }
 
     #[must_use]
-    pub fn ss(&self) -> &ua::SessionStatistics {
+    pub const fn ss(&self) -> &ua::SessionStatistics {
         ua::SessionStatistics::raw_ref(&self.0.ss)
     }
 }

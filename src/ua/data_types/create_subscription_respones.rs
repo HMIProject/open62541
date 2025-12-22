@@ -1,13 +1,17 @@
 use std::time::Duration;
 
-use crate::{ua, Error, Result};
+use crate::{Error, Result, ua};
 
 crate::data_type!(CreateSubscriptionResponse);
 
 impl CreateSubscriptionResponse {
     #[must_use]
-    pub const fn subscription_id(&self) -> ua::SubscriptionId {
-        ua::SubscriptionId::new(self.0.subscriptionId)
+    pub const fn subscription_id(&self) -> Option<ua::SubscriptionId> {
+        if let Some(id) = ua::IntegerId::from_u32(self.0.subscriptionId) {
+            Some(ua::SubscriptionId::new(id))
+        } else {
+            None
+        }
     }
 
     /// Gets revised publishing interval.

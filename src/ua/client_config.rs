@@ -2,7 +2,7 @@ use std::{ffi::c_void, fmt, mem::MaybeUninit};
 
 use open62541_sys::{UA_ClientConfig, UA_ClientConfig_clear, UA_ClientConfig_setDefault};
 
-use crate::{ua, ClientContext, Error};
+use crate::{ClientContext, Error, ua};
 
 pub(crate) struct ClientConfig(Option<UA_ClientConfig>);
 
