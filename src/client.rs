@@ -1,7 +1,8 @@
 use std::{ffi::CString, ptr, time::Duration};
 
 use open62541_sys::{
-    UA_CertificateGroup_AcceptAll, UA_Client_connect, UA_Client_getEndpoints, UA_ClientConfig,
+    UA_CertificateGroup_AcceptAll, UA_Client_connect, UA_Client_getConfig, UA_Client_getEndpoints,
+    UA_Client_getRemoteDataTypes, UA_ClientConfig,
 };
 
 use crate::{DataType as _, Error, Result, ua};
@@ -384,6 +385,31 @@ impl Client {
     #[must_use]
     pub fn state(&self) -> ua::ClientState {
         self.0.state()
+    }
+
+    pub fn with_remote_data_types(mut self) -> Result<Self> {
+        let mut out_custom_data_types = ptr::null_mut();
+
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Client_getRemoteDataTypes(
+                self.0.as_mut_ptr(),
+                0,
+                ptr::null(),
+                &raw mut out_custom_data_types,
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        let config = unsafe { UA_Client_getConfig(self.0.as_mut_ptr()) };
+        let config = unsafe { config.as_mut() }.expect("client config must be set");
+
+        assert!(
+            config.customDataTypes.is_null(),
+            "custom data types already set"
+        );
+        config.customDataTypes = out_custom_data_types;
+
+        Ok(self)
     }
 
     /// Connects to endpoint.

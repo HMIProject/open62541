@@ -6,11 +6,93 @@ use std::{
 };
 
 use open62541_sys::{
-    UA_DataType, UA_Order, UA_STATUSCODE_GOOD, UA_clear, UA_copy, UA_init, UA_new, UA_order,
-    UA_print,
+    UA_DataType, UA_DataType_clear, UA_DataType_copy, UA_DataType_fromDescription,
+    UA_DataType_getStructMember, UA_DecodeBinaryOptions, UA_Order, UA_STATUSCODE_GOOD, UA_clear,
+    UA_copy, UA_decodeBinary, UA_init, UA_new, UA_order, UA_print,
 };
 
-use crate::ua;
+use crate::{Error, Result, ua};
+
+// FIXME: Find better name.
+#[repr(transparent)]
+pub struct CustomDataType(UA_DataType);
+
+impl CustomDataType {
+    pub unsafe fn from_raw(src: UA_DataType) -> Self {
+        Self(src)
+    }
+
+    fn clone_raw(src: &UA_DataType) -> Self {
+        let src: *const UA_DataType = src;
+        let mut dst = MaybeUninit::<UA_DataType>::uninit();
+
+        let result = unsafe { UA_DataType_copy(src, dst.as_mut_ptr()) };
+        assert_eq!(result, UA_STATUSCODE_GOOD, "should have copied value");
+
+        // SAFETY: We just made sure that the memory region is initialized.
+        let dst = unsafe { dst.assume_init() };
+        // SAFETY: We pass a value without pointers to it into `Self`.
+        unsafe { Self::from_raw(dst) }
+    }
+
+    pub fn from_description(description: ua::ExtensionObject) -> Result<Self> {
+        let mut dst = MaybeUninit::<UA_DataType>::uninit();
+
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_DataType_fromDescription(dst.as_mut_ptr(), description.as_ptr(), ptr::null())
+        });
+        Error::verify_good(&status_code)?;
+
+        // SAFETY: We just made sure that the memory region is initialized.
+        let dst = unsafe { dst.assume_init() };
+        // SAFETY: We pass a value without pointers to it into `Self`.
+        Ok(unsafe { Self::from_raw(dst) })
+    }
+
+    pub fn decode(&self, value: &ua::ExtensionObject) -> Result<Vec<u8>> {
+        let mem_size = usize::try_from(self.0.memSize()).expect("get memory size");
+        let mut dst: Vec<u8> = Vec::with_capacity(mem_size);
+
+        if let Some((type_id, value)) = value.encoded_content_bytestring() {
+            if type_id != ua::NodeId::raw_ref(&self.0.typeId) {
+                return Err(Error::Internal("type ID does not match"));
+            }
+            let status_code = ua::StatusCode::new(unsafe {
+                UA_decodeBinary(
+                    value.as_ptr(),
+                    dst.as_mut_ptr().cast(),
+                    &self.0,
+                    ptr::null_mut(),
+                )
+            });
+            Error::verify_good(&status_code)?;
+        }
+
+        unsafe {
+            dst.set_len(mem_size);
+        }
+
+        Ok(dst)
+    }
+}
+
+impl Clone for CustomDataType {
+    fn clone(&self) -> Self {
+        Self::clone_raw(&self.0)
+    }
+}
+
+impl Debug for CustomDataType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("CustomDataType").finish_non_exhaustive()
+    }
+}
+
+impl Drop for CustomDataType {
+    fn drop(&mut self) {
+        unsafe { UA_DataType_clear(&mut self.0) };
+    }
+}
 
 /// Transparent wrapper for OPC UA data type.
 ///

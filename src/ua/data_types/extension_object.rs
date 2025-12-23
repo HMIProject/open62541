@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use open62541_sys::{UA_ExtensionObject_setValueCopy, UA_ExtensionObjectEncoding};
+use open62541_sys::{UA_ExtensionObject_setValueCopy, UA_ExtensionObjectEncoding, UA_decodeBinary};
 
 use crate::{DataType, ua};
 
@@ -25,12 +25,31 @@ impl ExtensionObject {
         extension_object
     }
 
+    /// Gets encoded type ID.
+    #[must_use]
+    pub fn encoded_type_id(&self) -> Option<&ua::NodeId> {
+        if !matches!(
+            self.0.encoding,
+            UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_NOBODY
+                | UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_BYTESTRING
+                | UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_XML
+        ) {
+            return None;
+        }
+
+        let encoded_content = unsafe { self.0.content.encoded.as_ref() };
+
+        Some(&ua::NodeId::raw_ref(&encoded_content.typeId))
+    }
+
     /// Gets encoded byte string content.
     #[must_use]
     pub fn encoded_content_bytestring(&self) -> Option<(&ua::NodeId, &ua::ByteString)> {
-        match self.0.encoding {
-            UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_BYTESTRING => {}
-            _ => return None,
+        if !matches!(
+            self.0.encoding,
+            UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_BYTESTRING
+        ) {
+            return None;
         }
 
         let encoded_content = unsafe { self.0.content.encoded.as_ref() };
@@ -44,9 +63,11 @@ impl ExtensionObject {
     /// Gets encoded XML content.
     #[must_use]
     pub fn encoded_content_xml(&self) -> Option<(&ua::NodeId, &ua::String)> {
-        match self.0.encoding {
-            UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_XML => {}
-            _ => return None,
+        if !matches!(
+            self.0.encoding,
+            UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_XML
+        ) {
+            return None;
         }
 
         let encoded_content = unsafe { self.0.content.encoded.as_ref() };
@@ -60,10 +81,12 @@ impl ExtensionObject {
     /// Gets decoded content.
     #[must_use]
     pub fn decoded_content<T: DataType>(&self) -> Option<&T> {
-        match self.0.encoding {
+        if !matches!(
+            self.0.encoding,
             UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_DECODED
-            | UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_DECODED_NODELETE => {}
-            _ => return None,
+                | UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_DECODED_NODELETE
+        ) {
+            return None;
         }
 
         let decoded_content = unsafe { self.0.content.decoded.as_ref() };
