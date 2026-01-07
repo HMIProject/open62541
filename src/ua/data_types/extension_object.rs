@@ -103,6 +103,28 @@ impl ExtensionObject {
         unsafe { decoded_content.data.cast::<T::Inner>().as_ref() }.map(T::raw_ref)
     }
 
+    pub(crate) fn raw_decoded_content_mut(
+        &mut self,
+        data_type: *const UA_DataType,
+    ) -> Option<*mut c_void> {
+        if !matches!(
+            self.0.encoding,
+            UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_DECODED
+                | UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_DECODED_NODELETE
+        ) {
+            return None;
+        }
+
+        let decoded_content = unsafe { self.0.content.decoded.as_ref() };
+
+        // This matches the implementation of `UA_ExtensionObject_hasDecodedType()`.
+        if decoded_content.data.is_null() || decoded_content.type_ != data_type {
+            return None;
+        }
+
+        Some(decoded_content.data)
+    }
+
     /// Decodes extension object.
     ///
     /// This turns an extension object with encoded representation (transport encoding, i.e., binary

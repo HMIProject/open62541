@@ -42,7 +42,7 @@ async fn read_value(fetch_upfront: bool) -> anyhow::Result<()> {
     println!("Raw value: {value:?}");
     println!("Type ID: {type_id:?}");
 
-    if let Some(extension_object_value) = value.to_scalar::<ua::ExtensionObject>() {
+    if let Some(mut extension_object_value) = value.to_scalar::<ua::ExtensionObject>() {
         let data_type_id = client
             .read_attribute(&node_id, ua::AttributeId::DATATYPE_T)
             .await
@@ -79,8 +79,11 @@ async fn read_value(fetch_upfront: bool) -> anyhow::Result<()> {
         let data_type = ua::DataType::from_description(ua::ExtensionObject::new(&description))
             .context("create data type")?;
 
-        let decoded_value = data_type.decode_raw(&extension_object_value);
-        println!("Decoded value: {decoded_value:?}")
+        println!("Encoded value: {extension_object_value:?}");
+        let member =
+            data_type.get_struct_member(&mut extension_object_value, "active_flushing2")?;
+        println!("Member value: {member:?}");
+        println!("Decoded value: {extension_object_value:?}");
     }
 
     println!("Disconnecting client");

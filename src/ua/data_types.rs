@@ -86,6 +86,7 @@ mod write_response;
 mod write_value;
 mod x509_identity_token;
 
+pub(crate) use self::variant::Var;
 pub use self::{
     aggregate_filter::AggregateFilter,
     anonymous_identity_token::AnonymousIdentityToken,

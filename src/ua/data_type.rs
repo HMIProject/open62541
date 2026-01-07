@@ -1,4 +1,4 @@
-use std::{ffi::CString, fmt::Debug, mem::MaybeUninit, ptr};
+use std::{ffi::CString, fmt::Debug, mem::MaybeUninit, ptr, slice};
 
 use open62541_sys::{
     UA_DataType, UA_DataType_clear, UA_DataType_copy, UA_DataType_fromDescription,
@@ -45,9 +45,9 @@ impl DataType {
 
     pub fn get_struct_member(
         &self,
-        value: &ua::ExtensionObject,
+        value: &mut ua::ExtensionObject,
         name: &str,
-    ) -> Result<ua::Variant> {
+    ) -> Result<ua::Var> {
         let name = CString::new(name).unwrap();
 
         let mut out_offset = 0;
@@ -63,25 +63,22 @@ impl DataType {
                 &raw mut out_is_array,
             )
         } {
-            panic!();
+            return Err(Error::Internal("unknown struct member"));
         }
 
         let out_member_type = unsafe { out_member_type.as_ref() }.expect("get member type");
-        let mem_size = usize::try_from(out_member_type.memSize()).expect("get memory size");
+        let member_size = usize::try_from(out_member_type.memSize()).expect("get member size");
 
-        // ua::Variant::from_raw(src)
+        // FIXME: Unwrap. Unsafe decode.
+        unsafe { value.decode(&raw const self.0).unwrap() };
+        let Some(data) = value.raw_decoded_content_mut(&raw const self.0) else {
+            panic!();
+        };
 
-        todo!()
-    }
+        let member_data =
+            unsafe { slice::from_raw_parts_mut(data.cast::<u8>().add(out_offset), member_size) };
 
-    pub fn decode(&self, value: &ua::ExtensionObject) -> Result<ua::Variant> {
-        todo!()
-    }
-
-    pub fn decode_raw(&self, value: &ua::ExtensionObject) -> Result<ua::ExtensionObject> {
-        let mut value = value.clone();
-        unsafe { value.decode(&self.0)? };
-        Ok(value)
+        Ok(ua::Var::scalar(out_member_type, member_data))
     }
 }
 
