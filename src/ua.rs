@@ -12,7 +12,9 @@ mod certificate_verification;
 mod client;
 mod client_config;
 mod continuation_point;
+mod data_type;
 mod data_type_definition;
+mod data_type_description;
 mod data_types;
 mod duration;
 mod event_id;
@@ -49,6 +51,7 @@ pub use self::{
     certificate_verification::CertificateVerification,
     client::{Client, ClientState},
     continuation_point::ContinuationPoint,
+    data_type::DataType,
     data_type_definition::DataTypeDefinition,
     data_types::*,
     duration::Duration,

@@ -1,7 +1,7 @@
 use std::str::FromStr as _;
 
 use anyhow::Context as _;
-use open62541::{ClientBuilder, CustomDataType, ua};
+use open62541::{ClientBuilder, ua};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -76,10 +76,10 @@ async fn read_value(fetch_upfront: bool) -> anyhow::Result<()> {
         let description = structure_definition.into_description(name);
         println!("Data type description: {description:?}");
 
-        let data_type = CustomDataType::from_description(ua::ExtensionObject::new(&description))
+        let data_type = ua::DataType::from_description(ua::ExtensionObject::new(&description))
             .context("create data type")?;
 
-        let decoded_value = data_type.decode(&extension_object_value);
+        let decoded_value = data_type.decode_raw(&extension_object_value);
         println!("Decoded value: {decoded_value:?}")
     }
 

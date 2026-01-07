@@ -238,7 +238,7 @@ pub use self::{
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
     browse_result::BrowseResult,
     client::{Client, ClientBuilder},
-    data_type::{CustomDataType, DataType},
+    data_type::DataType,
     data_value::DataValue,
     error::{Error, Result},
     monitored_item::{

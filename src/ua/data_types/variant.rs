@@ -1,8 +1,9 @@
 use std::ffi::c_void;
 
 use open62541_sys::{
-    UA_Variant_clear, UA_Variant_hasArrayType, UA_Variant_hasScalarType, UA_Variant_isEmpty,
-    UA_Variant_isScalar, UA_Variant_setArray, UA_Variant_setScalar, UA_Variant_setScalarCopy,
+    UA_DataType, UA_Variant_clear, UA_Variant_hasArrayType, UA_Variant_hasScalarType,
+    UA_Variant_isEmpty, UA_Variant_isScalar, UA_Variant_setArray, UA_Variant_setScalar,
+    UA_Variant_setScalarCopy,
 };
 
 use crate::{DataType, NonScalarValue, ScalarValue, ValueType, VariantValue, ua};
@@ -10,6 +11,10 @@ use crate::{DataType, NonScalarValue, ScalarValue, ValueType, VariantValue, ua};
 crate::data_type!(Variant);
 
 impl Variant {
+    fn raw_scalar(data_type: *const UA_DataType, value: Vec<u8>) -> Option<Self> {
+        todo!()
+    }
+
     /// Creates variant from scalar.
     #[must_use]
     pub fn scalar<T: DataType>(value: T) -> Self {
