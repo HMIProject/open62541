@@ -1,6 +1,6 @@
 use open62541_sys::UA_StructureDescription;
 
-use crate::{DataType as _, ua};
+use crate::{DataType as _, Result, ua};
 
 crate::data_type!(StructureDescription);
 
@@ -15,5 +15,29 @@ impl StructureDescription {
             name: name.into_raw(),
             structureDefinition: definition.into_raw(),
         })
+    }
+
+    #[must_use]
+    pub fn data_type_id(&self) -> &ua::NodeId {
+        ua::NodeId::raw_ref(&self.0.dataTypeId)
+    }
+
+    #[must_use]
+    pub fn name(&self) -> &ua::QualifiedName {
+        ua::QualifiedName::raw_ref(&self.0.name)
+    }
+
+    #[must_use]
+    pub fn structure_definition(&self) -> &ua::StructureDefinition {
+        ua::StructureDefinition::raw_ref(&self.0.structureDefinition)
+    }
+
+    #[must_use]
+    pub fn into_abstract(self) -> ua::DataTypeDescription {
+        ua::DataTypeDescription::Structure(self)
+    }
+
+    pub fn to_data_type(&self, custom_types: Option<&ua::DataTypeArray>) -> Result<ua::DataType> {
+        ua::DataType::from_description(ua::ExtensionObject::new(self), custom_types)
     }
 }

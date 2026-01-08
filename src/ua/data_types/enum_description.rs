@@ -1,6 +1,6 @@
 use open62541_sys::UA_EnumDescription;
 
-use crate::{DataType as _, ua};
+use crate::{DataType as _, Result, ua};
 
 crate::data_type!(EnumDescription);
 
@@ -17,5 +17,34 @@ impl EnumDescription {
             enumDefinition: definition.into_raw(),
             builtInType: built_in_type,
         })
+    }
+
+    #[must_use]
+    pub fn data_type_id(&self) -> &ua::NodeId {
+        ua::NodeId::raw_ref(&self.0.dataTypeId)
+    }
+
+    #[must_use]
+    pub fn name(&self) -> &ua::QualifiedName {
+        ua::QualifiedName::raw_ref(&self.0.name)
+    }
+
+    #[must_use]
+    pub fn enum_definition(&self) -> &ua::EnumDefinition {
+        ua::EnumDefinition::raw_ref(&self.0.enumDefinition)
+    }
+
+    #[must_use]
+    pub(crate) fn built_in_type(&self) -> u8 {
+        self.0.builtInType
+    }
+
+    #[must_use]
+    pub fn into_abstract(self) -> ua::DataTypeDescription {
+        ua::DataTypeDescription::Enum(self)
+    }
+
+    pub fn to_data_type(&self, custom_types: Option<&ua::DataTypeArray>) -> Result<ua::DataType> {
+        ua::DataType::from_description(ua::ExtensionObject::new(self), custom_types)
     }
 }

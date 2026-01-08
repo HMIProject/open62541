@@ -1,13 +1,14 @@
-use std::{ffi::c_void, fmt::Debug, marker::PhantomData, ptr};
+use std::ffi::c_void;
 
 use open62541_sys::{
-    UA_DataType, UA_Variant, UA_Variant_clear, UA_Variant_hasArrayType, UA_Variant_hasScalarType,
-    UA_Variant_isEmpty, UA_Variant_isScalar, UA_Variant_setArray, UA_Variant_setScalar,
-    UA_Variant_setScalarCopy, UA_VariantStorageType,
+    UA_Variant_clear, UA_Variant_hasArrayType, UA_Variant_hasScalarType, UA_Variant_isEmpty,
+    UA_Variant_isScalar, UA_Variant_setArray, UA_Variant_setScalar, UA_Variant_setScalarCopy,
 };
 
 use crate::{DataType, NonScalarValue, ScalarValue, ValueType, VariantValue, ua};
 
+// SAFETY: This must only hold primitive values, i.e. all directly and indirectly used `UA_DataType`
+// must be statically allocated. Otherwise, we'd risk use-after-free.
 crate::data_type!(Variant);
 
 impl Variant {
@@ -273,50 +274,6 @@ impl serde::Serialize for Variant {
         // - Argument,       // Data type ns=0;i=296
 
         Err(serde::ser::Error::custom("non-primitive value in Variant"))
-    }
-}
-
-/// Borrowed variant of [`Variant`].
-///
-/// This uses the `NODELETE` storage type internally, so it can be leaked into the raw type. This is
-/// basically a shallow copy, so while it owns the variant itself, any referenced data structures in
-/// it are shared from another variant or data structure, as indicated by the lifetime.
-#[repr(transparent)]
-pub struct Var<'a>(UA_Variant, PhantomData<&'a ()>);
-
-impl<'a> Var<'a> {
-    pub(crate) fn scalar(data_type: *const UA_DataType, value: &'a mut [u8]) -> Self {
-        let variant = UA_Variant {
-            type_: data_type,
-            storageType: UA_VariantStorageType::UA_VARIANT_DATA_NODELETE,
-            arrayLength: 0,
-            data: value.as_mut_ptr().cast::<c_void>(),
-            arrayDimensionsSize: 0,
-            arrayDimensions: ptr::null_mut(),
-        };
-
-        Self(variant, PhantomData)
-    }
-}
-
-impl Drop for Var<'_> {
-    fn drop(&mut self) {
-        // This only clears local memory but leaves pointers untouched (due to `NODELETE` storage).
-        unsafe { UA_Variant_clear(&raw mut self.0) };
-    }
-}
-
-impl Debug for Var<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Delegate to existing implementation for `UA_Variant`.
-        let variant: &Variant = self.as_ref();
-        variant.fmt(f)
-    }
-}
-
-impl<'a> AsRef<Variant> for Var<'a> {
-    fn as_ref(&self) -> &Variant {
-        Variant::raw_ref(&self.0)
     }
 }
 

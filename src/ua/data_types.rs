@@ -77,6 +77,7 @@ mod status_code;
 mod string;
 mod structure_definition;
 mod structure_description;
+mod structure_field;
 mod timestamps_to_return;
 mod trust_list_data_type;
 mod user_name_identity_token;
@@ -86,7 +87,6 @@ mod write_response;
 mod write_value;
 mod x509_identity_token;
 
-pub(crate) use self::variant::Var;
 pub use self::{
     aggregate_filter::AggregateFilter,
     anonymous_identity_token::AnonymousIdentityToken,
@@ -169,6 +169,7 @@ pub use self::{
     string::String,
     structure_definition::StructureDefinition,
     structure_description::StructureDescription,
+    structure_field::StructureField,
     timestamps_to_return::TimestampsToReturn,
     trust_list_data_type::TrustListDataType,
     user_name_identity_token::UserNameIdentityToken,

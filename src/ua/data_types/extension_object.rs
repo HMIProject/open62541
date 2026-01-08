@@ -7,6 +7,8 @@ use open62541_sys::{
 
 use crate::{DataType, Error, Result, ua};
 
+// SAFETY: This must only hold primitive values, i.e. all directly and indirectly used `UA_DataType`
+// must be statically allocated. Otherwise, we'd risk use-after-free.
 crate::data_type!(ExtensionObject);
 
 impl ExtensionObject {
@@ -14,8 +16,9 @@ impl ExtensionObject {
     #[must_use]
     pub fn new<T: DataType>(value: &T) -> Self {
         let mut extension_object = Self::init();
+
         // We cannot call `UA_ExtensionObject_setValue()`. This would avoid the copy but it would
-        // not work on stack-based values because the deallocation happens with `UA_free()`.
+        // not work on stack-based values because deallocation always happens with `UA_free()`.
         unsafe {
             UA_ExtensionObject_setValueCopy(
                 extension_object.as_mut_ptr(),
@@ -25,6 +28,7 @@ impl ExtensionObject {
                 T::data_type(),
             );
         }
+
         extension_object
     }
 
@@ -40,6 +44,7 @@ impl ExtensionObject {
             return None;
         }
 
+        // SAFETY: Encoding indicates encoded object, union variant is valid.
         let encoded_content = unsafe { self.0.content.encoded.as_ref() };
 
         Some(&ua::NodeId::raw_ref(&encoded_content.typeId))
@@ -55,6 +60,7 @@ impl ExtensionObject {
             return None;
         }
 
+        // SAFETY: Encoding indicates encoded object, union variant is valid.
         let encoded_content = unsafe { self.0.content.encoded.as_ref() };
 
         Some((
@@ -73,6 +79,7 @@ impl ExtensionObject {
             return None;
         }
 
+        // SAFETY: Encoding indicates encoded object, union variant is valid.
         let encoded_content = unsafe { self.0.content.encoded.as_ref() };
 
         Some((
@@ -154,7 +161,7 @@ impl ExtensionObject {
             return Ok(());
         }
 
-        // TODO: Add decoding XML encoding with `UA_decodeXml()`.
+        // TODO: Add decoding of XML encoding with `UA_decodeXml()`.
         if !matches!(
             self.0.encoding,
             UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_BYTESTRING
@@ -162,6 +169,7 @@ impl ExtensionObject {
             return Err(Error::Internal("unsupported encoding of extension object"));
         }
 
+        // SAFETY: Encoding indicates encoded object, union variant is valid.
         let encoded_content = unsafe { self.0.content.encoded.as_ref() };
         let type_id = ua::NodeId::raw_ref(&encoded_content.typeId);
         let body = ua::ByteString::raw_ref(&encoded_content.body);

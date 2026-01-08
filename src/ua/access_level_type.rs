@@ -5,7 +5,7 @@ use open62541_sys::{
     UA_ACCESSLEVELTYPE_TIMESTAMPWRITE, UA_AccessLevelType,
 };
 
-use crate::{DataTypeExt, ua};
+use crate::{DataTypeExt, Result, ua};
 
 /// Wrapper for [`UA_AccessLevelType`] from [`open62541_sys`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -99,8 +99,8 @@ impl AccessLevelType {
 impl DataTypeExt for AccessLevelType {
     type Inner = ua::Byte;
 
-    fn from_inner(value: Self::Inner) -> Self {
-        Self::from_u8(value.value())
+    fn from_inner(value: Self::Inner) -> Result<Self> {
+        Ok(Self::from_u8(value.value()))
     }
 
     fn into_inner(self) -> Self::Inner {

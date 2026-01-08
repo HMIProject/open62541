@@ -1,4 +1,9 @@
-use std::{ffi::CString, fmt::Debug, mem::MaybeUninit, ptr, slice};
+use std::{
+    ffi::{CStr, CString},
+    fmt::Debug,
+    mem::MaybeUninit,
+    ptr, slice,
+};
 
 use open62541_sys::{
     UA_DataType, UA_DataType_clear, UA_DataType_copy, UA_DataType_fromDescription,
@@ -8,11 +13,14 @@ use open62541_sys::{
 use crate::{DataType as _, Error, Result, ua};
 
 /// Wrapper for data type from [`open62541_sys`].
+//
+// SAFETY: This must only have primitive values as members, i.e. all directly and indirectly used
+// `UA_DataType` must be statically allocated. Otherwise, we'd risk use-after-free.
 #[repr(transparent)]
 pub struct DataType(UA_DataType);
 
 impl DataType {
-    pub unsafe fn from_raw(src: UA_DataType) -> Self {
+    unsafe fn from_raw(src: UA_DataType) -> Self {
         Self(src)
     }
 
@@ -29,11 +37,20 @@ impl DataType {
         unsafe { Self::from_raw(dst) }
     }
 
-    pub fn from_description(description: ua::ExtensionObject) -> Result<Self> {
+    pub(crate) fn from_description(
+        description: ua::ExtensionObject,
+        custom_types: Option<&ua::DataTypeArray>,
+    ) -> Result<Self> {
         let mut dst = MaybeUninit::<UA_DataType>::uninit();
 
         let status_code = ua::StatusCode::new(unsafe {
-            UA_DataType_fromDescription(dst.as_mut_ptr(), description.as_ptr(), ptr::null())
+            UA_DataType_fromDescription(
+                dst.as_mut_ptr(),
+                description.as_ptr(),
+                custom_types
+                    .map(ua::DataTypeArray::as_ptr)
+                    .unwrap_or(ptr::null()),
+            )
         });
         Error::verify_good(&status_code)?;
 
@@ -47,7 +64,7 @@ impl DataType {
         &self,
         value: &mut ua::ExtensionObject,
         name: &str,
-    ) -> Result<ua::Var> {
+    ) -> Result<ua::Variant> {
         let name = CString::new(name).unwrap();
 
         let mut out_offset = 0;
@@ -78,7 +95,15 @@ impl DataType {
         let member_data =
             unsafe { slice::from_raw_parts_mut(data.cast::<u8>().add(out_offset), member_size) };
 
-        Ok(ua::Var::scalar(out_member_type, member_data))
+        // Ok(ua::Var::scalar(out_member_type, member_data))
+
+        todo!()
+    }
+}
+
+impl Drop for DataType {
+    fn drop(&mut self) {
+        unsafe { UA_DataType_clear(&mut self.0) };
     }
 }
 
@@ -90,12 +115,12 @@ impl Clone for DataType {
 
 impl Debug for DataType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("DataType").finish_non_exhaustive()
-    }
-}
+        // SAFETY: We have a pointer to a valid C string.
+        let type_name = unsafe { CStr::from_ptr(self.0.typeName) };
 
-impl Drop for DataType {
-    fn drop(&mut self) {
-        unsafe { UA_DataType_clear(&mut self.0) };
+        f.debug_struct("DataType")
+            .field("typeName", &type_name.to_string_lossy())
+            .field("typeId", ua::NodeId::raw_ref(&self.0.typeId))
+            .finish_non_exhaustive()
     }
 }

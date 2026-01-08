@@ -1,64 +1,18 @@
-use std::marker::PhantomData;
+use std::{fmt::Debug, marker::PhantomData};
 
 use crate::{DataType, DataTypeExt, ua};
 
 /// Typed variant of [`ua::DataValue`].
 //
-// Do not derive trait implementations (except `fmt::Debug`) to avoid
-// depending on the capabilities of the generic, marker type `T`.
-// Instead we implement all applicable traits manually by delegating
-// to the implementations for `ua::DataValue` (see below).
-#[derive(Debug)]
-// ABI must match that of the the untyped variant ua::DataValue.
-// Required to safely transmute both types.
+// Do not derive trait implementations to avoid depending on the capabilities of the generic, marker
+// type `T`. Instead, implement all applicable traits manually, by delegating to implementations for
+// `ua::DataValue` (see below).
+//
+// ABI must match that of the untyped variant `ua::DataValue` to safely transmute between the types.
 #[repr(transparent)]
 pub struct DataValue<T> {
     data_value: ua::DataValue,
     _kind: PhantomData<T>,
-}
-
-impl<T> Clone for DataValue<T> {
-    fn clone(&self) -> Self {
-        let Self {
-            data_value,
-            _kind: _,
-        } = self;
-        Self {
-            data_value: data_value.clone(),
-            _kind: PhantomData,
-        }
-    }
-}
-
-impl<T> PartialEq for DataValue<T> {
-    fn eq(&self, other: &Self) -> bool {
-        let Self {
-            data_value,
-            _kind: _,
-        } = self;
-        data_value.eq(&other.data_value)
-    }
-}
-
-impl<T> Eq for DataValue<T> {
-    // `ua::DataValue` implements `Eq`.
-    // TODO: Verify this at compile time.
-}
-
-impl<T> PartialOrd for DataValue<T> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl<T> Ord for DataValue<T> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        let Self {
-            data_value,
-            _kind: _,
-        } = self;
-        data_value.cmp(&other.data_value)
-    }
 }
 
 impl<T: DataTypeExt> DataValue<T> {
@@ -102,10 +56,13 @@ impl<T: DataTypeExt> DataValue<T> {
     ///
     /// This returns `None` when the value is unset or not a scalar of the given type. The same can
     /// be achieved in two steps with [`Self::into_value()`] and [`ua::Variant::into_scalar()`].
+    //
+    // TODO: Use `Result` instead of `Option` for conversion errors from `DataTypeExt`.
     pub fn into_scalar_value(self) -> Option<T> {
         self.into_value()
             .and_then(ua::Variant::into_scalar::<T::Inner>)
-            .map(T::from_inner)
+            // TODO: Remove `ok()`. Return error to caller.
+            .and_then(|value| T::from_inner(value).ok())
     }
 
     #[must_use]
@@ -144,5 +101,58 @@ impl DataValue<ua::Variant> {
         let Self { data_value, _kind } = self;
 
         DataValue::new(data_value)
+    }
+}
+
+impl<T> Debug for DataValue<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.data_value.fmt(f)
+    }
+}
+
+impl<T> Clone for DataValue<T> {
+    fn clone(&self) -> Self {
+        let Self {
+            data_value,
+            _kind: _,
+        } = self;
+
+        Self {
+            data_value: data_value.clone(),
+            _kind: PhantomData,
+        }
+    }
+}
+
+impl<T> PartialEq for DataValue<T> {
+    fn eq(&self, other: &Self) -> bool {
+        let Self {
+            data_value,
+            _kind: _,
+        } = self;
+
+        data_value.eq(&other.data_value)
+    }
+}
+
+impl<T> Eq for DataValue<T> {
+    // `ua::DataValue` implements `Eq`.
+    // TODO: Verify this at compile time.
+}
+
+impl<T> PartialOrd for DataValue<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<T> Ord for DataValue<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let Self {
+            data_value,
+            _kind: _,
+        } = self;
+
+        data_value.cmp(&other.data_value)
     }
 }

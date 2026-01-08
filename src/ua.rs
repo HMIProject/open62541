@@ -13,6 +13,7 @@ mod client;
 mod client_config;
 mod continuation_point;
 mod data_type;
+mod data_type_array;
 mod data_type_definition;
 mod data_type_description;
 mod data_types;
@@ -52,7 +53,9 @@ pub use self::{
     client::{Client, ClientState},
     continuation_point::ContinuationPoint,
     data_type::DataType,
+    data_type_array::DataTypeArray,
     data_type_definition::DataTypeDefinition,
+    data_type_description::DataTypeDescription,
     data_types::*,
     duration::Duration,
     event_id::EventId,
