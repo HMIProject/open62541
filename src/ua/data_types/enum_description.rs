@@ -5,6 +5,7 @@ use crate::{DataType as _, Result, ua};
 crate::data_type!(EnumDescription);
 
 impl EnumDescription {
+    // TODO: Find abstraction for `built_in_type`.
     pub(crate) fn new(
         data_type_id: ua::NodeId,
         name: ua::QualifiedName,
@@ -34,14 +35,10 @@ impl EnumDescription {
         ua::EnumDefinition::raw_ref(&self.0.enumDefinition)
     }
 
+    // TODO: Encapsulate in better return type.
     #[must_use]
     pub(crate) fn built_in_type(&self) -> u8 {
         self.0.builtInType
-    }
-
-    #[must_use]
-    pub fn into_abstract(self) -> ua::DataTypeDescription {
-        ua::DataTypeDescription::Enum(self)
     }
 
     pub fn to_data_type(&self, custom_types: Option<&ua::DataTypeArray>) -> Result<ua::DataType> {

@@ -1,6 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    mem,
+    collections::{BTreeMap, BTreeSet},
     str::FromStr as _,
 };
 
@@ -35,7 +34,8 @@ async fn read_value(fetch_upfront: bool) -> anyhow::Result<()> {
     println!("Connected successfully (fetch_upfront: {fetch_upfront})");
 
     // let node_id = ua::NodeId::from_str("ns=3;s=\"6601_HMI\".\"Freshwater\"").unwrap();
-    let node_id = ua::NodeId::from_str("ns=3;s=\"6601_HMI\".\"Filling\"").unwrap();
+    // let node_id = ua::NodeId::from_str("ns=3;s=\"6601_HMI\".\"Filling\"").unwrap();
+    let node_id = ua::NodeId::from_str("ns=3;s=\"6601_HMI\".\"M901\"").unwrap();
 
     let value = client
         .read_value(&node_id)
@@ -61,6 +61,8 @@ async fn read_value(fetch_upfront: bool) -> anyhow::Result<()> {
 
         println!("Data type descriptions: {data_type_descriptions:?}");
 
+        client.add_data_types(&data_type_descriptions)?;
+
         // let data_type = description.to_data_type(None).context("create data type")?;
         // println!("Data type: {data_type:?}");
 
@@ -70,6 +72,17 @@ async fn read_value(fetch_upfront: bool) -> anyhow::Result<()> {
         // println!("Member value: {member:?}");
         // println!("Decoded value: {extension_object_value:?}");
     }
+
+    let value = client
+        .read_value(&node_id)
+        .await
+        .context("read value")?
+        .into_value()
+        .context("turn into value")?;
+    let type_id = value.type_id().context("get type ID")?;
+
+    println!("Raw value: {value:?}");
+    println!("Type ID: {type_id:?}");
 
     println!("Disconnecting client");
 
@@ -94,7 +107,12 @@ async fn read_nested_data_type_descriptions(
         BTreeMap::from_iter(known_data_type_ids.iter().map(|known_data_type_id| {
             (known_data_type_id.to_owned(), KnownDataType::PriorKnowledge)
         }));
-    let mut pending_data_type_ids = BTreeSet::from_iter(data_type_ids.iter().cloned());
+    let mut pending_data_type_ids = BTreeSet::from_iter(
+        data_type_ids
+            .iter()
+            .filter(|data_type_id| !is_known_data_type(data_type_id))
+            .cloned(),
+    );
 
     while !pending_data_type_ids.is_empty() {
         let data_type_ids = pending_data_type_ids
@@ -105,7 +123,7 @@ async fn read_nested_data_type_descriptions(
         let data_type_descriptions = read_data_type_descriptions(client, &data_type_ids).await?;
 
         for data_type_id in find_nested_data_type_ids(&data_type_descriptions)? {
-            if !known_data_type_ids.contains(&data_type_id) && data_type_id.as_ns0().is_none() {
+            if !known_data_type_ids.contains(&data_type_id) && !is_known_data_type(&data_type_id) {
                 pending_data_type_ids.insert(data_type_id);
             }
         }
@@ -184,7 +202,7 @@ async fn read_data_type_descriptions(
         let structure_description =
             structure_definition.into_description(data_type_id.to_owned(), browse_name);
 
-        data_type_descriptions.push(structure_description.into_abstract());
+        data_type_descriptions.push(ua::DataTypeDescription::Structure(structure_description));
     }
 
     Ok(data_type_descriptions)
@@ -192,22 +210,29 @@ async fn read_data_type_descriptions(
 
 fn find_nested_data_type_ids(
     data_type_descriptions: &[ua::DataTypeDescription],
-) -> anyhow::Result<Vec<ua::NodeId>> {
-    let mut nested_data_type_ids = Vec::new();
+) -> anyhow::Result<BTreeSet<ua::NodeId>> {
+    let mut nested_data_type_ids = BTreeSet::new();
 
     for data_type_description in data_type_descriptions {
-        match data_type_description.to_definition() {
-            ua::DataTypeDefinition::Structure(definition) => {
-                for field in definition.fields().context("missing struct fields")?.iter() {
-                    nested_data_type_ids.push(field.data_type().to_owned());
+        match data_type_description {
+            ua::DataTypeDescription::Structure(description) => {
+                let definition = description.structure_definition();
+                let fields = definition.fields().context("missing struct fields")?;
+                for field in fields.iter() {
+                    nested_data_type_ids.insert(field.data_type().to_owned());
                 }
             }
-            ua::DataTypeDefinition::Enum(_) => {
-                anyhow::bail!("unsupported enum definition")
+            ua::DataTypeDescription::Enum(_) => {
+                anyhow::bail!("unsupported enum description")
             }
-            _ => anyhow::bail!("unsupported data type definition"),
+            _ => anyhow::bail!("unsupported data type description"),
         }
     }
 
     Ok(nested_data_type_ids)
+}
+
+fn is_known_data_type(data_type_id: &ua::NodeId) -> bool {
+    // TODO: Add proper support for Simatic data types.
+    data_type_id.is_ns0() || (data_type_id.namespace_index() == 3 && data_type_id.is_numeric())
 }

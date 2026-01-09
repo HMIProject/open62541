@@ -73,6 +73,31 @@ impl NodeId {
         self.0.namespaceIndex
     }
 
+    /// Checks if this node ID is in namespace 0.
+    ///
+    /// Namespace 0 is always the UA namespace `http://opcfoundation.org/UA/` itself and is used for
+    /// fixed definitions as laid out in the OPC UA specification.
+    #[must_use]
+    pub const fn is_ns0(&self) -> bool {
+        self.0.namespaceIndex == 0
+    }
+
+    #[must_use]
+    pub fn is_numeric(&self) -> bool {
+        self.0.identifierType == UA_NodeIdType::UA_NODEIDTYPE_NUMERIC
+    }
+
+    #[must_use]
+    pub fn is_string(&self) -> bool {
+        self.0.identifierType == UA_NodeIdType::UA_NODEIDTYPE_STRING
+    }
+
+    #[must_use]
+    pub fn is_null(&self) -> bool {
+        // SAFETY: Read-only access of static.
+        self == Self::raw_ref(unsafe { &UA_NODEID_NULL })
+    }
+
     /// Gets node ID type.
     #[must_use]
     pub fn identifier_type(&self) -> &ua::NodeIdType {

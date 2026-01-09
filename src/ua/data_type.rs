@@ -99,6 +99,15 @@ impl DataType {
 
         todo!()
     }
+
+    pub(crate) fn into_raw(self) -> UA_DataType {
+        // Use `ManuallyDrop` to avoid double-free even when added code might cause panic.
+        // See documentation of `mem::forget()` for details.
+        let this = std::mem::ManuallyDrop::new(self);
+        // SAFETY: Aliasing memory temporarily is safe because destructor will not be
+        // called.
+        unsafe { std::ptr::read(&raw const this.0) }
+    }
 }
 
 impl Drop for DataType {

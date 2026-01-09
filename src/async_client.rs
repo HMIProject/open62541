@@ -1,4 +1,5 @@
 use std::{
+    collections::{BTreeMap, BTreeSet, HashSet, LinkedList, VecDeque},
     ffi::c_void,
     slice,
     sync::{
@@ -50,6 +51,7 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 pub struct AsyncClient {
     client: Arc<ua::Client>,
     background_thread: Option<BackgroundThread>,
+    known_data_type_descriptions: BTreeMap<ua::NodeId, ua::DataTypeDescription>,
 }
 
 impl AsyncClient {
@@ -79,6 +81,7 @@ impl AsyncClient {
         Self {
             client,
             background_thread: Some(background_thread),
+            known_data_type_descriptions: BTreeMap::new(),
         }
     }
 
@@ -124,6 +127,76 @@ impl AsyncClient {
         // handling to keep on running until the connection has been taken down which then makes the
         // task finish by itself.
         background_thread.wait_until_done().await;
+    }
+
+    pub fn add_data_types(
+        &self,
+        data_type_descriptions: &[ua::DataTypeDescription],
+    ) -> Result<usize> {
+        // Pick only descriptions from incoming slice that we do not already know. Create map to use
+        // at the end of this method to look up descriptions by their data type IDs again.
+        let new_data_type_descriptions = data_type_descriptions
+            .iter()
+            .filter_map(|data_type_description| {
+                let data_type_id = data_type_description.data_type_id();
+                if is_known_data_type(data_type_id)
+                    || self.known_data_type_descriptions.contains_key(data_type_id)
+                {
+                    return None;
+                }
+                Some((data_type_id, data_type_description))
+            })
+            .collect::<BTreeMap<_, _>>();
+        let new_data_type_ids = new_data_type_descriptions
+            .keys()
+            .copied()
+            .cloned()
+            .collect::<Vec<_>>();
+
+        println!("<= {new_data_type_ids:?}");
+
+        // Find dependency order: `sorted_data_type_ids` will contain dependants before dependencies
+        // (e.g. data type for structure followed by data types for its fields). Each data type (ID)
+        // will be listed only once and will not depend on any other data types listed before it.
+        let Some(sorted_data_type_ids) = topological_sort(&new_data_type_ids, |data_type_id| {
+            let data_type_description = new_data_type_descriptions.get(data_type_id).unwrap();
+            match data_type_description {
+                ua::DataTypeDescription::Structure(description) => {
+                    let Some(fields) = description.structure_definition().fields() else {
+                        return BTreeSet::new();
+                    };
+                    fields
+                        .iter()
+                        .filter_map(|field| {
+                            let data_type = field.data_type();
+                            new_data_type_descriptions
+                                .contains_key(data_type)
+                                .then(|| data_type.to_owned())
+                        })
+                        .collect()
+                }
+                ua::DataTypeDescription::Enum(_) => BTreeSet::new(),
+            }
+        }) else {
+            return Err(Error::Internal("cyclical data type descriptions"));
+        };
+
+        println!("=> {sorted_data_type_ids:?}");
+
+        let mut new_data_types = Vec::with_capacity(sorted_data_type_ids.len());
+
+        for data_type_id in sorted_data_type_ids {
+            let &data_type_description = new_data_type_descriptions
+                .get(&data_type_id)
+                .expect("data type description exists");
+
+            let data_type = data_type_description
+                .to_data_type(Some(&ua::DataTypeArray::new(&mut new_data_types)))?;
+
+            new_data_types.push(data_type.into_raw());
+        }
+
+        Ok(0)
     }
 
     /// Reads node value.
@@ -737,4 +810,49 @@ fn to_browse_result(result: &ua::BrowseResult, node_id: Option<&ua::NodeId>) -> 
     };
 
     Ok((references, result.continuation_point()))
+}
+
+fn topological_sort<T, F>(nodes: &[T], mut get_deps: F) -> Option<Vec<T>>
+where
+    T: Clone + Ord,
+    F: FnMut(&T) -> BTreeSet<T>,
+{
+    // Create list of edges from each node to its respective dependencies.
+    let mut pending_deps = nodes
+        .iter()
+        .map(|a| (a, get_deps(a)))
+        .collect::<BTreeMap<_, _>>();
+
+    // Prepare eventual result, and starting set for algorithm: any nodes without dependencies.
+    let mut result = Vec::with_capacity(nodes.len());
+    let mut pending_nodes = nodes
+        .iter()
+        .filter(|&a| pending_deps.get(a).expect("node exists").is_empty())
+        .collect::<Vec<_>>();
+
+    // Iterate over nodes without dependencies until all (reachable) nodes have been visited. During
+    // each turn, add node to result, then look for any other nodes that have their dependencies now
+    // satisfied to be visited in the next loop iteration.
+    while let Some(a) = pending_nodes.pop() {
+        result.push(a.clone());
+
+        for b in nodes {
+            let deps = pending_deps.get_mut(b).expect("node exists");
+            if deps.remove(a) && deps.is_empty() {
+                pending_nodes.push(b);
+            }
+        }
+    }
+
+    // If any uncleared edges remain, their exists a loop and no topological sort exists.
+    if pending_deps.values().any(|deps| !deps.is_empty()) {
+        return None;
+    }
+
+    Some(result)
+}
+
+fn is_known_data_type(data_type_id: &ua::NodeId) -> bool {
+    // TODO: Add proper support for Simatic data types.
+    data_type_id.is_ns0() || (data_type_id.namespace_index() == 3 && data_type_id.is_numeric())
 }

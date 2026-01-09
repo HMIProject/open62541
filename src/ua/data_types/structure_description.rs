@@ -32,11 +32,6 @@ impl StructureDescription {
         ua::StructureDefinition::raw_ref(&self.0.structureDefinition)
     }
 
-    #[must_use]
-    pub fn into_abstract(self) -> ua::DataTypeDescription {
-        ua::DataTypeDescription::Structure(self)
-    }
-
     pub fn to_data_type(&self, custom_types: Option<&ua::DataTypeArray>) -> Result<ua::DataType> {
         ua::DataType::from_description(ua::ExtensionObject::new(self), custom_types)
     }
