@@ -81,8 +81,8 @@ impl DataType {
     }
 
     #[must_use]
-    pub(crate) fn as_ptr(&mut self) -> *mut UA_DataType {
-        &raw mut self.0
+    pub fn type_id(&self) -> &ua::NodeId {
+        ua::NodeId::raw_ref(&self.0.typeId)
     }
 
     pub fn get_struct_member(

@@ -1,4 +1,7 @@
-use std::mem::{self, MaybeUninit};
+use std::{
+    fmt::Debug,
+    mem::{self, MaybeUninit},
+};
 
 use open62541_sys::UA_DataType;
 
@@ -32,8 +35,30 @@ impl DataTypeArray {
         };
 
         item.write(data_type);
+        self.len += 1;
 
         Ok(())
+    }
+
+    #[must_use]
+    pub(crate) fn len(&self) -> usize {
+        self.len
+    }
+
+    #[must_use]
+    pub(crate) fn is_empty(&self) -> bool {
+        self.len != 0
+    }
+
+    #[must_use]
+    pub(crate) fn as_slice(&self) -> &[ua::DataType] {
+        // SAFETY: This transmute is allowed, because `MaybeUninit` has `#repr(transparent)` set. We
+        // only access items that have been actually set.
+        unsafe { mem::transmute(&self.items[0..self.len]) }
+    }
+
+    pub(crate) fn iter(&self) -> impl ExactSizeIterator<Item = &ua::DataType> {
+        self.as_slice().into_iter()
     }
 
     /// Get [`ua::DataTypeArray`] of current array of data types.
@@ -44,8 +69,8 @@ impl DataTypeArray {
     /// before making any other changes to `self`.
     #[must_use]
     pub(crate) unsafe fn to_data_type_array(&mut self) -> ua::DataTypeArray {
-        // SAFETY: This transmute is allowed, because we go through `MaybeUninit` and `ua::DataType`
-        // which both have `repr(transparent)`. We only access items that have been actually set.
+        // SAFETY: This transmute is allowed, because `MaybeUninit` and `ua::DataType` both have the
+        // attribute `#repr(transparent)`. We only access items that have been actually set.
         let data_types = unsafe { mem::transmute(&mut self.items[0..self.len]) };
 
         unsafe { ua::DataTypeArray::new(data_types) }
@@ -59,5 +84,12 @@ impl Drop for DataTypeArray {
             // be dropped automatically within `MaybeUninit`, we do it manually here.
             unsafe { item.assume_init_drop() };
         }
+    }
+}
+
+impl Debug for DataTypeArray {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // TODO: Add useful implementation.
+        f.debug_tuple("DataTypeArray").finish_non_exhaustive()
     }
 }

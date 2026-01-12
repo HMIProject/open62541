@@ -29,7 +29,7 @@ async fn read_value(fetch_upfront: bool) -> anyhow::Result<()> {
             .with_remote_data_types()
             .context("get remote data types")?
     }
-    let client = client.into_async();
+    let mut client = client.into_async();
 
     println!("Connected successfully (fetch_upfront: {fetch_upfront})");
 
@@ -61,7 +61,8 @@ async fn read_value(fetch_upfront: bool) -> anyhow::Result<()> {
 
         println!("Data type descriptions: {data_type_descriptions:?}");
 
-        client.add_data_types(&data_type_descriptions)?;
+        let number_of_new_data_types = client.add_data_types(&data_type_descriptions)?;
+        println!("Added {number_of_new_data_types} new data types");
 
         // let data_type = description.to_data_type(None).context("create data type")?;
         // println!("Data type: {data_type:?}");

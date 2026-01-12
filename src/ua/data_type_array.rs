@@ -39,6 +39,7 @@ impl Drop for DataTypeArray {
 
 impl Debug for DataTypeArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // TODO: Add useful implementation.
         f.debug_tuple("DataTypeArray").finish_non_exhaustive()
     }
 }

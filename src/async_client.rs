@@ -12,8 +12,9 @@ use std::{
 
 use futures_channel::oneshot;
 use open62541_sys::{
-    __UA_Client_AsyncService, UA_Client, UA_Client_disconnectAsync, UA_Client_run_iterate,
-    UA_STATUSCODE_BADCONNECTIONCLOSED, UA_STATUSCODE_BADDISCONNECT, UA_UInt32,
+    __UA_Client_AsyncService, UA_Client, UA_Client_disconnectAsync, UA_Client_getConfig,
+    UA_Client_run_iterate, UA_STATUSCODE_BADCONNECTIONCLOSED, UA_STATUSCODE_BADDISCONNECT,
+    UA_UInt32,
 };
 
 use crate::{
@@ -32,10 +33,16 @@ use crate::{
 /// repeatedly calling `poll()`/`select()` inside open62541's event loop implementation.
 const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 
+#[derive(Debug)]
+struct DataTypeSet {
+    type_ids: BTreeSet<ua::NodeId>,
+    data_types: DataTypeArray,
+}
+
 /// Connected OPC UA client (with asynchronous API).
 ///
 /// To disconnect, prefer method [`disconnect()`](Self::disconnect) over simply dropping the client:
-/// disconnection involves server communication and might take a short amount of time. If the client
+/// disconnecting involves server communication and might take a short amount of time. If the client
 /// is dropped when still connected, it will _synchronously_ clean up after itself, thereby blocking
 /// while being dropped. In most cases, this is not the desired behavior.
 ///
@@ -49,9 +56,10 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 /// [multi-threaded runtimes]: https://docs.rs/tokio/latest/tokio/runtime/index.html
 #[derive(Debug)]
 pub struct AsyncClient {
+    // Use an `Arc` to access the client from here (the handle struct) and the background thread.
     client: Arc<ua::Client>,
     background_thread: Option<BackgroundThread>,
-    known_data_types: BTreeMap<ua::NodeId, ua::DataType>,
+    known_data_types: Vec<DataTypeSet>,
 }
 
 impl AsyncClient {
@@ -81,7 +89,7 @@ impl AsyncClient {
         Self {
             client,
             background_thread: Some(background_thread),
-            known_data_types: BTreeMap::new(),
+            known_data_types: Vec::new(),
         }
     }
 
@@ -116,9 +124,10 @@ impl AsyncClient {
             log::warn!("Error while disconnecting client: {error}");
         }
 
-        // PANIC: We only take the background thread in this method. Since it consumes `self`, the value must
-        // still be present when we reach this. Do so only right before awaiting to uphold invariant
-        // in `Drop` implementation which allows us to take an early return path there.
+        // PANIC: We only take the background thread here and in `drop()` (but that cannot have been
+        // called yet). Since the method consumes `self`, the value must still be present. Note that
+        // we the take value just before `await`, to uphold invariant in `Drop` implementation which
+        // allows us to take an early return path there.
         let background_thread = self.background_thread.take().expect("no background thread");
 
         // Asynchronously wait for the background task running in the background thread to complete.
@@ -130,7 +139,7 @@ impl AsyncClient {
     }
 
     pub fn add_data_types(
-        &self,
+        &mut self,
         data_type_descriptions: &[ua::DataTypeDescription],
     ) -> Result<usize> {
         // Pick only descriptions from incoming slice that we do not already know. The reason is: we
@@ -140,42 +149,50 @@ impl AsyncClient {
             .iter()
             .filter_map(|data_type_description| {
                 let data_type_id = data_type_description.data_type_id();
-                if is_well_known_data_type(data_type_id)
-                    || self.known_data_types.contains_key(data_type_id)
+                if is_well_known_data_type(data_type_id) {
+                    return None;
+                }
+                if self
+                    .known_data_types
+                    .iter()
+                    .any(|types| types.type_ids.contains(data_type_id))
                 {
                     return None;
                 }
                 Some((data_type_id, data_type_description))
             })
             .collect::<BTreeMap<_, _>>();
-        let new_data_type_ids = new_data_type_descriptions
-            .keys()
-            .copied()
-            .cloned()
-            .collect::<Vec<_>>();
 
         // Find dependency order: `sorted_data_type_ids` will contain dependants before dependencies
         // (e.g. data type for structure followed by data types for its fields). Each data type (ID)
         // will be listed only once and will not depend on any other data types listed before it.
-        let Some(sorted_data_type_ids) = topological_sort(&new_data_type_ids, |data_type_id| {
-            let data_type_description = new_data_type_descriptions.get(data_type_id).unwrap();
-            match data_type_description {
-                ua::DataTypeDescription::Structure(description) => {
-                    let Some(fields) = description.structure_definition().fields() else {
-                        return BTreeSet::new();
-                    };
-                    fields
-                        .iter()
-                        .filter_map(|field| {
-                            let data_type = field.data_type();
-                            new_data_type_descriptions
-                                .contains_key(data_type)
-                                .then(|| data_type.to_owned())
-                        })
-                        .collect()
+        let Some(sorted_data_type_ids) = ({
+            let new_data_type_ids = new_data_type_descriptions
+                .keys()
+                .copied()
+                .cloned()
+                .collect::<Vec<_>>();
+
+            topological_sort(&new_data_type_ids, |data_type_id| {
+                let data_type_description = new_data_type_descriptions.get(data_type_id).unwrap();
+                match data_type_description {
+                    ua::DataTypeDescription::Structure(description) => {
+                        let Some(fields) = description.structure_definition().fields() else {
+                            return BTreeSet::new();
+                        };
+                        fields
+                            .iter()
+                            .filter_map(|field| {
+                                let data_type = field.data_type();
+                                new_data_type_descriptions
+                                    .contains_key(data_type)
+                                    .then(|| data_type.to_owned())
+                            })
+                            .collect()
+                    }
+                    ua::DataTypeDescription::Enum(_) => BTreeSet::new(),
                 }
-                ua::DataTypeDescription::Enum(_) => BTreeSet::new(),
-            }
+            })
         }) else {
             // With the filtering above, topological sort must succeed. If it doesn't, the input can
             // only be malformed (containing a cycle) which would prevent us from creating data type
@@ -183,23 +200,49 @@ impl AsyncClient {
             return Err(Error::Internal("cyclical data type descriptions"));
         };
 
+        // Build array of data types iteratively. Later data types in the array may reference any of
+        // the earlier types _as well as_ any of the known data types from the client itself.
         let mut new_data_types = DataTypeArray::new(sorted_data_type_ids.len());
 
-        for data_type_id in sorted_data_type_ids {
+        for data_type_id in &sorted_data_type_ids {
             let &data_type_description = new_data_type_descriptions
-                .get(&data_type_id)
+                .get(data_type_id)
                 .expect("data type description exists");
 
             let data_type = {
                 // SAFETY: We use `custom_types` only in the call `to_data_type()`.
                 let custom_types = unsafe { new_data_types.to_data_type_array() };
+
+                // FIXME: Concatenate array with client's known data types, too.
                 data_type_description.to_data_type(Some(&custom_types))?
             };
 
             new_data_types.push(data_type)?;
         }
 
-        Ok(0)
+        // Add resulting array to internal list of known data types. Keep list of type IDs for quick
+        // lookups.
+        let number_of_new_data_types = new_data_types.len();
+        assert_eq!(number_of_new_data_types, sorted_data_type_ids.len());
+
+        let type_ids = sorted_data_type_ids.into_iter().collect::<BTreeSet<_>>();
+        assert_eq!(
+            type_ids.iter().collect::<BTreeSet<_>>(),
+            new_data_types
+                .iter()
+                .map(|data_type| data_type.type_id())
+                .collect::<BTreeSet<_>>(),
+            "consistent type IDs"
+        );
+
+        if !new_data_types.is_empty() {
+            self.known_data_types.push(DataTypeSet {
+                type_ids,
+                data_types: new_data_types,
+            });
+        }
+
+        Ok(number_of_new_data_types)
     }
 
     /// Reads node value.
