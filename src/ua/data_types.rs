@@ -76,6 +76,8 @@ mod status_code;
 mod string;
 mod structure_definition;
 mod timestamps_to_return;
+mod translate_browse_paths_to_node_ids_request;
+mod translate_browse_paths_to_node_ids_response;
 mod user_name_identity_token;
 mod variant;
 mod write_request;
@@ -164,6 +166,8 @@ pub use self::{
     string::String,
     structure_definition::StructureDefinition,
     timestamps_to_return::TimestampsToReturn,
+    translate_browse_paths_to_node_ids_request::TranslateBrowsePathsToNodeIdsRequest,
+    translate_browse_paths_to_node_ids_response::TranslateBrowsePathsToNodeIdsResponse,
     user_name_identity_token::UserNameIdentityToken,
     variant::Variant,
     write_request::WriteRequest,
