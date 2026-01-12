@@ -13,17 +13,33 @@ use open62541_sys::{
 use crate::{DataType as _, Error, Result, ua};
 
 /// Wrapper for data type from [`open62541_sys`].
-//
-// SAFETY: This must only have primitive values as members, i.e. all directly and indirectly used
-// `UA_DataType` must be statically allocated. Otherwise, we'd risk use-after-free.
-#[repr(transparent)]
-pub struct DataType(UA_DataType);
+///
+/// The actual data type is held on the heap to preserve pointer addresses after move.
+///
+/// # Safety
+///
+/// Instances of this type may be used _by address_, e.g., in [`ua::DataType`], [`ua::Variant`], and
+/// [`ua::ExtensionObject`]. In this case, the data type instance must live at least as long as that
+/// value.
+pub struct DataType(Box<UA_DataType>);
+
+unsafe impl Send for DataType {}
+unsafe impl Sync for DataType {}
 
 impl DataType {
+    /// Creates wrapper by taking ownership of data type.
+    ///
+    /// # Safety
+    ///
+    /// Ownership of the data type passes to `Self`. The data type must not have been referenced yet
+    /// by address in other values (as moving it into `Self` changes the address).
     unsafe fn from_raw(src: UA_DataType) -> Self {
-        Self(src)
+        Self(Box::new(src))
     }
 
+    // For now, we deliberately do not implement `Clone` to prevent subtle mistakes (e.g., when data
+    // types get reused without updating all references to them before dropping the original).
+    #[expect(dead_code, reason = "unused for now")]
     fn clone_raw(src: &UA_DataType) -> Self {
         let src: *const UA_DataType = src;
         let mut dst = MaybeUninit::<UA_DataType>::uninit();
@@ -73,7 +89,7 @@ impl DataType {
 
         if !unsafe {
             UA_DataType_getStructMember(
-                &self.0,
+                &raw const *self.0,
                 name.as_ptr(),
                 &raw mut out_offset,
                 &raw mut out_member_type,
@@ -87,8 +103,8 @@ impl DataType {
         let member_size = usize::try_from(out_member_type.memSize()).expect("get member size");
 
         // FIXME: Unwrap. Unsafe decode.
-        unsafe { value.decode(&raw const self.0).unwrap() };
-        let Some(data) = value.raw_decoded_content_mut(&raw const self.0) else {
+        unsafe { value.decode(&raw const *self.0).unwrap() };
+        let Some(data) = value.raw_decoded_content_mut(&raw const *self.0) else {
             panic!();
         };
 
@@ -106,19 +122,16 @@ impl DataType {
         let this = std::mem::ManuallyDrop::new(self);
         // SAFETY: Aliasing memory temporarily is safe because destructor will not be
         // called.
-        unsafe { std::ptr::read(&raw const this.0) }
+        unsafe { std::ptr::read(&raw const *this.0) }
     }
 }
 
 impl Drop for DataType {
     fn drop(&mut self) {
-        unsafe { UA_DataType_clear(&mut self.0) };
-    }
-}
+        // Remove all dynamically allocated data structures within the data type.
+        unsafe { UA_DataType_clear(&mut *self.0) };
 
-impl Clone for DataType {
-    fn clone(&self) -> Self {
-        Self::clone_raw(&self.0)
+        // Heap memory (boxed) is released when `self` goes out of scope here.
     }
 }
 

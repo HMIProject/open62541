@@ -51,7 +51,7 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 pub struct AsyncClient {
     client: Arc<ua::Client>,
     background_thread: Option<BackgroundThread>,
-    known_data_type_descriptions: BTreeMap<ua::NodeId, ua::DataTypeDescription>,
+    known_data_type_types: BTreeMap<ua::NodeId, ua::DataType>,
 }
 
 impl AsyncClient {
@@ -81,7 +81,7 @@ impl AsyncClient {
         Self {
             client,
             background_thread: Some(background_thread),
-            known_data_type_descriptions: BTreeMap::new(),
+            known_data_type_types: BTreeMap::new(),
         }
     }
 
@@ -133,14 +133,15 @@ impl AsyncClient {
         &self,
         data_type_descriptions: &[ua::DataTypeDescription],
     ) -> Result<usize> {
-        // Pick only descriptions from incoming slice that we do not already know. Create map to use
-        // at the end of this method to look up descriptions by their data type IDs again.
+        // Pick only descriptions from incoming slice that we do not already know. The reason is: we
+        // do not know whether these data types have already been referred to by _other_ data types;
+        // so, for each data type ID, we must always use the same compiled data type instance.
         let new_data_type_descriptions = data_type_descriptions
             .iter()
             .filter_map(|data_type_description| {
                 let data_type_id = data_type_description.data_type_id();
-                if is_known_data_type(data_type_id)
-                    || self.known_data_type_descriptions.contains_key(data_type_id)
+                if is_well_known_data_type(data_type_id)
+                    || self.known_data_type_types.contains_key(data_type_id)
                 {
                     return None;
                 }
@@ -852,7 +853,7 @@ where
     Some(result)
 }
 
-fn is_known_data_type(data_type_id: &ua::NodeId) -> bool {
+fn is_well_known_data_type(data_type_id: &ua::NodeId) -> bool {
     // TODO: Add proper support for Simatic data types.
     data_type_id.is_ns0() || (data_type_id.namespace_index() == 3 && data_type_id.is_numeric())
 }

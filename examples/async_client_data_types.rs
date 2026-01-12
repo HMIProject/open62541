@@ -110,7 +110,7 @@ async fn read_nested_data_type_descriptions(
     let mut pending_data_type_ids = BTreeSet::from_iter(
         data_type_ids
             .iter()
-            .filter(|data_type_id| !is_known_data_type(data_type_id))
+            .filter(|data_type_id| !is_well_known_data_type(data_type_id))
             .cloned(),
     );
 
@@ -123,7 +123,9 @@ async fn read_nested_data_type_descriptions(
         let data_type_descriptions = read_data_type_descriptions(client, &data_type_ids).await?;
 
         for data_type_id in find_nested_data_type_ids(&data_type_descriptions)? {
-            if !known_data_type_ids.contains(&data_type_id) && !is_known_data_type(&data_type_id) {
+            if !known_data_type_ids.contains(&data_type_id)
+                && !is_well_known_data_type(&data_type_id)
+            {
                 pending_data_type_ids.insert(data_type_id);
             }
         }
@@ -232,7 +234,7 @@ fn find_nested_data_type_ids(
     Ok(nested_data_type_ids)
 }
 
-fn is_known_data_type(data_type_id: &ua::NodeId) -> bool {
+fn is_well_known_data_type(data_type_id: &ua::NodeId) -> bool {
     // TODO: Add proper support for Simatic data types.
     data_type_id.is_ns0() || (data_type_id.namespace_index() == 3 && data_type_id.is_numeric())
 }
