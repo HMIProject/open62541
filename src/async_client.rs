@@ -227,14 +227,14 @@ impl AsyncClient {
         &self,
         node_attributes: &[(ua::NodeId, ua::AttributeId)],
     ) -> Result<Vec<DataValue<ua::Variant>>> {
-        let nodes_to_read: Vec<_> = node_attributes
+        let nodes_to_read = node_attributes
             .iter()
             .map(|(node_id, attribute_id)| {
                 ua::ReadValueId::init()
                     .with_node_id(node_id)
                     .with_attribute_id(attribute_id)
             })
-            .collect();
+            .collect::<Vec<_>>();
 
         let request = ua::ReadRequest::init()
             // TODO: Add method argument for this? We return timestamps in `DataValue` and they
@@ -248,8 +248,10 @@ impl AsyncClient {
             return Err(Error::internal("read should return results"));
         };
 
-        let results: Vec<DataValue<ua::Variant>> =
-            results.drain_all().map(ua::DataValue::cast).collect();
+        let results = results
+            .drain_all()
+            .map(ua::DataValue::cast)
+            .collect::<Vec<_>>();
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.

@@ -44,9 +44,9 @@ async fn browse_hierarchy(
     pending_node_ids.push_back(root_node_id.clone());
 
     while !pending_node_ids.is_empty() {
-        let browse_node_ids: Vec<ua::NodeId> = pending_node_ids
+        let browse_node_ids = pending_node_ids
             .drain(..MAX_NODE_IDS.min(pending_node_ids.len()))
-            .collect();
+            .collect::<Vec<_>>();
 
         println!(
             "Browsing {} node IDs {browse_node_ids:?}",
@@ -126,10 +126,11 @@ async fn browse_many_contd(
 
     debug_assert_eq!(results.len(), node_ids.len());
     // Tracks index of the original node ID for this result index.
-    let mut result_indices: Vec<usize> = (0..results.len()).collect();
+    let mut result_indices = (0..results.len()).collect::<Vec<_>>();
     // Collects all references for the given original node ID (index).
-    let mut collected_references: Vec<Result<Vec<ua::ReferenceDescription>>> =
-        (0..results.len()).map(|_| Ok(Vec::new())).collect();
+    let mut collected_references = (0..results.len())
+        .map(|_| Ok(Vec::new()))
+        .collect::<Vec<_>>();
 
     loop {
         let mut continuation_points = Vec::new();
@@ -253,7 +254,7 @@ impl<T> TreeNode<T> {
 
             println!("{prefix}{label}");
 
-            let mut children: Vec<(&String, &TreeNode<T>)> = node.node.children.iter().collect();
+            let mut children = node.node.children.iter().collect::<Vec<_>>();
 
             children.sort_by_key(|&(child_name, _)| child_name);
 
