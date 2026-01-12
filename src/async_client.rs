@@ -17,8 +17,8 @@ use open62541_sys::{
 };
 
 use crate::{
-    AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataValue, Error, Result,
-    ServiceRequest, ServiceResponse, SubscriptionBuilder, ua,
+    AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataTypeArray, DataValue,
+    Error, Result, ServiceRequest, ServiceResponse, SubscriptionBuilder, ua,
 };
 
 /// Timeout for `UA_Client_run_iterate()`.
@@ -51,7 +51,7 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 pub struct AsyncClient {
     client: Arc<ua::Client>,
     background_thread: Option<BackgroundThread>,
-    known_data_type_types: BTreeMap<ua::NodeId, ua::DataType>,
+    known_data_types: BTreeMap<ua::NodeId, ua::DataType>,
 }
 
 impl AsyncClient {
@@ -81,7 +81,7 @@ impl AsyncClient {
         Self {
             client,
             background_thread: Some(background_thread),
-            known_data_type_types: BTreeMap::new(),
+            known_data_types: BTreeMap::new(),
         }
     }
 
@@ -141,7 +141,7 @@ impl AsyncClient {
             .filter_map(|data_type_description| {
                 let data_type_id = data_type_description.data_type_id();
                 if is_well_known_data_type(data_type_id)
-                    || self.known_data_type_types.contains_key(data_type_id)
+                    || self.known_data_types.contains_key(data_type_id)
                 {
                     return None;
                 }
@@ -153,8 +153,6 @@ impl AsyncClient {
             .copied()
             .cloned()
             .collect::<Vec<_>>();
-
-        println!("<= {new_data_type_ids:?}");
 
         // Find dependency order: `sorted_data_type_ids` will contain dependants before dependencies
         // (e.g. data type for structure followed by data types for its fields). Each data type (ID)
@@ -179,22 +177,26 @@ impl AsyncClient {
                 ua::DataTypeDescription::Enum(_) => BTreeSet::new(),
             }
         }) else {
+            // With the filtering above, topological sort must succeed. If it doesn't, the input can
+            // only be malformed (containing a cycle) which would prevent us from creating data type
+            // instances below anyway.
             return Err(Error::Internal("cyclical data type descriptions"));
         };
 
-        println!("=> {sorted_data_type_ids:?}");
-
-        let mut new_data_types = Vec::with_capacity(sorted_data_type_ids.len());
+        let mut new_data_types = DataTypeArray::new(sorted_data_type_ids.len());
 
         for data_type_id in sorted_data_type_ids {
             let &data_type_description = new_data_type_descriptions
                 .get(&data_type_id)
                 .expect("data type description exists");
 
-            let data_type = data_type_description
-                .to_data_type(Some(&ua::DataTypeArray::new(&mut new_data_types)))?;
+            let data_type = {
+                // SAFETY: We use `custom_types` only in the call `to_data_type()`.
+                let custom_types = unsafe { new_data_types.to_data_type_array() };
+                data_type_description.to_data_type(Some(&custom_types))?
+            };
 
-            new_data_types.push(data_type.into_raw());
+            new_data_types.push(data_type)?;
         }
 
         Ok(0)

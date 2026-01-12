@@ -219,6 +219,7 @@ mod callback_fn;
 mod callback_stream;
 mod client;
 mod data_type;
+mod data_type_array;
 mod data_value;
 mod error;
 mod monitored_item;
@@ -257,10 +258,11 @@ pub use self::{
     userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},
 };
-use self::{
+pub(crate) use self::{
     callback_fn::CallbackMut,
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
+    data_type_array::DataTypeArray,
     monitored_item::create_monitored_items_callback,
     value::{ArrayValue, NonScalarValue},
 };
