@@ -262,7 +262,7 @@ pub(crate) use self::{
     callback_fn::CallbackMut,
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
-    data_type_array::DataTypeArray,
+    data_type_array::{DataTypeArray, DataTypeArrayRef},
     monitored_item::create_monitored_items_callback,
     value::{ArrayValue, NonScalarValue},
 };

@@ -18,8 +18,9 @@ use open62541_sys::{
 };
 
 use crate::{
-    AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataTypeArray, DataValue,
-    Error, Result, ServiceRequest, ServiceResponse, SubscriptionBuilder, ua,
+    AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataTypeArray,
+    DataTypeArrayRef, DataValue, Error, Result, ServiceRequest, ServiceResponse,
+    SubscriptionBuilder, ua,
 };
 
 /// Timeout for `UA_Client_run_iterate()`.
@@ -210,10 +211,18 @@ impl AsyncClient {
                 .expect("data type description exists");
 
             let data_type = {
-                // SAFETY: We use `custom_types` only in the call `to_data_type()`.
-                let custom_types = unsafe { new_data_types.to_data_type_array() };
+                let mut custom_types = DataTypeArrayRef::new(
+                    self.known_data_types
+                        .iter_mut()
+                        .map(|types| &mut types.data_types)
+                        .chain([&mut new_data_types])
+                        .collect(),
+                )
+                .expect("non-empty list of arrays");
 
-                // FIXME: Concatenate array with client's known data types, too.
+                // SAFETY: We use `custom_types` only in the call `to_data_type()`.
+                let custom_types = unsafe { custom_types.to_data_type_array() };
+
                 data_type_description.to_data_type(Some(&custom_types))?
             };
 

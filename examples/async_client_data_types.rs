@@ -5,7 +5,10 @@ use std::{
 
 use anyhow::Context as _;
 use itertools::Itertools;
-use open62541::{AsyncClient, ClientBuilder, ua};
+use open62541::{
+    AsyncClient, ClientBuilder,
+    ua::{self, DataTypeArray},
+};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -61,8 +64,10 @@ async fn read_value(fetch_upfront: bool) -> anyhow::Result<()> {
 
         println!("Data type descriptions: {data_type_descriptions:?}");
 
-        let number_of_new_data_types = client.add_data_types(&data_type_descriptions)?;
-        println!("Added {number_of_new_data_types} new data types");
+        for data_type_descriptions in data_type_descriptions.chunks(3) {
+            let number_of_new_data_types = client.add_data_types(data_type_descriptions)?;
+            println!("Added {number_of_new_data_types} new data types");
+        }
 
         // let data_type = description.to_data_type(None).context("create data type")?;
         // println!("Data type: {data_type:?}");

@@ -1,4 +1,4 @@
-use std::{fmt::Debug, ptr};
+use std::{fmt::Debug, mem, ptr};
 
 use open62541_sys::{UA_DataType, UA_DataTypeArray};
 
@@ -22,9 +22,29 @@ impl DataTypeArray {
         })
     }
 
+    /// Returns shared reference to value.
+    ///
+    /// # Safety
+    ///
+    /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
+    /// may happen when `open62541` functions are called that take ownership of values by pointer.
+    #[must_use]
+    pub(crate) unsafe fn as_ref(&self) -> &UA_DataTypeArray {
+        &self.0
+    }
+
     #[must_use]
     pub(crate) fn as_ptr(&self) -> *const UA_DataTypeArray {
         &raw const self.0
+    }
+
+    #[must_use]
+    pub(crate) fn into_raw(self) -> UA_DataTypeArray {
+        // Use `ManuallyDrop` to avoid double-free even when added code might cause panic. See
+        // documentation of `mem::forget()` for details.
+        let this = mem::ManuallyDrop::new(self);
+        // SAFETY: Aliasing memory temporarily is safe because destructor will not be called.
+        unsafe { ptr::read(&raw const this.0) }
     }
 }
 
