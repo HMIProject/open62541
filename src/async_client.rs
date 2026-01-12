@@ -251,7 +251,7 @@ impl AsyncClient {
         let results = results
             .drain_all()
             .map(ua::DataValue::cast)
-            .collect::<Vec<_>>();
+            .collect::<Vec<DataValue<ua::Variant>>>();
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.
