@@ -10,7 +10,7 @@ use open62541_sys::{UA_DataType, UA_DataTypeArray};
 
 use crate::ua;
 
-/// Safer variant of [`ua::DataTypeArray`].
+/// Efficient variant of [`ua::DataTypeArray`].
 ///
 /// This tracks the array's capacity, allowing in-place appending of new items without creating lots
 /// of singleton arrays in the resulting linked list of arrays.
@@ -25,10 +25,16 @@ pub(crate) struct DataTypeArray {
     last_capacity: NonZeroUsize,
 }
 
+// SAFETY: Like other data types, `UA_DataTypeArray` may be sent to another thread.
 unsafe impl Send for DataTypeArray {}
 
+// SAFETY: Like other data types, `UA_DataTypeArray` may be accessed by other threads.
 unsafe impl Sync for DataTypeArray {}
 
+/// Capacity of first array in linked list.
+///
+/// Each new array in linked list within [`DataTypeArray`] is doubled in size for amortized constant
+/// time [`DataTypeArray::push()`].
 const INITIAL_ARRAY_CAPACITY: NonZeroUsize = NonZeroUsize::new(4).expect("positive value");
 
 impl DataTypeArray {
@@ -37,7 +43,7 @@ impl DataTypeArray {
         let last_capacity = INITIAL_ARRAY_CAPACITY;
 
         Self {
-            arrays: vec![uninit_array(last_capacity, None)],
+            arrays: vec![uninit_array(last_capacity)],
             last_capacity,
         }
     }
@@ -68,7 +74,9 @@ impl DataTypeArray {
             let factor = NonZeroUsize::new(2).expect("positive factor");
             let next_capacity = self.last_capacity.saturating_mul(factor);
 
-            let array = uninit_array(next_capacity, Some(last_array.as_mut()));
+            let mut array = uninit_array(next_capacity);
+            debug_assert!(last_array.next.is_null(), "unexpected next array");
+            last_array.next = &raw mut *array;
             self.arrays.push(array);
             self.last_capacity = next_capacity;
         }
@@ -130,30 +138,37 @@ impl Drop for DataTypeArray {
             .split_last_mut()
             .expect("non-empty list of arrays");
 
-        // Drop arrays one after the other.
-        for array in arrays {
+        // Drop last array in list first (which may be partially or entirely empty). Do so to mirror
+        // order of initial push and to make sure no dangling pointers exist at any point during the
+        // iteration.
+        debug_assert!(last_array.next.is_null(), "unexpected next array");
+        unsafe { drop_array(last_array, self.last_capacity) };
+        let mut prev_array = last_array;
+
+        // Drop remaining arrays one after the other in reverse order.
+        for array in arrays.into_iter().rev() {
+            debug_assert_eq!(array.next, &raw mut **prev_array, "unexpected next array");
+            array.next = ptr::null_mut();
             // PANIC: All but the last array in the list are filled to capacity. Capacity of all the
             // arrays in the list is non-zero.
             let capacity = NonZeroUsize::new(array.typesSize).expect("non-empty array");
             unsafe { drop_array(array, capacity) };
+            prev_array = array;
         }
-
-        // Drop last array (which may be partially or entirely empty).
-        unsafe { drop_array(last_array, self.last_capacity) };
     }
 }
 
 impl Debug for DataTypeArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // TODO: Add useful implementation.
-        f.debug_tuple("DataTypeArray").finish_non_exhaustive()
+        f.debug_list().entries(self.iter()).finish()
     }
 }
 
-fn uninit_array(
-    capacity: NonZeroUsize,
-    next: Option<Pin<&mut UA_DataTypeArray>>,
-) -> Pin<Box<UA_DataTypeArray>> {
+/// Creates new `UA_DataTypeArray` on the heap.
+///
+/// The returned value gets leaked unless captured by an owning data structure. It does not hold any
+/// data types but has the given capacity.
+fn uninit_array(capacity: NonZeroUsize) -> Pin<Box<UA_DataTypeArray>> {
     let mut types = Vec::with_capacity(capacity.get());
 
     // Construct vector (to be turned into boxed slice) manually, because `UA_DataType` (and wrapper
@@ -172,7 +187,7 @@ fn uninit_array(
     let types = types.as_mut_ptr().cast::<UA_DataType>();
 
     Box::pin(UA_DataTypeArray {
-        next: next.map_or(ptr::null_mut(), |mut next| &raw mut *next),
+        next: ptr::null_mut(),
         typesSize: 0,
         types,
         // This flag only ever gets used by `UA_cleanupDataTypeWithCustom()` which we do not use. We
@@ -181,7 +196,19 @@ fn uninit_array(
     })
 }
 
+/// Drops `UA_DataTypeArray` created from [`uninit_array()`].
+///
+/// The data types are dropped in reverse order, making memory uninitialized. The value must not get
+/// used afterwards.
+///
+/// # Safety
+///
+/// All data types in the array are freed (in reverse order). No outside pointers to them must exist
+/// when this function is called.
 unsafe fn drop_array(array: &mut Pin<Box<UA_DataTypeArray>>, capacity: NonZeroUsize) {
+    // PANIC: We expect the array chain to be traversed outside this function.
+    debug_assert!(array.next.is_null(), "unexpected next array");
+
     // SAFETY: We reconstitute the owned memory as it was intially created.
     let mut types = unsafe {
         Vec::from_raw_parts(
@@ -191,7 +218,9 @@ unsafe fn drop_array(array: &mut Pin<Box<UA_DataTypeArray>>, capacity: NonZeroUs
         )
     };
 
-    for r#type in &mut types {
+    // Traverse list in reverse to not leave any dangling pointers around for intermediate values in
+    // case we stop iteration halfway.
+    for r#type in types.iter_mut().rev() {
         // SAFETY: These are the types that have actually been set.
         unsafe { r#type.assume_init_drop() };
     }
