@@ -1,3 +1,5 @@
+use std::pin::Pin;
+
 use crate::{Result, ua};
 
 #[derive(Debug, Clone)]
@@ -35,7 +37,10 @@ impl DataTypeDescription {
         }
     }
 
-    pub fn to_data_type(&self, custom_types: Option<&ua::DataTypeArray>) -> Result<ua::DataType> {
+    pub fn to_data_type(
+        &self,
+        custom_types: Option<Pin<&ua::DataTypeArray>>,
+    ) -> Result<ua::DataType> {
         match self {
             Self::Structure(value) => value.to_data_type(custom_types),
             Self::Enum(value) => value.to_data_type(custom_types),

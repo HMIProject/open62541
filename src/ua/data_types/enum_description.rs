@@ -1,3 +1,5 @@
+use std::pin::Pin;
+
 use open62541_sys::UA_EnumDescription;
 
 use crate::{DataType as _, Result, ua};
@@ -41,7 +43,10 @@ impl EnumDescription {
         self.0.builtInType
     }
 
-    pub fn to_data_type(&self, custom_types: Option<&ua::DataTypeArray>) -> Result<ua::DataType> {
+    pub fn to_data_type(
+        &self,
+        custom_types: Option<Pin<&ua::DataTypeArray>>,
+    ) -> Result<ua::DataType> {
         ua::DataType::from_description(ua::ExtensionObject::new(self), custom_types)
     }
 }

@@ -1,98 +1,145 @@
 use std::{
     fmt::Debug,
-    marker::PhantomData,
     mem::{self, MaybeUninit},
-    ptr,
+    num::NonZeroUsize,
+    pin::Pin,
+    ptr, slice,
 };
 
 use open62541_sys::{UA_DataType, UA_DataTypeArray};
 
-use crate::{Error, Result, ua};
+use crate::ua;
 
 /// Safer variant of [`ua::DataTypeArray`].
+///
+/// This tracks the array's capacity, allowing in-place appending of new items without creating lots
+/// of singleton arrays in the resulting linked list of arrays.
 pub(crate) struct DataTypeArray {
-    items: Box<[MaybeUninit<ua::DataType>]>,
-    len: usize,
+    // List of arrays that will form the linked list in `ua::DataTypeArray`. These are pinned for us
+    // to be able to return `ua::DataTypeArray` instances that can live across resizes of the vector
+    // `arrays` itself.
+    arrays: Vec<Pin<Box<UA_DataTypeArray>>>,
+
+    // Capacity of final item in `self.arrays`. The other items will be assumed to be fully occupied
+    // (i.e., their capacity matches their length).
+    last_capacity: NonZeroUsize,
 }
 
-impl DataTypeArray {
-    pub(crate) fn new(capacity: usize) -> Self {
-        let mut items = Vec::with_capacity(capacity);
+unsafe impl Send for DataTypeArray {}
 
-        // Construct vector (to be turned into boxed slice) manually, because `UA_DataType` (and our
-        // wrapper `ua::DataType`) does not implement `Clone`.
-        for _ in 0..capacity {
-            items.push(MaybeUninit::uninit());
-        }
+unsafe impl Sync for DataTypeArray {}
+
+const INITIAL_ARRAY_CAPACITY: NonZeroUsize = NonZeroUsize::new(4).expect("positive value");
+
+impl DataTypeArray {
+    #[must_use]
+    pub(crate) fn new() -> Self {
+        let last_capacity = INITIAL_ARRAY_CAPACITY;
 
         Self {
-            items: items.into_boxed_slice(),
-            len: 0,
+            arrays: vec![uninit_array(last_capacity, None)],
+            last_capacity,
         }
     }
 
-    pub(crate) fn push(&mut self, data_type: ua::DataType) -> Result<()> {
-        let Some(item) = self.items.get_mut(self.len) else {
-            return Err(Error::internal("maximum length reached"));
-        };
+    pub(crate) fn push(&mut self, data_type: ua::DataType) {
+        // Insert data type into free position in last array in list. We repeat this once, in case a
+        // full array is found in the first try and we need to extend the list of arrays first.
+        for _ in 0..2 {
+            // PANIC: We always create `DataTypeArray` with a non-empty list of arrays.
+            let last_array = self.arrays.last_mut().expect("empty list of arrays");
+            // SAFETY: We reconstitute the slice as it was intially created.
+            let types = unsafe {
+                slice::from_raw_parts_mut(
+                    last_array.types.cast::<MaybeUninit<UA_DataType>>(),
+                    self.last_capacity.get(),
+                )
+            };
 
-        item.write(data_type);
-        self.len += 1;
+            if let Some(last_type) = types.get_mut(last_array.typesSize) {
+                last_type.write(data_type.into_raw());
+                last_array.typesSize += 1;
 
-        Ok(())
+                return;
+            }
+
+            // Last array in list is full. Push new array to list. Double capacity of each new array
+            // for amortized constant time of this operation.
+            let factor = NonZeroUsize::new(2).expect("positive factor");
+            let next_capacity = self.last_capacity.saturating_mul(factor);
+
+            let array = uninit_array(next_capacity, Some(last_array.as_mut()));
+            self.arrays.push(array);
+            self.last_capacity = next_capacity;
+        }
+
+        // PANIC: This never happens: we just added a new array and it has non-zero capacity.
+        unreachable!("newly added array is full");
     }
 
+    #[expect(dead_code, reason = "unused for now")]
     #[must_use]
     pub(crate) fn len(&self) -> usize {
-        self.len
+        self.arrays.iter().map(|array| array.typesSize).sum()
     }
 
+    #[expect(dead_code, reason = "unused for now")]
     #[must_use]
     pub(crate) fn is_empty(&self) -> bool {
-        self.len != 0
+        // PANIC: We always create `DataTypeArray` with a non-empty list of arrays.
+        let last_array = self.arrays.last().expect("empty list of arrays");
+
+        // It is sufficient to check the size of any array in the list, because only the last one is
+        // possibly empty: all others are always assumed to be at full (non-zero) capacity.
+        last_array.typesSize != 0
     }
 
     #[must_use]
-    pub(crate) fn as_slice(&self) -> &[ua::DataType] {
-        // SAFETY: This transmute is allowed, because `MaybeUninit` has `#repr(transparent)` set. We
-        // only access items that have been actually set.
-        unsafe { mem::transmute(&self.items[0..self.len]) }
+    pub(crate) fn contains(&self, type_id: &ua::NodeId) -> bool {
+        self.iter().any(|r#type| r#type.type_id() == type_id)
     }
 
-    #[must_use]
-    unsafe fn as_raw_parts(&mut self) -> (usize, *mut UA_DataType) {
-        // SAFETY: This transmute is allowed, because `MaybeUninit` and `ua::DataType` both have the
-        // attribute `#repr(transparent)`. We only access items that have been actually set.
-        (self.len, unsafe { mem::transmute(self.items.as_mut_ptr()) })
-    }
-
-    pub(crate) fn iter(&self) -> impl ExactSizeIterator<Item = &ua::DataType> {
-        self.as_slice().into_iter()
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &ua::DataType> {
+        self.arrays
+            .iter()
+            .map(|array| {
+                // SAFETY: We only access the initialized parts of the array.
+                unsafe { slice::from_raw_parts(array.types, array.typesSize) }
+            })
+            .flat_map(|types| types.iter().map(ua::DataType::raw_ref))
     }
 
     /// Get [`ua::DataTypeArray`] of current array of data types.
-    ///
-    /// # Safety
-    ///
-    /// The returned object aliases the current set of items in `self`. It therefore must be dropped
-    /// before making any other changes to `self`. In particular, `self` must outlive the result.
     #[must_use]
-    pub(crate) unsafe fn to_data_type_array(&mut self) -> ua::DataTypeArray {
-        // SAFETY: This transmute is allowed, because `MaybeUninit` and `ua::DataType` both have the
-        // attribute `#repr(transparent)`. We only access items that have been actually set.
-        let data_types = unsafe { mem::transmute(&mut self.items[0..self.len]) };
+    pub(crate) fn as_data_type_array(&self) -> Pin<&ua::DataTypeArray> {
+        // PANIC: We always create `DataTypeArray` with a non-empty list of arrays.
+        let first_array = self.arrays.first().expect("non-empty list of arrays");
 
-        unsafe { ua::DataTypeArray::new(data_types) }
+        unsafe {
+            // SAFETY: Transmutation is allowed for `#[repr(transparent)]`.
+            mem::transmute::<Pin<&UA_DataTypeArray>, Pin<&ua::DataTypeArray>>(first_array.as_ref())
+        }
     }
 }
 
 impl Drop for DataTypeArray {
     fn drop(&mut self) {
-        for item in &mut self.items[0..self.len] {
-            // SAFETY: These are exactly the items that have been actually set. Since they would not
-            // be dropped automatically within `MaybeUninit`, we do it manually here.
-            unsafe { item.assume_init_drop() };
+        // PANIC: We always create `DataTypeArray` with a non-empty list of arrays.
+        let (last_array, arrays) = self
+            .arrays
+            .split_last_mut()
+            .expect("non-empty list of arrays");
+
+        // Drop arrays one after the other.
+        for array in arrays {
+            // PANIC: All but the last array in the list are filled to capacity. Capacity of all the
+            // arrays in the list is non-zero.
+            let capacity = NonZeroUsize::new(array.typesSize).expect("non-empty array");
+            unsafe { drop_array(array, capacity) };
         }
+
+        // Drop last array (which may be partially or entirely empty).
+        unsafe { drop_array(last_array, self.last_capacity) };
     }
 }
 
@@ -103,62 +150,49 @@ impl Debug for DataTypeArray {
     }
 }
 
-pub(crate) struct DataTypeArrayRef<'a>(UA_DataTypeArray, PhantomData<&'a ()>);
+fn uninit_array(
+    capacity: NonZeroUsize,
+    next: Option<Pin<&mut UA_DataTypeArray>>,
+) -> Pin<Box<UA_DataTypeArray>> {
+    let mut types = Vec::with_capacity(capacity.get());
 
-impl<'a> DataTypeArrayRef<'a> {
-    pub(crate) fn new(arrays: Vec<&'a mut DataTypeArray>) -> Option<Self> {
-        let mut result = None;
-
-        // Iteratively prepend new values to the start of the resulting linked list. Resulting array
-        // should have the same order, so we iterate over the incoming data type arrays in reverse.
-        for array in arrays.into_iter().rev() {
-            let (data_types_len, data_types) = unsafe { array.as_raw_parts() };
-
-            let array = UA_DataTypeArray {
-                next: ptr::null_mut(),
-                typesSize: data_types_len,
-                types: data_types,
-                // We do not want the data type arrays inside the result to be cleaned up: the whole
-                // idea is to alias them.
-                cleanup: false,
-            };
-
-            result = Some(if let Some(array_chain) = result {
-                UA_DataTypeArray {
-                    // Leak any referenced chained data type arrays onto the heap. Drop will have to
-                    // recapture them. This is the nature of a linked list.
-                    next: Box::leak(Box::new(array_chain)),
-                    ..array
-                }
-            } else {
-                array
-            });
-        }
-
-        result.map(|array_chain| Self(array_chain, PhantomData))
+    // Construct vector (to be turned into boxed slice) manually, because `UA_DataType` (and wrapper
+    // `ua::DataType`) does not implement `Clone`.
+    while types.len() < types.capacity() {
+        types.push(MaybeUninit::uninit());
     }
 
-    /// Get [`ua::DataTypeArray`] of current array of data types.
-    ///
-    /// # Safety
-    ///
-    /// The returned object aliases the current set of items in `self`. It therefore must be dropped
-    /// before making any other changes to `self`. In particular, `self` must outlive the result.
-    #[must_use]
-    pub(crate) unsafe fn to_data_type_array(&mut self) -> ua::DataTypeArray {
-        // TODO: Use constructor method instead.
-        unsafe { mem::transmute(ptr::read(&raw const self.0)) }
-    }
+    // PANIC: Uphold invariant for reclaiming the owned memory later.
+    debug_assert_eq!(types.len(), types.capacity(), "unexpected size");
+    let types: &mut [MaybeUninit<UA_DataType>] = types.leak::<'static>();
+
+    // Casting from `MaybeUninit<UA_DataType>` to `UA_DataType` is allowed, because `MaybeUninit` is
+    // `#[repr(transparent)]`. We make sure that we only access items at this pointer within the set
+    // capacity. When reassembling the owned memory (for dropping), we apply the correct capacity.
+    let types = types.as_mut_ptr().cast::<UA_DataType>();
+
+    Box::pin(UA_DataTypeArray {
+        next: next.map_or(ptr::null_mut(), |mut next| &raw mut *next),
+        typesSize: 0,
+        types,
+        // This flag only ever gets used by `UA_cleanupDataTypeWithCustom()` which we do not use. We
+        // always clean up in our own `Drop` implementation.
+        cleanup: false,
+    })
 }
 
-impl Drop for DataTypeArrayRef<'_> {
-    fn drop(&mut self) {
-        let mut next = self.0.next;
+unsafe fn drop_array(array: &mut Pin<Box<UA_DataTypeArray>>, capacity: NonZeroUsize) {
+    // SAFETY: We reconstitute the owned memory as it was intially created.
+    let mut types = unsafe {
+        Vec::from_raw_parts(
+            array.types.cast::<MaybeUninit<UA_DataType>>(),
+            array.typesSize,
+            capacity.get(),
+        )
+    };
 
-        while !next.is_null() {
-            let array = unsafe { Box::from_raw(next) };
-            next = array.next;
-            // Heap allocation is cleaned up here when `array` goes out of scope.
-        }
+    for r#type in &mut types {
+        // SAFETY: These are the types that have actually been set.
+        unsafe { r#type.assume_init_drop() };
     }
 }

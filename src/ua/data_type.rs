@@ -1,7 +1,8 @@
 use std::{
     ffi::{CStr, CString},
     fmt::Debug,
-    mem::MaybeUninit,
+    mem::{self, MaybeUninit},
+    pin::Pin,
     ptr, slice,
 };
 
@@ -41,6 +42,19 @@ impl DataType {
         Self(src)
     }
 
+    /// Creates wrapper reference from value.
+    #[must_use]
+    pub(crate) fn raw_ref(src: &UA_DataType) -> &Self {
+        let src: *const UA_DataType = src;
+        // This transmutes between the inner type and `Self` through `cast()`. This is valid because
+        // of `#[repr(transparent)]`.
+        let ptr = src.cast::<Self>();
+        // SAFETY: `#[repr(transparent)]` allows us to transmute between `Self` and the inner type.
+        let ptr = unsafe { ptr.as_ref() };
+        // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
+        unsafe { ptr.unwrap_unchecked() }
+    }
+
     // For now, we deliberately do not implement `Clone` to prevent subtle mistakes (e.g., when data
     // types get reused without updating all references to them before dropping the original).
     #[expect(dead_code, reason = "unused for now")]
@@ -59,7 +73,7 @@ impl DataType {
 
     pub(crate) fn from_description(
         description: ua::ExtensionObject,
-        custom_types: Option<&ua::DataTypeArray>,
+        custom_types: Option<Pin<&ua::DataTypeArray>>,
     ) -> Result<Self> {
         let mut dst = MaybeUninit::<UA_DataType>::uninit();
 
@@ -68,8 +82,8 @@ impl DataType {
                 dst.as_mut_ptr(),
                 description.as_ptr(),
                 custom_types
-                    .map(ua::DataTypeArray::as_ptr)
-                    .unwrap_or(ptr::null()),
+                    .as_deref()
+                    .map_or(ptr::null(), ua::DataTypeArray::as_ptr),
             )
         });
         Error::verify_good(&status_code)?;
@@ -125,13 +139,11 @@ impl DataType {
         todo!()
     }
 
+    /// Gives up ownership and returns value.
+    #[must_use]
     pub(crate) fn into_raw(self) -> UA_DataType {
-        // Use `ManuallyDrop` to avoid double-free even when added code might cause panic.
-        // See documentation of `mem::forget()` for details.
-        let this = std::mem::ManuallyDrop::new(self);
-        // SAFETY: Aliasing memory temporarily is safe because destructor will not be
-        // called.
-        unsafe { std::ptr::read(&raw const this.0) }
+        // SAFETY: Type `#[repr(transparent)]`.
+        unsafe { mem::transmute(self) }
     }
 }
 

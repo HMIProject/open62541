@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet, HashSet, LinkedList, VecDeque},
+    collections::{BTreeMap, BTreeSet},
     ffi::c_void,
     slice,
     sync::{
@@ -12,15 +12,13 @@ use std::{
 
 use futures_channel::oneshot;
 use open62541_sys::{
-    __UA_Client_AsyncService, UA_Client, UA_Client_disconnectAsync, UA_Client_getConfig,
-    UA_Client_run_iterate, UA_STATUSCODE_BADCONNECTIONCLOSED, UA_STATUSCODE_BADDISCONNECT,
-    UA_UInt32,
+    __UA_Client_AsyncService, UA_Client, UA_Client_disconnectAsync, UA_Client_run_iterate,
+    UA_STATUSCODE_BADCONNECTIONCLOSED, UA_STATUSCODE_BADDISCONNECT, UA_UInt32,
 };
 
 use crate::{
-    AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataTypeArray,
-    DataTypeArrayRef, DataValue, Error, Result, ServiceRequest, ServiceResponse,
-    SubscriptionBuilder, ua,
+    AsyncSubscription, Attribute, BrowseResult, CallbackOnce, DataType, DataTypeArray, DataValue,
+    Error, Result, ServiceRequest, ServiceResponse, SubscriptionBuilder, ua,
 };
 
 /// Timeout for `UA_Client_run_iterate()`.
@@ -33,12 +31,6 @@ use crate::{
 /// first, the value should not be too large. On the other hand, it should not be too small to avoid
 /// repeatedly calling `poll()`/`select()` inside open62541's event loop implementation.
 const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
-
-#[derive(Debug)]
-struct DataTypeSet {
-    type_ids: BTreeSet<ua::NodeId>,
-    data_types: DataTypeArray,
-}
 
 /// Connected OPC UA client (with asynchronous API).
 ///
@@ -60,7 +52,12 @@ pub struct AsyncClient {
     // Use an `Arc` to access the client from here (the handle struct) and the background thread.
     client: Arc<ua::Client>,
     background_thread: Option<BackgroundThread>,
-    known_data_types: Vec<DataTypeSet>,
+
+    // We keep our own list of custom (known) data types around. While `UA_Client` can store this as
+    // well, the would result in an automatic resolution of all returned data values, making it hard
+    // to reason about lifetimes: `UA_Variant` et al. would refer to these data types by pointer and
+    // the targets would be freed when the client is shut down, risking use-after-free.
+    custom_data_types: DataTypeArray,
 }
 
 impl AsyncClient {
@@ -90,7 +87,7 @@ impl AsyncClient {
         Self {
             client,
             background_thread: Some(background_thread),
-            known_data_types: Vec::new(),
+            custom_data_types: DataTypeArray::new(),
         }
     }
 
@@ -150,13 +147,8 @@ impl AsyncClient {
             .iter()
             .filter_map(|data_type_description| {
                 let data_type_id = data_type_description.data_type_id();
-                if is_well_known_data_type(data_type_id) {
-                    return None;
-                }
-                if self
-                    .known_data_types
-                    .iter()
-                    .any(|types| types.type_ids.contains(data_type_id))
+                if is_well_known_data_type(data_type_id)
+                    || self.custom_data_types.contains(data_type_id)
                 {
                     return None;
                 }
@@ -201,57 +193,21 @@ impl AsyncClient {
             return Err(Error::Internal("cyclical data type descriptions"));
         };
 
-        // Build array of data types iteratively. Later data types in the array may reference any of
-        // the earlier types _as well as_ any of the known data types from the client itself.
-        let mut new_data_types = DataTypeArray::new(sorted_data_type_ids.len());
-
+        // Iterate over new data types in dependency order (with dependencies first). Add any of the
+        // resulting compiled data types directly into the set of known data types to be used in the
+        // next loop iteration.
         for data_type_id in &sorted_data_type_ids {
             let &data_type_description = new_data_type_descriptions
                 .get(data_type_id)
                 .expect("data type description exists");
 
-            let data_type = {
-                let mut custom_types = DataTypeArrayRef::new(
-                    self.known_data_types
-                        .iter_mut()
-                        .map(|types| &mut types.data_types)
-                        .chain([&mut new_data_types])
-                        .collect(),
-                )
-                .expect("non-empty list of arrays");
+            let data_type = data_type_description
+                .to_data_type(Some(self.custom_data_types.as_data_type_array()))?;
 
-                // SAFETY: We use `custom_types` only in the call `to_data_type()`.
-                let custom_types = unsafe { custom_types.to_data_type_array() };
-
-                data_type_description.to_data_type(Some(&custom_types))?
-            };
-
-            new_data_types.push(data_type)?;
+            self.custom_data_types.push(data_type);
         }
 
-        // Add resulting array to internal list of known data types. Keep list of type IDs for quick
-        // lookups.
-        let number_of_new_data_types = new_data_types.len();
-        assert_eq!(number_of_new_data_types, sorted_data_type_ids.len());
-
-        let type_ids = sorted_data_type_ids.into_iter().collect::<BTreeSet<_>>();
-        assert_eq!(
-            type_ids.iter().collect::<BTreeSet<_>>(),
-            new_data_types
-                .iter()
-                .map(|data_type| data_type.type_id())
-                .collect::<BTreeSet<_>>(),
-            "consistent type IDs"
-        );
-
-        if !new_data_types.is_empty() {
-            self.known_data_types.push(DataTypeSet {
-                type_ids,
-                data_types: new_data_types,
-            });
-        }
-
-        Ok(number_of_new_data_types)
+        Ok(sorted_data_type_ids.len())
     }
 
     /// Reads node value.

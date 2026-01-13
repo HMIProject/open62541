@@ -1,3 +1,5 @@
+use std::pin::Pin;
+
 use open62541_sys::UA_StructureDescription;
 
 use crate::{DataType as _, Result, ua};
@@ -32,7 +34,10 @@ impl StructureDescription {
         ua::StructureDefinition::raw_ref(&self.0.structureDefinition)
     }
 
-    pub fn to_data_type(&self, custom_types: Option<&ua::DataTypeArray>) -> Result<ua::DataType> {
+    pub fn to_data_type(
+        &self,
+        custom_types: Option<Pin<&ua::DataTypeArray>>,
+    ) -> Result<ua::DataType> {
         ua::DataType::from_description(ua::ExtensionObject::new(self), custom_types)
     }
 }

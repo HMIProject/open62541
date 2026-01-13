@@ -167,18 +167,18 @@ pub unsafe trait DataType: Debug + Clone {
         unsafe { Self::from_raw(src) }
     }
 
-    /// Creates copy without giving up ownership.
-    ///
-    /// # Safety
-    ///
-    /// Think twice before using this. Pointers to dynamically allocated attributes within `src` are
-    /// copied and will become dangling pointers in `src` when the _returned_ value is dropped. Vice
-    /// versa, directly (or indirectly) freeing the copied value later would double-free memory when
-    /// the returned value is dropped.
-    #[must_use]
-    unsafe fn copy_raw(src: &Self::Inner) -> Self {
-        todo!()
-    }
+    // /// Creates copy without giving up ownership.
+    // ///
+    // /// # Safety
+    // ///
+    // /// Think twice before using this. Pointers to dynamically allocated attributes within `src` are
+    // /// copied and will become dangling pointers in `src` when the _returned_ value is dropped. Vice
+    // /// versa, directly (or indirectly) freeing the copied value later would double-free memory when
+    // /// the returned value is dropped.
+    // #[must_use]
+    // unsafe fn copy_raw(src: &Self::Inner) -> Self {
+    //     todo!()
+    // }
 
     /// Clones value into `dst`.
     ///
@@ -433,12 +433,7 @@ macro_rules! data_type {
             }
 
             fn into_raw(self) -> Self::Inner {
-                // Use `ManuallyDrop` to avoid double-free even when added code might cause panic.
-                // See documentation of `mem::forget()` for details.
-                let this = std::mem::ManuallyDrop::new(self);
-                // SAFETY: Aliasing memory temporarily is safe because destructor will not be
-                // called.
-                unsafe { std::ptr::read(&raw const this.0) }
+                unsafe { std::mem::transmute(self) }
             }
         }
 
