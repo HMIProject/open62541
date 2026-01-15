@@ -6,8 +6,12 @@ use std::{
 use anyhow::Context as _;
 use itertools::Itertools;
 use open62541::{
-    AsyncClient, ClientBuilder,
+    AsyncClient, ClientBuilder, DataType,
     ua::{self, DataTypeArray},
+};
+use open62541_sys::{
+    UA_NS0ID_BASEDATATYPE, UA_NS0ID_HASSUBTYPE, UA_NS0ID_PUBLISHSUBSCRIBETYPE_ADDCONNECTION,
+    UA_NS0ID_REFERENCELISTENTRYDATATYPE, UA_NS0ID_VARIABLETYPENODE_ENCODING_DEFAULTJSON,
 };
 
 #[tokio::main]
@@ -59,17 +63,59 @@ async fn read_value(fetch_upfront: bool) -> anyhow::Result<()> {
             .into_scalar_value()
             .context("turn into scalar value")?;
 
-        let data_type_descriptions =
+        let mut data_type_descriptions =
             read_nested_data_type_descriptions(&client, &[data_type_id], &[]).await?;
         println!("Data type descriptions: {data_type_descriptions:?}");
+
+        let data_type_ids = data_type_descriptions
+            .iter()
+            .map(|data_type_description| data_type_description.data_type_id().to_owned())
+            .collect::<BTreeSet<_>>();
+
+        let mut missing_types = BTreeSet::new();
+
+        for data_type_description in &mut data_type_descriptions {
+            let ua::DataTypeDescription::Structure(structure_description) = data_type_description
+            else {
+                unimplemented!();
+            };
+
+            for field in structure_description
+                .structure_definition()
+                .fields()
+                .unwrap()
+                .iter_mut()
+            {
+                let data_type_id = field.data_type();
+                if !data_type_id.is_ns0() && !data_type_ids.contains(data_type_id) {
+                    println!("MISSING: {data_type_id:?}");
+                    missing_types.insert(data_type_id.to_owned());
+                }
+            }
+        }
+
+        if !missing_types.is_empty() {
+            let supertypes = read_supertypes(&client, &missing_types).await?;
+            println!("Supertypes: {supertypes:?}");
+            for (subtype, supertype) in missing_types.into_iter().zip(supertypes) {
+                for data_type_description in data_type_descriptions.iter_mut().skip(1) {
+                    data_type_description.replace_data_type(&subtype, &supertype);
+                    // data_type_description
+                    //     .replace_data_type(&subtype, &ua::NodeId::ns0(UA_NS0ID_BASEDATATYPE));
+                }
+            }
+            for data_type_description in &mut data_type_descriptions {
+                data_type_description.drop_arrays();
+            }
+            println!("Adjusted data type descriptions: {data_type_descriptions:?}");
+        }
 
         let number_of_new_data_types = client.add_data_types(&data_type_descriptions)?;
         println!("Added {number_of_new_data_types} new data types");
 
-        // let data_type = description.to_data_type(None).context("create data type")?;
-        // println!("Data type: {data_type:?}");
-
-        // println!("Encoded value: {extension_object_value:?}");
+        println!("Encoded value: {extension_object_value:?}");
+        client.decode_extension_object(&mut extension_object_value)?;
+        println!("Decoded value: {extension_object_value:?}");
         // let member =
         //     data_type.get_struct_member(&mut extension_object_value, "active_flushing2")?;
         // println!("Member value: {member:?}");
@@ -92,6 +138,43 @@ async fn read_value(fetch_upfront: bool) -> anyhow::Result<()> {
     client.disconnect().await;
 
     Ok(())
+}
+
+async fn read_supertypes(
+    client: &AsyncClient,
+    data_type_ids: impl IntoIterator<Item = &ua::NodeId>,
+) -> anyhow::Result<Vec<ua::NodeId>> {
+    let browse_descriptions = data_type_ids
+        .into_iter()
+        .map(|data_type_id| {
+            ua::BrowseDescription::init()
+                .with_node_id(data_type_id)
+                .with_browse_direction(&ua::BrowseDirection::INVERSE)
+                .with_reference_type_id(&ua::NodeId::ns0(UA_NS0ID_HASSUBTYPE))
+                .with_include_subtypes(true)
+                .with_node_class_mask(&ua::NodeClassMask::DATATYPE)
+                .with_result_mask(&ua::BrowseResultMask::NONE)
+        })
+        .collect::<Vec<_>>();
+
+    let results = client.browse_many(&browse_descriptions).await?;
+
+    let mut supertypes = Vec::with_capacity(results.len());
+
+    for result in results {
+        let result = result?;
+
+        if !result.1.is_none() {
+            unimplemented!();
+        };
+
+        let nodes = result.0.to_vec();
+        assert_eq!(nodes.len(), 1);
+
+        supertypes.push(nodes.first().unwrap().node_id().node_id().to_owned());
+    }
+
+    Ok(supertypes)
 }
 
 async fn read_nested_data_type_descriptions(

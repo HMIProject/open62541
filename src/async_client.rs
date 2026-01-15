@@ -210,6 +210,25 @@ impl AsyncClient {
         Ok(sorted_data_type_ids.len())
     }
 
+    pub fn decode_extension_object(&self, value: &mut ua::ExtensionObject) -> Result<()> {
+        let Some(type_id) = value.encoded_type_id() else {
+            return Ok(());
+        };
+
+        let Some(data_type) = self.custom_data_types.get_binary_encoding(type_id) else {
+            return Err(Error::Internal("unknown data type"));
+        };
+
+        unsafe {
+            value.decode(
+                data_type.as_ptr(),
+                Some(&self.custom_data_types.as_data_type_array()),
+            )
+        }?;
+
+        Ok(())
+    }
+
     /// Reads node value.
     ///
     /// To read other attributes, see [`read_attribute()`], [`read_attributes()`], and

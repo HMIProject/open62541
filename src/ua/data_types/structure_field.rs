@@ -39,4 +39,12 @@ impl StructureField {
     pub fn is_optional(&self) -> bool {
         self.0.isOptional
     }
+
+    fn data_type_mut(&mut self) -> &mut ua::NodeId {
+        ua::NodeId::raw_mut(&mut self.0.dataType)
+    }
+
+    pub(crate) fn set_data_type(&mut self, data_type: ua::NodeId) {
+        *self.data_type_mut() = data_type;
+    }
 }

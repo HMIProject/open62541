@@ -341,6 +341,10 @@ impl<T: DataType> Array<T> {
         self.as_slice_mut().iter_mut()
     }
 
+    pub(crate) fn into_iter(self) -> impl ExactSizeIterator<Item = T> {
+        vec![].into_iter()
+    }
+
     /// Consumes the array elements as an iterator.
     ///
     /// Replaces the elements of the array by default-initialized instances ([`DataType::init()`]).

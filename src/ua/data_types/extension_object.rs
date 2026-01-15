@@ -1,11 +1,16 @@
-use std::{ffi::c_void, ptr};
+use std::{
+    collections::BTreeMap,
+    ffi::c_void,
+    io::{Cursor, Read},
+    ptr,
+};
 
 use open62541_sys::{
-    UA_DataType, UA_ExtensionObject_clear, UA_ExtensionObject_setValue,
+    UA_DataType, UA_DecodeBinaryOptions, UA_ExtensionObject_clear, UA_ExtensionObject_setValue,
     UA_ExtensionObject_setValueCopy, UA_ExtensionObjectEncoding, UA_decodeBinary,
 };
 
-use crate::{DataType, Error, Result, ua};
+use crate::{DataType, DataValue, Error, Result, ua};
 
 // SAFETY: This must only hold primitive values, i.e. all directly and indirectly used `UA_DataType`
 // must be statically allocated. Otherwise, we'd risk use-after-free.
@@ -110,6 +115,10 @@ impl ExtensionObject {
         unsafe { decoded_content.data.cast::<T::Inner>().as_ref() }.map(T::raw_ref)
     }
 
+    pub fn into_decoded(self) -> DecodedValue {
+        todo!()
+    }
+
     pub(crate) fn raw_decoded_content_mut(
         &mut self,
         data_type: *const UA_DataType,
@@ -145,7 +154,11 @@ impl ExtensionObject {
     ///
     /// `data_type` must outlive `self` (this pointer becomes part of the extension object's decoded
     /// representation).
-    pub(crate) unsafe fn decode(&mut self, data_type: *const UA_DataType) -> Result<()> {
+    pub(crate) unsafe fn decode(
+        &mut self,
+        data_type: *const UA_DataType,
+        custom_types: Option<&ua::DataTypeArray>,
+    ) -> Result<()> {
         if matches!(
             self.0.encoding,
             UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_DECODED
@@ -176,13 +189,18 @@ impl ExtensionObject {
 
         // PANIC: The given pointer must be valid.
         let data_type_ref = unsafe { data_type.as_ref() }.expect("valid data type");
-        if type_id != ua::NodeId::raw_ref(&data_type_ref.typeId) {
+        if type_id != ua::NodeId::raw_ref(&data_type_ref.binaryEncodingId) {
             return Err(Error::Internal("unexpected extension object data type ID"));
         }
 
         // PANIC: `usize` must hold the given `UA_UInt32` value.
         let mem_size = usize::try_from(data_type_ref.memSize()).expect("get memory size");
         let mut data: Vec<u8> = Vec::with_capacity(mem_size);
+
+        let mut options = UA_DecodeBinaryOptions {
+            customTypes: custom_types.map_or(ptr::null(), |custom_types| custom_types.as_ptr()),
+            ..Default::default()
+        };
 
         // This puts data into the heap-allocated vector that might include pointers or referenced
         // data structures. After this has succeded, we must not drop `data` or risk memory leaks.
@@ -191,7 +209,7 @@ impl ExtensionObject {
                 body.as_ptr(),
                 data.as_mut_ptr().cast::<c_void>(),
                 data_type,
-                ptr::null_mut(),
+                &raw mut options,
             )
         });
         Error::verify_good(&status_code)?;
@@ -210,4 +228,45 @@ impl ExtensionObject {
 
         Ok(())
     }
+}
+
+#[derive(Debug)]
+pub enum DecodedValue {
+    Simple(SimpleValue),
+    Structure(DecodedStructure),
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum SimpleValue {
+    Boolean(bool),
+    SByte(i8),
+    Byte(u8),
+}
+
+#[derive(Debug)]
+pub struct DecodedStructure {
+    pub fields: BTreeMap<String, DecodedValue>,
+}
+
+fn decode_binary(mut body: Cursor<&[u8]>) -> Result<DecodedValue> {
+    let namespace = decode_uint16(&mut body)?;
+
+    todo!()
+}
+
+fn decode_uint16(data: &mut Cursor<&[u8]>) -> Result<u16> {
+    let mut value: [u8; 2] = [0, 0];
+    data.read_exact(&mut value).unwrap();
+    Ok(u16::from_le_bytes(value))
+}
+
+fn decode_int32(data: &mut Cursor<&[u8]>) -> Result<i32> {
+    let mut value: [u8; 4] = [0, 0, 0, 0];
+    data.read_exact(&mut value).unwrap();
+    Ok(i32::from_le_bytes(value))
+}
+
+fn decode_enumeration(data: &mut Cursor<&[u8]>) -> Result<i32> {
+    decode_int32(data)
 }

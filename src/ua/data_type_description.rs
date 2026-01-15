@@ -26,6 +26,24 @@ impl DataTypeDescription {
         }
     }
 
+    pub fn drop_arrays(&mut self) {
+        match self {
+            Self::Structure(description) => description.drop_arrays(),
+            Self::Enum(_) => {
+                // Nothing to do for enums.
+            }
+        }
+    }
+
+    pub fn replace_data_type(&mut self, from: &ua::NodeId, to: &ua::NodeId) {
+        match self {
+            Self::Structure(description) => description.replace_data_type(from, to),
+            Self::Enum(_) => {
+                // Nothing to do for enums.
+            }
+        }
+    }
+
     pub fn to_definition(&self) -> ua::DataTypeDefinition {
         match self {
             Self::Structure(description) => {

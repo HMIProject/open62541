@@ -29,6 +29,14 @@ impl StructureDescription {
         ua::QualifiedName::raw_ref(&self.0.name)
     }
 
+pub fn drop_arrays(&mut self) {
+        ua::StructureDefinition::raw_mut(&mut self.0.structureDefinition).drop_arrays()
+}
+
+    pub fn replace_data_type(&mut self, from: &ua::NodeId, to: &ua::NodeId) {
+        ua::StructureDefinition::raw_mut(&mut self.0.structureDefinition).replace_data_type(from,to)
+    }
+
     #[must_use]
     pub fn structure_definition(&self) -> &ua::StructureDefinition {
         ua::StructureDefinition::raw_ref(&self.0.structureDefinition)

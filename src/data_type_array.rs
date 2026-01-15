@@ -103,6 +103,12 @@ impl DataTypeArray {
     }
 
     #[must_use]
+    pub(crate) fn get_binary_encoding(&self, type_id: &ua::NodeId) -> Option<&ua::DataType> {
+        self.iter()
+            .find(|r#type| r#type.binary_encoding_id() == type_id)
+    }
+
+    #[must_use]
     pub(crate) fn contains(&self, type_id: &ua::NodeId) -> bool {
         self.iter().any(|r#type| r#type.type_id() == type_id)
     }

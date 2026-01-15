@@ -71,6 +71,21 @@ impl DataType {
         unsafe { Self::from_raw(dst) }
     }
 
+    /// Returns const pointer to value.
+    ///
+    /// # Safety
+    ///
+    /// The value is owned by `Self`. Ownership must not be given away, in whole or in parts. This
+    /// may happen when `open62541` functions are called that take ownership of values by pointer.
+    #[must_use]
+    pub(crate) unsafe fn as_ptr(&self) -> *const UA_DataType {
+        let this: *const Self = self;
+        // This transmutes between `Self` and the inner type through `cast()`. Types that implement
+        // `DataType` guarantee that we can transmute between them and their inner type, so this is
+        // okay.
+        this.cast::<UA_DataType>()
+    }
+
     pub(crate) fn from_description(
         description: ua::ExtensionObject,
         custom_types: Option<Pin<&ua::DataTypeArray>>,
@@ -99,6 +114,16 @@ impl DataType {
         ua::NodeId::raw_ref(&self.0.typeId)
     }
 
+    #[must_use]
+    pub fn binary_encoding_id(&self) -> &ua::NodeId {
+        ua::NodeId::raw_ref(&self.0.binaryEncodingId)
+    }
+
+    #[must_use]
+    pub fn xml_encoding_id(&self) -> &ua::NodeId {
+        ua::NodeId::raw_ref(&self.0.xmlEncodingId)
+    }
+
     pub fn get_struct_member(
         &self,
         value: &mut ua::ExtensionObject,
@@ -125,14 +150,14 @@ impl DataType {
         let out_member_type = unsafe { out_member_type.as_ref() }.expect("get member type");
         let member_size = usize::try_from(out_member_type.memSize()).expect("get member size");
 
-        // FIXME: Unwrap. Unsafe decode.
-        unsafe { value.decode(&raw const self.0).unwrap() };
-        let Some(data) = value.raw_decoded_content_mut(&raw const self.0) else {
-            panic!();
-        };
+        // // FIXME: Unwrap. Unsafe decode.
+        // unsafe { value.decode(&raw const self.0).unwrap() };
+        // let Some(data) = value.raw_decoded_content_mut(&raw const self.0) else {
+        //     panic!();
+        // };
 
-        let member_data =
-            unsafe { slice::from_raw_parts_mut(data.cast::<u8>().add(out_offset), member_size) };
+        // let member_data =
+        //     unsafe { slice::from_raw_parts_mut(data.cast::<u8>().add(out_offset), member_size) };
 
         // Ok(ua::Var::scalar(out_member_type, member_data))
 
@@ -151,9 +176,6 @@ impl Drop for DataType {
     fn drop(&mut self) {
         // Remove all dynamically allocated data structures within the data type.
         unsafe { UA_DataType_clear(&mut self.0) };
-
-        // Heap memory (boxed) is released when `self` goes out of scope here. No pointer must point
-        // to this data type's address anymore after this.
     }
 }
 
