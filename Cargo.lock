@@ -634,6 +634,7 @@ name = "open62541"
 version = "0.10.1"
 dependencies = [
  "anyhow",
+ "bytes",
  "derive_more",
  "env_logger",
  "futures",
