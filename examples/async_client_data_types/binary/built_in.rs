@@ -1,0 +1,14 @@
+mod boolean;
+mod byte_string;
+mod data_value;
+mod date_time;
+mod extension_object;
+mod guid;
+mod localized_text;
+mod node_Id;
+mod number;
+mod qualified_name;
+mod status_code;
+mod string;
+mod variant;
+mod xml_element;
