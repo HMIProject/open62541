@@ -105,6 +105,17 @@ impl ByteString {
         unsafe { self.as_bytes().unwrap_unchecked() }
     }
 
+    /// Converts byte string into string.
+    ///
+    /// This is lossless because the underlying types of OPC UA strings and byte strings are exactly
+    /// the same, only with different semantics.
+    #[must_use]
+    pub(crate) fn into_string(self) -> ua::String {
+        let string = self.into_raw();
+        // SAFETY: We still own this string.
+        unsafe { ua::String::from_raw(string) }
+    }
+
     #[must_use]
     fn array_value(&self) -> ArrayValue<u8> {
         // Internally, `open62541` represents strings as `Byte` array and has the same special cases

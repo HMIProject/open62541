@@ -32,6 +32,7 @@ mod session_state;
 mod session_statistics;
 mod specified_attributes;
 mod subscription_id;
+mod trust_list_masks;
 mod unit_id;
 mod user_identity_token;
 
@@ -66,6 +67,7 @@ pub use self::{
     session_statistics::SessionStatistics,
     specified_attributes::SpecifiedAttributes,
     subscription_id::SubscriptionId,
+    trust_list_masks::TrustListMasks,
     unit_id::UnitId,
     user_identity_token::UserIdentityToken,
 };

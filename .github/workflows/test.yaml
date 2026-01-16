@@ -115,14 +115,18 @@ jobs:
           shared-key: ${{ github.workflow }}-${{ github.job }}-${{ matrix.target }}-${{ matrix.runner_os }}
 
       - name: Build with feature combinations
+        # Disable build for GNU targets on Ubuntu 22.04 (unsupported `atomic_uintptr_t`).
+        # TODO: Try to re-enable this step regardless of the build target in the future.
+        if: ${{ matrix.runner_os != 'ubuntu-22.04' || endsWith(matrix.target, '-musl') }}
         run: >-
           cargo hack --each-feature
           build --locked
 
       - name: Run tests (bins/lib/tests/examples) with feature combinations
+        # Disable build for GNU targets on Ubuntu 22.04 (unsupported `atomic_uintptr_t`).
         # Disable tests for musl libc target(s) due to build failure for unknown reasons.
         # TODO: Try to re-enable this step regardless of the build target in the future.
-        if: ${{ !endsWith(matrix.target, '-musl') }}
+        if: ${{ matrix.runner_os != 'ubuntu-22.04' && !endsWith(matrix.target, '-musl') }}
         run: >-
           cargo hack --each-feature
           test --locked
@@ -135,15 +139,19 @@ jobs:
       # certain features only for some doctests, so we run them without
       # `cargo-hack`.
       - name: Run doctests with all features enabled
+        # Disable build for GNU targets on Ubuntu 22.04 (unsupported `atomic_uintptr_t`).
         # Disable tests for musl libc target(s) due to build failure for unknown reasons.
         # TODO: Try to re-enable this step regardless of the build target in the future.
-        if: ${{ !endsWith(matrix.target, '-musl') }}
+        if: ${{ matrix.runner_os != 'ubuntu-22.04' && !endsWith(matrix.target, '-musl') }}
         run: >-
           cargo test
           --locked --all-features
           --doc
 
       - name: Build package with all features enabled
+        # Disable build for GNU targets on Ubuntu 22.04 (unsupported `atomic_uintptr_t`).
+        # TODO: Try to re-enable this step regardless of the build target in the future.
+        if: ${{ matrix.runner_os != 'ubuntu-22.04' || endsWith(matrix.target, '-musl') }}
         run: >-
           cargo package
           --locked --all-features

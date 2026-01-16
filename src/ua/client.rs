@@ -1,8 +1,8 @@
 use std::ptr::NonNull;
 
 use open62541_sys::{
-    UA_Client, UA_Client_delete, UA_Client_disconnect, UA_Client_getConfig, UA_Client_getContext,
-    UA_Client_getState, UA_Client_new, UA_Client_newWithConfig,
+    UA_Client, UA_Client_delete, UA_Client_disconnect, UA_Client_getConfig, UA_Client_getState,
+    UA_Client_new, UA_Client_newWithConfig,
 };
 
 use crate::{ClientContext, DataType as _, Error, ua};
@@ -118,7 +118,10 @@ impl Drop for Client {
 
         // Fetch context pointer before deleting client below, but free associated memory only after
         // client has completely shut down.
-        let context = unsafe { UA_Client_getContext(self.as_mut_ptr()) }.cast::<ClientContext>();
+        let context = unsafe { UA_Client_getConfig(self.as_mut_ptr()).as_ref() }
+            .expect("require client config")
+            .clientContext
+            .cast::<ClientContext>();
 
         // `UA_Client_delete()` matches `UA_Client_new()`. This may block (!) whenever the client is
         // still connected, for as long as it takes to take down the connection. This can be avoided

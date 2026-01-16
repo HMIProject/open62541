@@ -1,6 +1,6 @@
 use std::{ffi::CString, fmt, ptr, slice, str};
 
-use open62541_sys::UA_String_fromChars;
+use open62541_sys::{UA_ByteString_allocBuffer, UA_String_fromChars};
 
 use crate::{ArrayValue, DataType as _, Error, ua};
 
@@ -24,6 +24,24 @@ impl String {
         Ok(Self(str))
     }
 
+    /// Creates uninitialized string of specific length.
+    ///
+    /// This should be used with caution: the uninitialized contents may contain leaked data and may
+    /// not be valid UTF-8.
+    #[must_use]
+    pub(crate) fn uninit(len: usize) -> Self {
+        let mut str = ua::ByteString::init();
+        // We let `UA_ByteString_allocBuffer()` do the string allocation.
+        let status_code =
+            ua::StatusCode::new(unsafe { UA_ByteString_allocBuffer(str.as_mut_ptr(), len) });
+        // PANIC: The only possible errors here are out-of-memory.
+        assert!(
+            status_code.is_good(),
+            "byte string should have been created"
+        );
+        str.into_string()
+    }
+
     /// Creates invalid string (as defined by OPC UA).
     // TODO: The OPC UA specification calls invalid strings "null". Consider changing this to match.
     pub(crate) fn invalid() -> Self {
@@ -35,6 +53,22 @@ impl String {
     #[expect(dead_code, reason = "unused for now")]
     pub(crate) fn empty() -> Self {
         Self::new("").unwrap()
+    }
+
+    /// Gets string length.
+    ///
+    /// This may return [`None`] when the string itself is invalid (as defined by OPC UA).
+    #[expect(dead_code, reason = "unused for now")]
+    #[must_use]
+    pub(crate) fn len(&self) -> Option<usize> {
+        match self.array_value() {
+            ArrayValue::Invalid => None,
+            ArrayValue::Empty => Some(0),
+            ArrayValue::Valid(_) => {
+                // `self.0.data` is valid, so we may use `self.0.length` now.
+                Some(self.0.length)
+            }
+        }
     }
 
     /// Checks if string is invalid.
@@ -65,6 +99,20 @@ impl String {
             ArrayValue::Valid(data) => {
                 // `self.0.data` is valid, so we may use `self.0.length` now.
                 Some(unsafe { slice::from_raw_parts(data.as_ptr(), self.0.length) })
+            }
+        }
+    }
+
+    #[must_use]
+    pub(crate) fn as_mut_bytes(&mut self) -> Option<&mut [u8]> {
+        // Internally, `open62541` represents strings as `Byte` array and has the same special cases
+        // as regular arrays, i.e. empty and invalid states.
+        match self.array_value() {
+            ArrayValue::Invalid => None,
+            ArrayValue::Empty => Some(&mut []),
+            ArrayValue::Valid(data) => {
+                // `self.0.data` is valid, so we may use `self.0.length` now.
+                Some(unsafe { slice::from_raw_parts_mut(data.as_ptr(), self.0.length) })
             }
         }
     }

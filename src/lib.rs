@@ -253,10 +253,7 @@ pub use self::{
         ServerBuilder, ServerRunner, VariableNode,
     },
     service::{ServiceRequest, ServiceResponse},
-    traits::{
-        Attribute, Attributes, CustomCertificateVerification, DataTypeExt, FilterOperand,
-        MonitoringFilter,
-    },
+    traits::{Attribute, Attributes, DataTypeExt, FilterOperand, MonitoringFilter},
     userdata::{Userdata, UserdataSentinel},
     value::{ScalarValue, ValueType, VariantValue},
 };

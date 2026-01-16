@@ -3,16 +3,17 @@ use std::{
     ptr,
 };
 
-use open62541_sys::{
-    UA_ByteString, UA_CertificateVerification, UA_CertificateVerification_AcceptAll, UA_StatusCode,
-    UA_String,
-};
+use derive_more::Debug;
+#[cfg(feature = "mbedtls")]
+use open62541_sys::UA_CertificateGroup_Memorystore;
+use open62541_sys::{UA_CertificateGroup, UA_CertificateGroup_AcceptAll};
 
-use crate::{CustomCertificateVerification, DataType, Userdata, ua};
+#[cfg(feature = "mbedtls")]
+use crate::{DataType as _, ua};
 
-/// Wrapper for [`UA_CertificateVerification`] from [`open62541_sys`].
+/// Wrapper for [`UA_CertificateGroup`] from [`open62541_sys`].
 #[derive(Debug)]
-pub struct CertificateVerification(UA_CertificateVerification);
+pub struct CertificateVerification(#[debug(skip)] UA_CertificateGroup);
 
 impl CertificateVerification {
     /// Creates certificate verification with all checks disabled.
@@ -22,71 +23,36 @@ impl CertificateVerification {
     #[must_use]
     pub fn accept_all() -> Self {
         let mut certificate_verification = Self::init();
-        // SAFETY: Certificate verification is null, but that is valid.
+        // SAFETY: Certificate verification is uninitialized, but that is expected.
         unsafe {
-            UA_CertificateVerification_AcceptAll(certificate_verification.as_mut_ptr());
+            UA_CertificateGroup_AcceptAll(certificate_verification.as_mut_ptr());
         }
         certificate_verification
     }
 
-    /// Creates certificate verification with custom callbacks.
-    pub fn custom(certificate_verification: impl CustomCertificateVerification + 'static) -> Self {
-        type Ud = Userdata<Box<dyn CustomCertificateVerification>>;
-
-        unsafe extern "C" fn verify_certificate_c(
-            cv: *const UA_CertificateVerification,
-            certificate: *const UA_ByteString,
-        ) -> UA_StatusCode {
-            // SAFETY: Reference is used only for the remainder of this function.
-            let certificate = ua::ByteString::raw_ref(unsafe {
-                certificate.as_ref().expect("certificate should be set")
-            });
-
-            // SAFETY: We use the user data only when it is still alive.
-            let certificate_verification = unsafe { Ud::peek_at((*cv).context) };
-            let status_code = certificate_verification.verify_certificate(certificate);
-            status_code.into_raw()
+    #[cfg(feature = "mbedtls")]
+    #[must_use]
+    pub fn memory_store(
+        certificate_group_id: &ua::NodeId,
+        trust_list: Option<&ua::TrustListDataType>,
+    ) -> Self {
+        let mut certificate_verification = Self::init();
+        // SAFETY: Certificate verification is uninitialized, but that is expected.
+        unsafe {
+            UA_CertificateGroup_Memorystore(
+                certificate_verification.as_mut_ptr(),
+                // SAFETY: Argument is only read, not modified or returned.
+                certificate_group_id.as_ptr().cast_mut(),
+                trust_list.map_or(ptr::null(), |trust_list| trust_list.as_ptr()),
+                // FIXME: Initialize logger.
+                ptr::null(),
+                // TODO: Allow parameters. Valid parameters are:
+                // - "max-trust-listsize"
+                // - "max-rejected-listsize"
+                ptr::null(),
+            );
         }
-
-        unsafe extern "C" fn verify_application_uri_c(
-            cv: *const UA_CertificateVerification,
-            certificate: *const UA_ByteString,
-            application_uri: *const UA_String,
-        ) -> UA_StatusCode {
-            // SAFETY: References are used only for the remainder of this function.
-            let certificate = ua::ByteString::raw_ref(unsafe {
-                certificate.as_ref().expect("certificate should be set")
-            });
-            let application_uri = ua::String::raw_ref(unsafe {
-                application_uri
-                    .as_ref()
-                    .expect("application URI should be set")
-            });
-
-            // SAFETY: We use the user data only when it is still alive.
-            let certificate_verification = unsafe { Ud::peek_at((*cv).context) };
-            let status_code =
-                certificate_verification.verify_application_uri(certificate, application_uri);
-            status_code.into_raw()
-        }
-
-        unsafe extern "C" fn clear_c(cv: *mut UA_CertificateVerification) {
-            // Reclaim ownership of certificate verification and drop it.
-            // SAFETY: We use the user data only when it is still alive.
-            let _unused = unsafe { Ud::consume((*cv).context) };
-        }
-
-        let inner = UA_CertificateVerification {
-            context: Ud::prepare(Box::new(certificate_verification)),
-            verifyCertificate: Some(verify_certificate_c),
-            verifyApplicationURI: Some(verify_application_uri_c),
-            getExpirationDate: None,
-            getSubjectName: None,
-            clear: Some(clear_c),
-            logging: ptr::null_mut(),
-        };
-
-        unsafe { Self::from_raw(inner) }
+        certificate_verification
     }
 
     /// Creates wrapper by taking ownership of value.
@@ -98,7 +64,7 @@ impl CertificateVerification {
     /// Ownership of the value passes to `Self`. This must only be used for values that are not
     /// contained within other values that may be dropped.
     #[must_use]
-    pub(crate) const unsafe fn from_raw(src: UA_CertificateVerification) -> Self {
+    pub(crate) const unsafe fn from_raw(src: UA_CertificateGroup) -> Self {
         Self(src)
     }
 
@@ -112,7 +78,7 @@ impl CertificateVerification {
     #[expect(clippy::allow_attributes, reason = "non-static condition")]
     #[allow(clippy::missing_const_for_fn, reason = "unsupported before Rust 1.87")]
     #[must_use]
-    pub(crate) fn into_raw(self) -> UA_CertificateVerification {
+    pub(crate) fn into_raw(self) -> UA_CertificateGroup {
         // Use `ManuallyDrop` to avoid double-free even when added code might cause panic. See
         // documentation of `mem::forget()` for details.
         let this = ManuallyDrop::new(self);
@@ -125,7 +91,7 @@ impl CertificateVerification {
     /// This initializes the value and makes all attributes well-defined. Additional attributes may
     /// need to be initialized for the value to be actually useful afterwards.
     pub(crate) const fn init() -> Self {
-        let inner = MaybeUninit::<UA_CertificateVerification>::zeroed();
+        let inner = MaybeUninit::<UA_CertificateGroup>::zeroed();
         // SAFETY: Zero-initialized memory is a valid certificate verification.
         let inner = unsafe { inner.assume_init() };
         // SAFETY: We pass a value without pointers to it into `Self`.
@@ -140,7 +106,7 @@ impl CertificateVerification {
     /// The logging reference will be transferred from the old to the new certificate verification.
     ///
     /// After this, it is the responsibility of `dst` to eventually clean up the data.
-    pub(crate) fn move_into_raw(self, dst: &mut UA_CertificateVerification) {
+    pub(crate) fn move_into_raw(self, dst: &mut UA_CertificateGroup) {
         // Move certificate verification into target, transferring ownership.
         let orig = mem::replace(dst, self.into_raw());
         // Take ownership of previously set certificate verification in order to drop it.
@@ -161,7 +127,7 @@ impl CertificateVerification {
     #[must_use]
     #[expect(clippy::allow_attributes, reason = "non-static condition")]
     #[allow(clippy::missing_const_for_fn, reason = "unsupported before Rust 1.87")]
-    pub(crate) unsafe fn as_mut(&mut self) -> &mut UA_CertificateVerification {
+    pub(crate) unsafe fn as_mut(&mut self) -> &mut UA_CertificateGroup {
         &mut self.0
     }
 
@@ -174,7 +140,7 @@ impl CertificateVerification {
     #[must_use]
     #[expect(clippy::allow_attributes, reason = "non-static condition")]
     #[allow(clippy::missing_const_for_fn, reason = "unsupported before Rust 1.87")]
-    pub(crate) unsafe fn as_mut_ptr(&mut self) -> *mut UA_CertificateVerification {
+    pub(crate) unsafe fn as_mut_ptr(&mut self) -> *mut UA_CertificateGroup {
         &raw mut self.0
     }
 }
