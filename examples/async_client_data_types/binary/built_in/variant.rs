@@ -10,8 +10,8 @@ impl BinaryReader for Variant {
     fn read(data: &mut Bytes) -> Self {
         let encoding_mask = Byte::read(data);
         let type_id = encoding_mask.0 & 0b0011_1111;
-        let array_dimensions = encoding_mask.0 & 0b0100_0000 != 0x00;
-        let array_of_values = encoding_mask.0 & 0b1000_0000 != 0x00;
+        let array_dimensions = (encoding_mask.0 & 0b0100_0000) != 0x00;
+        let array_of_values = (encoding_mask.0 & 0b1000_0000) != 0x00;
         if type_id == 0 {
             return Self::Null;
         }
@@ -115,7 +115,6 @@ fn read_variant_scalar(type_id: BuiltInTypeId, data: &mut Bytes) -> VariantScala
                         crate::data_types::$name::read(data).into(),
                     ),
                 )+
-                _ => panic!(),
             }
         };
     }
@@ -133,19 +132,19 @@ fn read_variant_scalar(type_id: BuiltInTypeId, data: &mut Bytes) -> VariantScala
         Float,
         Double,
         String,
-        // DateTime,
+        DateTime,
         Guid,
         ByteString,
         XmlElement,
         NodeId,
-        // ExpandedNodeId,
+        ExpandedNodeId,
         StatusCode,
         QualifiedName,
         LocalizedText,
         ExtensionObject,
-        // DataValue,
+        DataValue,
         Variant,
-        // DiagnosticInfo,
+        DiagnosticInfo,
     )
 }
 
@@ -160,7 +159,6 @@ fn read_variant_array(type_id: BuiltInTypeId, length: usize, data: &mut Bytes) -
                         }).collect())
                     },
                 )+
-                _ => panic!(),
             }
         };
     }
@@ -178,19 +176,19 @@ fn read_variant_array(type_id: BuiltInTypeId, length: usize, data: &mut Bytes) -
         Float,
         Double,
         String,
-        // DateTime,
+        DateTime,
         Guid,
         ByteString,
         XmlElement,
         NodeId,
-        // ExpandedNodeId,
+        ExpandedNodeId,
         StatusCode,
         QualifiedName,
         LocalizedText,
         ExtensionObject,
-        // DataValue,
+        DataValue,
         Variant,
-        // DiagnosticInfo,
+        DiagnosticInfo,
     )
 }
 

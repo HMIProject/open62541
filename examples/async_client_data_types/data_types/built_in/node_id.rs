@@ -1,6 +1,7 @@
 use super::{ByteString, Guid, String};
 
 // [Part 3: 8.2 NodeId](https://reference.opcfoundation.org/Core/Part3/v105/docs/8.2)
+// [Part 5: 12.2.8 NodeId](https://reference.opcfoundation.org/Core/Part5/v105/docs/12.2.8)
 // [Part 6: 5.1.12 QualifiedName, NodeId and ExpandedNodeId String Encoding](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.1.12)
 // [Part 6: 5.2.2.9 NodeId](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.9)
 pub enum NodeId {

@@ -6,7 +6,7 @@ use num_bigint::BigInt;
 
 use crate::{
     binary::BinaryReader,
-    data_types::{Byte, Decimal, Double, Float, Int16, Int32, NodeId},
+    data_types::{Byte, Decimal, Double, Float, Index, Int16, Int32, NodeId, UInt32},
 };
 
 // [Part 6: 5.2.2.3 Floating Point](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.3)
@@ -39,5 +39,11 @@ impl BinaryReader for Decimal {
         data.try_copy_to_slice(&mut value).unwrap();
         let value = BigInt::from_signed_bytes_le(&value);
         Self(value, scale.0)
+    }
+}
+
+impl BinaryReader for Index {
+    fn read(data: &mut Bytes) -> Self {
+        Self(UInt32::read(data).0)
     }
 }
