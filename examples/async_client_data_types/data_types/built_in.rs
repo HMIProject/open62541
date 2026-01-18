@@ -30,8 +30,8 @@ pub use self::{
     localized_text::LocalizedText,
     node_id::NodeId,
     number::{
-        Byte, Decimal, Double, Float, Int16, Int32, Int64, Integer, Number, SByte, UInt16, UInt32,
-        UInt64, UInteger,
+        Byte, Decimal, Double, Float, Index, Int16, Int32, Int64, Integer, Number, SByte, UInt16,
+        UInt32, UInt64, UInteger,
     },
     qualified_name::QualifiedName,
     status_code::StatusCode,
