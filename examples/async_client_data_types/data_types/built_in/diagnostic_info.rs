@@ -1,7 +1,8 @@
-use super::{StatusCode, String};
+use crate::data_types::{StatusCode, String};
 
 // [Part 4: 7.12 DiagnosticInfo](https://reference.opcfoundation.org/Core/Part4/v105/docs/7.12)
 // [Part 6: 5.2.2.12 DiagnosticInfo](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.12)
+#[derive(Debug, Clone)]
 pub struct DiagnosticInfo {
     pub namespace_uri: Option<i32>,
     pub symbolic_id: Option<i32>,

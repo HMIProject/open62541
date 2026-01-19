@@ -1,31 +1,14 @@
-mod integer;
-mod uinteger;
-
 use bytes::{Buf as _, Bytes};
 use num_bigint::BigInt;
 
 use crate::{
-    binary::BinaryReader,
-    data_types::{Byte, Decimal, Double, Float, Index, Int16, Int32, NodeId, UInt32},
+    binary::StatelessBinaryReader,
+    data_types::{Byte, Decimal, Int16, Int32, NodeId},
 };
-
-// [Part 6: 5.2.2.3 Floating Point](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.3)
-impl BinaryReader for Float {
-    fn read(data: &mut Bytes) -> Self {
-        Self(data.try_get_f32_le().unwrap())
-    }
-}
-
-// [Part 6: 5.2.2.3 Floating Point](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.3)
-impl BinaryReader for Double {
-    fn read(data: &mut Bytes) -> Self {
-        Self(data.try_get_f64_le().unwrap())
-    }
-}
 
 // [Part 6: 5.1.10 Decimal](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.1.10)
 // [Part 6: 5.2.3 Decimal](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.3)
-impl BinaryReader for Decimal {
+impl StatelessBinaryReader for Decimal {
     fn read(data: &mut Bytes) -> Self {
         let type_id = NodeId::read(data);
         assert!(matches!(type_id, NodeId::Numeric(0, identifier) if identifier == 50));
@@ -39,11 +22,5 @@ impl BinaryReader for Decimal {
         data.try_copy_to_slice(&mut value).unwrap();
         let value = BigInt::from_signed_bytes_le(&value);
         Self(value, scale.0)
-    }
-}
-
-impl BinaryReader for Index {
-    fn read(data: &mut Bytes) -> Self {
-        Self(UInt32::read(data).0)
     }
 }

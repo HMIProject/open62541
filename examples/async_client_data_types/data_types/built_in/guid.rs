@@ -1,4 +1,5 @@
 // [Part 3: 8.16 Guid](https://reference.opcfoundation.org/Core/Part3/v105/docs/8.16)
+#[derive(Debug, Clone, Copy)]
 pub struct Guid(pub u32, pub u16, pub u16, pub [u8; 8]);
 
 impl Guid {

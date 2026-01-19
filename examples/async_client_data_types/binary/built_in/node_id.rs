@@ -1,12 +1,12 @@
 use bytes::Bytes;
 
 use crate::{
-    binary::BinaryReader,
+    binary::StatelessBinaryReader,
     data_types::{Byte, ByteString, Guid, NodeId, String, UInt16, UInt32},
 };
 
 // [Part 6: 5.2.2.9 NodeId](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.9)
-impl BinaryReader for NodeId {
+impl StatelessBinaryReader for NodeId {
     fn read(data: &mut Bytes) -> Self {
         let NodeIdWithDataEncodingFlags {
             node_id,
