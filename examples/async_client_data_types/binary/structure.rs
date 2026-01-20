@@ -3,7 +3,7 @@ use std::num::NonZeroU32;
 use bytes::Bytes;
 
 use crate::{
-    binary::{BinaryReader, BinaryReaderContext, BuiltInTypeId, StatelessBinaryReader},
+    binary::{BinaryReader, BinaryReaderWithContext, BuiltInTypeId},
     data_types::{
         Array, DataTypeDefinition, ExtensionObject, NodeId, Structure, StructureDefinition,
         StructureField, StructureType, UInt32, Variant,
@@ -18,7 +18,16 @@ impl Structure {
     #[must_use]
     pub(crate) fn read(
         structure_definition: &StructureDefinition,
-        context: &BinaryReaderContext,
+        context: &ReadStructureContext,
+        data: &mut Bytes,
+    ) -> Self {
+        Self::read_with_context((structure_definition, context), data)
+    }
+}
+
+impl BinaryReaderWithContext<(&StructureDefinition, &ReadStructureContext)> for Structure {
+    fn read_with_context(
+        (structure_definition, context): (&StructureDefinition, &ReadStructureContext),
         data: &mut Bytes,
     ) -> Self {
         let StructureDefinition {
@@ -43,24 +52,13 @@ impl Structure {
     }
 }
 
-impl BinaryReader for Structure {
-    fn read_with_context(context: &BinaryReaderContext, data: &mut Bytes) -> Self {
-        let BinaryReaderContext {
-            structure_definition,
-            ..
-        } = context;
-
-        let Some(structure_definition) = structure_definition else {
-            panic!();
-        };
-
-        Self::read(structure_definition, context, data)
-    }
+struct ReadStructureContext {
+    find_data_type_definition: Box<dyn Fn(&NodeId) -> (&NodeId, &DataTypeDefinition)>,
 }
 
 // [Part 6: 5.2.6 Structures](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.6)
 fn read_structure(
-    context: &BinaryReaderContext,
+    context: &ReadStructureContext,
     fields: &[StructureField],
     data: &mut Bytes,
 ) -> Structure {
@@ -74,7 +72,7 @@ fn read_structure(
 
 // [Part 6: 5.2.7 Structures with optional fields](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.7)
 fn read_structure_with_optional_fields(
-    context: &BinaryReaderContext,
+    context: &ReadStructureContext,
     fields: &[StructureField],
     data: &mut Bytes,
 ) -> Structure {
@@ -93,7 +91,7 @@ fn read_structure_with_optional_fields(
 }
 
 fn read_structure_with_subtyped_fields(
-    context: &BinaryReaderContext,
+    context: &ReadStructureContext,
     fields: &[StructureField],
     data: &mut Bytes,
 ) -> Structure {
@@ -102,7 +100,7 @@ fn read_structure_with_subtyped_fields(
 
 // [Part 6: 5.2.8 Unions](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.8)
 fn read_union(
-    context: &BinaryReaderContext,
+    context: &ReadStructureContext,
     fields: &[StructureField],
     data: &mut Bytes,
 ) -> Structure {
@@ -123,7 +121,7 @@ fn read_union(
 }
 
 fn read_union_with_subtyped_fields(
-    context: &BinaryReaderContext,
+    context: &ReadStructureContext,
     fields: &[StructureField],
     data: &mut Bytes,
 ) -> Structure {
@@ -131,7 +129,7 @@ fn read_union_with_subtyped_fields(
 }
 
 // [Part 6: 5.2.5 Arrays](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.5)
-fn read_field(context: &BinaryReaderContext, field: &StructureField, data: &mut Bytes) -> Variant {
+fn read_field(context: &ReadStructureContext, field: &StructureField, data: &mut Bytes) -> Variant {
     if field.is_scalar() {
         read_scalar_field(context, field, data)
     } else if field.is_array() {
@@ -142,7 +140,7 @@ fn read_field(context: &BinaryReaderContext, field: &StructureField, data: &mut 
 }
 
 fn read_scalar_field(
-    context: &BinaryReaderContext,
+    context: &ReadStructureContext,
     field: &StructureField,
     data: &mut Bytes,
 ) -> Variant {
@@ -205,7 +203,7 @@ fn read_scalar_field(
 }
 
 fn read_array_field(
-    context: &BinaryReaderContext,
+    context: &ReadStructureContext,
     field: &StructureField,
     data: &mut Bytes,
 ) -> Variant {
@@ -216,14 +214,16 @@ fn read_array_field(
 
         let array = match data_type_definition {
             DataTypeDefinition::Structure(structure_definition) => {
-                let context = context
-                    .to_owned()
-                    .with_structure_definition(structure_definition.to_owned());
-
                 let array = if field.is_one_dimensional_array() {
-                    Array::<Structure>::read_one_dimensional_with_context(&context, data)
+                    Array::<Structure>::read_one_dimensional_with_context(
+                        (structure_definition, context),
+                        data,
+                    )
                 } else if field.is_multi_dimensional_array() {
-                    Array::<Structure>::read_multi_dimensional_with_context(&context, data)
+                    Array::<Structure>::read_multi_dimensional_with_context(
+                        (structure_definition, context),
+                        data,
+                    )
                 } else {
                     panic!();
                 };

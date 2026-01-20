@@ -1,12 +1,12 @@
 use bytes::Bytes;
 
 use crate::{
-    binary::{BuiltInTypeId, StatelessBinaryReader},
+    binary::{BuiltInTypeId, BinaryReader},
     data_types::{Array, Byte, Int32, Variant, VariantArray, VariantScalar},
 };
 
 // [Part 6: 5.2.2.16 Variant](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.16)
-impl StatelessBinaryReader for Variant {
+impl BinaryReader for Variant {
     fn read(data: &mut Bytes) -> Self {
         read_variant(data)
     }

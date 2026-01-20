@@ -1,12 +1,12 @@
 use bytes::Bytes;
 
 use crate::{
-    binary::StatelessBinaryReader,
+    binary::BinaryReader,
     data_types::{DateTime, Int64},
 };
 
 // [Part 6: 5.2.2.5 DateTime](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.5)
-impl StatelessBinaryReader for DateTime {
+impl BinaryReader for DateTime {
     fn read(data: &mut Bytes) -> Self {
         let value = Int64::read(data);
 

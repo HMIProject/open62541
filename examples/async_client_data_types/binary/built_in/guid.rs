@@ -1,12 +1,12 @@
 use bytes::Bytes;
 
 use crate::{
-    binary::StatelessBinaryReader,
+    binary::BinaryReader,
     data_types::{Byte, Guid, UInt16, UInt32},
 };
 
 // [Part 6: 5.2.2.6 Guid](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.6)
-impl StatelessBinaryReader for Guid {
+impl BinaryReader for Guid {
     fn read(data: &mut Bytes) -> Self {
         let a = UInt32::read(data);
         let b = UInt16::read(data);

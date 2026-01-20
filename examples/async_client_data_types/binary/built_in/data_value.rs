@@ -1,12 +1,12 @@
 use bytes::{Buf, Bytes};
 
 use crate::{
-    binary::StatelessBinaryReader,
+    binary::BinaryReader,
     data_types::{DataValue, DateTime, StatusCode, UInt16, Variant},
 };
 
 // [Part 6: 5.2.2.17 DataValue](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.17)
-impl StatelessBinaryReader for DataValue {
+impl BinaryReader for DataValue {
     fn read(data: &mut Bytes) -> Self {
         let encoding_mask = data.try_get_u8().unwrap();
 
@@ -27,11 +27,12 @@ impl StatelessBinaryReader for DataValue {
             .then(|| DateTime::read(data))
             .unwrap_or_else(DateTime::min_value);
         let source_picoseconds = has_source_picoseconds.then(|| UInt16::read(data).0);
-        let source_picoseconds = has_source_timestamp.then_some(source_picoseconds).flatten();
         let server_timestamp = has_server_timestamp
             .then(|| DateTime::read(data))
             .unwrap_or_else(DateTime::min_value);
         let server_picoseconds = has_server_picoseconds.then(|| UInt16::read(data).0);
+
+        let source_picoseconds = has_source_timestamp.then_some(source_picoseconds).flatten();
         let server_picoseconds = has_server_timestamp.then_some(server_picoseconds).flatten();
 
         Self {

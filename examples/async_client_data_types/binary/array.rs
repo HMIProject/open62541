@@ -1,44 +1,43 @@
 use bytes::Bytes;
 
 use crate::{
-    binary::{BinaryReader, BinaryReaderContext, StatelessBinaryReader},
+    binary::{BinaryReader, BinaryReaderWithContext},
     data_types::{Array, Int32},
 };
 
 // [Part 6: 5.2.5 Arrays](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.5)
-impl<T> Array<T>
-where
-    T: StatelessBinaryReader,
-{
+impl<T> Array<T> {
     #[must_use]
-    pub(crate) fn read_one_dimensional(data: &mut Bytes) -> Self {
+    pub(crate) fn read_one_dimensional(data: &mut Bytes) -> Self
+    where
+        T: BinaryReader,
+    {
         read_one_dimensional_array(data, |data| T::read(data))
     }
 
     #[must_use]
-    pub(crate) fn read_multi_dimensional(data: &mut Bytes) -> Self {
+    pub(crate) fn read_multi_dimensional(data: &mut Bytes) -> Self
+    where
+        T: BinaryReader,
+    {
         read_multi_dimensional_array(data, |data| T::read(data))
     }
-}
 
-// [Part 6: 5.2.5 Arrays](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.5)
-impl<T> Array<T>
-where
-    T: BinaryReader,
-{
     #[must_use]
-    pub(crate) fn read_one_dimensional_with_context(
-        context: &BinaryReaderContext,
-        data: &mut Bytes,
-    ) -> Self {
+    pub(crate) fn read_one_dimensional_with_context<C>(context: C, data: &mut Bytes) -> Self
+    where
+        T: BinaryReaderWithContext<C>,
+        C: Copy,
+    {
         read_one_dimensional_array(data, |data| T::read_with_context(context, data))
     }
 
     #[must_use]
-    pub(crate) fn read_multi_dimensional_with_context(
-        context: &BinaryReaderContext,
-        data: &mut Bytes,
-    ) -> Self {
+    pub(crate) fn read_multi_dimensional_with_context<C>(context: C, data: &mut Bytes) -> Self
+    where
+        T: BinaryReaderWithContext<C>,
+        C: Copy,
+    {
         read_multi_dimensional_array(data, |data| T::read_with_context(context, data))
     }
 }

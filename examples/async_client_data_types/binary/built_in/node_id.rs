@@ -1,34 +1,41 @@
 use bytes::Bytes;
 
 use crate::{
-    binary::StatelessBinaryReader,
+    binary::BinaryReader,
     data_types::{Byte, ByteString, Guid, NodeId, String, UInt16, UInt32},
 };
 
 // [Part 6: 5.2.2.9 NodeId](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.9)
-impl StatelessBinaryReader for NodeId {
+impl BinaryReader for NodeId {
     fn read(data: &mut Bytes) -> Self {
         let NodeIdWithDataEncodingFlags {
+            has_namespace_uri,
+            has_server_index,
             node_id,
-            namespace_uri,
-            server_index,
-        } = read_node_id_with_encoding_flags(data);
-        assert!(!namespace_uri);
-        assert!(!server_index);
+        } = read_node_id_with_data_encoding_flags(data);
+
+        assert!(!has_namespace_uri);
+        assert!(!has_server_index);
+
         node_id
     }
 }
 
 pub(super) struct NodeIdWithDataEncodingFlags {
+    pub(super) has_namespace_uri: bool,
+    pub(super) has_server_index: bool,
     pub(super) node_id: NodeId,
-    pub(super) namespace_uri: bool,
-    pub(super) server_index: bool,
 }
 
-pub(super) fn read_node_id_with_encoding_flags(data: &mut Bytes) -> NodeIdWithDataEncodingFlags {
+// [Part 6: 5.2.2.9 NodeId](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.9)
+pub(super) fn read_node_id_with_data_encoding_flags(
+    data: &mut Bytes,
+) -> NodeIdWithDataEncodingFlags {
     let data_encoding = Byte::read(data);
-    let namespace_uri = (data_encoding.0 & 0x40) != 0x00;
-    let server_index = (data_encoding.0 & 0x80) != 0x00;
+
+    let has_namespace_uri = (data_encoding.0 & 0x40) != 0x00;
+    let has_server_index = (data_encoding.0 & 0x80) != 0x00;
+
     let node_id = match data_encoding.0 {
         0x00 => {
             let identifier = Byte::read(data);
@@ -63,9 +70,10 @@ pub(super) fn read_node_id_with_encoding_flags(data: &mut Bytes) -> NodeIdWithDa
             panic!();
         }
     };
+
     NodeIdWithDataEncodingFlags {
+        has_namespace_uri,
+        has_server_index,
         node_id,
-        namespace_uri,
-        server_index,
     }
 }

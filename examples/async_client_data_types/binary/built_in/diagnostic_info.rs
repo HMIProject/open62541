@@ -1,10 +1,10 @@
 use crate::{
-    binary::StatelessBinaryReader,
+    binary::BinaryReader,
     data_types::{Byte, DiagnosticInfo, Int32, StatusCode, String},
 };
 
 // [Part 6: 5.2.2.12 DiagnosticInfo](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.12)
-impl StatelessBinaryReader for DiagnosticInfo {
+impl BinaryReader for DiagnosticInfo {
     fn read(data: &mut bytes::Bytes) -> Self {
         let encoding_mask = Byte::read(data);
 

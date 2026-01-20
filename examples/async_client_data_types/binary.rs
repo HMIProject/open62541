@@ -14,35 +14,14 @@ use bytes::Bytes;
 
 use crate::data_types::{DataTypeDefinition, NodeId, StructureDefinition};
 
-pub(crate) trait StatelessBinaryReader {
+pub(crate) trait BinaryReader {
     #[must_use]
     fn read(data: &mut Bytes) -> Self;
 }
 
-pub(crate) trait BinaryReader
-where
-    Self: Sized,
-{
+pub(crate) trait BinaryReaderWithContext<C> {
     #[must_use]
-    fn read_with_context(context: &BinaryReaderContext, data: &mut Bytes) -> Self;
-}
-
-#[derive(Clone)]
-pub(crate) struct BinaryReaderContext {
-    structure_definition: Option<StructureDefinition>,
-    find_data_type_definition: Arc<dyn Fn(&NodeId) -> (&NodeId, &DataTypeDefinition)>,
-}
-
-impl BinaryReaderContext {
-    pub(crate) fn with_structure_definition(
-        self,
-        structure_definition: StructureDefinition,
-    ) -> Self {
-        Self {
-            structure_definition: Some(structure_definition),
-            ..self
-        }
-    }
+    fn read_with_context(context: C, data: &mut Bytes) -> Self;
 }
 
 #[derive(Debug, Clone, Copy)]

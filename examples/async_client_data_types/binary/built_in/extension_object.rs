@@ -1,7 +1,7 @@
 use bytes::Bytes;
 
 use crate::{
-    binary::StatelessBinaryReader,
+    binary::BinaryReader,
     data_types::{
         Byte, ByteString, ExtensionObject, NodeId, StructureDefinition, StructureType, XmlElement,
     },
@@ -22,12 +22,12 @@ impl ExtensionObject {
 }
 
 // [Part 6: 5.2.2.15 ExtensionObject](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.15)
-impl StatelessBinaryReader for ExtensionObject {
+impl BinaryReader for ExtensionObject {
     fn read(data: &mut Bytes) -> Self {
         let type_id = NodeId::read(data);
-        let encoding = Byte::read(data);
+        let encoding = Byte::read(data).0;
 
-        match encoding.0 {
+        match encoding {
             0x00 => Self::Null(type_id),
             0x01 => {
                 let body = ByteString::read(data);

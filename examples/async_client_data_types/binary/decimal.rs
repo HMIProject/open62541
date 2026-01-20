@@ -2,13 +2,13 @@ use bytes::{Buf as _, Bytes};
 use num_bigint::BigInt;
 
 use crate::{
-    binary::StatelessBinaryReader,
+    binary::BinaryReader,
     data_types::{Byte, Decimal, Int16, Int32, NodeId},
 };
 
 // [Part 6: 5.1.10 Decimal](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.1.10)
 // [Part 6: 5.2.3 Decimal](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.3)
-impl StatelessBinaryReader for Decimal {
+impl BinaryReader for Decimal {
     fn read(data: &mut Bytes) -> Self {
         let type_id = NodeId::read(data);
         assert!(matches!(type_id, NodeId::Numeric(0, identifier) if identifier == 50));

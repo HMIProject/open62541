@@ -3,12 +3,12 @@ use std::string::String as StdString;
 use bytes::{Buf as _, Bytes};
 
 use crate::{
-    binary::StatelessBinaryReader,
+    binary::BinaryReader,
     data_types::{Int32, String},
 };
 
 // [Part 6: 5.2.2.4 String](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.4)
-impl StatelessBinaryReader for String {
+impl BinaryReader for String {
     fn read(data: &mut Bytes) -> Self {
         let length = Int32::read(data);
         if length.0 == -1 {

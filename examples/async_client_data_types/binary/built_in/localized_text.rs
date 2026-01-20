@@ -1,12 +1,12 @@
 use bytes::Bytes;
 
 use crate::{
-    binary::StatelessBinaryReader,
+    binary::BinaryReader,
     data_types::{Byte, LocaleId, LocalizedText, String},
 };
 
 // [Part 6: 5.2.2.14 LocalizedText](https://reference.opcfoundation.org/Core/Part6/v105/docs/5.2.2.14)
-impl StatelessBinaryReader for LocalizedText {
+impl BinaryReader for LocalizedText {
     fn read(data: &mut Bytes) -> Self {
         let encoding_mask = Byte::read(data);
 
