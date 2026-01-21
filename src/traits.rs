@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use open62541_sys::UA_DataType;
 
-use crate::{DataType, ua};
+use crate::{DataType, Result, ua};
 
 /// Extended values.
 ///
@@ -15,8 +15,12 @@ pub trait DataTypeExt: Debug + Clone {
     /// Inner type sent over the wire.
     type Inner: DataType;
 
-    /// Creates instance for immer type.
-    fn from_inner(value: Self::Inner) -> Self;
+    /// Creates instance for inner type.
+    ///
+    /// # Errors
+    ///
+    /// This may fail when the conversion from the inner type cannot be done.
+    fn from_inner(value: Self::Inner) -> Result<Self>;
 
     /// Returns inner type representation.
     fn into_inner(self) -> Self::Inner;
@@ -26,8 +30,8 @@ pub trait DataTypeExt: Debug + Clone {
 impl<T: DataType> DataTypeExt for T {
     type Inner = Self;
 
-    fn from_inner(value: Self::Inner) -> Self {
-        value
+    fn from_inner(value: Self::Inner) -> Result<Self> {
+        Ok(value)
     }
 
     fn into_inner(self) -> Self::Inner {
@@ -107,15 +111,15 @@ pub trait PrivateKeyPasswordCallback {
     /// # Errors
     ///
     /// This should return an appropriate error when the password cannot be provided.
-    fn private_key_password(&self) -> Result<crate::Password, crate::Error>;
+    fn private_key_password(&self) -> Result<crate::Password>;
 }
 
 #[cfg(feature = "mbedtls")]
 impl<F> PrivateKeyPasswordCallback for F
 where
-    F: Fn() -> Result<crate::Password, crate::Error>,
+    F: Fn() -> Result<crate::Password>,
 {
-    fn private_key_password(&self) -> Result<crate::Password, crate::Error> {
+    fn private_key_password(&self) -> Result<crate::Password> {
         self()
     }
 }

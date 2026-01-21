@@ -37,6 +37,21 @@ impl String {
         Self::new("").unwrap()
     }
 
+    /// Gets string length.
+    ///
+    /// This may return [`None`] when the string itself is invalid (as defined by OPC UA).
+    #[must_use]
+    pub fn len(&self) -> Option<usize> {
+        match self.array_value() {
+            ArrayValue::Invalid => None,
+            ArrayValue::Empty => Some(0),
+            ArrayValue::Valid(_) => {
+                // `self.0.data` is valid, so we may use `self.0.length` now.
+                Some(self.0.length)
+            }
+        }
+    }
+
     /// Checks if string is invalid.
     ///
     /// The invalid state is defined by OPC UA. It is a third state which is distinct from empty and
