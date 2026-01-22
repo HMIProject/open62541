@@ -14,6 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add `ua::DataTypeDescription`, `ua::EnumDescription`, `ua::StructureDescription`,
   `ua::StructureField`, `ua::StructureType`.
 - Add missing accessor methods to `ua::StructureDefinition`.
+- Add constructors `ua::NodeId::guid()` and `ua::NodeId::byte_string()`.
 - Add methods `is_ns0()`, `is_numeric()`, `is_string()`, `is_null()` to `ua::NodeId`.
 
 ### Changed

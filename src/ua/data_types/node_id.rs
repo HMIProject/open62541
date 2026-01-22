@@ -1,8 +1,8 @@
 use std::{ffi::CString, fmt, hash, str};
 
 use open62541_sys::{
-    UA_NODEID_NULL, UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC, UA_NodeId_hash, UA_NodeId_parse,
-    UA_NodeId_print, UA_NodeIdType,
+    UA_NODEID_BYTESTRING_ALLOC, UA_NODEID_GUID, UA_NODEID_NULL, UA_NODEID_NUMERIC,
+    UA_NODEID_STRING_ALLOC, UA_NodeId_hash, UA_NodeId_parse, UA_NodeId_print, UA_NodeIdType,
 };
 
 use crate::{DataType, Error, ua};
@@ -55,6 +55,53 @@ impl NodeId {
         if !string.is_empty() && (identifier.data.is_null() || identifier.length == 0) {
             debug_assert!(identifier.data.is_null(), "unexpected node ID string data");
             panic!("node ID string should have been allocated");
+        }
+
+        Self(inner)
+    }
+
+    /// Creates GUID node ID.
+    #[must_use]
+    pub fn guid(ns_index: u16, guid: ua::Guid) -> Self {
+        let inner = unsafe { UA_NODEID_GUID(ns_index, guid.into_raw()) };
+        debug_assert_eq!(
+            inner.identifierType,
+            UA_NodeIdType::UA_NODEIDTYPE_GUID,
+            "new node ID should have GUID type"
+        );
+
+        Self(inner)
+    }
+
+    /// Creates byte string node ID.
+    ///
+    /// # Panics
+    ///
+    /// The byte string identifier must not contain any NUL bytes.
+    #[must_use]
+    pub fn byte_string(ns_index: u16, byte_string: &[u8]) -> Self {
+        // Unfortunately, `UA_NODEID_BYTESTRING_ALLOC` requires a NUL-terminated C `char` pointer to
+        // the buffer. This imposes the restriction that no node IDs with NUL bytes can be created.
+        let byte_string =
+            CString::new(byte_string).expect("node ID byte string does not contain NUL bytes");
+
+        // Sring allocation can fail, but `UA_NODEID_BYTESTRING_ALLOC` does not tell us this when it
+        // happens. Instead, we end up with a well-defined node ID that has an empty byte string.
+        let inner = unsafe { UA_NODEID_BYTESTRING_ALLOC(ns_index, byte_string.as_ptr()) };
+        debug_assert_eq!(
+            inner.identifierType,
+            UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING,
+            "new node ID should have byte string type"
+        );
+
+        // SAFETY: We have checked that we have this enum variant.
+        let identifier = unsafe { inner.identifier.byteString.as_ref() };
+        if !byte_string.is_empty() && (identifier.data.is_null() || identifier.length == 0) {
+            debug_assert!(
+                identifier.data.is_null(),
+                "unexpected node ID byte string data"
+            );
+            panic!("node ID byte string should have been allocated");
         }
 
         Self(inner)
