@@ -85,7 +85,7 @@ impl NodeId {
         let byte_string =
             CString::new(byte_string).expect("node ID byte string does not contain NUL bytes");
 
-        // Sring allocation can fail, but `UA_NODEID_BYTESTRING_ALLOC` does not tell us this when it
+        // String allocation can fail but `UA_NODEID_BYTESTRING_ALLOC` does not tell us this when it
         // happens. Instead, we end up with a well-defined node ID that has an empty byte string.
         let inner = unsafe { UA_NODEID_BYTESTRING_ALLOC(ns_index, byte_string.as_ptr()) };
         debug_assert_eq!(
