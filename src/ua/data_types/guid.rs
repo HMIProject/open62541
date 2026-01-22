@@ -4,7 +4,7 @@ crate::data_type!(Guid);
 
 impl Guid {
     #[must_use]
-    pub fn new(data1: u32, data2: u16, data3: u16, data4: [u8; 8]) -> Self {
+    pub const fn new(data1: u32, data2: u16, data3: u16, data4: [u8; 8]) -> Self {
         Self(UA_Guid {
             data1,
             data2,
