@@ -11,6 +11,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Add method `ua::VariableAttributes::with_array_dimensions()`.
 - Add method `Server::add_data_type_node()` and type `DataTypeNode`.
+- Add `ua::DataTypeDescription`, `ua::EnumDescription`, `ua::StructureDescription`,
+  `ua::StructureField`, `ua::StructureType`.
+- Add missing accessor methods to `ua::StructureDefinition`.
+- Add methods `is_ns0()`, `is_numeric()`, `is_string()`, `is_null()` to `ua::NodeId`.
+- Add constructors `ua::NodeId::guid()` and `ua::NodeId::byte_string()`.
+- Add constructor `ua::Guid::new()`.
+
+### Changed
+
+- Breaking: Remove `Unknown` variant from `ua::DataTypeDefinition`.
+- Breaking: Return `Result` from `DataTypeExt::from_inner()`.
 
 ## [0.10.1] - 2025-10-29
 

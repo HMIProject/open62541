@@ -39,6 +39,7 @@ mod delete_subscriptions_response;
 mod element_operand;
 mod endpoint_description;
 mod enum_definition;
+mod enum_description;
 mod enum_field;
 mod enumeration;
 mod eu_information;
@@ -75,6 +76,9 @@ mod simple_attribute_operand;
 mod status_code;
 mod string;
 mod structure_definition;
+mod structure_description;
+mod structure_field;
+mod structure_type;
 mod timestamps_to_return;
 mod user_name_identity_token;
 mod variant;
@@ -123,6 +127,7 @@ pub use self::{
     element_operand::ElementOperand,
     endpoint_description::EndpointDescription,
     enum_definition::EnumDefinition,
+    enum_description::EnumDescription,
     enum_field::EnumField,
     enumeration::Enumeration,
     eu_information::EUInformation,
@@ -163,6 +168,9 @@ pub use self::{
     status_code::StatusCode,
     string::String,
     structure_definition::StructureDefinition,
+    structure_description::StructureDescription,
+    structure_field::StructureField,
+    structure_type::StructureType,
     timestamps_to_return::TimestampsToReturn,
     user_name_identity_token::UserNameIdentityToken,
     variant::Variant,

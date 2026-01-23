@@ -4,7 +4,7 @@ use open62541_sys::{
     UA_ACCESSRESTRICTIONTYPE_SIGNINGREQUIRED, UA_AccessRestrictionType,
 };
 
-use crate::{DataTypeExt, ua};
+use crate::{DataTypeExt, Result, ua};
 
 /// Wrapper for [`UA_AccessRestrictionType`] from [`open62541_sys`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -54,8 +54,8 @@ impl AccessRestrictionType {
 impl DataTypeExt for AccessRestrictionType {
     type Inner = ua::UInt16;
 
-    fn from_inner(value: Self::Inner) -> Self {
-        Self::from_u16(value.value())
+    fn from_inner(value: Self::Inner) -> Result<Self> {
+        Ok(Self::from_u16(value.value()))
     }
 
     fn into_inner(self) -> Self::Inner {
