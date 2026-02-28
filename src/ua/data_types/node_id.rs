@@ -140,6 +140,16 @@ impl NodeId {
     }
 
     #[must_use]
+    pub fn is_guid(&self) -> bool {
+        self.0.identifierType == UA_NodeIdType::UA_NODEIDTYPE_GUID
+    }
+
+    #[must_use]
+    pub fn is_byte_string(&self) -> bool {
+        self.0.identifierType == UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING
+    }
+
+    #[must_use]
     pub fn is_null(&self) -> bool {
         // SAFETY: Read-only access of static.
         self == Self::raw_ref(unsafe { &UA_NODEID_NULL })
@@ -176,6 +186,24 @@ impl NodeId {
         (self.0.identifierType == UA_NodeIdType::UA_NODEIDTYPE_STRING).then(|| {
             let identifier = unsafe { self.0.identifier.string.as_ref() };
             (self.0.namespaceIndex, ua::String::raw_ref(identifier))
+        })
+    }
+
+    /// Gets namespace and identifier of GUID node ID.
+    #[must_use]
+    pub fn as_guid(&self) -> Option<(u16, &ua::Guid)> {
+        (self.0.identifierType == UA_NodeIdType::UA_NODEIDTYPE_GUID).then(|| {
+            let identifier = unsafe { self.0.identifier.guid.as_ref() };
+            (self.0.namespaceIndex, ua::Guid::raw_ref(identifier))
+        })
+    }
+
+    /// Gets namespace and identifier of byte string node ID.
+    #[must_use]
+    pub fn as_byte_string(&self) -> Option<(u16, &ua::ByteString)> {
+        (self.0.identifierType == UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING).then(|| {
+            let identifier = unsafe { self.0.identifier.byteString.as_ref() };
+            (self.0.namespaceIndex, ua::ByteString::raw_ref(identifier))
         })
     }
 
