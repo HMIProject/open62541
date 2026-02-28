@@ -1,6 +1,8 @@
 use std::slice;
 
-use open62541_sys::{UA_ByteString_clear, UA_ByteString_copy, UA_ByteString_memZero, UA_String};
+use open62541_sys::{
+    UA_ByteString, UA_ByteString_clear, UA_ByteString_copy, UA_ByteString_memZero,
+};
 
 use crate::{ArrayValue, DataType, ua};
 
@@ -21,9 +23,9 @@ impl ByteString {
     #[must_use]
     pub fn new(s: &[u8]) -> Self {
         let mut dst = Self::init();
-        let src = UA_String {
+        let src = UA_ByteString {
             length: s.len(),
-            // SAFETY: `UA_String` needs `*mut UA_Byte`. But the call to `UA_ByteString_copy()` does
+            // SAFETY: `UA_ByteString` needs `*mut UA_Byte`. But the call to `UA_ByteString_copy()` does
             // not actually mutate the value, it only reads from it.
             data: s.as_ptr().cast_mut(),
         };
@@ -62,12 +64,18 @@ impl ByteString {
         }
     }
 
-    /// Checks if byte string is invalid.
+    /// Creates an invalid null byte string (as defined by OPC UA).
+    #[must_use]
+    pub fn null() -> Self {
+        Self::init()
+    }
+
+    /// Checks if byte string is null and invalid.
     ///
-    /// The invalid state is defined by OPC UA. It is a third state which is distinct from empty and
+    /// The null state is defined by OPC UA. It is a third state which is distinct from empty and
     /// regular (non-empty) byte strings.
     #[must_use]
-    pub fn is_invalid(&self) -> bool {
+    pub fn is_null(&self) -> bool {
         matches!(self.array_value(), ArrayValue::Invalid)
     }
 
@@ -140,6 +148,12 @@ mod tests {
     use super::*;
 
     #[test]
+    fn null() {
+        assert!(ua::ByteString::null().is_null());
+        assert!(!ua::ByteString::null().is_empty());
+    }
+
+    #[test]
     fn zeroizing() {
         let mut string = ua::ByteString::new("SECRET".as_bytes());
         let data_ptr = string.as_bytes().unwrap().as_ptr();
@@ -158,6 +172,7 @@ mod tests {
         assert_eq!(data, "\0\0\0\0\0\0".as_bytes());
 
         string.clear();
+        assert!(string.is_null());
 
         // SAFETY: Object has been reset but is still allocated.
         let object = unsafe { std::ptr::read(object_ptr) };

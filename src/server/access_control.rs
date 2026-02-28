@@ -188,8 +188,8 @@ where
             login_callback,
         } = self;
 
-        let username = ua::String::invalid();
-        let password = ua::String::invalid();
+        let username = ua::String::null();
+        let password = ua::String::null();
 
         // SAFETY: `UA_AccessControl_defaultWithLoginCallback()` does not take ownership of strings,
         // it uses them only to make internal copies. But the strings must only be dropped after the

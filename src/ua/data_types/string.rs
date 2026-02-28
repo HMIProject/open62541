@@ -24,11 +24,20 @@ impl String {
         Ok(Self(str))
     }
 
-    /// Creates invalid string (as defined by OPC UA).
-    // TODO: The OPC UA specification calls invalid strings "null". Consider changing this to match.
-    pub(crate) fn invalid() -> Self {
+    /// Creates an invalid null string (as defined by OPC UA).
+    #[must_use]
+    pub fn null() -> Self {
         let str = unsafe { UA_String_fromChars(ptr::null()) };
         Self(str)
+    }
+
+    /// Checks if string is null and invalid.
+    ///
+    /// The null state is defined by OPC UA. It is a third state which is distinct from empty and
+    /// regular (non-empty) strings.
+    #[must_use]
+    pub fn is_null(&self) -> bool {
+        matches!(self.array_value(), ArrayValue::Invalid)
     }
 
     /// Creates empty string.
@@ -50,15 +59,6 @@ impl String {
                 Some(self.0.length)
             }
         }
-    }
-
-    /// Checks if string is invalid.
-    ///
-    /// The invalid state is defined by OPC UA. It is a third state which is distinct from empty and
-    /// regular (non-empty) strings.
-    #[must_use]
-    pub fn is_invalid(&self) -> bool {
-        matches!(self.array_value(), ArrayValue::Invalid)
     }
 
     /// Checks if string is empty.
@@ -149,8 +149,19 @@ mod tests {
     #[test]
     fn valid_string() {
         let str = ua::String::new("lorem ipsum").expect("should parse string");
+        assert!(!str.is_null());
+        assert!(!str.is_empty());
         assert_eq!(str.as_str().expect("should display string"), "lorem ipsum");
         assert_eq!(str.to_string(), "lorem ipsum");
+    }
+
+    #[test]
+    fn null_string() {
+        let str = ua::String::null();
+        assert!(str.is_null());
+        assert!(!str.is_empty());
+        assert!(str.as_str().is_none());
+        assert_eq!(str.to_string(), "");
     }
 
     #[test]
@@ -158,6 +169,8 @@ mod tests {
         // Empty strings may have an internal representation in `UA_String` that contains invalid or
         // null pointers. This must not cause any problems.
         let str = ua::String::new("").expect("should parse empty string");
+        assert!(!str.is_null());
+        assert!(str.is_empty());
         assert_eq!(str.as_str().expect("should display empty string"), "");
         assert_eq!(str.to_string(), "");
     }
