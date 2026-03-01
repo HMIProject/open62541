@@ -24,6 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Breaking: Remove `Unknown` variant from `ua::DataTypeDefinition`.
 - Breaking: Return `Result` from `DataTypeExt::from_inner()`.
+- Breaking: Replace `ua::String::is_invalid()` with `ua::String::is_null()`.
+- Breaking: Replace `ua::ByteString::is_invalid()` with `ua::ByteString::is_null()`.
 
 ## [0.10.1] - 2025-10-29
 
