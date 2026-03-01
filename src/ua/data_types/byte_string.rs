@@ -40,6 +40,12 @@ impl ByteString {
         dst
     }
 
+    /// Creates an invalid null byte string (as defined by OPC UA).
+    #[must_use]
+    pub fn null() -> Self {
+        Self::init()
+    }
+
     #[cfg_attr(
         not(any(feature = "mbedtls", test)),
         expect(dead_code, reason = "unused")
@@ -62,12 +68,6 @@ impl ByteString {
             // intact. The string has the same length as before but is all `\0`.
             UA_ByteString_memZero(self.as_mut_ptr());
         }
-    }
-
-    /// Creates an invalid null byte string (as defined by OPC UA).
-    #[must_use]
-    pub fn null() -> Self {
-        Self::init()
     }
 
     /// Checks if byte string is null and invalid.

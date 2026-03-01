@@ -31,15 +31,6 @@ impl String {
         Self(str)
     }
 
-    /// Checks if string is null and invalid.
-    ///
-    /// The null state is defined by OPC UA. It is a third state which is distinct from empty and
-    /// regular (non-empty) strings.
-    #[must_use]
-    pub fn is_null(&self) -> bool {
-        matches!(self.array_value(), ArrayValue::Invalid)
-    }
-
     /// Creates empty string.
     #[expect(dead_code, reason = "unused for now")]
     pub(crate) fn empty() -> Self {
@@ -59,6 +50,15 @@ impl String {
                 Some(self.0.length)
             }
         }
+    }
+
+    /// Checks if string is null and invalid.
+    ///
+    /// The null state is defined by OPC UA. It is a third state which is distinct from empty and
+    /// regular (non-empty) strings.
+    #[must_use]
+    pub fn is_null(&self) -> bool {
+        matches!(self.array_value(), ArrayValue::Invalid)
     }
 
     /// Checks if string is empty.
