@@ -17,6 +17,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add methods `is_ns0()`, `is_numeric()`, `is_string()`, `is_null()` to `ua::NodeId`.
 - Add constructors `ua::NodeId::guid()` and `ua::NodeId::byte_string()`.
 - Add constructor `ua::Guid::new()`.
+- Add accessors for remaining `UA_NodeIdType` variants to `ua::NodeId`.
 
 ### Changed
 
