@@ -18,11 +18,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add constructors `ua::NodeId::guid()` and `ua::NodeId::byte_string()`.
 - Add constructor `ua::Guid::new()`.
 - Add accessors for remaining `UA_NodeIdType` variants to `ua::NodeId`.
+- Add methods `null()` and `is_null()` to `ua::String` and `ua::ByteString`.
 
 ### Changed
 
 - Breaking: Remove `Unknown` variant from `ua::DataTypeDefinition`.
 - Breaking: Return `Result` from `DataTypeExt::from_inner()`.
+- Breaking: Replace `ua::String::is_invalid()` with `ua::String::is_null()`.
+- Breaking: Replace `ua::ByteString::is_invalid()` with `ua::ByteString::is_null()`.
 
 ## [0.10.1] - 2025-10-29
 

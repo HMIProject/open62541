@@ -76,7 +76,7 @@ pub struct Certificate(ua::ByteString);
 
 impl Certificate {
     pub(crate) fn from_byte_string(byte_string: ua::ByteString) -> Option<Self> {
-        (!byte_string.is_invalid()).then(|| Self(byte_string))
+        (!byte_string.is_null()).then(|| Self(byte_string))
     }
 
     pub(crate) unsafe fn from_string_unchecked(string: ua::String) -> Self {
@@ -136,7 +136,7 @@ pub struct PrivateKey(Zeroizing<ua::ByteString>);
 
 impl PrivateKey {
     pub(crate) fn from_byte_string(byte_string: ua::ByteString) -> Option<Self> {
-        (!byte_string.is_invalid()).then(|| Self(Zeroizing::new(byte_string)))
+        (!byte_string.is_null()).then(|| Self(Zeroizing::new(byte_string)))
     }
 
     pub(crate) unsafe fn from_string_unchecked(string: ua::String) -> Self {
@@ -214,8 +214,8 @@ pub fn create_certificate(
     let mut logger = ua::Logger::rust_log();
 
     // These are out arguments for the function call and need not be initialized.
-    let mut private_key = ua::String::invalid();
-    let mut certificate = ua::String::invalid();
+    let mut private_key = ua::String::null();
+    let mut certificate = ua::String::null();
 
     let status_code = ua::StatusCode::new(unsafe {
         // SAFETY: The arrays live until `UA_CreateCertificate()` returns and that function does not
