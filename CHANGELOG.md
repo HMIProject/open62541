@@ -19,6 +19,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   [1.5.0](https://github.com/open62541/open62541/releases/tag/v1.5.0).
 - Breaking: Remove method `ua::CertificateVerification::custom()` and trait
   `CustomCertificateVerification`.
+- Breaking: Remove `Unknown` variant from `ua::DataTypeDefinition`.
+- Breaking: Return `Result` from `DataTypeExt::from_inner()`.
+- Breaking: Replace `ua::String::is_invalid()` with `ua::String::is_null()`.
+- Breaking: Replace `ua::ByteString::is_invalid()` with `ua::ByteString::is_null()`.
+- Add `ua::DataTypeDescription`, `ua::EnumDescription`, `ua::StructureDescription`,
+  `ua::StructureField`, `ua::StructureType`.
+- Add missing accessor methods to `ua::StructureDefinition`.
+- Add methods `is_ns0()`, `is_numeric()`, `is_string()`, `is_null()` to `ua::NodeId`.
+- Add constructors `ua::NodeId::guid()` and `ua::NodeId::byte_string()`.
+- Add constructor `ua::Guid::new()`.
+- Add accessors for remaining `UA_NodeIdType` variants to `ua::NodeId`.
+- Add methods `null()` and `is_null()` to `ua::String` and `ua::ByteString`.
+
+### Fixed
+
+- Fix linker errors for build target `x86_64-linux-unknown-gnu` by updating `open62541-sys` to
+  version 0.5.4 ([#288](https://github.com/HMIProject/open62541/issues/288)).
 
 ## [0.10.1] - 2025-10-29
 

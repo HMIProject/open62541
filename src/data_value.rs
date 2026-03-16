@@ -102,10 +102,13 @@ impl<T: DataTypeExt> DataValue<T> {
     ///
     /// This returns `None` when the value is unset or not a scalar of the given type. The same can
     /// be achieved in two steps with [`Self::into_value()`] and [`ua::Variant::into_scalar()`].
+    //
+    // TODO: Use `Result` instead of `Option` for conversion errors from `DataTypeExt`.
     pub fn into_scalar_value(self) -> Option<T> {
         self.into_value()
             .and_then(ua::Variant::into_scalar::<T::Inner>)
-            .map(T::from_inner)
+            // TODO: Remove `ok()`. Return error to caller.
+            .and_then(|value| T::from_inner(value).ok())
     }
 
     #[must_use]

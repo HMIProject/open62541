@@ -15,7 +15,7 @@ impl ContinuationPoint {
     pub(crate) fn new(continuation_point: ua::ByteString) -> Option<Self> {
         // Unset continuation points indicate that the `BrowseResult` contains all references and no
         // continuation is actually necessary.
-        if continuation_point.is_invalid() {
+        if continuation_point.is_null() {
             return None;
         }
 

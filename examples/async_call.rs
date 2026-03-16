@@ -170,11 +170,11 @@ async fn read_sparse_node_values(
     node_ids: &[Option<ua::NodeId>],
 ) -> anyhow::Result<Vec<Option<DataValue<ua::Variant>>>> {
     // Condense sparse list into dense list for request.
-    let node_attributes: Vec<_> = node_ids
+    let node_attributes = node_ids
         .iter()
         .flatten()
         .map(|node_id| (node_id.clone(), ua::AttributeId::VALUE))
-        .collect();
+        .collect::<Vec<_>>();
 
     // Empty requests would return `BadNothingToDo` error.
     let values = if node_attributes.is_empty() {

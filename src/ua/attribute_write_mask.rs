@@ -14,7 +14,7 @@ use open62541_sys::{
     UA_ATTRIBUTEWRITEMASK_VALUERANK, UA_ATTRIBUTEWRITEMASK_WRITEMASK, UA_AttributeWriteMask,
 };
 
-use crate::{DataTypeExt, ua};
+use crate::{DataTypeExt, Result, ua};
 
 /// Wrapper for [`UA_AttributeWriteMask`] from [`open62541_sys`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -193,8 +193,8 @@ impl AttributeWriteMask {
 impl DataTypeExt for AttributeWriteMask {
     type Inner = ua::UInt32;
 
-    fn from_inner(value: Self::Inner) -> Self {
-        Self::from_u32(value.value())
+    fn from_inner(value: Self::Inner) -> Result<Self> {
+        Ok(Self::from_u32(value.value()))
     }
 
     fn into_inner(self) -> Self::Inner {

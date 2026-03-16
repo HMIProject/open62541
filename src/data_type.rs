@@ -235,7 +235,8 @@ pub unsafe trait DataType: Debug + Clone {
     /// # Safety
     ///
     /// Think twice before using this. Pointers to dynamically allocated attributes within `Self`
-    /// are copied and will become dangling pointers when `self` is dropped.
+    /// are copied and will become dangling pointers when `this` is dropped. Vice versa, directly
+    /// (or indirectly) freeing the copied value would double-free memory when `this` is dropped.
     ///
     /// This function is necessary because some functions in `open62541` take arguments by value
     /// instead of by pointer _without taking ownership_ and make the caller responsible for
@@ -419,12 +420,9 @@ macro_rules! data_type {
             }
 
             fn into_raw(self) -> Self::Inner {
-                // Use `ManuallyDrop` to avoid double-free even when added code might cause panic.
-                // See documentation of `mem::forget()` for details.
-                let this = std::mem::ManuallyDrop::new(self);
-                // SAFETY: Aliasing memory temporarily is safe because destructor will not be
-                // called.
-                unsafe { std::ptr::read(&raw const this.0) }
+                // SAFETY: We can transmute with `#[repr(transparent)]` on the type definition. (We
+                // cannot simply unwrap due to an implementation of `Drop`.)
+                unsafe { std::mem::transmute(self) }
             }
         }
 

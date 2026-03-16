@@ -34,7 +34,7 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 /// Connected OPC UA client (with asynchronous API).
 ///
 /// To disconnect, prefer method [`disconnect()`](Self::disconnect) over simply dropping the client:
-/// disconnection involves server communication and might take a short amount of time. If the client
+/// disconnecting involves server communication and might take a short amount of time. If the client
 /// is dropped when still connected, it will _synchronously_ clean up after itself, thereby blocking
 /// while being dropped. In most cases, this is not the desired behavior.
 ///
@@ -48,6 +48,7 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 /// [multi-threaded runtimes]: https://docs.rs/tokio/latest/tokio/runtime/index.html
 #[derive(Debug)]
 pub struct AsyncClient {
+    // Use an `Arc` to access the client from here (the handle struct) and the background thread.
     client: Arc<ua::Client>,
     background_thread: Option<BackgroundThread>,
 }
@@ -113,9 +114,10 @@ impl AsyncClient {
             log::warn!("Error while disconnecting client: {error}");
         }
 
-        // PANIC: We only take the background thread in this method. Since it consumes `self`, the value must
-        // still be present when we reach this. Do so only right before awaiting to uphold invariant
-        // in `Drop` implementation which allows us to take an early return path there.
+        // PANIC: We only take the background thread here and in `drop()` (but that cannot have been
+        // called yet). Since the method consumes `self`, the value must still be present. Note that
+        // we the take value just before `await`, to uphold invariant in `Drop` implementation which
+        // allows us to take an early return path there.
         let background_thread = self.background_thread.take().expect("no background thread");
 
         // Asynchronously wait for the background task running in the background thread to complete.
@@ -227,14 +229,14 @@ impl AsyncClient {
         &self,
         node_attributes: &[(ua::NodeId, ua::AttributeId)],
     ) -> Result<Vec<DataValue<ua::Variant>>> {
-        let nodes_to_read: Vec<_> = node_attributes
+        let nodes_to_read = node_attributes
             .iter()
             .map(|(node_id, attribute_id)| {
                 ua::ReadValueId::init()
                     .with_node_id(node_id)
                     .with_attribute_id(attribute_id)
             })
-            .collect();
+            .collect::<Vec<_>>();
 
         let request = ua::ReadRequest::init()
             // TODO: Add method argument for this? We return timestamps in `DataValue` and they
@@ -248,8 +250,10 @@ impl AsyncClient {
             return Err(Error::internal("read should return results"));
         };
 
-        let results: Vec<DataValue<ua::Variant>> =
-            results.drain_all().map(ua::DataValue::cast).collect();
+        let results = results
+            .drain_all()
+            .map(ua::DataValue::cast)
+            .collect::<Vec<DataValue<ua::Variant>>>();
 
         // The OPC UA specification state that the resulting list has the same number of elements as
         // the request list. If not, we would not be able to match elements in the two lists anyway.

@@ -1,6 +1,6 @@
 use open62541_sys::UA_Duration;
 
-use crate::{DataTypeExt, ua};
+use crate::{DataTypeExt, Result, ua};
 
 /// Wrapper for [`UA_Duration`] from [`open62541_sys`].
 #[derive(Debug, Clone)]
@@ -62,8 +62,8 @@ impl Duration {
 impl DataTypeExt for Duration {
     type Inner = ua::Double;
 
-    fn from_inner(value: Self::Inner) -> Self {
-        Self::from_f64(value.value())
+    fn from_inner(value: Self::Inner) -> Result<Self> {
+        Ok(Self::from_f64(value.value()))
     }
 
     fn into_inner(self) -> Self::Inner {

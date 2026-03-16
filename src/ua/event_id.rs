@@ -14,7 +14,7 @@ impl EventId {
     #[must_use]
     pub(crate) fn new(event_id: ua::ByteString) -> Option<Self> {
         // Unset event IDs are not expected.
-        if event_id.is_invalid() {
+        if event_id.is_null() {
             return None;
         }
 
