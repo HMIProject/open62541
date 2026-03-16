@@ -27,6 +27,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Replace `ua::String::is_invalid()` with `ua::String::is_null()`.
 - Breaking: Replace `ua::ByteString::is_invalid()` with `ua::ByteString::is_null()`.
 
+### Fixed
+
+- Fix linker errors for build target `x86_64-linux-unknown-gnu` by updating `open62541-sys` to
+  version 0.5.4 ([#288](https://github.com/HMIProject/open62541/issues/288)).
+
 ## [0.10.1] - 2025-10-29
 
 ### Fixed
