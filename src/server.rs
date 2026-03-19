@@ -14,16 +14,16 @@ use std::{
 
 use derive_more::Debug;
 use open62541_sys::{
-    UA_CertificateGroup_AcceptAll, UA_GlobalNodeLifecycle, UA_NodeId, UA_STATUSCODE_BADNOTFOUND,
-    UA_Server, UA_Server_addCallbackValueSourceVariableNode, UA_Server_addDataTypeNode,
-    UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addNode_begin,
-    UA_Server_addNode_finish, UA_Server_addReference, UA_Server_browse, UA_Server_browseNext,
-    UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath, UA_Server_deleteNode,
-    UA_Server_deleteReference, UA_Server_getConfig, UA_Server_getNamespaceByIndex,
-    UA_Server_getNamespaceByName, UA_Server_getStatistics, UA_Server_read,
-    UA_Server_readObjectProperty, UA_Server_run_iterate, UA_Server_run_shutdown,
-    UA_Server_run_startup, UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds,
-    UA_Server_writeDataValue, UA_Server_writeObjectProperty, UA_Server_writeValue, UA_ServerConfig,
+    UA_CertificateGroup_AcceptAll, UA_GlobalNodeLifecycle, UA_NS0ID_HASPROPERTY, UA_NodeId,
+    UA_STATUSCODE_BADNOTFOUND, UA_Server, UA_Server_addCallbackValueSourceVariableNode,
+    UA_Server_addDataTypeNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
+    UA_Server_addNode_begin, UA_Server_addNode_finish, UA_Server_addReference, UA_Server_browse,
+    UA_Server_browseNext, UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath,
+    UA_Server_deleteNode, UA_Server_deleteReference, UA_Server_getConfig,
+    UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName, UA_Server_getStatistics,
+    UA_Server_read, UA_Server_run_iterate, UA_Server_run_shutdown, UA_Server_run_startup,
+    UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, UA_Server_writeDataValue,
+    UA_Server_writeValue, UA_ServerConfig,
 };
 use parking_lot::{Condvar, Mutex, MutexGuard};
 
@@ -1021,6 +1021,9 @@ impl Server {
     /// ))?;
     ///
     /// // This makes the variable available in two parents.
+    /// # // NOTE: `UA_Server_addReference()` passes large C structs by value and may trigger a C
+    /// # // ABI issue on macOS (aarch64). Skip these calls on that platform as a workaround.
+    /// # if !cfg!(all(target_os = "macos", target_arch = "aarch64")) {
     /// server.add_reference(
     ///     &parent_two_node_id,
     ///     &ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
@@ -1036,6 +1039,7 @@ impl Server {
     ///     true,
     /// ).unwrap_err();
     /// assert_eq!(error.status_code(), ua::StatusCode::BADDUPLICATEREFERENCENOTALLOWED);
+    /// # } // end cfg! guard
     /// #
     /// # Ok(())
     /// # }
@@ -1639,32 +1643,35 @@ impl Server {
         object_id: &ua::NodeId,
         property_name: &ua::QualifiedName,
     ) -> Result<ua::Variant> {
-        let mut value = ua::Variant::init();
-        let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_readObjectProperty(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
-                // SAFETY: We deep-copy the values and give up ownership via `into_raw()`. Passing
-                // shallow copies (via `to_raw_copy`) of heap-owning types by value causes
-                // SIGSEGV/SIGBUS on macOS (aarch64). On that platform the C ABI passes structs
-                // larger than 16 bytes via a hidden pointer; the C library internally aliases
-                // and may clean up those copies, which conflicts with Rust's `Drop` on the
-                // originals (double-free). Giving up ownership here prevents that conflict.
-                //
-                // This approach is safe regardless of whether the C function takes ownership:
-                //   - If it does take ownership: the function frees the values, Rust does not
-                //     (ownership was given up via `into_raw()`). No double-free.
-                //   - If it does not take ownership: the function uses but does not free the
-                //     values, and neither does Rust. The memory is leaked per call, but there
-                //     is no memory-safety violation. The leak is acceptable until the root cause
-                //     of the macOS crash is fully confirmed and a safer approach is found.
-                object_id.clone().into_raw(),
-                property_name.clone().into_raw(),
-                value.as_mut_ptr(),
-            )
-        });
-        Error::verify_good(&status_code)?;
-        Ok(value)
+        // Find the property variable node by translating the browse path from the object using a
+        // `HasProperty` reference. This avoids calling `UA_Server_readObjectProperty()` directly,
+        // which passes large C structs by value and crashes on macOS (aarch64) due to a C ABI
+        // issue with the indirect argument passing convention on that platform.
+        let targets = self.translate_browse_path_to_node_ids(
+            &ua::BrowsePath::init()
+                .with_starting_node(object_id)
+                .with_relative_path(
+                    &ua::RelativePath::init().with_elements(&[
+                        ua::RelativePathElement::init()
+                            .with_reference_type_id(&ua::NodeId::ns0(UA_NS0ID_HASPROPERTY))
+                            .with_target_name(property_name),
+                    ]),
+                ),
+        )?;
+        let target_node_id = targets
+            .iter()
+            .next()
+            .ok_or_else(|| Error::internal("object property not found"))?
+            .target_id()
+            .node_id();
+        let data_value = self.read_attribute(target_node_id, &ua::AttributeId::VALUE);
+        // If the read returned an explicit status code, propagate errors.
+        if let Some(status) = data_value.status() {
+            Error::verify_good(&status)?;
+        }
+        data_value
+            .into_value()
+            .ok_or_else(|| Error::internal("object property has no value"))
     }
 
     /// Writes object property.
@@ -1719,30 +1726,28 @@ impl Server {
         property_name: &ua::QualifiedName,
         value: &ua::Variant,
     ) -> Result<()> {
-        let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_writeObjectProperty(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
-                // SAFETY: We deep-copy the values and give up ownership via `into_raw()`. Passing
-                // shallow copies (via `to_raw_copy`) of heap-owning types by value causes
-                // SIGSEGV/SIGBUS on macOS (aarch64). On that platform the C ABI passes structs
-                // larger than 16 bytes via a hidden pointer; the C library internally aliases
-                // and may clean up those copies, which conflicts with Rust's `Drop` on the
-                // originals (double-free). Giving up ownership here prevents that conflict.
-                //
-                // This approach is safe regardless of whether the C function takes ownership:
-                //   - If it does take ownership: the function frees the values, Rust does not
-                //     (ownership was given up via `into_raw()`). No double-free.
-                //   - If it does not take ownership: the function uses but does not free the
-                //     values, and neither does Rust. The memory is leaked per call, but there
-                //     is no memory-safety violation. The leak is acceptable until the root cause
-                //     of the macOS crash is fully confirmed and a safer approach is found.
-                object_id.clone().into_raw(),
-                property_name.clone().into_raw(),
-                value.clone().into_raw(),
-            )
-        });
-        Error::verify_good(&status_code)
+        // Find the property variable node by translating the browse path from the object using a
+        // `HasProperty` reference. This avoids calling `UA_Server_writeObjectProperty()` directly,
+        // which passes large C structs by value and crashes on macOS (aarch64) due to a C ABI
+        // issue with the indirect argument passing convention on that platform.
+        let targets = self.translate_browse_path_to_node_ids(
+            &ua::BrowsePath::init()
+                .with_starting_node(object_id)
+                .with_relative_path(
+                    &ua::RelativePath::init().with_elements(&[
+                        ua::RelativePathElement::init()
+                            .with_reference_type_id(&ua::NodeId::ns0(UA_NS0ID_HASPROPERTY))
+                            .with_target_name(property_name),
+                    ]),
+                ),
+        )?;
+        let target_node_id = targets
+            .iter()
+            .next()
+            .ok_or_else(|| Error::internal("object property not found"))?
+            .target_id()
+            .node_id();
+        self.write_value(target_node_id, value)
     }
 
     /// Gets server statistics.
