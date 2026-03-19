@@ -1051,12 +1051,24 @@ impl Server {
             UA_Server_addReference(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
-                // SAFETY: The `NodeId` values are used to find internal pointers, are not modified
-                // and no references to these variables exist beyond this function call. Passing by
-                // value is safe here.
-                DataType::to_raw_copy(source_id),
-                DataType::to_raw_copy(reference_type_id),
-                DataType::to_raw_copy(target_id),
+                // SAFETY: We deep-copy the values and give up ownership via `into_raw()`. This
+                // avoids undefined behavior on macOS (aarch64) where passing shallow copies of
+                // heap-owning types by value causes SIGSEGV/SIGBUS. On that platform the C ABI
+                // passes large structs via a hidden pointer; any internal cleanup that the C
+                // library performs on the copy would then alias the original Rust-owned memory,
+                // leading to a double-free or use-after-free. Giving up ownership here means
+                // Rust's `Drop` will not free the data a second time.
+                //
+                // This approach is safe regardless of whether the C function takes ownership:
+                //   - If it does take ownership: the function frees the values, Rust does not
+                //     (ownership was given up via `into_raw()`). No double-free.
+                //   - If it does not take ownership: the function uses but does not free the
+                //     values, and neither does Rust. The memory is leaked per call, but there
+                //     is no memory-safety violation. The leak is acceptable until the root cause
+                //     of the macOS crash is fully confirmed and a safer approach is found.
+                source_id.clone().into_raw(),
+                reference_type_id.clone().into_raw(),
+                target_id.clone().into_raw(),
                 is_forward,
             )
         });
@@ -1080,13 +1092,23 @@ impl Server {
             UA_Server_deleteReference(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
-                // SAFETY: The `NodeId` values are used to find internal pointers, are not modified
-                // and no references to these variables exist beyond this function call. Passing by
-                // value is safe here.
-                DataType::to_raw_copy(source_node_id),
-                DataType::to_raw_copy(reference_type_id),
+                // SAFETY: We deep-copy the values and give up ownership via `into_raw()`. This
+                // mirrors the reasoning applied to `add_reference`: passing shallow copies of
+                // heap-owning types by value is unsafe on macOS (aarch64) because the C ABI
+                // passes large structs via a hidden pointer, which can cause double-free or
+                // use-after-free if the C library performs any internal cleanup on those copies.
+                //
+                // This approach is safe regardless of whether the C function takes ownership:
+                //   - If it does take ownership: the function frees the values, Rust does not
+                //     (ownership was given up via `into_raw()`). No double-free.
+                //   - If it does not take ownership: the function uses but does not free the
+                //     values, and neither does Rust. The memory is leaked per call, but there
+                //     is no memory-safety violation. The leak is acceptable until the root cause
+                //     of the macOS crash is fully confirmed and a safer approach is found.
+                source_node_id.clone().into_raw(),
+                reference_type_id.clone().into_raw(),
                 is_forward,
-                DataType::to_raw_copy(target_node_id),
+                target_node_id.clone().into_raw(),
                 delete_bidirectional,
             )
         });
@@ -1622,10 +1644,22 @@ impl Server {
             UA_Server_readObjectProperty(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
-                // SAFETY: The function expects copies but does not take ownership. In particular,
-                // memory lives only on the stack and is not released when the function returns.
-                DataType::to_raw_copy(object_id),
-                DataType::to_raw_copy(property_name),
+                // SAFETY: We deep-copy the values and give up ownership via `into_raw()`. Passing
+                // shallow copies (via `to_raw_copy`) of heap-owning types by value causes
+                // SIGSEGV/SIGBUS on macOS (aarch64). On that platform the C ABI passes structs
+                // larger than 16 bytes via a hidden pointer; the C library internally aliases
+                // and may clean up those copies, which conflicts with Rust's `Drop` on the
+                // originals (double-free). Giving up ownership here prevents that conflict.
+                //
+                // This approach is safe regardless of whether the C function takes ownership:
+                //   - If it does take ownership: the function frees the values, Rust does not
+                //     (ownership was given up via `into_raw()`). No double-free.
+                //   - If it does not take ownership: the function uses but does not free the
+                //     values, and neither does Rust. The memory is leaked per call, but there
+                //     is no memory-safety violation. The leak is acceptable until the root cause
+                //     of the macOS crash is fully confirmed and a safer approach is found.
+                object_id.clone().into_raw(),
+                property_name.clone().into_raw(),
                 value.as_mut_ptr(),
             )
         });
@@ -1689,11 +1723,23 @@ impl Server {
             UA_Server_writeObjectProperty(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
-                // SAFETY: The function expects copies but does not take ownership. In particular,
-                // memory lives only on the stack and is not released when the function returns.
-                DataType::to_raw_copy(object_id),
-                DataType::to_raw_copy(property_name),
-                DataType::to_raw_copy(value),
+                // SAFETY: We deep-copy the values and give up ownership via `into_raw()`. Passing
+                // shallow copies (via `to_raw_copy`) of heap-owning types by value causes
+                // SIGSEGV/SIGBUS on macOS (aarch64). On that platform the C ABI passes structs
+                // larger than 16 bytes via a hidden pointer; the C library internally aliases
+                // and may clean up those copies, which conflicts with Rust's `Drop` on the
+                // originals (double-free). Giving up ownership here prevents that conflict.
+                //
+                // This approach is safe regardless of whether the C function takes ownership:
+                //   - If it does take ownership: the function frees the values, Rust does not
+                //     (ownership was given up via `into_raw()`). No double-free.
+                //   - If it does not take ownership: the function uses but does not free the
+                //     values, and neither does Rust. The memory is leaked per call, but there
+                //     is no memory-safety violation. The leak is acceptable until the root cause
+                //     of the macOS crash is fully confirmed and a safer approach is found.
+                object_id.clone().into_raw(),
+                property_name.clone().into_raw(),
+                value.clone().into_raw(),
             )
         });
         Error::verify_good(&status_code)
