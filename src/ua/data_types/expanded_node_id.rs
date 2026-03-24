@@ -1,7 +1,8 @@
 use std::{fmt, str};
 
 use open62541_sys::{
-    UA_EXPANDEDNODEID_NUMERIC, UA_ExpandedNodeId_parse, UA_ExpandedNodeId_print, UA_NodeIdType,
+    UA_EXPANDEDNODEID_NODEID, UA_EXPANDEDNODEID_NUMERIC, UA_ExpandedNodeId_parse,
+    UA_ExpandedNodeId_print, UA_NodeIdType,
 };
 
 use crate::{DataType as _, Error, ua};
@@ -25,14 +26,8 @@ impl ExpandedNodeId {
     /// Creates expanded node ID from node ID.
     #[must_use]
     pub(crate) fn from_node_id(node_id: ua::NodeId) -> Self {
-        // Construct directly in Rust instead of calling `UA_EXPANDEDNODEID_NODEID()`, which takes
-        // and returns large structs by value. Constructing in Rust is more explicit about ownership.
-        //
-        // SAFETY: We initialize the struct directly. `init()` zeroes all fields (valid empty
-        // state), and we then set `nodeId`, passing ownership of `node_id` into the new wrapper.
-        let mut expanded = ua::ExpandedNodeId::init();
-        unsafe { expanded.as_mut().nodeId = node_id.into_raw(); }
-        expanded
+        // This passes ownership into the created expanded node ID.
+        Self(unsafe { UA_EXPANDEDNODEID_NODEID(node_id.into_raw()) })
     }
 
     #[must_use]
