@@ -26,8 +26,7 @@ impl ExpandedNodeId {
     #[must_use]
     pub(crate) fn from_node_id(node_id: ua::NodeId) -> Self {
         // Construct directly in Rust instead of calling `UA_EXPANDEDNODEID_NODEID()`, which takes
-        // and returns large structs by value. On macOS (aarch64), such FFI calls may behave
-        // incorrectly due to C ABI issues with the indirect argument passing convention.
+        // and returns large structs by value. Constructing in Rust is more explicit about ownership.
         //
         // SAFETY: We initialize the struct directly. `init()` zeroes all fields (valid empty
         // state), and we then set `nodeId`, passing ownership of `node_id` into the new wrapper.

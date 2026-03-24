@@ -1017,13 +1017,10 @@ impl Server {
     ///     parent_one_node_id.clone(),
     ///     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
     ///     ua::QualifiedName::new(1, "Variable"),
-    ///     ua::VariableAttributes::init(),
+    ///     ua::VariableAttributes::default(),
     /// ))?;
     ///
     /// // This makes the variable available in two parents.
-    /// # // NOTE: `UA_Server_addReference()` passes large C structs by value and may trigger a C
-    /// # // ABI issue on macOS (aarch64). Skip these calls on that platform as a workaround.
-    /// # if !cfg!(all(target_os = "macos", target_arch = "aarch64")) {
     /// server.add_reference(
     ///     &parent_two_node_id,
     ///     &ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
@@ -1039,7 +1036,6 @@ impl Server {
     ///     true,
     /// ).unwrap_err();
     /// assert_eq!(error.status_code(), ua::StatusCode::BADDUPLICATEREFERENCENOTALLOWED);
-    /// # } // end cfg! guard
     /// #
     /// # Ok(())
     /// # }
@@ -1055,21 +1051,8 @@ impl Server {
             UA_Server_addReference(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
-                // SAFETY: We deep-copy the values and give up ownership via `into_raw()`. This
-                // avoids undefined behavior on macOS (aarch64) where passing shallow copies of
-                // heap-owning types by value causes SIGSEGV/SIGBUS. On that platform the C ABI
-                // passes large structs via a hidden pointer; any internal cleanup that the C
-                // library performs on the copy would then alias the original Rust-owned memory,
-                // leading to a double-free or use-after-free. Giving up ownership here means
-                // Rust's `Drop` will not free the data a second time.
-                //
-                // This approach is safe regardless of whether the C function takes ownership:
-                //   - If it does take ownership: the function frees the values, Rust does not
-                //     (ownership was given up via `into_raw()`). No double-free.
-                //   - If it does not take ownership: the function uses but does not free the
-                //     values, and neither does Rust. The memory is leaked per call, but there
-                //     is no memory-safety violation. The leak is acceptable until the root cause
-                //     of the macOS crash is fully confirmed and a safer approach is found.
+                // SAFETY: The function takes these arguments by value on the C side. We pass
+                // deep copies via `clone().into_raw()`, transferring ownership to the C function.
                 source_id.clone().into_raw(),
                 reference_type_id.clone().into_raw(),
                 target_id.clone().into_raw(),
@@ -1096,19 +1079,8 @@ impl Server {
             UA_Server_deleteReference(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
-                // SAFETY: We deep-copy the values and give up ownership via `into_raw()`. This
-                // mirrors the reasoning applied to `add_reference`: passing shallow copies of
-                // heap-owning types by value is unsafe on macOS (aarch64) because the C ABI
-                // passes large structs via a hidden pointer, which can cause double-free or
-                // use-after-free if the C library performs any internal cleanup on those copies.
-                //
-                // This approach is safe regardless of whether the C function takes ownership:
-                //   - If it does take ownership: the function frees the values, Rust does not
-                //     (ownership was given up via `into_raw()`). No double-free.
-                //   - If it does not take ownership: the function uses but does not free the
-                //     values, and neither does Rust. The memory is leaked per call, but there
-                //     is no memory-safety violation. The leak is acceptable until the root cause
-                //     of the macOS crash is fully confirmed and a safer approach is found.
+                // SAFETY: The function takes these arguments by value on the C side. We pass
+                // deep copies via `clone().into_raw()`, transferring ownership to the C function.
                 source_node_id.clone().into_raw(),
                 reference_type_id.clone().into_raw(),
                 is_forward,
@@ -1615,7 +1587,7 @@ impl Server {
     /// #     object_node_id.clone(),
     /// #     ua::NodeId::ns0(UA_NS0ID_HASPROPERTY),
     /// #     ua::QualifiedName::new(1, "SomeVariable"),
-    /// #     ua::VariableAttributes::init()
+    /// #     ua::VariableAttributes::default()
     /// #         .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING))
     /// #         .with_value_rank(-1),
     /// # ))?;
@@ -1645,8 +1617,7 @@ impl Server {
     ) -> Result<ua::Variant> {
         // Find the property variable node by translating the browse path from the object using a
         // `HasProperty` reference. This avoids calling `UA_Server_readObjectProperty()` directly,
-        // which passes large C structs by value and crashes on macOS (aarch64) due to a C ABI
-        // issue with the indirect argument passing convention on that platform.
+        // which takes large C structs by value; using the browse-path approach is more robust.
         let targets = self.translate_browse_path_to_node_ids(
             &ua::BrowsePath::init()
                 .with_starting_node(object_id)
@@ -1706,7 +1677,7 @@ impl Server {
     /// #     object_node_id.clone(),
     /// #     ua::NodeId::ns0(UA_NS0ID_HASPROPERTY),
     /// #     ua::QualifiedName::new(1, "SomeVariable"),
-    /// #     ua::VariableAttributes::init()
+    /// #     ua::VariableAttributes::default()
     /// #         .with_data_type(&ua::NodeId::ns0(UA_NS0ID_STRING))
     /// #         .with_value_rank(-1),
     /// # ))?;
@@ -1728,8 +1699,7 @@ impl Server {
     ) -> Result<()> {
         // Find the property variable node by translating the browse path from the object using a
         // `HasProperty` reference. This avoids calling `UA_Server_writeObjectProperty()` directly,
-        // which passes large C structs by value and crashes on macOS (aarch64) due to a C ABI
-        // issue with the indirect argument passing convention on that platform.
+        // which takes large C structs by value; using the browse-path approach is more robust.
         let targets = self.translate_browse_path_to_node_ids(
             &ua::BrowsePath::init()
                 .with_starting_node(object_id)
