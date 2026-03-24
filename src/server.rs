@@ -14,16 +14,16 @@ use std::{
 
 use derive_more::Debug;
 use open62541_sys::{
-    UA_CertificateGroup_AcceptAll, UA_GlobalNodeLifecycle, UA_NodeId, UA_STATUSCODE_BADNOTFOUND,
-    UA_Server, UA_Server_addCallbackValueSourceVariableNode, UA_Server_addDataTypeNode,
-    UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addNode_begin,
-    UA_Server_addNode_finish, UA_Server_addReference, UA_Server_browse, UA_Server_browseNext,
-    UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath, UA_Server_deleteNode,
-    UA_Server_deleteReference, UA_Server_getConfig, UA_Server_getNamespaceByIndex,
-    UA_Server_getNamespaceByName, UA_Server_getStatistics, UA_Server_read,
-    UA_Server_readObjectProperty, UA_Server_run_iterate, UA_Server_run_shutdown,
-    UA_Server_run_startup, UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds,
-    UA_Server_writeDataValue, UA_Server_writeObjectProperty, UA_Server_writeValue, UA_ServerConfig,
+    UA_CertificateGroup_AcceptAll, UA_GlobalNodeLifecycle, UA_NS0ID_HASPROPERTY, UA_NodeId,
+    UA_STATUSCODE_BADNOTFOUND, UA_Server, UA_Server_addCallbackValueSourceVariableNode,
+    UA_Server_addDataTypeNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
+    UA_Server_addNode_begin, UA_Server_addNode_finish, UA_Server_addReference, UA_Server_browse,
+    UA_Server_browseNext, UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath,
+    UA_Server_deleteNode, UA_Server_deleteReference, UA_Server_getConfig,
+    UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName, UA_Server_getStatistics,
+    UA_Server_read, UA_Server_run_iterate, UA_Server_run_shutdown, UA_Server_run_startup,
+    UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds, UA_Server_write,
+    UA_ServerConfig,
 };
 use parking_lot::{Condvar, Mutex, MutexGuard};
 
@@ -1051,12 +1051,13 @@ impl Server {
             UA_Server_addReference(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
-                // SAFETY: The `NodeId` values are used to find internal pointers, are not modified
-                // and no references to these variables exist beyond this function call. Passing by
-                // value is safe here.
-                DataType::to_raw_copy(source_id),
-                DataType::to_raw_copy(reference_type_id),
-                DataType::to_raw_copy(target_id),
+                // SAFETY: We deep-copy each argument and give up Rust ownership via `into_raw()`.
+                // The C function receives its own copies and is responsible for their cleanup.
+                // This avoids use-after-free if the C function internally calls `UA_*_clear()` on
+                // a shallow copy of the argument, which would otherwise free Rust-owned data.
+                source_id.clone().into_raw(),
+                reference_type_id.clone().into_raw(),
+                target_id.clone().into_raw(),
                 is_forward,
             )
         });
@@ -1080,13 +1081,12 @@ impl Server {
             UA_Server_deleteReference(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
-                // SAFETY: The `NodeId` values are used to find internal pointers, are not modified
-                // and no references to these variables exist beyond this function call. Passing by
-                // value is safe here.
-                DataType::to_raw_copy(source_node_id),
-                DataType::to_raw_copy(reference_type_id),
+                // SAFETY: We deep-copy each argument and give up Rust ownership via `into_raw()`.
+                // See `add_reference` for the full rationale.
+                source_node_id.clone().into_raw(),
+                reference_type_id.clone().into_raw(),
                 is_forward,
-                DataType::to_raw_copy(target_node_id),
+                target_node_id.clone().into_raw(),
                 delete_bidirectional,
             )
         });
@@ -1529,14 +1529,20 @@ impl Server {
     ///
     /// This fails when the node does not exist or its value attribute cannot be written.
     pub fn write_value(&self, node_id: &ua::NodeId, value: &ua::Variant) -> Result<()> {
+        // Use UA_Server_write() which takes UA_WriteValue* by pointer, avoiding by-value passing
+        // of large C structs (UA_NodeId, UA_Variant) that can cause double-free crashes on macOS
+        // aarch64 when the C function internally shallow-copies and then clears its arguments.
+        let write_value = ua::WriteValue::init()
+            .with_node_id(node_id)
+            .with_attribute_id(&ua::AttributeId::VALUE)
+            .with_value(&ua::DataValue::init().with_value(value));
         let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_writeValue(
+            UA_Server_write(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
-                // SAFETY: The function expects copies but does not take ownership. It is a wrapper
-                // that internally delegates to `__UA_Server_write()` by pointer.
-                DataType::to_raw_copy(node_id),
-                DataType::to_raw_copy(value),
+                // SAFETY: Passing a pointer to the write value. The function does not take
+                // ownership of the pointed-to data.
+                write_value.as_ptr(),
             )
         });
         Error::verify_good(&status_code)
@@ -1548,14 +1554,19 @@ impl Server {
     ///
     /// This fails when the node does not exist or its value attribute cannot be written.
     pub fn write_data_value(&self, node_id: &ua::NodeId, value: &ua::DataValue) -> Result<()> {
+        // Use UA_Server_write() which takes UA_WriteValue* by pointer. See `write_value` for the
+        // full rationale.
+        let write_value = ua::WriteValue::init()
+            .with_node_id(node_id)
+            .with_attribute_id(&ua::AttributeId::VALUE)
+            .with_value(value);
         let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_writeDataValue(
+            UA_Server_write(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
-                // SAFETY: The function expects copies but does not take ownership. It is a wrapper
-                // that internally delegates to `__UA_Server_write()` by pointer.
-                DataType::to_raw_copy(node_id),
-                DataType::to_raw_copy(value),
+                // SAFETY: Passing a pointer to the write value. The function does not take
+                // ownership of the pointed-to data.
+                write_value.as_ptr(),
             )
         });
         Error::verify_good(&status_code)
@@ -1617,20 +1628,35 @@ impl Server {
         object_id: &ua::NodeId,
         property_name: &ua::QualifiedName,
     ) -> Result<ua::Variant> {
-        let mut value = ua::Variant::init();
-        let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_readObjectProperty(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
-                // SAFETY: The function expects copies but does not take ownership. In particular,
-                // memory lives only on the stack and is not released when the function returns.
-                DataType::to_raw_copy(object_id),
-                DataType::to_raw_copy(property_name),
-                value.as_mut_ptr(),
-            )
-        });
-        Error::verify_good(&status_code)?;
-        Ok(value)
+        // Find the property variable node by translating the browse path from the object using a
+        // HasProperty reference. This avoids calling `UA_Server_readObjectProperty()` which passes
+        // large C structs by value and can cause double-free crashes on macOS aarch64 when the C
+        // function internally shallow-copies its arguments and calls `UA_*_clear()` on them.
+        let targets = self.translate_browse_path_to_node_ids(
+            &ua::BrowsePath::init()
+                .with_starting_node(object_id)
+                .with_relative_path(
+                    &ua::RelativePath::init().with_elements(&[
+                        ua::RelativePathElement::init()
+                            .with_reference_type_id(&ua::NodeId::ns0(UA_NS0ID_HASPROPERTY))
+                            .with_target_name(property_name),
+                    ]),
+                ),
+        )?;
+        let target_node_id = targets
+            .iter()
+            .next()
+            .ok_or_else(|| Error::internal("object property not found"))?
+            .target_id()
+            .node_id();
+        let data_value = self.read_attribute(target_node_id, &ua::AttributeId::VALUE);
+        // If the read returned an explicit status code, propagate errors.
+        if let Some(status) = data_value.status() {
+            Error::verify_good(&status)?;
+        }
+        data_value
+            .into_value()
+            .ok_or_else(|| Error::internal("object property has no value"))
     }
 
     /// Writes object property.
@@ -1685,18 +1711,28 @@ impl Server {
         property_name: &ua::QualifiedName,
         value: &ua::Variant,
     ) -> Result<()> {
-        let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_writeObjectProperty(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
-                // SAFETY: The function expects copies but does not take ownership. In particular,
-                // memory lives only on the stack and is not released when the function returns.
-                DataType::to_raw_copy(object_id),
-                DataType::to_raw_copy(property_name),
-                DataType::to_raw_copy(value),
-            )
-        });
-        Error::verify_good(&status_code)
+        // Find the property variable node by translating the browse path from the object using a
+        // HasProperty reference. This avoids calling `UA_Server_writeObjectProperty()` which
+        // passes large C structs by value; see `read_object_property` for the full rationale.
+        let targets = self.translate_browse_path_to_node_ids(
+            &ua::BrowsePath::init()
+                .with_starting_node(object_id)
+                .with_relative_path(
+                    &ua::RelativePath::init().with_elements(&[
+                        ua::RelativePathElement::init()
+                            .with_reference_type_id(&ua::NodeId::ns0(UA_NS0ID_HASPROPERTY))
+                            .with_target_name(property_name),
+                    ]),
+                ),
+        )?;
+        let target_node_id = targets
+            .iter()
+            .next()
+            .ok_or_else(|| Error::internal("object property not found"))?
+            .target_id()
+            .node_id()
+            .clone();
+        self.write_value(&target_node_id, value)
     }
 
     /// Gets server statistics.
