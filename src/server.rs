@@ -1003,14 +1003,14 @@ impl Server {
     /// #     ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
     /// #     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
     /// #     ua::QualifiedName::new(1, "ParentOne"),
-    /// #     ua::ObjectAttributes::init(),
+    /// #     ua::ObjectAttributes::default(),
     /// # ))?;
     /// // let parent_two_node_id = server.add_node(/* snip */)?;
     /// # let parent_two_node_id = server.add_node(Node::new(
     /// #     ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
     /// #     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
     /// #     ua::QualifiedName::new(1, "ParentTwo"),
-    /// #     ua::ObjectAttributes::init(),
+    /// #     ua::ObjectAttributes::default(),
     /// # ))?;
     ///
     /// let variable_node_id = server.add_node(Node::new(
@@ -1583,7 +1583,7 @@ impl Server {
     /// #     ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
     /// #     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
     /// #     ua::QualifiedName::new(1, "SomeObject"),
-    /// #     ua::ObjectAttributes::init(),
+    /// #     ua::ObjectAttributes::default(),
     /// # ))?;
     /// # let variable_node_id = server.add_node(Node::new(
     /// #     object_node_id.clone(),
@@ -1659,7 +1659,7 @@ impl Server {
     /// #     ua::NodeId::ns0(UA_NS0ID_OBJECTSFOLDER),
     /// #     ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
     /// #     ua::QualifiedName::new(1, "SomeObject"),
-    /// #     ua::ObjectAttributes::init(),
+    /// #     ua::ObjectAttributes::default(),
     /// # ))?;
     /// # let variable_node_id = server.add_node(Node::new(
     /// #     object_node_id.clone(),
