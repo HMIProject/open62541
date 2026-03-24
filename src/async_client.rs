@@ -694,19 +694,16 @@ fn background_task(client: &ua::Client, cancelled: &AtomicBool) {
         });
         if let Err(error) = Error::verify_good(&status_code) {
             // Context-sensitive handling of bad status codes.
-            match status_code.into_raw() {
-                UA_STATUSCODE_BADDISCONNECT => {
-                    // Not an error.
-                    log::info!("Terminating background task after disconnect");
-                }
-                UA_STATUSCODE_BADCONNECTIONCLOSED => {
-                    // Not an error.
-                    log::info!("Terminating background task after connection closed");
-                }
-                _ => {
-                    // Unexpected error.
-                    log::error!("Terminating background task: run failed with {error}");
-                }
+            let status_code = status_code.into_raw();
+            if status_code == UA_STATUSCODE_BADDISCONNECT {
+                // Not an error.
+                log::info!("Terminating background task after disconnect");
+            } else if status_code == UA_STATUSCODE_BADCONNECTIONCLOSED {
+                // Not an error.
+                log::info!("Terminating background task after connection closed");
+            } else {
+                // Unexpected error.
+                log::error!("Terminating background task: run failed with {error}");
             }
             return;
         }
