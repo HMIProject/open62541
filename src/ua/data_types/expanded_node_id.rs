@@ -12,7 +12,26 @@ crate::data_type!(ExpandedNodeId);
 impl ExpandedNodeId {
     /// Creates expanded node ID.
     ///
-    /// Constructs a new instance from parts.
+    /// Constructs a new instance from parts by taking ownership.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use open62541::ua;
+    ///
+    /// let node_id = ua::NodeId::numeric(1, 234);
+    /// let namespace_uri = ua::String::new("http://www.example.com").unwrap();
+    /// let server_index = 99;
+    ///
+    /// let expanded_node_id = ua::ExpandedNodeId::new(
+    ///     node_id.clone(),
+    ///     namespace_uri.clone(),
+    ///     server_index);
+    ///
+    /// assert_eq!(expanded_node_id.node_id(), &node_id);
+    /// assert_eq!(expanded_node_id.namespace_uri(), &namespace_uri);
+    /// assert_eq!(expanded_node_id.server_index(), server_index);
+    /// ```
     #[must_use]
     pub fn new(node_id: ua::NodeId, namespace_uri: ua::String, server_index: u32) -> Self {
         let mut new = Self::from(node_id);
