@@ -10,6 +10,19 @@ use crate::{DataType as _, Error, ua};
 crate::data_type!(ExpandedNodeId);
 
 impl ExpandedNodeId {
+    /// Creates expanded node ID.
+    ///
+    /// Constructs a new instance from parts.
+    #[must_use]
+    pub fn new(node_id: ua::NodeId, namespace_uri: ua::String, server_index: u32) -> Self {
+        let mut new = Self::from(node_id);
+        debug_assert!(new.namespace_uri().is_null());
+        // This passes ownership into the created expanded node ID.
+        new.0.namespaceUri = namespace_uri.into_raw();
+        new.0.serverIndex = server_index;
+        new
+    }
+
     /// Creates numeric expanded node ID.
     #[must_use]
     pub fn numeric(ns_index: u16, numeric: u32) -> Self {
@@ -21,13 +34,6 @@ impl ExpandedNodeId {
         );
 
         Self(inner)
-    }
-
-    /// Creates expanded node ID from node ID.
-    #[must_use]
-    pub(crate) fn from_node_id(node_id: ua::NodeId) -> Self {
-        // This passes ownership into the created expanded node ID.
-        Self(unsafe { UA_EXPANDEDNODEID_NODEID(node_id.into_raw()) })
     }
 
     #[must_use]
@@ -43,6 +49,13 @@ impl ExpandedNodeId {
     #[must_use]
     pub const fn server_index(&self) -> u32 {
         self.0.serverIndex
+    }
+}
+
+impl From<ua::NodeId> for ExpandedNodeId {
+    fn from(node_id: ua::NodeId) -> Self {
+        // This passes ownership into the created expanded node ID.
+        Self(unsafe { UA_EXPANDEDNODEID_NODEID(node_id.into_raw()) })
     }
 }
 

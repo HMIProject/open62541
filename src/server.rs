@@ -980,7 +980,7 @@ impl Server {
     /// server.add_reference(
     ///     &parent_two_node_id,
     ///     &ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
-    ///     &variable_node_id.clone().into_expanded_node_id(),
+    ///     &variable_node_id.clone().into(),
     ///     true,
     /// )?;
     ///
@@ -988,7 +988,7 @@ impl Server {
     /// let error = server.add_reference(
     ///     &parent_one_node_id,
     ///     &ua::NodeId::ns0(UA_NS0ID_ORGANIZES),
-    ///     &variable_node_id.clone().into_expanded_node_id(),
+    ///     &variable_node_id.clone().into(),
     ///     true,
     /// ).unwrap_err();
     /// assert_eq!(error.status_code(), ua::StatusCode::BADDUPLICATEREFERENCENOTALLOWED);
@@ -1297,7 +1297,7 @@ impl Server {
     /// assert_eq!(
     ///     target.target_id(),
     ///     &ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME)
-    ///         .into_expanded_node_id()
+    ///         .into()
     /// );
     ///
     /// // All relative path elements were processed.
@@ -1372,7 +1372,7 @@ impl Server {
     /// assert_eq!(
     ///     target.target_id(),
     ///     &ua::NodeId::ns0(UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME)
-    ///         .into_expanded_node_id()
+    ///         .into()
     /// );
     ///
     /// // All relative path elements were processed.
