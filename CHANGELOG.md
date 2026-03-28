@@ -34,8 +34,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
-- Temporarily disable the following methods in `ua::Server` on `aarch64-apple-darwin` due to
-  [unresolved crashes](https://github.com/HMIProject/open62541/issues/325):
+- Breaking: Temporarily disable the following methods in `ua::Server` on `aarch64-apple-darwin` due
+  to [unresolved crashes](https://github.com/HMIProject/open62541/issues/325):
   - `ua::Server::add_reference()`
   - `ua::Server::read_object_property()`
   - `ua::Server::write_object_property()`
