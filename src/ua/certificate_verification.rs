@@ -6,10 +6,9 @@ use std::{
 use derive_more::Debug;
 #[cfg(feature = "mbedtls")]
 use open62541_sys::UA_CertificateGroup_Memorystore;
-use open62541_sys::{UA_CertificateGroup, UA_CertificateGroup_AcceptAll};
+use open62541_sys::{UA_ByteString, UA_CertificateGroup, UA_CertificateGroup_AcceptAll, UA_StatusCode};
 
-#[cfg(feature = "mbedtls")]
-use crate::{DataType as _, ua};
+use crate::{CustomCertificateVerification, DataType as _, Userdata, ua};
 
 /// Wrapper for [`UA_CertificateGroup`] from [`open62541_sys`].
 #[derive(Debug)]
@@ -28,6 +27,42 @@ impl CertificateVerification {
             UA_CertificateGroup_AcceptAll(certificate_verification.as_mut_ptr());
         }
         certificate_verification
+    }
+
+    /// Creates certificate verification with custom callbacks.
+    #[must_use]
+    pub fn custom(certificate_verification: impl CustomCertificateVerification + 'static) -> Self {
+        type Ud = Userdata<Box<dyn CustomCertificateVerification>>;
+
+        unsafe extern "C" fn verify_certificate_c(
+            cv: *mut UA_CertificateGroup,
+            certificate: *const UA_ByteString,
+        ) -> UA_StatusCode {
+            // SAFETY: Reference is used only for the remainder of this function.
+            let certificate = ua::ByteString::raw_ref(unsafe {
+                certificate.as_ref().expect("certificate should be set")
+            });
+
+            // SAFETY: We use the user data only when it is still alive.
+            let certificate_verification = unsafe { Ud::peek_at((*cv).context) };
+            let status_code = certificate_verification.verify_certificate(certificate);
+            status_code.into_raw()
+        }
+
+        unsafe extern "C" fn clear_c(cv: *mut UA_CertificateGroup) {
+            // Reclaim ownership of certificate verification and drop it.
+            // SAFETY: We use the user data only when it is still alive.
+            let _unused = unsafe { Ud::consume((*cv).context) };
+        }
+
+        let raw = MaybeUninit::<UA_CertificateGroup>::zeroed();
+        // SAFETY: Zero-initialized memory is a valid certificate group.
+        let mut inner = unsafe { raw.assume_init() };
+        inner.context = Ud::prepare(Box::new(certificate_verification));
+        inner.verifyCertificate = Some(verify_certificate_c);
+        inner.clear = Some(clear_c);
+        // SAFETY: We pass a value with a valid context pointer into `Self`.
+        unsafe { Self::from_raw(inner) }
     }
 
     #[cfg(feature = "mbedtls")]
