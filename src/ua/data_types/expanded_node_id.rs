@@ -101,7 +101,7 @@ impl str::FromStr for ExpandedNodeId {
 
         let status_code = ua::StatusCode::new({
             let str = ua::String::new(s)?;
-            // SAFETY: `UA_NodeId_parse()` expects the string passed by value but does not take
+            // SAFETY: `UA_ExpandedNodeId_parse()` expects the string passed by value but does not take
             // ownership.
             let str = unsafe { ua::String::to_raw_copy(&str) };
             unsafe { UA_ExpandedNodeId_parse(node_id.as_mut_ptr(), str) }
