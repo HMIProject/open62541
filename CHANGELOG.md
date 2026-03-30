@@ -28,7 +28,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Breaking: Return `Result` from `DataTypeExt::from_inner()`.
 - Breaking: Replace `ua::String::is_invalid()` with `ua::String::is_null()`.
 - Breaking: Replace `ua::ByteString::is_invalid()` with `ua::ByteString::is_null()`.
-- Breaking: Remove `into_expanded_node_id()` from `ua::NodeId`.
+- Breaking: Remove `into_expanded_node_id()` from `ua::NodeId`. Use `Into::into()` instead.
 
 ### Fixed
 
