@@ -1,0 +1,24 @@
+{
+  "ignorePatterns": [],
+  "singleQuote": true,
+  "trailingComma": "all",
+  "endOfLine": "lf",
+  "insertFinalNewline": true,
+  "printWidth": 100,
+  "overrides": [
+    {
+      "files": ["**/*.yaml", "**/*.yml"],
+      "options": {
+        "tabWidth": 2,
+        // In double quotes you can use escapes.
+        "singleQuote": false,
+      },
+    },
+    {
+      "files": ["**/*.md"],
+      "options": {
+        "proseWrap": "always",
+      },
+    },
+  ],
+}
