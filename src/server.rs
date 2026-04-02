@@ -7,23 +7,23 @@ mod node_types;
 use std::{
     any::Any,
     ffi::{CString, c_void},
-    ptr,
+    mem, ptr,
     sync::Arc,
     time::Instant,
 };
 
+use derive_more::Debug;
 use open62541_sys::{
-    __UA_Server_addNode, UA_CertificateVerification_AcceptAll, UA_NodeId,
-    UA_STATUSCODE_BADNOTFOUND, UA_Server, UA_Server_addDataSourceVariableNode,
-    UA_Server_addDataTypeNode, UA_Server_addMethodNodeEx, UA_Server_addNamespace,
-    UA_Server_addReference, UA_Server_browse, UA_Server_browseNext, UA_Server_browseRecursive,
-    UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent, UA_Server_deleteNode,
+    UA_CertificateGroup_AcceptAll, UA_GlobalNodeLifecycle, UA_NodeId, UA_STATUSCODE_BADNOTFOUND,
+    UA_Server, UA_Server_addCallbackValueSourceVariableNode, UA_Server_addDataTypeNode,
+    UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addNode_begin,
+    UA_Server_addNode_finish, UA_Server_addReference, UA_Server_browse, UA_Server_browseNext,
+    UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath, UA_Server_deleteNode,
     UA_Server_deleteReference, UA_Server_getConfig, UA_Server_getNamespaceByIndex,
     UA_Server_getNamespaceByName, UA_Server_getStatistics, UA_Server_read,
     UA_Server_readObjectProperty, UA_Server_run_iterate, UA_Server_run_shutdown,
     UA_Server_run_startup, UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds,
-    UA_Server_triggerEvent, UA_Server_writeDataValue, UA_Server_writeObjectProperty,
-    UA_Server_writeValue, UA_ServerConfig,
+    UA_Server_writeDataValue, UA_Server_writeObjectProperty, UA_Server_writeValue, UA_ServerConfig,
 };
 use parking_lot::{Condvar, Mutex, MutexGuard};
 
@@ -68,6 +68,9 @@ pub use self::{
 pub struct ServerBuilder {
     config: ua::ServerConfig,
 
+    /// Heap-allocated set of callbacks in `config.nodeLifecycle`.
+    global_node_lifecycle: Box<UA_GlobalNodeLifecycle>,
+
     /// [`AccessControl`] instances may hold additional data that must be kept alive until server is
     /// shut down. The sentinel value cleans this up when it is dropped.
     access_control_sentinel: Option<Box<dyn Any + Send>>,
@@ -77,6 +80,7 @@ impl ServerBuilder {
     fn new(config: ua::ServerConfig) -> Self {
         Self {
             config,
+            global_node_lifecycle: Box::default(),
             access_control_sentinel: None,
         }
     }
@@ -195,8 +199,8 @@ impl ServerBuilder {
     pub fn accept_all(mut self) -> Self {
         let config = self.config_mut();
         unsafe {
-            UA_CertificateVerification_AcceptAll(&raw mut config.secureChannelPKI);
-            UA_CertificateVerification_AcceptAll(&raw mut config.sessionPKI);
+            UA_CertificateGroup_AcceptAll(&raw mut config.secureChannelPKI);
+            UA_CertificateGroup_AcceptAll(&raw mut config.sessionPKI);
         }
         self
     }
@@ -226,7 +230,7 @@ impl ServerBuilder {
 
     /// Builds OPC UA server.
     #[must_use]
-    pub fn build(mut self) -> (Server, ServerRunner) {
+    pub fn build(self) -> (Server, ServerRunner) {
         unsafe extern "C" fn destructor_c(
             _server: *mut UA_Server,
             _session_id: *const UA_NodeId,
@@ -261,22 +265,25 @@ impl ServerBuilder {
             }
         }
 
-        let config = self.config_mut();
-
-        // PANIC: We never set lifecycle hooks elsewhere in config.
-        debug_assert!(config.nodeLifecycle.destructor.is_none());
-        config.nodeLifecycle.destructor = Some(destructor_c);
-
         let Self {
-            config,
+            mut config,
+            mut global_node_lifecycle,
             access_control_sentinel,
         } = self;
+
+        // PANIC: We never set lifecycle hooks elsewhere in config.
+        debug_assert!(global_node_lifecycle.destructor.is_none());
+        global_node_lifecycle.destructor = Some(destructor_c);
+
+        // SAFETY: We keep `global_node_lifecycle` alive until `clear_global_node_lifecycle()`.
+        unsafe { set_global_node_lifecycle(&mut config, &mut global_node_lifecycle) };
 
         let server = Arc::new(ua::Server::new_with_config(config));
         let state = Arc::new(RunnerState::new());
 
         let runner = ServerRunner::new(
             Arc::clone(&server),
+            global_node_lifecycle,
             access_control_sentinel,
             Arc::clone(&state),
         );
@@ -366,6 +373,7 @@ enum RunnerStateInner {
 
 #[derive(Debug)]
 struct ServerConfigGuard<'a> {
+    #[debug(skip)]
     config: &'a UA_ServerConfig,
     guard: RunnerStateGuard<'a>,
 }
@@ -610,21 +618,33 @@ impl Server {
         let mut out_new_node_id = ua::NodeId::null();
 
         let status_code = ua::StatusCode::new(unsafe {
-            __UA_Server_addNode(
+            UA_Server_addNode_begin(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 attributes.node_class().clone().into_raw(),
-                requested_new_node_id.as_ptr(),
-                parent_node_id.as_ptr(),
-                reference_type_id.as_ptr(),
-                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
+                DataType::to_raw_copy(&requested_new_node_id),
+                DataType::to_raw_copy(&parent_node_id),
+                DataType::to_raw_copy(&reference_type_id),
+                // TODO: Verify that `UA_Server_addNode_begin()` takes ownership.
                 browse_name.clone().into_raw(),
-                type_definition.as_ptr(),
-                attributes.as_node_attributes().as_ptr(),
+                // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
+                DataType::to_raw_copy(&type_definition),
+                attributes.as_node_attributes().as_ptr().cast(),
                 attributes.attribute_type(),
                 context.map_or(ptr::null_mut(), NodeContext::leak),
                 out_new_node_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addNode_finish(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.server.as_ptr().cast_mut(),
+                // TODO: Verify that `UA_Server_addNode_finish()` does not take ownership.
+                DataType::to_raw_copy(&out_new_node_id),
             )
         });
         Error::verify_good(&status_code)?;
@@ -657,21 +677,33 @@ impl Server {
         let mut out_new_node_id = ua::NodeId::null();
 
         let status_code = ua::StatusCode::new(unsafe {
-            __UA_Server_addNode(
+            UA_Server_addNode_begin(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 ua::NodeClass::OBJECT.into_raw(),
-                requested_new_node_id.as_ptr(),
-                parent_node_id.as_ptr(),
-                reference_type_id.as_ptr(),
-                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
+                DataType::to_raw_copy(&requested_new_node_id),
+                DataType::to_raw_copy(&parent_node_id),
+                DataType::to_raw_copy(&reference_type_id),
+                // TODO: Verify that `UA_Server_addNode_begin()` takes ownership.
                 browse_name.into_raw(),
-                type_definition.as_ptr(),
-                attributes.as_node_attributes().as_ptr(),
+                // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
+                DataType::to_raw_copy(&type_definition),
+                attributes.as_node_attributes().as_ptr().cast(),
                 ua::ObjectAttributes::data_type(),
                 ptr::null_mut(),
                 out_new_node_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addNode_finish(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.server.as_ptr().cast_mut(),
+                // TODO: Verify that `UA_Server_addNode_finish()` does not take ownership.
+                DataType::to_raw_copy(&out_new_node_id),
             )
         });
         Error::verify_good(&status_code)?;
@@ -704,21 +736,33 @@ impl Server {
         let mut out_new_node_id = ua::NodeId::null();
 
         let status_code = ua::StatusCode::new(unsafe {
-            __UA_Server_addNode(
+            UA_Server_addNode_begin(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 ua::NodeClass::VARIABLE.into_raw(),
-                requested_new_node_id.as_ptr(),
-                parent_node_id.as_ptr(),
-                reference_type_id.as_ptr(),
-                // TODO: Verify that `__UA_Server_addNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
+                DataType::to_raw_copy(&requested_new_node_id),
+                DataType::to_raw_copy(&parent_node_id),
+                DataType::to_raw_copy(&reference_type_id),
+                // TODO: Verify that `UA_Server_addNode_begin()` takes ownership.
                 browse_name.into_raw(),
-                type_definition.as_ptr(),
-                attributes.as_node_attributes().as_ptr(),
+                // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
+                DataType::to_raw_copy(&type_definition),
+                attributes.as_node_attributes().as_ptr().cast(),
                 ua::VariableAttributes::data_type(),
                 ptr::null_mut(),
                 out_new_node_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_addNode_finish(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.server.as_ptr().cast_mut(),
+                // TODO: Verify that `UA_Server_addNode_finish()` does not take ownership.
+                DataType::to_raw_copy(&out_new_node_id),
             )
         });
         Error::verify_good(&status_code)?;
@@ -757,20 +801,20 @@ impl Server {
         // SAFETY: We store `node_context` inside the node to keep `data_source` alive.
         let (data_source, node_context) = unsafe { data_source::wrap_data_source(data_source) };
         let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_addDataSourceVariableNode(
+            UA_Server_addCallbackValueSourceVariableNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.server.as_ptr().cast_mut(),
-                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 requested_new_node_id.into_raw(),
-                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 parent_node_id.into_raw(),
-                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 reference_type_id.into_raw(),
-                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 browse_name.into_raw(),
-                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 type_definition.into_raw(),
-                // TODO: Verify that `UA_Server_addDataSourceVariableNode()` takes ownership.
+                // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 attributes.into_raw(),
                 data_source,
                 node_context.leak(),
@@ -1049,65 +1093,69 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Creates an event.
-    ///
-    /// This returns the [`ua::NodeId`] of the created event.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the event could not be created.
-    pub fn create_event(&self, event_type: &ua::NodeId) -> Result<ua::NodeId> {
-        // This out variable must be initialized without memory allocation because the call below
-        // overwrites it in place, without releasing any held data first.
-        let mut out_node_id = ua::NodeId::init();
-        let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_createEvent(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
-                // SAFETY: Passing as value is okay here, as event_type is only used for the scope
-                // of the function and does not get modified.
-                DataType::to_raw_copy(event_type),
-                out_node_id.as_mut_ptr(),
-            )
-        });
-        Error::verify_good(&status_code)?;
-        Ok(out_node_id)
-    }
+    // FIXME: Fix implementation and add back.
+    //
+    // /// Creates an event.
+    // ///
+    // /// This returns the [`ua::NodeId`] of the created event.
+    // ///
+    // /// # Errors
+    // ///
+    // /// This fails when the event could not be created.
+    // pub fn create_event(&self, event_type: &ua::NodeId) -> Result<ua::NodeId> {
+    //     // This out variable must be initialized without memory allocation because the call below
+    //     // overwrites it in place, without releasing any held data first.
+    //     let mut out_node_id = ua::NodeId::init();
+    //     let status_code = ua::StatusCode::new(unsafe {
+    //         UA_Server_createEvent(
+    //             // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+    //             self.server.as_ptr().cast_mut(),
+    //             // SAFETY: Passing as value is okay here, as event_type is only used for the scope
+    //             // of the function and does not get modified.
+    //             DataType::to_raw_copy(event_type),
+    //             out_node_id.as_mut_ptr(),
+    //         )
+    //     });
+    //     Error::verify_good(&status_code)?;
+    //     Ok(out_node_id)
+    // }
 
-    /// Triggers an event.
-    ///
-    /// This returns the [`ua::EventId`] of the new event.
-    ///
-    /// # Errors
-    ///
-    /// This fails when the event could not be triggered.
-    pub fn trigger_event(
-        &self,
-        event_node_id: &ua::NodeId,
-        origin_id: &ua::NodeId,
-        delete_event_node: bool,
-    ) -> Result<ua::EventId> {
-        // This out variable must be initialized without memory allocation because the call below
-        // overwrites it in place, without releasing any held data first.
-        let mut out_event_id = ua::ByteString::init();
-        let status_code = ua::StatusCode::new(unsafe {
-            UA_Server_triggerEvent(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
-                // SAFETY: Passing as value is okay here, as the variables are only used for the
-                // scope of the function and do not get modified.
-                DataType::to_raw_copy(event_node_id),
-                DataType::to_raw_copy(origin_id),
-                out_event_id.as_mut_ptr(),
-                delete_event_node,
-            )
-        });
-        Error::verify_good(&status_code)?;
-        let Some(event_id) = ua::EventId::new(out_event_id) else {
-            return Err(Error::internal("trigger should return event ID"));
-        };
-        Ok(event_id)
-    }
+    // FIXME: Fix implementation and add back.
+    //
+    // /// Triggers an event.
+    // ///
+    // /// This returns the [`ua::EventId`] of the new event.
+    // ///
+    // /// # Errors
+    // ///
+    // /// This fails when the event could not be triggered.
+    // pub fn trigger_event(
+    //     &self,
+    //     event_node_id: &ua::NodeId,
+    //     origin_id: &ua::NodeId,
+    //     delete_event_node: bool,
+    // ) -> Result<ua::EventId> {
+    //     // This out variable must be initialized without memory allocation because the call below
+    //     // overwrites it in place, without releasing any held data first.
+    //     let mut out_event_id = ua::ByteString::init();
+    //     let status_code = ua::StatusCode::new(unsafe {
+    //         UA_Server_triggerEvent(
+    //             // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+    //             self.server.as_ptr().cast_mut(),
+    //             // SAFETY: Passing as value is okay here, as the variables are only used for the
+    //             // scope of the function and do not get modified.
+    //             DataType::to_raw_copy(event_node_id),
+    //             DataType::to_raw_copy(origin_id),
+    //             out_event_id.as_mut_ptr(),
+    //             delete_event_node,
+    //         )
+    //     });
+    //     Error::verify_good(&status_code)?;
+    //     let Some(event_id) = ua::EventId::new(out_event_id) else {
+    //         return Err(Error::internal("trigger should return event ID"));
+    //     };
+    //     Ok(event_id)
+    // }
 
     /// Browses specific node.
     ///
@@ -1700,6 +1748,9 @@ impl Server {
 pub struct ServerRunner {
     server: Arc<ua::Server>,
 
+    /// Heap-allocated set of callbacks in `config.nodeLifecycle`.
+    global_node_lifecycle: Box<UA_GlobalNodeLifecycle>,
+
     /// [`AccessControl`] instances may hold additional data that must be kept alive until server is
     /// shut down. The sentinel value cleans this up when it is dropped.
     access_control_sentinel: Option<Box<dyn Any + Send>>,
@@ -1711,11 +1762,13 @@ impl ServerRunner {
     #[must_use]
     fn new(
         server: Arc<ua::Server>,
+        global_node_lifecycle: Box<UA_GlobalNodeLifecycle>,
         access_control_sentinel: Option<Box<dyn Any + Send>>,
         state: Arc<RunnerState>,
     ) -> Self {
         Self {
             server,
+            global_node_lifecycle,
             access_control_sentinel,
             state,
         }
@@ -1742,9 +1795,11 @@ impl ServerRunner {
     pub fn run_until_interrupt(mut self) -> Result<()> {
         let Self {
             server,
+            global_node_lifecycle,
             access_control_sentinel,
             state,
         } = &mut self;
+        let global_node_lifecycle = mem::take(global_node_lifecycle);
         let access_control_sentinel = access_control_sentinel.take();
 
         let mut state_guard = state.lock();
@@ -1772,6 +1827,8 @@ impl ServerRunner {
             }
         }
 
+        unsafe { clear_global_node_lifecycle(server, global_node_lifecycle) };
+
         // Compile-time assertion to make sure that the sentinel value was still around for the call
         // above (including any branches that exit early with `?` or `return`): only when the server
         // has finished shutting down, we are allowed to drop sentinel values.
@@ -1791,9 +1848,11 @@ impl ServerRunner {
     pub fn run_until_cancelled(mut self, mut is_cancelled: impl FnMut() -> bool) -> Result<()> {
         let Self {
             server,
+            global_node_lifecycle,
             access_control_sentinel,
             state,
         } = &mut self;
+        let global_node_lifecycle = mem::take(global_node_lifecycle);
         let access_control_sentinel = access_control_sentinel.take();
 
         let mut state_guard = state.lock();
@@ -1868,6 +1927,8 @@ impl ServerRunner {
             }
         }
 
+        unsafe { clear_global_node_lifecycle(server, global_node_lifecycle) };
+
         // Compile-time assertion to make sure that the sentinel value was still around for the call
         // above (including any branches that exit early with `?` or `return`): only when the server
         // has finished shutting down, we are allowed to drop sentinel values.
@@ -1899,4 +1960,48 @@ fn to_browse_result(result: &ua::BrowseResult) -> BrowseResult {
     };
 
     Ok((references.into_vec(), result.continuation_point()))
+}
+
+/// Sets `config.nodeLifecycle` to the given value.
+///
+/// # Safety
+///
+/// This must be called before the server accesses `config.nodeLifecycle`.
+///
+/// The boxed value `global_node_lifecycle` must be kept alive until `clear_global_node_lifecycle()`
+/// has been called.
+unsafe fn set_global_node_lifecycle(
+    config: &mut ua::ServerConfig,
+    global_node_lifecycle: &mut Box<UA_GlobalNodeLifecycle>,
+) {
+    let config = unsafe { config.as_mut() };
+
+    // PANIC: Nobody else has initialized the node lifecycle callbacks before.
+    debug_assert!(config.nodeLifecycle.is_null());
+
+    // This stores the pointer to the `Box`-allocated `global_node_lifecycle` in the config; it must
+    // be kept alive elsewhere (e.g., in `ServerRunner`) until the server no longer accesses it.
+    config.nodeLifecycle = &raw mut *global_node_lifecycle.as_mut();
+}
+
+/// Clears `config.nodeLifecycle`.
+///
+/// # Safety
+///
+/// This must be called after the server has finished accessing `config.nodeLifecycle`.
+unsafe fn clear_global_node_lifecycle(
+    server: &ua::Server,
+    mut global_node_lifecycle: Box<UA_GlobalNodeLifecycle>,
+) {
+    // SAFETY: The server has finished execution and we can mutate the configuration.
+    let config = unsafe { &mut *UA_Server_getConfig(server.as_ptr().cast_mut()) };
+
+    debug_assert_eq!(
+        config.nodeLifecycle,
+        &raw mut *global_node_lifecycle.as_mut()
+    );
+
+    // Remove pointer to prevent server from making any more calls. `global_node_lifecycle` goes out
+    // of scope at the end of this function and gets freed.
+    config.nodeLifecycle = ptr::null_mut();
 }

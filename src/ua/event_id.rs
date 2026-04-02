@@ -10,6 +10,7 @@ impl EventId {
     /// This may return [`None`] when the string is invalid (as defined by OPC UA).
     ///
     /// Note: The given string should not be empty.
+    #[expect(dead_code, reason = "unused for now")]
     #[must_use]
     pub(crate) fn new(event_id: ua::ByteString) -> Option<Self> {
         // Unset event IDs are not expected.

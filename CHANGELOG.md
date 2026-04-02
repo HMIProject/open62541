@@ -11,6 +11,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Add method `ua::VariableAttributes::with_array_dimensions()`.
 - Add method `Server::add_data_type_node()` and type `DataTypeNode`.
+- Add method `ua::CertificateVerification::memory_store()` and `ua::TrustListDataType`.
+
+### Changed
+
+- Breaking: Upgrade to open62541 version
+  [1.5.0](https://github.com/open62541/open62541/releases/tag/v1.5.0).
+- Breaking: Remove method `ua::CertificateVerification::custom()` and trait
+  `CustomCertificateVerification`.
+- Breaking: Remove `Unknown` variant from `ua::DataTypeDefinition`.
+- Breaking: Return `Result` from `DataTypeExt::from_inner()`.
+- Breaking: Replace `ua::String::is_invalid()` with `ua::String::is_null()`.
+- Breaking: Replace `ua::ByteString::is_invalid()` with `ua::ByteString::is_null()`.
+- Breaking: Remove `into_expanded_node_id()` from `ua::NodeId`. Use `Into::into()` instead.
 - Add `ua::DataTypeDescription`, `ua::EnumDescription`, `ua::StructureDescription`,
   `ua::StructureField`, `ua::StructureType`.
 - Add missing accessor methods to `ua::StructureDefinition`.
@@ -21,14 +34,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add methods `null()` and `is_null()` to `ua::String` and `ua::ByteString`.
 - Add method `new()` to `ua::ExpandedNodeId`.
 - Add `From`/`Into` conversion from `ua::NodeId` to `ua::ExpandedNodeId`.
-
-### Changed
-
-- Breaking: Remove `Unknown` variant from `ua::DataTypeDefinition`.
-- Breaking: Return `Result` from `DataTypeExt::from_inner()`.
-- Breaking: Replace `ua::String::is_invalid()` with `ua::String::is_null()`.
-- Breaking: Replace `ua::ByteString::is_invalid()` with `ua::ByteString::is_null()`.
-- Breaking: Remove `into_expanded_node_id()` from `ua::NodeId`. Use `Into::into()` instead.
 
 ### Fixed
 
