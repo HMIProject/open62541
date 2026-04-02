@@ -35,6 +35,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add method `new()` to `ua::ExpandedNodeId`.
 - Add `From`/`Into` conversion from `ua::NodeId` to `ua::ExpandedNodeId`.
 
+### Removed
+
+- Breaking: Temporarily disable the following methods in `ua::Server` on `aarch64-apple-darwin` due
+  to [unresolved crashes](https://github.com/HMIProject/open62541/issues/325):
+  - `ua::Server::add_reference()`
+  - `ua::Server::read_object_property()`
+  - `ua::Server::write_object_property()`
+
 ### Fixed
 
 - Fix linker errors for build target `x86_64-linux-unknown-gnu` by updating `open62541-sys` to

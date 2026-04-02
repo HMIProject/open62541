@@ -981,7 +981,13 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
+    // FIXME: Remove target restrictions.
+    // <https://github.com/HMIProject/open62541/issues/325>
+    #[cfg(not(all(target_arch = "aarch64", target_os = "macos")))]
     /// Adds a reference from one node to another.
+    ///
+    /// Disabled on target `aarch64-apple-darwin` due to unresolved crashes. See also:
+    /// <https://github.com/HMIProject/open62541/issues/325>
     ///
     /// # Errors
     ///
@@ -1561,7 +1567,13 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
+    // FIXME: Remove target restrictions.
+    // <https://github.com/HMIProject/open62541/issues/325>
+    #[cfg(not(all(target_arch = "aarch64", target_os = "macos")))]
     /// Reads object property.
+    ///
+    /// Disabled on target `aarch64-apple-darwin` due to unresolved crashes. See also:
+    /// <https://github.com/HMIProject/open62541/issues/325>
     ///
     /// # Errors
     ///
@@ -1633,11 +1645,17 @@ impl Server {
         Ok(value)
     }
 
+    // FIXME: Remove target restrictions.
+    // <https://github.com/HMIProject/open62541/issues/325>
+    #[cfg(not(all(target_arch = "aarch64", target_os = "macos")))]
     /// Writes object property.
     ///
     /// The property is represented as a `VariableNode` with a `HasProperty` reference from the
     /// `ObjectNode`. The `VariableNode` is identified by its `BrowseName`. Writing the property
     /// sets the value attribute of the `VariableNode`.
+    ///
+    /// Disabled on target `aarch64-apple-darwin` due to unresolved crashes. See also:
+    /// <https://github.com/HMIProject/open62541/issues/325>
     ///
     /// # Errors
     ///
