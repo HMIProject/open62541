@@ -522,6 +522,19 @@ impl AsyncClient {
             let _unused = tx.send(result.map_err(Error::new));
         };
 
+        // Reject requests if the background thread is not running immediately before submission.
+        //
+        // Without the background thread requests will not be serviced and the
+        // async invocation would be pending forever. Due to race conditions this
+        // could happen at any time and callers are encouraged to enclose asynchronous
+        // calls with timeouts.
+        if self
+            .background_thread
+            .as_ref()
+            .is_none_or(|background_thread| !background_thread.is_running_and_not_finished_yet())
+        {
+            return Err(Error::Internal("no background thread"));
+        }
         log::debug!("Running {}", R::type_name());
 
         let mut request_id: UA_UInt32 = 0;
@@ -606,8 +619,8 @@ enum BackgroundTheadCancelledState {
 #[derive(Debug)]
 struct BackgroundThread {
     state: Arc<AtomicU8>,
-    finished_rx: oneshot::Receiver<()>,
     handle: JoinHandle<()>,
+    finished_rx: oneshot::Receiver<()>,
 }
 
 impl BackgroundThread {
@@ -625,15 +638,13 @@ impl BackgroundThread {
             let state = Arc::clone(&state);
             thread::spawn(move || {
                 let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-                    background_thread(&client, &state)
+                    let () = background_thread(&client, &state);
                 }));
                 match result {
                     Ok(()) => {
-                        log::info!("Background task terminated");
                         let _unused = finished_tx.send(());
                     }
                     Err(panicked) => {
-                        log::info!("Background task panicked");
                         let _unused = finished_tx.send(());
                         // Forward the panic.
                         panic::resume_unwind(panicked);
@@ -645,8 +656,8 @@ impl BackgroundThread {
 
         Self {
             state,
-            finished_rx,
             handle,
+            finished_rx,
         }
     }
 
@@ -714,8 +725,8 @@ impl BackgroundThread {
     async fn wait_until_finished(self) {
         let Self {
             state,
-            finished_rx,
             handle,
+            finished_rx,
         } = self;
         debug_assert_ne!(
             state.load(Ordering::Relaxed),
