@@ -128,9 +128,10 @@ impl AsyncClient {
 
         // Asynchronously wait for the background task running in the background thread to complete.
         //
-        // Note: We do _not_ abort the background task before blocking: we require the asynchronous
-        // handling to keep on running until the connection has been taken down which then makes the
-        // task finish by itself.
+        // Note: We first request graceful cancellation before blocking. The
+        // `TerminateAfterNotConnected` mode keeps the asynchronous handling running until the
+        // connection has been taken down, at which point the background task can finish and we wait
+        // for that completion here.
         background_thread.cancel(BackgroundTaskCancelledState::TerminateAfterNotConnected);
         background_thread.wait_until_finished().await;
     }
