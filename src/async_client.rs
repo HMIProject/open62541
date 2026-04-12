@@ -760,10 +760,23 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
 
     // Run until cancelled. The only other way to exit is when `UA_Client_run_iterate()` fails which
     // happens when the connection is broken and the client instance cannot be used anymore.
-    while let state = state.load(Ordering::Relaxed)
-        && state
-            != BackgroundTaskState::Cancelled(BackgroundTaskCancelledState::TerminateAsap).to_u8()
-    {
+    loop {
+        let state = state.load(Ordering::Relaxed);
+        if state
+            == BackgroundTaskState::Cancelled(BackgroundTaskCancelledState::TerminateAsap).to_u8()
+        {
+            log::info!("Terminating cancelled background task");
+            break;
+        }
+        debug_assert!(
+            state == BackgroundTaskState::Running.to_u8()
+                || state
+                    == BackgroundTaskState::Cancelled(
+                        BackgroundTaskCancelledState::TerminateAfterNotConnected
+                    )
+                    .to_u8()
+        );
+
         // Track time of iteration start to report iteration times below.
         let start_of_iteration = Instant::now();
 
@@ -800,9 +813,13 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
                 .to_u8()
             {
                 if not_connected {
-                    log::info!("Terminating background task after not connected: {error}");
+                    log::info!(
+                        "Terminating cancelled background task after not connected: {error}"
+                    );
                 } else {
-                    log::error!("Terminating background task on unexpected error: {error}");
+                    log::error!(
+                        "Terminating cancelled background task on unexpected error: {error}"
+                    );
                 }
                 return;
             }
@@ -815,12 +832,6 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
             // Continue until cancelled.
         }
     }
-
-    debug_assert_ne!(
-        state.load(Ordering::Relaxed),
-        BackgroundTaskState::Running.to_u8()
-    );
-    log::info!("Terminating cancelled background task");
 }
 
 /// Converts [`ua::BrowseResult`] to our public result type.
