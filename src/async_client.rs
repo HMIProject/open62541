@@ -613,6 +613,7 @@ impl BackgroundThread {
             let state = Arc::clone(&state);
             thread::spawn(move || {
                 let () = background_task(&client, &state);
+                log::info!("Background task finished");
                 // The send() is redundant here, because dropping the sender will also wake up and unblock the receiver.
                 // finished_tx will be dropped implicitly even if background_task() panics.
                 let _unused = finished_tx.send(());
