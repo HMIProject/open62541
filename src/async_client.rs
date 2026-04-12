@@ -538,7 +538,9 @@ impl AsyncClient {
             .as_ref()
             .is_none_or(|background_thread| !background_thread.is_running_and_not_finished_yet())
         {
-            return Err(Error::Internal("no background thread"));
+            return Err(Error::Internal(
+                "background processing not running; async request cannot be serviced",
+            ));
         }
         log::debug!("Running {}", R::type_name());
 
