@@ -132,8 +132,10 @@ impl AsyncClient {
         // `TerminateAfterNotConnected` mode keeps the asynchronous handling running until the
         // connection has been taken down, at which point the background task can finish and we wait
         // for that completion here.
-        background_thread.cancel(BackgroundTaskCancelledState::TerminateAfterNotConnected);
-        background_thread.wait_until_finished().await;
+        background_thread.cancel(BackgroundTaskCancellationMode::TerminateAfterNotConnected);
+        background_thread
+            .wait_until_finished_after_cancelled()
+            .await;
     }
 
     /// Reads node value.
@@ -585,7 +587,8 @@ impl Drop for AsyncClient {
         };
 
         log::info!("Cancelling and joining background task when dropping client");
-        background_thread.cancel_and_join(BackgroundTaskCancelledState::TerminateAsap);
+        background_thread.cancel(BackgroundTaskCancellationMode::TerminateAsap);
+        background_thread.join_after_cancelled();
 
         log::info!("Background task finished when dropping client");
     }
@@ -633,22 +636,18 @@ impl BackgroundThread {
             && !self.handle.is_finished()
     }
 
-    fn cancel(&self, cancelled: BackgroundTaskCancelledState) {
+    fn cancel(&self, mode: BackgroundTaskCancellationMode) {
         self.state.store(
-            BackgroundTaskState::Cancelled(cancelled).to_u8(),
+            BackgroundTaskState::Cancelled { mode }.to_u8(),
             Ordering::Relaxed,
         );
     }
 
-    fn cancel_and_join(self, cancelled: BackgroundTaskCancelledState) {
+    fn join_after_cancelled(self) {
         let Self { state, handle, .. } = self;
-
-        // Notify background task to cancel itself, even when [`UA_Client_run_iterate()`] would want
-        // to keep on running. This is okay: we are not issuing asynchronous requests anymore anyway
-        // (the only other call will be `UA_Client_delete()` when inner client drops).
-        state.store(
-            BackgroundTaskState::Cancelled(cancelled).to_u8(),
-            Ordering::Relaxed,
+        debug_assert_ne!(
+            state.load(Ordering::Relaxed),
+            BackgroundTaskState::Running.to_u8()
         );
 
         // We need to wait for the task to finish and must do so blockingly. `UA_Client_delete()` is
@@ -688,7 +687,7 @@ impl BackgroundThread {
         let _unused = handle.join();
     }
 
-    async fn wait_until_finished(self) {
+    async fn wait_until_finished_after_cancelled(self) {
         let Self {
             state,
             handle,
@@ -714,24 +713,26 @@ impl BackgroundThread {
 #[derive(Debug, Clone, Copy)]
 enum BackgroundTaskState {
     Running,
-    Cancelled(BackgroundTaskCancelledState),
+    Cancelled {
+        mode: BackgroundTaskCancellationMode,
+    },
 }
 
 impl BackgroundTaskState {
-    // Conversion to u8 is needed to store the state in an AtomicU8.
+    // Map all possible states to u8 that could be store in an AtomicUi.
     const fn to_u8(self) -> u8 {
         match self {
             Self::Running => 0,
-            Self::Cancelled(cancelled) => match cancelled {
-                BackgroundTaskCancelledState::TerminateAfterNotConnected => 1,
-                BackgroundTaskCancelledState::TerminateAsap => 2,
+            Self::Cancelled { mode } => match mode {
+                BackgroundTaskCancellationMode::TerminateAfterNotConnected => 1,
+                BackgroundTaskCancellationMode::TerminateAsap => 2,
             },
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-enum BackgroundTaskCancelledState {
+enum BackgroundTaskCancellationMode {
     /// Terminate gracefully by servicing all pending requests until no longer connected.
     TerminateAfterNotConnected,
     /// Terminate as soon as possible.
@@ -759,7 +760,10 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
     loop {
         let current_state = state.load(Ordering::Relaxed);
         if current_state
-            == BackgroundTaskState::Cancelled(BackgroundTaskCancelledState::TerminateAsap).to_u8()
+            == (BackgroundTaskState::Cancelled {
+                mode: BackgroundTaskCancellationMode::TerminateAsap,
+            })
+            .to_u8()
         {
             log::info!("Terminating cancelled background task");
             break;
@@ -767,9 +771,9 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
         debug_assert!(
             current_state == BackgroundTaskState::Running.to_u8()
                 || current_state
-                    == BackgroundTaskState::Cancelled(
-                        BackgroundTaskCancelledState::TerminateAfterNotConnected
-                    )
+                    == BackgroundTaskState::Cancelled {
+                        mode: BackgroundTaskCancellationMode::TerminateAfterNotConnected
+                    }
                     .to_u8()
         );
 
@@ -803,9 +807,9 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
                     | UA_STATUSCODE_BADCONNECTIONREJECTED
             );
             if current_state
-                == BackgroundTaskState::Cancelled(
-                    BackgroundTaskCancelledState::TerminateAfterNotConnected,
-                )
+                == (BackgroundTaskState::Cancelled {
+                    mode: BackgroundTaskCancellationMode::TerminateAfterNotConnected,
+                })
                 .to_u8()
             {
                 if not_connected {
