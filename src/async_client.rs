@@ -107,7 +107,7 @@ impl AsyncClient {
 
         // PANIC: We only take the background thread here and in `drop()` (but that cannot have been
         // called yet). Since the method consumes `self`, the value must still be present. Note that
-        // we the take value just before `await`, to uphold invariant in `Drop` implementation which
+        // we take the value just before `await`, to uphold invariant in `Drop` implementation which
         // allows us to take an early return path there.
         let background_thread = self.background_thread.take().expect("no background thread");
 
