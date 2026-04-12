@@ -744,9 +744,9 @@ enum BackgroundTaskCancellationMode {
 /// This runs [`UA_Client_run_iterate()`] in a loop, blocking for up to `RUN_ITERATE_TIMEOUT` during
 /// each iteration. Termination is controlled through the shared atomic `state`, which is checked
 /// between loop iterations. Setting the state to
-/// [`BackgroundTaskState::Cancelled(BackgroundTaskCancelledState::TerminateAsap)`] stops the task
-/// before the next iteration, while
-/// [`BackgroundTaskState::Cancelled(BackgroundTaskCancelledState::TerminateAfterNotConnected)`]
+/// [`BackgroundTaskState::Cancelled { mode: BackgroundTaskCancellationMode::TerminateAsap }`]
+/// stops the task before the next iteration, while
+/// [`BackgroundTaskState::Cancelled { mode: BackgroundTaskCancellationMode::TerminateAfterNotConnected }`]
 /// requests graceful shutdown by continuing to service pending work until the client is no longer
 /// connected.
 fn background_task(client: &ua::Client, state: &AtomicU8) {
