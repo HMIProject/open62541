@@ -1,6 +1,6 @@
 use std::{
     ffi::c_void,
-    slice,
+    panic, slice,
     sync::{
         Arc, Weak,
         atomic::{AtomicU8, Ordering},
@@ -105,21 +105,26 @@ impl AsyncClient {
     pub async fn disconnect(mut self) {
         log::info!("Disconnecting from endpoint");
 
-        let status_code = ua::StatusCode::new(unsafe {
-            UA_Client_disconnectAsync(
-                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.client.as_ptr().cast_mut(),
-            )
-        });
-        if let Err(error) = Error::verify_good(&status_code) {
-            log::warn!("Error while disconnecting client: {error}");
-        }
-
         // PANIC: We only take the background thread here and in `drop()` (but that cannot have been
         // called yet). Since the method consumes `self`, the value must still be present. Note that
         // we the take value just before `await`, to uphold invariant in `Drop` implementation which
         // allows us to take an early return path there.
         let background_thread = self.background_thread.take().expect("no background thread");
+
+        // Disconnecting requires driving the internal event loop.
+        if background_thread.is_running_and_not_finished_yet() {
+            let status_code = ua::StatusCode::new(unsafe {
+                UA_Client_disconnectAsync(
+                    // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                    self.client.as_ptr().cast_mut(),
+                )
+            });
+            if let Err(error) = Error::verify_good(&status_code) {
+                log::warn!("Error while disconnecting client: {error}");
+            }
+        } else {
+            log::info!("Cannot disconnect client without background thread");
+        }
 
         // Asynchronously wait for the background task running in the background thread to complete.
         //
@@ -127,7 +132,7 @@ impl AsyncClient {
         // handling to keep on running until the connection has been taken down which then makes the
         // task finish by itself.
         background_thread.cancel(BackgroundTheadCancelledState::TerminateAfterNotConnected);
-        background_thread.wait_until_done().await;
+        background_thread.wait_until_finished().await;
     }
 
     /// Reads node value.
@@ -601,14 +606,14 @@ enum BackgroundTheadCancelledState {
 #[derive(Debug)]
 struct BackgroundThread {
     state: Arc<AtomicU8>,
-    done_rx: oneshot::Receiver<()>,
+    finished_rx: oneshot::Receiver<()>,
     handle: JoinHandle<()>,
 }
 
 impl BackgroundThread {
     fn spawn(client: Arc<ua::Client>) -> Self {
         let state = Arc::new(AtomicU8::new(BackgroundTheadState::Running.to_u8()));
-        let (done_tx, done_rx) = oneshot::channel();
+        let (finished_tx, finished_rx) = oneshot::channel();
 
         // Run the event loop concurrently. We do so on a thread where we may block: we need to call
         // `UA_Client_run_iterate()` and this method blocks for up to `RUN_ITERATE_TIMEOUT`.
@@ -619,17 +624,36 @@ impl BackgroundThread {
         let handle = {
             let state = Arc::clone(&state);
             thread::spawn(move || {
-                background_task(&client, &state);
-                log::info!("Background task finished");
-                let _unused = done_tx.send(());
+                let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+                    background_thread(&client, &state)
+                }));
+                match result {
+                    Ok(()) => {
+                        log::info!("Background task terminated");
+                        let _unused = finished_tx.send(());
+                    }
+                    Err(panicked) => {
+                        log::info!("Background task panicked");
+                        let _unused = finished_tx.send(());
+                        // Forward the panic.
+                        panic::resume_unwind(panicked);
+                        // Unreachable
+                    }
+                }
             })
         };
 
         Self {
             state,
-            done_rx,
+            finished_rx,
             handle,
         }
+    }
+
+    #[must_use]
+    fn is_running_and_not_finished_yet(&self) -> bool {
+        self.state.load(Ordering::Relaxed) == BackgroundTheadState::Running.to_u8()
+            && !self.handle.is_finished()
     }
 
     fn cancel(&self, cancelled: BackgroundTheadCancelledState) {
@@ -687,12 +711,26 @@ impl BackgroundThread {
         let _unused = handle.join();
     }
 
-    async fn wait_until_done(self) {
-        let Self { done_rx, .. } = self;
+    async fn wait_until_finished(self) {
+        let Self {
+            state,
+            finished_rx,
+            handle,
+        } = self;
+        debug_assert_ne!(
+            state.load(Ordering::Relaxed),
+            BackgroundTheadState::Running.to_u8()
+        );
+
+        if handle.is_finished() {
+            return;
+        }
 
         // We ignore the result: the sender is only dropped when the background thread has finished,
         // which is exactly what we are waiting for anyway.
-        let _unused = done_rx.await;
+        let _unused = finished_rx.await;
+
+        debug_assert!(handle.is_finished());
     }
 }
 
@@ -702,7 +740,7 @@ impl BackgroundThread {
 /// each iteration. In case the loop does not finish by itself (which happens in case of disconnects
 /// and for final connection failures), the cancellation token `cancel` can be used to stop the task
 /// from the outside before the next loop iteration.
-fn background_task(client: &ua::Client, state: &AtomicU8) {
+fn background_thread(client: &ua::Client, state: &AtomicU8) {
     log::info!("Starting background task");
 
     // `UA_Client_run_iterate()` expects the timeout to be given in milliseconds.
