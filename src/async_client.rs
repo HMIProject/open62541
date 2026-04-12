@@ -135,9 +135,7 @@ impl AsyncClient {
         // connection has been taken down, at which point the background task can finish and we wait
         // for that completion here.
         background_thread.cancel(BackgroundTaskCancellationMode::TerminateAfterNotConnected);
-        background_thread
-            .wait_until_finished_after_cancelled()
-            .await;
+        background_thread.join_after_cancelled().await;
     }
 
     /// Reads node value.
@@ -592,7 +590,7 @@ impl Drop for AsyncClient {
 
         log::info!("Cancelling and joining background task when dropping client");
         background_thread.cancel(BackgroundTaskCancellationMode::TerminateAsap);
-        background_thread.join_after_cancelled();
+        background_thread.join_after_cancelled_blocking();
 
         log::info!("Background task finished when dropping client");
     }
@@ -602,13 +600,13 @@ impl Drop for AsyncClient {
 struct BackgroundThread {
     state: Arc<AtomicU8>,
     handle: JoinHandle<()>,
-    finished_rx: oneshot::Receiver<()>,
+    terminated_rx: oneshot::Receiver<()>,
 }
 
 impl BackgroundThread {
     fn spawn(client: Arc<ua::Client>) -> Self {
         let state = Arc::new(AtomicU8::new(BackgroundTaskState::Running.to_u8()));
-        let (finished_tx, finished_rx) = oneshot::channel();
+        let (terminated_tx, terminated_rx) = oneshot::channel();
 
         // Run the event loop concurrently. We do so on a thread where we may block: we need to call
         // `UA_Client_run_iterate()` and this method blocks for up to `RUN_ITERATE_TIMEOUT`.
@@ -620,17 +618,17 @@ impl BackgroundThread {
             let state = Arc::clone(&state);
             thread::spawn(move || {
                 let () = background_task(&client, &state);
-                log::info!("Background task finished");
+                log::info!("Background task terminated");
                 // The send() is redundant here, because dropping the sender will also wake up and unblock the receiver.
-                // finished_tx will be dropped implicitly even if background_task() panics.
-                let _unused = finished_tx.send(());
+                // terminated_tx will be dropped implicitly even if background_task() panics.
+                let _unused = terminated_tx.send(());
             })
         };
 
         Self {
             state,
             handle,
-            finished_rx,
+            terminated_rx,
         }
     }
 
@@ -647,8 +645,12 @@ impl BackgroundThread {
         );
     }
 
-    fn join_after_cancelled(self) {
-        let Self { state, handle, .. } = self;
+    fn join_after_cancelled_blocking(self) {
+        let Self {
+            state,
+            handle,
+            terminated_rx,
+        } = self;
         debug_assert_ne!(
             state.load(Ordering::Relaxed),
             BackgroundTaskState::Running.to_u8()
@@ -665,6 +667,7 @@ impl BackgroundThread {
         // threads may cause deadlocks and must be avoided.
         #[cfg(feature = "tokio")]
         if let Ok(rt) = &tokio::runtime::Handle::try_current() {
+            let mut terminated_rx = terminated_rx;
             if matches!(
                 rt.runtime_flavor(),
                 tokio::runtime::RuntimeFlavor::CurrentThread
@@ -673,6 +676,7 @@ impl BackgroundThread {
                 tokio::task::block_in_place(move || {
                     let _unused = handle.join();
                 });
+                debug_assert!(terminated_rx.try_recv().is_err());
             } else {
                 // Offload the synchronous invocation from the executor thread onto a worker thread.
                 let join_handle = rt.spawn_blocking(move || {
@@ -682,20 +686,23 @@ impl BackgroundThread {
                 tokio::task::block_in_place(move || {
                     rt.block_on(async move {
                         let _unused = join_handle.await;
+                        debug_assert!(terminated_rx.try_recv().is_err());
                     });
                 });
             }
             return;
         }
+        #[cfg(not(feature = "tokio"))]
+        drop(terminated_rx);
 
         let _unused = handle.join();
     }
 
-    async fn wait_until_finished_after_cancelled(self) {
+    async fn join_after_cancelled(self) {
         let Self {
             state,
             handle,
-            finished_rx,
+            terminated_rx,
         } = self;
         debug_assert_ne!(
             state.load(Ordering::Relaxed),
@@ -703,14 +710,21 @@ impl BackgroundThread {
         );
 
         if handle.is_finished() {
+            // Nothing to do.
             return;
         }
 
+        // Asynchronously wait for the background task to terminate.
+        //
         // We ignore the result: the sender is only dropped when the background thread has finished,
-        // which is exactly what we are waiting for anyway.
-        let _unused = finished_rx.await;
+        // which is exactly what we are waiting for anyway in the next step.
+        let _unused = terminated_rx.await;
 
-        debug_assert!(handle.is_finished());
+        // After the background task has terminated the background thread should finish instantly.
+        #[cfg(feature = "tokio")]
+        tokio::task::block_in_place(move || {
+            let _unused = handle.join();
+        });
     }
 }
 
