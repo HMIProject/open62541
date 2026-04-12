@@ -123,7 +123,9 @@ impl AsyncClient {
                 log::warn!("Error while disconnecting client: {error}");
             }
         } else {
-            log::info!("Cannot disconnect client without background thread");
+            log::info!(
+                "Cannot disconnect client because background thread is not running or has already finished"
+            );
         }
 
         // Asynchronously wait for the background task running in the background thread to complete.
