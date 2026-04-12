@@ -766,16 +766,16 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
     // Run until cancelled. The only other way to exit is when `UA_Client_run_iterate()` fails which
     // happens when the connection is broken and the client instance cannot be used anymore.
     loop {
-        let state = state.load(Ordering::Relaxed);
-        if state
+        let current_state = state.load(Ordering::Relaxed);
+        if current_state
             == BackgroundTaskState::Cancelled(BackgroundTaskCancelledState::TerminateAsap).to_u8()
         {
             log::info!("Terminating cancelled background task");
             break;
         }
         debug_assert!(
-            state == BackgroundTaskState::Running.to_u8()
-                || state
+            current_state == BackgroundTaskState::Running.to_u8()
+                || current_state
                     == BackgroundTaskState::Cancelled(
                         BackgroundTaskCancelledState::TerminateAfterNotConnected
                     )
@@ -811,7 +811,7 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
                     | UA_STATUSCODE_BADCONNECTIONCLOSED
                     | UA_STATUSCODE_BADCONNECTIONREJECTED
             );
-            if state
+            if current_state
                 == BackgroundTaskState::Cancelled(
                     BackgroundTaskCancelledState::TerminateAfterNotConnected,
                 )
