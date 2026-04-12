@@ -131,7 +131,7 @@ impl AsyncClient {
         // Note: We do _not_ abort the background task before blocking: we require the asynchronous
         // handling to keep on running until the connection has been taken down which then makes the
         // task finish by itself.
-        background_thread.cancel(BackgroundTheadCancelledState::TerminateAfterNotConnected);
+        background_thread.cancel(BackgroundTaskCancelledState::TerminateAfterNotConnected);
         background_thread.wait_until_finished().await;
     }
 
@@ -584,36 +584,10 @@ impl Drop for AsyncClient {
         };
 
         log::info!("Cancelling and joining background task when dropping client");
-        background_thread.cancel_and_join(BackgroundTheadCancelledState::Aborted);
+        background_thread.cancel_and_join(BackgroundTaskCancelledState::TerminateAsap);
 
         log::info!("Background task finished when dropping client");
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-enum BackgroundTheadState {
-    Running,
-    Cancelled(BackgroundTheadCancelledState),
-}
-
-impl BackgroundTheadState {
-    // Conversion to u8 is needed to store the state in an AtomicU8.
-    const fn to_u8(self) -> u8 {
-        match self {
-            Self::Running => 0,
-            Self::Cancelled(cancelled) => match cancelled {
-                BackgroundTheadCancelledState::TerminateAfterNotConnected => 1,
-                BackgroundTheadCancelledState::Aborted => 2,
-            },
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-enum BackgroundTheadCancelledState {
-    /// terminate gracefully.
-    TerminateAfterNotConnected,
-    Aborted,
 }
 
 #[derive(Debug)]
@@ -625,7 +599,7 @@ struct BackgroundThread {
 
 impl BackgroundThread {
     fn spawn(client: Arc<ua::Client>) -> Self {
-        let state = Arc::new(AtomicU8::new(BackgroundTheadState::Running.to_u8()));
+        let state = Arc::new(AtomicU8::new(BackgroundTaskState::Running.to_u8()));
         let (finished_tx, finished_rx) = oneshot::channel();
 
         // Run the event loop concurrently. We do so on a thread where we may block: we need to call
@@ -638,7 +612,7 @@ impl BackgroundThread {
             let state = Arc::clone(&state);
             thread::spawn(move || {
                 let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-                    let () = background_thread(&client, &state);
+                    let () = background_task(&client, &state);
                 }));
                 match result {
                     Ok(()) => {
@@ -663,25 +637,25 @@ impl BackgroundThread {
 
     #[must_use]
     fn is_running_and_not_finished_yet(&self) -> bool {
-        self.state.load(Ordering::Relaxed) == BackgroundTheadState::Running.to_u8()
+        self.state.load(Ordering::Relaxed) == BackgroundTaskState::Running.to_u8()
             && !self.handle.is_finished()
     }
 
-    fn cancel(&self, cancelled: BackgroundTheadCancelledState) {
+    fn cancel(&self, cancelled: BackgroundTaskCancelledState) {
         self.state.store(
-            BackgroundTheadState::Cancelled(cancelled).to_u8(),
+            BackgroundTaskState::Cancelled(cancelled).to_u8(),
             Ordering::Relaxed,
         );
     }
 
-    fn cancel_and_join(self, cancelled: BackgroundTheadCancelledState) {
+    fn cancel_and_join(self, cancelled: BackgroundTaskCancelledState) {
         let Self { state, handle, .. } = self;
 
         // Notify background task to cancel itself, even when [`UA_Client_run_iterate()`] would want
         // to keep on running. This is okay: we are not issuing asynchronous requests anymore anyway
         // (the only other call will be `UA_Client_delete()` when inner client drops).
         state.store(
-            BackgroundTheadState::Cancelled(cancelled).to_u8(),
+            BackgroundTaskState::Cancelled(cancelled).to_u8(),
             Ordering::Relaxed,
         );
 
@@ -730,7 +704,7 @@ impl BackgroundThread {
         } = self;
         debug_assert_ne!(
             state.load(Ordering::Relaxed),
-            BackgroundTheadState::Running.to_u8()
+            BackgroundTaskState::Running.to_u8()
         );
 
         if handle.is_finished() {
@@ -745,13 +719,40 @@ impl BackgroundThread {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum BackgroundTaskState {
+    Running,
+    Cancelled(BackgroundTaskCancelledState),
+}
+
+impl BackgroundTaskState {
+    // Conversion to u8 is needed to store the state in an AtomicU8.
+    const fn to_u8(self) -> u8 {
+        match self {
+            Self::Running => 0,
+            Self::Cancelled(cancelled) => match cancelled {
+                BackgroundTaskCancelledState::TerminateAfterNotConnected => 1,
+                BackgroundTaskCancelledState::TerminateAsap => 2,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum BackgroundTaskCancelledState {
+    /// Terminate gracefully by servicing all pending requests until no longer connected.
+    TerminateAfterNotConnected,
+    /// Terminate as soon as possible.
+    TerminateAsap,
+}
+
 /// Background task for [`ua::Client`].
 ///
 /// This runs [`UA_Client_run_iterate()`] in a loop, blocking for up to `RUN_ITERATE_TIMEOUT` during
 /// each iteration. In case the loop does not finish by itself (which happens in case of disconnects
 /// and for final connection failures), the cancellation token `cancel` can be used to stop the task
 /// from the outside before the next loop iteration.
-fn background_thread(client: &ua::Client, state: &AtomicU8) {
+fn background_task(client: &ua::Client, state: &AtomicU8) {
     log::info!("Starting background task");
 
     // `UA_Client_run_iterate()` expects the timeout to be given in milliseconds.
@@ -760,7 +761,8 @@ fn background_thread(client: &ua::Client, state: &AtomicU8) {
     // Run until cancelled. The only other way to exit is when `UA_Client_run_iterate()` fails which
     // happens when the connection is broken and the client instance cannot be used anymore.
     while let state = state.load(Ordering::Relaxed)
-        && state != BackgroundTheadState::Cancelled(BackgroundTheadCancelledState::Aborted).to_u8()
+        && state
+            != BackgroundTaskState::Cancelled(BackgroundTaskCancelledState::TerminateAsap).to_u8()
     {
         // Track time of iteration start to report iteration times below.
         let start_of_iteration = Instant::now();
@@ -772,7 +774,7 @@ fn background_thread(client: &ua::Client, state: &AtomicU8) {
             // _not_ held for the entire time though, so we can send out requests concurrently while
             // the client is running the iteration.
             //
-            // The invocation returns with the current connect status.
+            // The invocation returns the current connect status of the client.
             unsafe {
                 UA_Client_run_iterate(
                     // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
@@ -781,34 +783,43 @@ fn background_thread(client: &ua::Client, state: &AtomicU8) {
                 )
             }
         });
-        if let Err(err) = Error::verify_good(&connect_status) {
-            match connect_status.into_raw() {
-                UA_STATUSCODE_BADDISCONNECT
-                | UA_STATUSCODE_BADCONNECTIONCLOSED
-                | UA_STATUSCODE_BADCONNECTIONREJECTED => {
-                    // Not an error.
-                    if state
-                        == BackgroundTheadState::Cancelled(
-                            BackgroundTheadCancelledState::TerminateAfterNotConnected,
-                        )
-                        .to_u8()
-                    {
-                        log::info!("Terminating background task after not connected");
-                        return;
-                    }
-                }
-                _ => {
-                    // Unexpected error.
-                    log::error!("Terminating background task after unexpected error: {err:#}");
-                    return;
-                }
-            }
-        }
-
         let time_taken = start_of_iteration.elapsed();
         log::trace!("Iterate run took {time_taken:?}");
+
+        if let Err(error) = Error::verify_good(&connect_status) {
+            let not_connected = matches!(
+                connect_status.into_raw(),
+                UA_STATUSCODE_BADDISCONNECT
+                    | UA_STATUSCODE_BADCONNECTIONCLOSED
+                    | UA_STATUSCODE_BADCONNECTIONREJECTED
+            );
+            if state
+                == BackgroundTaskState::Cancelled(
+                    BackgroundTaskCancelledState::TerminateAfterNotConnected,
+                )
+                .to_u8()
+            {
+                if not_connected {
+                    log::info!("Terminating background task after not connected: {error}");
+                } else {
+                    log::error!("Terminating background task on unexpected error: {error}");
+                }
+                return;
+            }
+            if not_connected {
+                log::info!("Background task connect status: {error}");
+            } else {
+                // TODO: Handle more status codes?
+                log::error!("Unexpected error in background task: {error}");
+            }
+            // Continue until cancelled.
+        }
     }
 
+    debug_assert_ne!(
+        state.load(Ordering::Relaxed),
+        BackgroundTaskState::Running.to_u8()
+    );
     log::info!("Terminating cancelled background task");
 }
 
