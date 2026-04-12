@@ -649,7 +649,7 @@ impl BackgroundThread {
         let Self {
             state,
             handle,
-            terminated_rx,
+            terminated_rx: _,
         } = self;
         debug_assert_ne!(
             state.load(Ordering::Relaxed),
@@ -667,16 +667,14 @@ impl BackgroundThread {
         // threads may cause deadlocks and must be avoided.
         #[cfg(feature = "tokio")]
         if let Ok(rt) = &tokio::runtime::Handle::try_current() {
-            let mut terminated_rx = terminated_rx;
             if matches!(
                 rt.runtime_flavor(),
                 tokio::runtime::RuntimeFlavor::CurrentThread
             ) {
-                // Do not spawn new thread, because we do not have multiple threads in this runtime.
-                tokio::task::block_in_place(move || {
+                // Blocking the current thread would panic.
+                rt.spawn_blocking(move || {
                     let _unused = handle.join();
                 });
-                debug_assert!(terminated_rx.try_recv().is_err());
             } else {
                 // Offload the synchronous invocation from the executor thread onto a worker thread.
                 let join_handle = rt.spawn_blocking(move || {
@@ -686,14 +684,11 @@ impl BackgroundThread {
                 tokio::task::block_in_place(move || {
                     rt.block_on(async move {
                         let _unused = join_handle.await;
-                        debug_assert!(terminated_rx.try_recv().is_err());
                     });
                 });
             }
             return;
         }
-        #[cfg(not(feature = "tokio"))]
-        drop(terminated_rx);
 
         let _unused = handle.join();
     }
@@ -722,9 +717,21 @@ impl BackgroundThread {
 
         // After the background task has terminated the background thread should finish instantly.
         #[cfg(feature = "tokio")]
-        tokio::task::block_in_place(move || {
-            let _unused = handle.join();
-        });
+        {
+            let rt = tokio::runtime::Handle::current();
+            if matches!(
+                rt.runtime_flavor(),
+                tokio::runtime::RuntimeFlavor::CurrentThread
+            ) {
+                tokio::task::spawn_blocking(move || {
+                    let _unused = handle.join();
+                });
+            } else {
+                tokio::task::block_in_place(move || {
+                    let _unused = handle.join();
+                });
+            }
+        }
     }
 }
 

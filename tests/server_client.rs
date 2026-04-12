@@ -9,6 +9,12 @@ use std::{
 use open62541::{ClientBuilder, ServerBuilder, ua};
 use open62541_sys::UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME;
 
+#[derive(Debug)]
+enum ClientStrategy {
+    Disconnect,
+    Drop,
+}
+
 // This mirrors test `create_and_destroy_client()` in `open62541-sys`.
 #[test]
 fn create_and_destroy_client() {
@@ -17,8 +23,7 @@ fn create_and_destroy_client() {
 }
 
 // This mirrors test `open_server_and_connect()` in `open62541-sys`.
-#[tokio::test]
-async fn open_server_and_connect() {
+async fn open_server_and_connect(client_strategy: ClientStrategy) {
     // Initialize new server listening on random port.
     let (server, runner) = ServerBuilder::default()
         .server_urls(&["opc.tcp://127.0.0.1:0"])
@@ -70,10 +75,37 @@ async fn open_server_and_connect() {
             .contains("open62541 OPC UA Server")
     );
 
-    // Disconnect client.
-    client.disconnect().await;
+    // Disconnect or drop the client.
+    match client_strategy {
+        ClientStrategy::Disconnect => {
+            client.disconnect().await;
+        }
+        ClientStrategy::Drop => {
+            drop(client);
+        }
+    }
 
     // Shut down server.
     running.store(false, Ordering::Relaxed);
     background_thread.join().unwrap();
+}
+
+#[tokio::test]
+async fn open_server_and_connect_disconnect_client_current_thread() {
+    open_server_and_connect(ClientStrategy::Disconnect).await;
+}
+
+#[tokio::test]
+async fn open_server_and_connect_drop_client_current_thread() {
+    open_server_and_connect(ClientStrategy::Drop).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn open_server_and_connect_disconnect_client_multi_thread() {
+    open_server_and_connect(ClientStrategy::Disconnect).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn open_server_and_connect_drop_client_multi_thread() {
+    open_server_and_connect(ClientStrategy::Drop).await;
 }
