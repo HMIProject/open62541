@@ -719,7 +719,7 @@ enum BackgroundTaskState {
 }
 
 impl BackgroundTaskState {
-    // Map all possible states to u8 that could be store in an AtomicUi.
+    // Map all possible states to u8 that could be stored in an AtomicU8.
     const fn to_u8(self) -> u8 {
         match self {
             Self::Running => 0,
