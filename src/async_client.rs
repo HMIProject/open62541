@@ -755,6 +755,7 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
     let timeout_millis = u32::try_from(RUN_ITERATE_TIMEOUT.as_millis()).unwrap_or(u32::MAX);
 
     // Run until cancelled.
+    let mut last_connect_status = ua::StatusCode::GOOD;
     loop {
         let current_state = state.load(Ordering::Relaxed);
         if current_state
@@ -796,7 +797,7 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
 
         if let Err(error) = Error::verify_good(&connect_status) {
             let not_connected = matches!(
-                connect_status.into_raw(),
+                connect_status.clone().into_raw(),
                 UA_STATUSCODE_BADDISCONNECT
                     | UA_STATUSCODE_BADCONNECTIONCLOSED
                     | UA_STATUSCODE_BADCONNECTIONREJECTED
@@ -818,14 +819,18 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
                 }
                 return;
             }
-            if not_connected {
-                log::info!("Background task connect status: {error}");
-            } else {
-                // TODO: Handle more status codes?
-                log::error!("Unexpected error in background task: {error}");
+            // Only log each bad connect status once after its first occurrence.
+            if connect_status != last_connect_status {
+                if not_connected {
+                    log::info!("Bad connect status in background task: {error}");
+                } else {
+                    // TODO: Handle more status codes?
+                    log::error!("Unexpected error in background task: {error}");
+                }
             }
             // Continue until cancelled.
         }
+        last_connect_status = connect_status;
     }
 }
 
