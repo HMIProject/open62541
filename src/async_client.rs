@@ -1,6 +1,6 @@
 use std::{
     ffi::c_void,
-    panic, slice,
+    slice,
     sync::{
         Arc, Weak,
         atomic::{AtomicU8, Ordering},
@@ -612,20 +612,10 @@ impl BackgroundThread {
         let handle = {
             let state = Arc::clone(&state);
             thread::spawn(move || {
-                let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-                    let () = background_task(&client, &state);
-                }));
-                match result {
-                    Ok(()) => {
-                        let _unused = finished_tx.send(());
-                    }
-                    Err(panicked) => {
-                        let _unused = finished_tx.send(());
-                        // Forward the panic.
-                        panic::resume_unwind(panicked);
-                        // Unreachable
-                    }
-                }
+                let () = background_task(&client, &state);
+                // The send() is redundant here, because dropping the sender will also wake up and unblock the receiver.
+                // finished_tx will be dropped implicitly even if background_task() panics.
+                let _unused = finished_tx.send(());
             })
         };
 
