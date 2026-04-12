@@ -716,12 +716,14 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
         // Track time of iteration start to report iteration times below.
         let start_of_iteration = Instant::now();
 
-        let status_code = ua::StatusCode::new({
+        let connect_status = ua::StatusCode::new({
             log::trace!("Running iterate");
 
             // This returns after the timeout even when nothing was processed. The internal mutex is
             // _not_ held for the entire time though, so we can send out requests concurrently while
             // the client is running the iteration.
+            //
+            // The invocation returns with the current connect status.
             unsafe {
                 UA_Client_run_iterate(
                     // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
@@ -730,8 +732,8 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
                 )
             }
         });
-        if let Err(err) = Error::verify_good(&status_code) {
-            match status_code.into_raw() {
+        if let Err(err) = Error::verify_good(&connect_status) {
+            match connect_status.into_raw() {
                 UA_STATUSCODE_BADDISCONNECT
                 | UA_STATUSCODE_BADCONNECTIONCLOSED
                 | UA_STATUSCODE_BADCONNECTIONREJECTED => {
