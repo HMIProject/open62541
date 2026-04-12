@@ -763,8 +763,7 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
     // `UA_Client_run_iterate()` expects the timeout to be given in milliseconds.
     let timeout_millis = u32::try_from(RUN_ITERATE_TIMEOUT.as_millis()).unwrap_or(u32::MAX);
 
-    // Run until cancelled. The only other way to exit is when `UA_Client_run_iterate()` fails which
-    // happens when the connection is broken and the client instance cannot be used anymore.
+    // Run until cancelled.
     loop {
         let current_state = state.load(Ordering::Relaxed);
         if current_state
