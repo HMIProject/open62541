@@ -676,6 +676,7 @@ impl BackgroundThread {
                 rt.runtime_flavor(),
                 tokio::runtime::RuntimeFlavor::CurrentThread
             ) {
+                // Using tokio::task::block_in_place() here would panic.
                 log::warn!("Blocking executor thread to join background thread");
                 // Continue below.
             } else {
