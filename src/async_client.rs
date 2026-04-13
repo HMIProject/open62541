@@ -721,14 +721,17 @@ impl BackgroundThread {
         // After the background task has terminated the background thread should finish instantly.
         #[cfg(feature = "tokio")]
         {
+            // This `async fn` is supposed to run on a Tokio executor thread.
+            // Otherwise obtaining a runtime handle would panic as expected.
             let rt = tokio::runtime::Handle::current();
             if matches!(
                 rt.runtime_flavor(),
                 tokio::runtime::RuntimeFlavor::CurrentThread
             ) {
-                tokio::task::spawn_blocking(move || {
+                let _unused = tokio::task::spawn_blocking(move || {
                     let _unused = handle.join();
-                });
+                })
+                .await;
             } else {
                 tokio::task::block_in_place(move || {
                     let _unused = handle.join();
