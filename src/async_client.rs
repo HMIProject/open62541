@@ -728,6 +728,7 @@ impl BackgroundThread {
                 rt.runtime_flavor(),
                 tokio::runtime::RuntimeFlavor::CurrentThread
             ) {
+                // Using tokio::task::block_in_place() here would panic.
                 let _unused = tokio::task::spawn_blocking(move || {
                     let _unused = handle.join();
                 })
