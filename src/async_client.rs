@@ -663,34 +663,36 @@ impl BackgroundThread {
         // TODO: Use `tracing` and span to group log messages.
         log::info!("Waiting for background task to finish after cancelling");
 
+        let join_background_thread_blocking = move || {
+            let _unused = handle.join();
+        };
+
         // `AsyncClient` is supposed to be used in asynchronous context. Note that blocking executor
         // threads may cause deadlocks and must be avoided.
         #[cfg(feature = "tokio")]
         if let Ok(rt) = &tokio::runtime::Handle::try_current() {
+            // Asynchronous context.
             if matches!(
                 rt.runtime_flavor(),
                 tokio::runtime::RuntimeFlavor::CurrentThread
             ) {
-                // Blocking the current thread would panic.
-                rt.spawn_blocking(move || {
-                    let _unused = handle.join();
-                });
+                log::warn!("Blocking executor thread to join background thread");
+                // Continue below.
             } else {
-                // Offload the synchronous invocation from the executor thread onto a worker thread.
-                let join_handle = rt.spawn_blocking(move || {
-                    let _unused = handle.join();
-                });
+                // Offload the synchronous, blocking invocation from the executor thread
+                // onto a worker thread.
+                let join_handle = rt.spawn_blocking(join_background_thread_blocking);
                 // Re-enter the asynchronous context for joining the worker thread.
                 tokio::task::block_in_place(move || {
                     rt.block_on(async move {
                         let _unused = join_handle.await;
                     });
                 });
+                return;
             }
-            return;
         }
 
-        let _unused = handle.join();
+        join_background_thread_blocking();
     }
 
     async fn join_after_cancelled(self) {
