@@ -90,12 +90,12 @@ async fn open_server_and_connect(client_strategy: ClientStrategy) {
     background_thread.join().unwrap();
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "current_thread")]
 async fn open_server_and_connect_disconnect_client_current_thread() {
     open_server_and_connect(ClientStrategy::Disconnect).await;
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "current_thread")]
 async fn open_server_and_connect_drop_client_current_thread() {
     open_server_and_connect(ClientStrategy::Drop).await;
 }
