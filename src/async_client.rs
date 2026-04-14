@@ -681,16 +681,18 @@ impl BackgroundThread {
         // After the background task has terminated the background thread should finish almost instantly.
         #[cfg(feature = "tokio")]
         {
-            // The enclosing `async fn` is supposed to run on a Tokio runtime thread.
-            // Spawning a worker thread for joining the background thread synchronously
-            // works independent of the runtime flavor (single/multi-threaded).
-            let _unused = tokio::task::spawn_blocking(join_background_thread_blocking).await;
+            // The enclosing `async fn` is probably running on a Tokio runtime thread,
+            // but we cannot be sure.
+            if let Ok(rt) = tokio::runtime::Handle::try_current() {
+                // Spawning a worker thread for joining the background thread synchronously
+                // works independent of the runtime flavor (single/multi-threaded).
+                let _unused = rt.spawn_blocking(join_background_thread_blocking).await;
+                return;
+            }
         }
-        #[cfg(not(feature = "tokio"))]
-        {
-            log::warn!("Blocking async runtime thread to join background thread");
-            join_background_thread_blocking();
-        }
+
+        log::warn!("Blocking async runtime thread to join background thread");
+        join_background_thread_blocking();
     }
 
     fn join_after_cancelled_on_drop_blocking(self) {
