@@ -40,7 +40,7 @@ const RUN_ITERATE_TIMEOUT: Duration = Duration::from_millis(200);
 /// while being dropped. In most cases, this is not the desired behavior.
 ///
 /// With feature `tokio` enabled, blocking invocations in [`AsyncClient::drop()`] might be offloaded
-/// from executor to worker threads as needed to prevent deadlocks. However, this can be implemented
+/// from runtime to worker threads as needed to prevent deadlocks. However, this can be implemented
 /// only when running in [multi-threaded runtimes]. When using current-thread runtime (or some other
 /// asynchronous runtime), make sure to not invoke [`AsyncClient::drop()`] in asynchronous contexts.
 ///
@@ -590,7 +590,7 @@ impl Drop for AsyncClient {
 
         log::info!("Cancelling and joining background task when dropping client");
         background_thread.cancel(BackgroundTaskCancellationMode::TerminateAsap);
-        background_thread.join_after_cancelled_blocking();
+        background_thread.join_after_cancelled_on_drop_blocking();
 
         log::info!("Background task finished when dropping client");
     }
@@ -645,57 +645,6 @@ impl BackgroundThread {
         );
     }
 
-    fn join_after_cancelled_blocking(self) {
-        let Self {
-            state,
-            handle,
-            terminated_rx: _,
-        } = self;
-        debug_assert_ne!(
-            state.load(Ordering::Relaxed),
-            BackgroundTaskState::Running.to_u8()
-        );
-
-        // We need to wait for the task to finish and must do so blockingly. `UA_Client_delete()` is
-        // not safe run concurrently while `UA_Client_run_iterate()` is still running. We ignore the
-        // result, because we do not care if the thread panicked (and there is nothing that we could
-        // do anyway in that case).
-        // TODO: Use `tracing` and span to group log messages.
-        log::info!("Waiting for background task to finish after cancelling");
-
-        let join_background_thread_blocking = move || {
-            let _unused = handle.join();
-        };
-
-        // `AsyncClient` is supposed to be used in asynchronous context. Note that blocking executor
-        // threads may cause deadlocks and must be avoided.
-        #[cfg(feature = "tokio")]
-        if let Ok(rt) = &tokio::runtime::Handle::try_current() {
-            // Asynchronous context.
-            if matches!(
-                rt.runtime_flavor(),
-                tokio::runtime::RuntimeFlavor::CurrentThread
-            ) {
-                // Using tokio::task::block_in_place() here would panic.
-                log::warn!("Blocking executor thread to join background thread");
-                // Continue below.
-            } else {
-                // Offload the synchronous, blocking invocation from the executor thread
-                // onto a worker thread.
-                let join_handle = rt.spawn_blocking(join_background_thread_blocking);
-                // Re-enter the asynchronous context for joining the worker thread.
-                tokio::task::block_in_place(move || {
-                    rt.block_on(async move {
-                        let _unused = join_handle.await;
-                    });
-                });
-                return;
-            }
-        }
-
-        join_background_thread_blocking();
-    }
-
     async fn join_after_cancelled(self) {
         let Self {
             state,
@@ -712,33 +661,85 @@ impl BackgroundThread {
             return;
         }
 
+        // TODO: Use `tracing` and span to group log messages.
+        log::info!("Waiting for background task to finish after cancelling");
+
+        // We need to wait for the task to finish and must do so blockingly.
+        // `UA_Client_delete()` is not safe to run concurrently while `UA_Client_run_iterate()`
+        // is still running. We ignore the result, because we do not care if the thread panicked
+        // (and there is nothing that we could do anyway in that case).
+        let join_background_thread_blocking = move || {
+            let _unused = handle.join();
+        };
+
         // Asynchronously wait for the background task to terminate.
         //
         // We ignore the result: the sender is only dropped when the background thread has finished,
         // which is exactly what we are waiting for anyway in the next step.
         let _unused = terminated_rx.await;
 
-        // After the background task has terminated the background thread should finish instantly.
+        // After the background task has terminated the background thread should finish almost instantly.
         #[cfg(feature = "tokio")]
         {
-            // This `async fn` is supposed to run on a Tokio executor thread.
-            // Otherwise obtaining a runtime handle would panic as expected.
-            let rt = tokio::runtime::Handle::current();
+            // The enclosing `async fn` is supposed to run on a Tokio runtime thread.
+            // Spawning a worker thread for joining the background thread synchronously
+            // works independent of the runtime flavor (single/multi-threaded).
+            let _unused = tokio::task::spawn_blocking(join_background_thread_blocking).await;
+        }
+        #[cfg(not(feature = "tokio"))]
+        {
+            log::warn!("Blocking async runtime thread to join background thread");
+            join_background_thread_blocking();
+        }
+    }
+
+    fn join_after_cancelled_on_drop_blocking(self) {
+        let Self {
+            state,
+            handle,
+            // The one-shot channel receiver is useless here.
+            terminated_rx: _,
+        } = self;
+        debug_assert_ne!(
+            state.load(Ordering::Relaxed),
+            BackgroundTaskState::Running.to_u8()
+        );
+
+        if handle.is_finished() {
+            // Nothing to do.
+            return;
+        }
+
+        // TODO: Use `tracing` and span to group log messages.
+        log::info!("Waiting for background task to finish after cancelling (blocking)");
+
+        // We need to wait for the task to finish and must do so blockingly.
+        // `UA_Client_delete()` is not safe to run concurrently while `UA_Client_run_iterate()`
+        // is still running. We ignore the result, because we do not care if the thread panicked
+        // (and there is nothing that we could do anyway in that case).
+        let join_background_thread_blocking = move || {
+            let _unused = handle.join();
+        };
+
+        // `AsyncClient` is supposed to be used in asynchronous context. Note that blocking runtime
+        // threads may cause deadlocks and must be avoided.
+        #[cfg(feature = "tokio")]
+        if let Ok(rt) = &tokio::runtime::Handle::try_current() {
+            // Asynchronous context.
             if matches!(
                 rt.runtime_flavor(),
                 tokio::runtime::RuntimeFlavor::CurrentThread
             ) {
                 // Using tokio::task::block_in_place() here would panic.
-                let _unused = tokio::task::spawn_blocking(move || {
-                    let _unused = handle.join();
-                })
-                .await;
+                log::warn!("Blocking async runtime thread to join background thread");
+                // Continue below.
             } else {
-                tokio::task::block_in_place(move || {
-                    let _unused = handle.join();
-                });
+                tokio::task::block_in_place(join_background_thread_blocking);
+                return;
             }
         }
+
+        join_background_thread_blocking();
     }
 }
 
