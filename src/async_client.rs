@@ -536,9 +536,7 @@ impl AsyncClient {
             .as_ref()
             .is_none_or(|background_thread| !background_thread.is_running_and_not_finished_yet())
         {
-            return Err(Error::new(ua::StatusCode::new(
-                UA_STATUSCODE_BADDISCONNECT,
-            )));
+            return Err(Error::new(ua::StatusCode::new(UA_STATUSCODE_BADDISCONNECT)));
         }
         log::debug!("Running {}", R::type_name());
 
