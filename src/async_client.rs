@@ -522,19 +522,13 @@ impl AsyncClient {
             let _unused = tx.send(result.map_err(Error::new));
         };
 
-        // Reject requests if the background thread is not running immediately before submission.
-        //
-        // Without the background thread requests will not be serviced and the
-        // async invocation would be pending forever. Due to race conditions this
-        // could happen at any time and callers are encouraged to enclose asynchronous
-        // calls with timeouts.
-        if self
-            .background_thread
-            .as_ref()
-            .is_none_or(|background_thread| !background_thread.is_running_and_not_finished_yet())
-        {
-            return Err(Error::new(ua::StatusCode::new(UA_STATUSCODE_BADDISCONNECT)));
-        }
+        // The background thread only terminates and finishes after being cancelled. This could only
+        // happen in disconnect() by consuming self or in drop().
+        debug_assert!(
+            self.background_thread
+                .as_ref()
+                .is_some_and(BackgroundThread::is_running_and_not_finished_yet)
+        );
         log::debug!("Running {}", R::type_name());
 
         let mut request_id: UA_UInt32 = 0;
