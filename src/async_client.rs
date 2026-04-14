@@ -111,21 +111,18 @@ impl AsyncClient {
         // allows us to take an early return path there.
         let background_thread = self.background_thread.take().expect("no background thread");
 
-        // Disconnecting requires driving the internal event loop.
-        if background_thread.is_running_and_not_finished_yet() {
-            let status_code = ua::StatusCode::new(unsafe {
-                UA_Client_disconnectAsync(
-                    // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                    self.client.as_ptr().cast_mut(),
-                )
-            });
-            if let Err(error) = Error::verify_good(&status_code) {
-                log::warn!("Error while disconnecting client: {error}");
-            }
-        } else {
-            log::info!(
-                "Cannot disconnect client because background thread is not running or has already finished"
-            );
+        // The background thread has not been cancelled yet, because it is only cancelled here
+        // or in drop(). It doesn't terminate and finish on its own before being cancelled.
+        debug_assert!(background_thread.is_running_and_not_finished_yet());
+
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Client_disconnectAsync(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.client.as_ptr().cast_mut(),
+            )
+        });
+        if let Err(error) = Error::verify_good(&status_code) {
+            log::warn!("Error while disconnecting client: {error}");
         }
 
         // Asynchronously wait for the background task running in the background thread to complete.
@@ -585,6 +582,10 @@ impl Drop for AsyncClient {
             log::debug!("Background task has already finished before dropping client");
             return;
         };
+
+        // The background thread has not been cancelled yet, because it is only cancelled here
+        // or in disconnect(). It doesn't terminate and finish on its own before being cancelled.
+        debug_assert!(background_thread.is_running_and_not_finished_yet());
 
         log::info!("Cancelling and joining background task when dropping client");
         background_thread.cancel(BackgroundTaskCancellationMode::TerminateAsap);
