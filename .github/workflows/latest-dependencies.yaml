@@ -139,12 +139,14 @@ jobs:
           --locked --all-features
           --doc
 
-      - name: Build package with all features enabled
-        # Disable build for GNU targets on Ubuntu 22.04 (unsupported `atomic_uintptr_t`).
-        # TODO: Try to re-enable this step regardless of the build target in the future.
-        if: ${{ matrix.runner_os != 'ubuntu-22.04' || endsWith(matrix.target, '-musl') }}
-        # We allow dirty state here because it is only expected after update.
-        run: >-
-          cargo package
-          --locked --all-features
-          --allow-dirty
+      # FIXME: Re-enable this step after switching to open62541-sys v0.6.x.
+      #- name: Build package with all features enabled
+      #- name: Build package with all features enabled
+      # Disable build for GNU targets on Ubuntu 22.04 (unsupported `atomic_uintptr_t`).
+      # TODO: Try to re-enable this step regardless of the build target in the future.
+      #if: ${{ matrix.runner_os != 'ubuntu-22.04' || endsWith(matrix.target, '-musl') }}
+      # We allow dirty state here because it is only expected after update.
+      #run: >-
+      #  cargo package
+      #  --locked --all-features
+      #  --allow-dirty
