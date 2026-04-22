@@ -36,11 +36,13 @@ repos:
     hooks:
       - id: check-github-actions
       - id: check-github-workflows
-  - repo: https://github.com/ComPWA/taplo-pre-commit
-    rev: v0.9.3
-    hooks:
-      - id: taplo-format
-      - id: taplo-lint
+  # The taplo-lint checks have been disabled, because they only work with
+  # the newest Rust version and don't respect the `rust-version` field in
+  # `Cargo.toml`.
+  # - repo: https://github.com/ComPWA/taplo-pre-commit
+  #   rev: v0.9.3
+  #   hooks:
+  #     - id: taplo-lint
   # Format code with oxfmt for supported file types.
   - repo: https://github.com/oxc-project/mirrors-oxfmt
     rev: v0.43.0
@@ -49,6 +51,7 @@ repos:
         types_or:
           - json
           - markdown
+          - toml
           - yaml
   - repo: https://github.com/doublify/pre-commit-rust
     rev: v1.0
