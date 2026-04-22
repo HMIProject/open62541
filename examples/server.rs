@@ -143,7 +143,7 @@ fn statistics_task(server: &Server, cancelled: &AtomicBool) {
     while !cancelled.load(Ordering::Relaxed) {
         let statistics = server.statistics();
         println!("{statistics:?}");
-        thread::sleep(Duration::from_millis(1000));
+        thread::sleep(Duration::from_secs(1));
     }
 }
 
@@ -162,7 +162,7 @@ fn server_task(
 
             server.write_value(value_node_id, &ua::Variant::scalar(ua::String::new(value)?))?;
 
-            thread::sleep(Duration::from_millis(1000));
+            thread::sleep(Duration::from_secs(1));
         }
     }
 }
