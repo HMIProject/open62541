@@ -57,11 +57,9 @@ jobs:
             runner_os: ubuntu-24.04
 
           - target: x86_64-apple-darwin
-            runner_os: macos-14
+            runner_os: macos-15-intel
           - target: x86_64-apple-darwin
-            runner_os: macos-15
-          - target: x86_64-apple-darwin
-            runner_os: macos-26
+            runner_os: macos-26-intel
 
           - target: x86_64-pc-windows-msvc
             runner_os: windows-2022
