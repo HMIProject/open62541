@@ -1,8 +1,8 @@
 use std::{ffi::CString, fmt, hash, str};
 
 use open62541_sys::{
-    UA_NODEID_BYTESTRING_ALLOC, UA_NODEID_GUID, UA_NODEID_NULL, UA_NODEID_NUMERIC,
-    UA_NODEID_STRING_ALLOC, UA_NodeId_hash, UA_NodeId_parse, UA_NodeId_print, UA_NodeIdType,
+    UA_NODEID_GUID, UA_NODEID_NULL, UA_NODEID_NUMERIC, UA_NODEID_STRING_ALLOC, UA_NodeId_hash,
+    UA_NodeId_parse, UA_NodeId_print, UA_NodeIdType,
 };
 
 use crate::{DataType, Error, ua};
@@ -77,34 +77,22 @@ impl NodeId {
     ///
     /// # Panics
     ///
-    /// The byte string identifier must not contain any NUL bytes.
+    /// Enough memory must be available to copy the byte string to the heap.
     #[must_use]
     pub fn byte_string(ns_index: u16, byte_string: &[u8]) -> Self {
-        // Unfortunately, `UA_NODEID_BYTESTRING_ALLOC` requires a NUL-terminated C `char` pointer to
-        // the buffer. This imposes the restriction that no node IDs with NUL bytes can be created.
-        let byte_string =
-            CString::new(byte_string).expect("node ID byte string does not contain NUL bytes");
-
-        // String allocation can fail but `UA_NODEID_BYTESTRING_ALLOC` does not tell us this when it
-        // happens. Instead, we end up with a well-defined node ID that has an empty byte string.
-        let inner = unsafe { UA_NODEID_BYTESTRING_ALLOC(ns_index, byte_string.as_ptr()) };
+        let byte_string = ua::ByteString::new(byte_string);
+        let mut node_id = Self::init();
+        node_id.0.namespaceIndex = ns_index;
+        node_id.0.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
+        // SAFETY: We just selected the byte string identifier variant.
+        *unsafe { node_id.0.identifier.byteString.as_mut() } = byte_string.into_raw();
         debug_assert_eq!(
-            inner.identifierType,
+            node_id.0.identifierType,
             UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING,
             "new node ID should have byte string type"
         );
 
-        // SAFETY: We have checked that we have this enum variant.
-        let identifier = unsafe { inner.identifier.byteString.as_ref() };
-        if !byte_string.is_empty() && (identifier.data.is_null() || identifier.length == 0) {
-            debug_assert!(
-                identifier.data.is_null(),
-                "unexpected node ID byte string data"
-            );
-            panic!("node ID byte string should have been allocated");
-        }
-
-        Self(inner)
+        node_id
     }
 
     /// Creates null node ID.
@@ -322,7 +310,7 @@ mod serde {
 
 #[cfg(test)]
 mod tests {
-    use std::str;
+    use std::{panic, str};
 
     use crate::ua;
 
@@ -339,5 +327,33 @@ mod tests {
         // Usually, parsing is done via `parse()` however which is implemented for `FromStr` target.
         //
         let _node_id: ua::NodeId = "ns=0;i=2258".parse().expect("should be valid node ID");
+    }
+
+    #[test]
+    fn byte_string_with_nul_bytes() {
+        const PAYLOAD: &[u8] = &[
+            1, 0, 0, 0, 166, 225, 42, 113, 138, 247, 51, 58, 186, 250, 45, 118, 134, 239, 96, 71,
+            140, 247, 64,
+        ];
+
+        let node_id = panic::catch_unwind(|| ua::NodeId::byte_string(2, PAYLOAD))
+            .expect("byte string node ID should allow NUL bytes");
+        let (ns_index, identifier) = node_id
+            .as_byte_string()
+            .expect("node ID should have byte string identifier");
+
+        assert_eq!(ns_index, 2);
+        assert_eq!(identifier.as_bytes(), Some(PAYLOAD));
+
+        let round_trip: ua::NodeId = node_id
+            .to_string()
+            .parse()
+            .expect("byte string node ID should round-trip");
+        let (ns_index, identifier) = round_trip
+            .as_byte_string()
+            .expect("round-tripped node ID should have byte string identifier");
+
+        assert_eq!(ns_index, 2);
+        assert_eq!(identifier.as_bytes(), Some(PAYLOAD));
     }
 }
