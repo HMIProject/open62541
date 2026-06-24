@@ -349,7 +349,11 @@ mod tests {
             .expect("node ID should have byte string identifier");
 
         assert_eq!(ns, 1, "node ID namespace didn't match input");
-        assert_eq!(id.as_bytes(), Some(PAYLOAD), "node ID byte string should be empty");
+        assert_eq!(
+            id.as_bytes(),
+            Some(PAYLOAD),
+            "node ID byte string should be empty"
+        );
 
         let round_trip: ua::NodeId = node_id
             .to_string()
@@ -361,7 +365,11 @@ mod tests {
             .expect("round-tripped node ID should have byte string identifier");
 
         assert_eq!(ns, 1, "namespace index should match initial");
-        assert_eq!(id.as_bytes(), Some(PAYLOAD), "node ID byte string should be empty");
+        assert_eq!(
+            id.as_bytes(),
+            Some(PAYLOAD),
+            "node ID byte string should be empty"
+        );
     }
 
     #[test]
