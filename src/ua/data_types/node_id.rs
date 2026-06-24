@@ -79,13 +79,22 @@ impl NodeId {
     ///
     /// Enough memory must be available to copy the byte string to the heap.
     #[must_use]
-    pub fn byte_string(ns_index: u16, byte_string: &[u8]) -> Self {
-        let byte_string = ua::ByteString::new(byte_string);
+    pub fn byte_string(ns_index: u16, bytes: &[u8]) -> Self {
+        let byte_string = ua::ByteString::new(bytes);
+
+        debug_assert!(
+            matches!(byte_string.as_bytes(), Some(new_bytes) if new_bytes.len() == bytes.len()),
+            "allocated node id byte string is corrupted"
+        );
+
         let mut node_id = Self::init();
+
         node_id.0.namespaceIndex = ns_index;
         node_id.0.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
+
         // SAFETY: We just selected the byte string identifier variant.
         *unsafe { node_id.0.identifier.byteString.as_mut() } = byte_string.into_raw();
+
         debug_assert_eq!(
             node_id.0.identifierType,
             UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING,
