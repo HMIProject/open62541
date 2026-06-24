@@ -339,6 +339,32 @@ mod tests {
     }
 
     #[test]
+    fn empty_byte_string() {
+        const PAYLOAD: &[u8] = &[];
+        let node_id = panic::catch_unwind(|| ua::NodeId::byte_string(1, PAYLOAD))
+            .expect("byte string node ID should allow empty byte strings");
+
+        let (ns, id) = node_id
+            .as_byte_string()
+            .expect("node ID should have byte string identifier");
+
+        assert_eq!(ns, 1, "node ID namespace didn't match input");
+        assert_eq!(id.as_bytes(), Some(PAYLOAD), "node ID byte string should be empty");
+
+        let round_trip: ua::NodeId = node_id
+            .to_string()
+            .parse()
+            .expect("byte string node ID should round-trip");
+
+        let (ns, id) = round_trip
+            .as_byte_string()
+            .expect("round-tripped node ID should have byte string identifier");
+
+        assert_eq!(ns, 1, "namespace index should match initial");
+        assert_eq!(id.as_bytes(), Some(PAYLOAD), "node ID byte string should be empty");
+    }
+
+    #[test]
     fn byte_string_with_nul_bytes() {
         const PAYLOAD: &[u8] = &[
             1, 0, 0, 0, 166, 225, 42, 113, 138, 247, 51, 58, 186, 250, 45, 118, 134, 239, 96, 71,
@@ -347,6 +373,7 @@ mod tests {
 
         let node_id = panic::catch_unwind(|| ua::NodeId::byte_string(2, PAYLOAD))
             .expect("byte string node ID should allow NUL bytes");
+
         let (ns_index, identifier) = node_id
             .as_byte_string()
             .expect("node ID should have byte string identifier");
@@ -358,6 +385,7 @@ mod tests {
             .to_string()
             .parse()
             .expect("byte string node ID should round-trip");
+
         let (ns_index, identifier) = round_trip
             .as_byte_string()
             .expect("round-tripped node ID should have byte string identifier");
