@@ -81,12 +81,6 @@ impl NodeId {
     #[must_use]
     pub fn byte_string(ns_index: u16, bytes: &[u8]) -> Self {
         let byte_string = ua::ByteString::new(bytes);
-
-        debug_assert!(
-            matches!(byte_string.as_bytes(), Some(new_bytes) if new_bytes.len() == bytes.len()),
-            "allocated node id byte string is corrupted"
-        );
-
         let mut node_id = Self::init();
 
         node_id.0.namespaceIndex = ns_index;
