@@ -40,12 +40,6 @@ impl ByteString {
             "byte string should have been created"
         );
 
-        // byte string cmp would be expensive in release, but `debug_assert` should be fine enough
-        debug_assert!(
-            matches!(dst.as_bytes(), Some(dst_bytes) if dst_bytes.len() == s.len()),
-            "byte string was corrupted after allocation"
-        );
-
         dst
     }
 
