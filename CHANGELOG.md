@@ -21,6 +21,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add methods `null()` and `is_null()` to `ua::String` and `ua::ByteString`.
 - Add method `new()` to `ua::ExpandedNodeId`.
 - Add `From`/`Into` conversion from `ua::NodeId` to `ua::ExpandedNodeId`.
+- Fix `ua::NodeId::byte_string` to allow byte strings that contain NUL bytes.
 
 ### Changed
 
