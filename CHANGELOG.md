@@ -21,7 +21,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add methods `null()` and `is_null()` to `ua::String` and `ua::ByteString`.
 - Add method `new()` to `ua::ExpandedNodeId`.
 - Add `From`/`Into` conversion from `ua::NodeId` to `ua::ExpandedNodeId`.
-- Fix `ua::NodeId::byte_string` to allow byte strings that contain NUL bytes.
 
 ### Changed
 
@@ -36,6 +35,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Fix linker errors for build target `x86_64-linux-unknown-gnu` by updating `open62541-sys` to
   version 0.5.4 ([#288](https://github.com/HMIProject/open62541/issues/288)).
 - Improve handling of and recovery from connection loss in `AsyncClient`.
+- Fix `ua::NodeId::byte_string` to allow byte strings that contain NUL bytes.
 
 ## [0.10.1] - 2025-10-29
 
