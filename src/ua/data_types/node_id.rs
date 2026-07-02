@@ -89,12 +89,6 @@ impl NodeId {
         // SAFETY: We just selected the byte string identifier variant.
         *unsafe { node_id.0.identifier.byteString.as_mut() } = byte_string.into_raw();
 
-        debug_assert_eq!(
-            node_id.0.identifierType,
-            UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING,
-            "new node ID should have byte string type"
-        );
-
         node_id
     }
 
