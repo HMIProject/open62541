@@ -16,7 +16,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Breaking: Upgrade to open62541 version
-  [1.5.0](https://github.com/open62541/open62541/releases/tag/v1.5.0).
+  [1.5.5](https://github.com/open62541/open62541/releases/tag/v1.5.5).
 - Breaking: Remove method `ua::CertificateVerification::custom()` and trait
   `CustomCertificateVerification`.
 - Breaking: Remove `Unknown` variant from `ua::DataTypeDefinition`.
