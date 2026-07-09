@@ -39,22 +39,24 @@ jobs:
             runner_os: macos-26
 
           - target: aarch64-unknown-linux-gnu
-            runner_os: ubuntu-22.04-arm
-          - target: aarch64-unknown-linux-gnu
             runner_os: ubuntu-24.04-arm
+          - target: aarch64-unknown-linux-gnu
+            runner_os: ubuntu-26.04-arm
 
           - target: aarch64-unknown-linux-musl
-            runner_os: ubuntu-22.04-arm
-          - target: aarch64-unknown-linux-musl
             runner_os: ubuntu-24.04-arm
+          - target: aarch64-unknown-linux-musl
+            runner_os: ubuntu-26.04-arm
 
           - target: aarch64-pc-windows-msvc
             runner_os: windows-11-arm
 
           - target: armv7-unknown-linux-gnueabihf
-            runner_os: ubuntu-22.04
-          - target: armv7-unknown-linux-gnueabihf
             runner_os: ubuntu-24.04
+          # Build on Ubuntu 26.04 fails: <https://github.com/Mbed-TLS/mbedtls/issues/9875>
+          # TODO: Re-enable when fixed.
+          #- target: armv7-unknown-linux-gnueabihf
+          #  runner_os: ubuntu-26.04
 
           - target: x86_64-apple-darwin
             runner_os: macos-15-intel
@@ -67,14 +69,14 @@ jobs:
             runner_os: windows-2025
 
           - target: x86_64-unknown-linux-gnu
-            runner_os: ubuntu-22.04
-          - target: x86_64-unknown-linux-gnu
             runner_os: ubuntu-24.04
+          - target: x86_64-unknown-linux-gnu
+            runner_os: ubuntu-26.04
 
           - target: x86_64-unknown-linux-musl
-            runner_os: ubuntu-22.04
-          - target: x86_64-unknown-linux-musl
             runner_os: ubuntu-24.04
+          - target: x86_64-unknown-linux-musl
+            runner_os: ubuntu-26.04
 
     runs-on: ${{ matrix.runner_os }}
 
@@ -131,9 +133,6 @@ jobs:
           build --locked
 
       - name: Run tests (bins/lib/tests/examples) with feature combinations
-        # Disable tests for musl libc target(s) due to build failure for unknown reasons.
-        # TODO: Try to re-enable this step regardless of the build target in the future.
-        if: ${{ !endsWith(matrix.target, '-musl') }}
         run: >-
           cargo hack --each-feature
           test --locked
@@ -146,9 +145,6 @@ jobs:
       # certain features only for some doctests, so we run them without
       # `cargo-hack`.
       - name: Run doctests with all features enabled
-        # Disable tests for musl libc target(s) due to build failure for unknown reasons.
-        # TODO: Try to re-enable this step regardless of the build target in the future.
-        if: ${{ !endsWith(matrix.target, '-musl') }}
         run: >-
           cargo test
           --locked --all-features
