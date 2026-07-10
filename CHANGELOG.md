@@ -18,8 +18,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Breaking: Upgrade to open62541 version
   [1.5.5](https://github.com/open62541/open62541/releases/tag/v1.5.5).
-- Breaking: `CustomCertificateVerification::verify_application_uri()` has been removed; implement
-  `CustomCertificateVerification` and use `ua::CertificateVerification::custom()` instead.
+- Breaking: `CustomCertificateVerification::verify_application_uri()` has been removed; only `verify_certificate()` is supported via `ua::CertificateVerification::custom()`.
+- Breaking: `Server::create_event()` and `Server::trigger_event()` are currently removed pending a 1.5.5-compatible implementation.
 - Breaking: Remove `Unknown` variant from `ua::DataTypeDefinition`.
 - Breaking: Return `Result` from `DataTypeExt::from_inner()`.
 - Breaking: Replace `ua::String::is_invalid()` with `ua::String::is_null()`.
