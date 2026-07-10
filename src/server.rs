@@ -294,7 +294,11 @@ impl ServerBuilder {
 
         // The access control sentinel is kept by the runner: access control is only consulted while
         // the server is running, which requires the runner to be alive.
-        let runner = ServerRunner::new(Arc::clone(&server), access_control_sentinel, Arc::clone(&state));
+        let runner = ServerRunner::new(
+            Arc::clone(&server),
+            access_control_sentinel,
+            Arc::clone(&state),
+        );
         let server = Server { server, state };
         (server, runner)
     }
