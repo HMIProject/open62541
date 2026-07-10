@@ -12,13 +12,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add method `ua::VariableAttributes::with_array_dimensions()`.
 - Add method `Server::add_data_type_node()` and type `DataTypeNode`.
 - Add method `ua::CertificateVerification::memory_store()` and `ua::TrustListDataType`.
+- Add method `ua::CertificateVerification::custom()` and trait `CustomCertificateVerification`.
 
 ### Changed
 
 - Breaking: Upgrade to open62541 version
   [1.5.5](https://github.com/open62541/open62541/releases/tag/v1.5.5).
-- Breaking: Remove method `ua::CertificateVerification::custom()` and trait
-  `CustomCertificateVerification`.
+- Breaking: `CustomCertificateVerification::verify_application_uri()` has been removed; implement
+  `CustomCertificateVerification` and use `ua::CertificateVerification::custom()` instead.
 - Breaking: Remove `Unknown` variant from `ua::DataTypeDefinition`.
 - Breaking: Return `Result` from `DataTypeExt::from_inner()`.
 - Breaking: Replace `ua::String::is_invalid()` with `ua::String::is_null()`.
