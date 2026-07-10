@@ -7,7 +7,8 @@ mod node_types;
 use std::{
     any::Any,
     ffi::{CString, c_void},
-    mem, ptr,
+    ops::Deref,
+    ptr,
     sync::Arc,
     time::Instant,
 };
@@ -275,15 +276,26 @@ impl ServerBuilder {
         debug_assert!(global_node_lifecycle.destructor.is_none());
         global_node_lifecycle.destructor = Some(destructor_c);
 
-        // SAFETY: We keep `global_node_lifecycle` alive until `clear_global_node_lifecycle()`.
+        // Point the server configuration at the heap-allocated callbacks. The `Box` is moved into the
+        // shared `SharedServer` below, which keeps it alive for as long as any `Server` or
+        // `ServerRunner` handle exists.
         unsafe { set_global_node_lifecycle(&mut config, &mut global_node_lifecycle) };
 
-        let server = Arc::new(ua::Server::new_with_config(config));
+        // `SharedServer` owns the `UA_Server` together with the node lifecycle callbacks that its
+        // configuration borrows via `config.nodeLifecycle`. Sharing it through `Arc` ties the lifetime
+        // of those callbacks to the server itself, not to the `ServerRunner`. This matters because
+        // `Server` and `ServerRunner` share ownership of the server and either one may outlive the
+        // other (e.g. `let (server, _) = builder.build();` drops the runner immediately).
+        let server = Arc::new(SharedServer {
+            server: ua::Server::new_with_config(config),
+            global_node_lifecycle,
+        });
         let state = Arc::new(RunnerState::new());
 
+        // The access control sentinel is kept by the runner: access control is only consulted while
+        // the server is running, which requires the runner to be alive.
         let runner = ServerRunner::new(
             Arc::clone(&server),
-            global_node_lifecycle,
             access_control_sentinel,
             Arc::clone(&state),
         );
@@ -390,6 +402,37 @@ impl ServerConfigGuard<'_> {
     }
 }
 
+/// Owns the [`ua::Server`] together with the heap-allocated node lifecycle callbacks that its
+/// configuration borrows through a raw pointer.
+///
+/// The server configuration's `nodeLifecycle` field is a raw pointer into Rust-owned memory (see
+/// [`set_global_node_lifecycle()`]). That memory must stay valid for as long as the `UA_Server`
+/// exists and must only be freed *after* [`UA_Server_delete()`](open62541_sys::UA_Server_delete) has
+/// run, because deleting the server also deletes its nodes, which invokes the node destructor
+/// callback.
+///
+/// Both [`Server`] and [`ServerRunner`] share ownership of this value through [`Arc`], so the
+/// borrowed data outlives every server handle regardless of which one is dropped first. The fields
+/// are declared so that `server` (and thus `UA_Server_delete()`) is dropped *before*
+/// `global_node_lifecycle`.
+#[derive(Debug)]
+struct SharedServer {
+    server: ua::Server,
+
+    /// Heap-allocated set of callbacks pointed at by `config.nodeLifecycle`. Never read directly; it
+    /// exists solely to keep the callbacks alive for the configuration's raw pointer.
+    #[expect(dead_code, reason = "kept alive for `config.nodeLifecycle` to borrow")]
+    global_node_lifecycle: Box<UA_GlobalNodeLifecycle>,
+}
+
+impl Deref for SharedServer {
+    type Target = ua::Server;
+
+    fn deref(&self) -> &Self::Target {
+        &self.server
+    }
+}
+
 /// OPC UA server.
 ///
 /// This represents an OPC UA server. Nodes can be added through the several methods below.
@@ -398,7 +441,7 @@ impl ServerConfigGuard<'_> {
 /// from clients.
 #[derive(Debug, Clone)]
 pub struct Server {
-    server: Arc<ua::Server>,
+    server: Arc<SharedServer>,
     state: Arc<RunnerState>,
 }
 
@@ -1746,13 +1789,14 @@ impl Server {
 
 #[derive(Debug)]
 pub struct ServerRunner {
-    server: Arc<ua::Server>,
+    // Shares ownership of the server (and the node lifecycle callbacks its configuration borrows)
+    // with [`Server`].
+    server: Arc<SharedServer>,
 
-    /// Heap-allocated set of callbacks in `config.nodeLifecycle`.
-    global_node_lifecycle: Box<UA_GlobalNodeLifecycle>,
-
-    /// [`AccessControl`] instances may hold additional data that must be kept alive until server is
-    /// shut down. The sentinel value cleans this up when it is dropped.
+    /// [`AccessControl`] instances may hold additional data that must be kept alive while the server
+    /// is running. The sentinel value cleans this up when it is dropped (i.e. when the runner is
+    /// dropped, after the server has stopped). Never read directly.
+    #[expect(dead_code, reason = "kept alive for the running server to borrow")]
     access_control_sentinel: Option<Box<dyn Any + Send>>,
 
     state: Arc<RunnerState>,
@@ -1761,14 +1805,12 @@ pub struct ServerRunner {
 impl ServerRunner {
     #[must_use]
     fn new(
-        server: Arc<ua::Server>,
-        global_node_lifecycle: Box<UA_GlobalNodeLifecycle>,
+        server: Arc<SharedServer>,
         access_control_sentinel: Option<Box<dyn Any + Send>>,
         state: Arc<RunnerState>,
     ) -> Self {
         Self {
             server,
-            global_node_lifecycle,
             access_control_sentinel,
             state,
         }
@@ -1792,15 +1834,8 @@ impl ServerRunner {
     /// # Errors
     ///
     /// This fails when the server cannot be started.
-    pub fn run_until_interrupt(mut self) -> Result<()> {
-        let Self {
-            server,
-            global_node_lifecycle,
-            access_control_sentinel,
-            state,
-        } = &mut self;
-        let global_node_lifecycle = mem::take(global_node_lifecycle);
-        let access_control_sentinel = access_control_sentinel.take();
+    pub fn run_until_interrupt(self) -> Result<()> {
+        let Self { server, state, .. } = &self;
 
         let mut state_guard = state.lock();
 
@@ -1827,13 +1862,6 @@ impl ServerRunner {
             }
         }
 
-        unsafe { clear_global_node_lifecycle(server, global_node_lifecycle) };
-
-        // Compile-time assertion to make sure that the sentinel value was still around for the call
-        // above (including any branches that exit early with `?` or `return`): only when the server
-        // has finished shutting down, we are allowed to drop sentinel values.
-        drop(access_control_sentinel);
-
         Ok(())
     }
 
@@ -1845,15 +1873,8 @@ impl ServerRunner {
     /// # Errors
     ///
     /// This fails when the server cannot be started.
-    pub fn run_until_cancelled(mut self, mut is_cancelled: impl FnMut() -> bool) -> Result<()> {
-        let Self {
-            server,
-            global_node_lifecycle,
-            access_control_sentinel,
-            state,
-        } = &mut self;
-        let global_node_lifecycle = mem::take(global_node_lifecycle);
-        let access_control_sentinel = access_control_sentinel.take();
+    pub fn run_until_cancelled(self, mut is_cancelled: impl FnMut() -> bool) -> Result<()> {
+        let Self { server, state, .. } = &self;
 
         let mut state_guard = state.lock();
 
@@ -1927,13 +1948,6 @@ impl ServerRunner {
             }
         }
 
-        unsafe { clear_global_node_lifecycle(server, global_node_lifecycle) };
-
-        // Compile-time assertion to make sure that the sentinel value was still around for the call
-        // above (including any branches that exit early with `?` or `return`): only when the server
-        // has finished shutting down, we are allowed to drop sentinel values.
-        drop(access_control_sentinel);
-
         Ok(())
     }
 }
@@ -1968,8 +1982,8 @@ fn to_browse_result(result: &ua::BrowseResult) -> BrowseResult {
 ///
 /// This must be called before the server accesses `config.nodeLifecycle`.
 ///
-/// The boxed value `global_node_lifecycle` must be kept alive until `clear_global_node_lifecycle()`
-/// has been called.
+/// The boxed value `global_node_lifecycle` must be kept alive (and not moved out of its `Box`) until
+/// the server has been deleted. Ownership is transferred to [`SharedServer`], which guarantees this.
 unsafe fn set_global_node_lifecycle(
     config: &mut ua::ServerConfig,
     global_node_lifecycle: &mut Box<UA_GlobalNodeLifecycle>,
@@ -1979,29 +1993,8 @@ unsafe fn set_global_node_lifecycle(
     // PANIC: Nobody else has initialized the node lifecycle callbacks before.
     debug_assert!(config.nodeLifecycle.is_null());
 
-    // This stores the pointer to the `Box`-allocated `global_node_lifecycle` in the config; it must
-    // be kept alive elsewhere (e.g., in `ServerRunner`) until the server no longer accesses it.
+    // Store a pointer to the `Box`-allocated `global_node_lifecycle` in the config. The `Box` is kept
+    // alive by `SharedServer` for as long as the server exists; the heap address is stable across the
+    // move of the `Box` into `SharedServer`.
     config.nodeLifecycle = &raw mut *global_node_lifecycle.as_mut();
-}
-
-/// Clears `config.nodeLifecycle`.
-///
-/// # Safety
-///
-/// This must be called after the server has finished accessing `config.nodeLifecycle`.
-unsafe fn clear_global_node_lifecycle(
-    server: &ua::Server,
-    mut global_node_lifecycle: Box<UA_GlobalNodeLifecycle>,
-) {
-    // SAFETY: The server has finished execution and we can mutate the configuration.
-    let config = unsafe { &mut *UA_Server_getConfig(server.as_ptr().cast_mut()) };
-
-    debug_assert_eq!(
-        config.nodeLifecycle,
-        &raw mut *global_node_lifecycle.as_mut()
-    );
-
-    // Remove pointer to prevent server from making any more calls. `global_node_lifecycle` goes out
-    // of scope at the end of this function and gets freed.
-    config.nodeLifecycle = ptr::null_mut();
 }

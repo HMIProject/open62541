@@ -37,6 +37,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fix use-after-free when a `Server` is used after its `ServerRunner` has been dropped (e.g.
+  `let (server, _) = builder.build();`). The node lifecycle callbacks borrowed by
+  `config.nodeLifecycle` are now owned by the shared server and outlive every server handle.
 - Fix linker errors for build target `x86_64-linux-unknown-gnu` by updating `open62541-sys` to
   version 0.5.4 ([#288](https://github.com/HMIProject/open62541/issues/288)).
 - Improve handling of and recovery from connection loss in `AsyncClient`.
