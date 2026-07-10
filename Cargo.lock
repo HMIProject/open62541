@@ -613,7 +613,7 @@ dependencies = [
 [[package]]
 name = "open62541-sys"
 version = "0.6.0"
-source = "git+https://github.com/HMIProject/open62541-sys.git?branch=open62541-1.5#27270f78d2d0cd95d72dada98c0c0dcfb2bfbc13"
+source = "git+https://github.com/HMIProject/open62541-sys.git?branch=open62541-1.5#af85432b90f59f5e5e597f12745d3d9e410f4d7b"
 dependencies = [
  "bindgen",
  "cc",
