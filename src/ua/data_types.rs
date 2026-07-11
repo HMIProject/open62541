@@ -48,6 +48,11 @@ mod expanded_node_id;
 mod extension_object;
 mod filter_operator;
 mod guid;
+mod history_data;
+mod history_read_request;
+mod history_read_response;
+mod history_read_result;
+mod history_read_value_id;
 mod issued_identity_token;
 mod literal_operand;
 mod localized_text;
@@ -62,6 +67,7 @@ mod node_id;
 mod node_id_type;
 mod qualified_name;
 mod range;
+mod read_raw_modified_details;
 mod read_request;
 mod read_response;
 mod read_value_id;
@@ -136,6 +142,11 @@ pub use self::{
     extension_object::ExtensionObject,
     filter_operator::FilterOperator,
     guid::Guid,
+    history_data::HistoryData,
+    history_read_request::HistoryReadRequest,
+    history_read_response::HistoryReadResponse,
+    history_read_result::HistoryReadResult,
+    history_read_value_id::HistoryReadValueId,
     issued_identity_token::IssuedIdentityToken,
     literal_operand::LiteralOperand,
     localized_text::LocalizedText,
@@ -154,6 +165,7 @@ pub use self::{
     node_id_type::NodeIdType,
     qualified_name::QualifiedName,
     range::Range,
+    read_raw_modified_details::ReadRawModifiedDetails,
     read_request::ReadRequest,
     read_response::ReadResponse,
     read_value_id::ReadValueId,
