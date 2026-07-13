@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-13
+
 ### Added
 
 - Add method `ua::VariableAttributes::with_array_dimensions()`.
@@ -585,7 +587,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
-[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/HMIProject/open62541/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/HMIProject/open62541/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/HMIProject/open62541/compare/v0.9.4...v0.10.0
 [0.9.4]: https://github.com/HMIProject/open62541/compare/v0.9.3...v0.9.4
