@@ -268,11 +268,10 @@ async fn create_subscription(
         _client: *mut UA_Client,
         userdata: *mut c_void,
         _request_id: UA_UInt32,
-        response: *mut c_void,
+        response: *mut UA_CreateSubscriptionResponse,
     ) {
         log::debug!("Subscriptions_create() completed");
 
-        let response = response.cast::<UA_CreateSubscriptionResponse>();
         // SAFETY: Incoming pointer is valid for access.
         // PANIC: We expect pointer to be valid when good.
         let response = unsafe { response.as_ref() }.expect("response should be set");
@@ -334,11 +333,10 @@ fn delete_subscriptions(client: &ua::Client, request: &ua::DeleteSubscriptionsRe
         _client: *mut UA_Client,
         _userdata: *mut c_void,
         _request_id: UA_UInt32,
-        response: *mut c_void,
+        response: *mut UA_DeleteSubscriptionsResponse,
     ) {
         log::debug!("Subscriptions_delete() completed");
 
-        let response = response.cast::<UA_DeleteSubscriptionsResponse>();
         // SAFETY: Incoming pointer is valid for access.
         // PANIC: We expect pointer to be valid when good.
         let response = unsafe { response.as_ref() }.expect("response should be set");
