@@ -463,6 +463,14 @@ impl Server {
         ServerBuilder::default().build()
     }
 
+    unsafe fn as_ptr(&self) -> *const UA_Server {
+        unsafe { self.server.as_ptr() }
+    }
+
+    unsafe fn as_mut_ptr(&self) -> *mut UA_Server {
+        unsafe { self.as_ptr().cast_mut() }
+    }
+
     /// Gets discovery URLs.
     ///
     /// This is particularly useful when the server has been configured to listen on a random port.
@@ -527,7 +535,7 @@ impl Server {
         let result = unsafe {
             UA_Server_addNamespace(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 name.as_ptr(),
             )
         };
@@ -563,7 +571,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_getNamespaceByName(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // SAFETY: The `String` is used for comparison with internal strings only. It is not
                 // changed and it is only used in the scope of the function. This means ownership is
                 // preserved and passing by value is safe here.
@@ -622,7 +630,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_getNamespaceByIndex(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 namespace_index.into(),
                 found_uri.as_mut_ptr(),
             )
@@ -663,7 +671,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_addNode_begin(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 attributes.node_class().clone().into_raw(),
                 // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
@@ -722,7 +730,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_addNode_begin(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 ua::NodeClass::OBJECT.into_raw(),
                 // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
@@ -781,7 +789,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_addNode_begin(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // Passing ownership is trivial with primitive value (`u32`).
                 ua::NodeClass::VARIABLE.into_raw(),
                 // TODO: Verify that `UA_Server_addNode_begin()` does not take ownership.
@@ -846,7 +854,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_addCallbackValueSourceVariableNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
                 requested_new_node_id.into_raw(),
                 // TODO: Verify that `UA_Server_addCallbackValueSourceVariableNode()` takes ownership.
@@ -915,7 +923,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_addMethodNodeEx(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
                 requested_new_node_id.into_raw(),
                 // TODO: Verify that `UA_Server_addMethodNodeEx()` takes ownership.
@@ -982,7 +990,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_addDataTypeNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // TODO: Verify that `UA_Server_addDataTypeNode()` takes ownership.
                 requested_new_node_id.into_raw(),
                 // TODO: Verify that `UA_Server_addDataTypeNode()` takes ownership.
@@ -1013,7 +1021,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_deleteNode(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // SAFETY: `UA_Server_deleteNode()` expects the node ID passed by value but does not
                 // take ownership.
                 ua::NodeId::to_raw_copy(node_id),
@@ -1093,7 +1101,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_addReference(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // SAFETY: The `NodeId` values are used to find internal pointers, are not modified
                 // and no references to these variables exist beyond this function call. Passing by
                 // value is safe here.
@@ -1122,7 +1130,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_deleteReference(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // SAFETY: The `NodeId` values are used to find internal pointers, are not modified
                 // and no references to these variables exist beyond this function call. Passing by
                 // value is safe here.
@@ -1152,7 +1160,7 @@ impl Server {
     //     let status_code = ua::StatusCode::new(unsafe {
     //         UA_Server_createEvent(
     //             // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-    //             self.server.as_ptr().cast_mut(),
+    //             self.as_mut_ptr(),
     //             // SAFETY: Passing as value is okay here, as event_type is only used for the scope
     //             // of the function and does not get modified.
     //             DataType::to_raw_copy(event_type),
@@ -1184,7 +1192,7 @@ impl Server {
     //     let status_code = ua::StatusCode::new(unsafe {
     //         UA_Server_triggerEvent(
     //             // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-    //             self.server.as_ptr().cast_mut(),
+    //             self.as_mut_ptr(),
     //             // SAFETY: Passing as value is okay here, as the variables are only used for the
     //             // scope of the function and do not get modified.
     //             DataType::to_raw_copy(event_node_id),
@@ -1232,7 +1240,7 @@ impl Server {
         let result = unsafe {
             ua::BrowseResult::from_raw(UA_Server_browse(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 max_references,
                 browse_description.as_ptr(),
             ))
@@ -1255,7 +1263,7 @@ impl Server {
         let result = unsafe {
             ua::BrowseResult::from_raw(UA_Server_browseNext(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // We do not release the continuation point but browse it instead.
                 false,
                 continuation_point.as_byte_string().as_ptr(),
@@ -1333,7 +1341,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_browseRecursive(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 browse_description.as_ptr(),
                 &raw mut result_size,
                 &raw mut result_ptr,
@@ -1409,7 +1417,7 @@ impl Server {
         let result = unsafe {
             ua::BrowsePathResult::from_raw(UA_Server_browseSimplifiedBrowsePath(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // SAFETY: The function expects a copy but does not take ownership. In particular,
                 // memory lives only on the stack and is not released when the function returns.
                 DataType::to_raw_copy(origin),
@@ -1479,7 +1487,7 @@ impl Server {
         let result = unsafe {
             ua::BrowsePathResult::from_raw(UA_Server_translateBrowsePathToNodeIds(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 browse_path.as_ptr(),
             ))
         };
@@ -1555,7 +1563,7 @@ impl Server {
 
         let result = unsafe {
             ua::DataValue::from_raw(UA_Server_read(
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 item.as_ptr(),
                 // TODO: Add method argument for this? We return timestamps in `DataValue` and they
                 // should not end up always being `None` by default.
@@ -1575,7 +1583,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_writeValue(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // SAFETY: The function expects copies but does not take ownership. It is a wrapper
                 // that internally delegates to `__UA_Server_write()` by pointer.
                 DataType::to_raw_copy(node_id),
@@ -1594,7 +1602,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_writeDataValue(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // SAFETY: The function expects copies but does not take ownership. It is a wrapper
                 // that internally delegates to `__UA_Server_write()` by pointer.
                 DataType::to_raw_copy(node_id),
@@ -1664,7 +1672,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_readObjectProperty(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // SAFETY: The function expects copies but does not take ownership. In particular,
                 // memory lives only on the stack and is not released when the function returns.
                 DataType::to_raw_copy(object_id),
@@ -1731,7 +1739,7 @@ impl Server {
         let status_code = ua::StatusCode::new(unsafe {
             UA_Server_writeObjectProperty(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
                 // SAFETY: The function expects copies but does not take ownership. In particular,
                 // memory lives only on the stack and is not released when the function returns.
                 DataType::to_raw_copy(object_id),
@@ -1748,7 +1756,7 @@ impl Server {
         unsafe {
             ua::ServerStatistics::from_raw(UA_Server_getStatistics(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-                self.server.as_ptr().cast_mut(),
+                self.as_mut_ptr(),
             ))
         }
     }
@@ -1778,7 +1786,7 @@ impl Server {
         //
         // In addition, by binding the lifetime of the resulting reference to the guard, we know for
         // sure that no runner function is being executed while this reference is alive.
-        let config = unsafe { &*UA_Server_getConfig(self.server.as_ptr().cast_mut()) };
+        let config = unsafe { &*UA_Server_getConfig(self.as_mut_ptr()) };
 
         ServerConfigGuard {
             config,
