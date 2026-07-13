@@ -7,6 +7,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-14
+
+### Changed
+
+- Breaking: Upgrade to open62541 version
+  [1.5.5](https://github.com/open62541/open62541/releases/tag/v1.5.5).
+- Breaking: `CustomCertificateVerification::verify_application_uri()` has been removed; only
+  `verify_certificate()` is supported via `ua::CertificateVerification::custom()`.
+- Breaking: `Server::create_event()` and `Server::trigger_event()` are currently removed pending a
+  1.5.5-compatible implementation.
+- Prevent use-after-free when a `Server` is used after its `ServerRunner` has been dropped (e.g.
+  `let (server, _) = builder.build();`). The node lifecycle callbacks borrowed by
+  `config.nodeLifecycle` are now owned by the shared server and outlive every server handle.
+
 ## [0.11.0] - 2026-07-13
 
 ### Added
@@ -18,12 +32,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Breaking: Upgrade to open62541 version
-  [1.5.5](https://github.com/open62541/open62541/releases/tag/v1.5.5).
-- Breaking: `CustomCertificateVerification::verify_application_uri()` has been removed; only
-  `verify_certificate()` is supported via `ua::CertificateVerification::custom()`.
-- Breaking: `Server::create_event()` and `Server::trigger_event()` are currently removed pending a
-  1.5.5-compatible implementation.
 - Breaking: Remove `Unknown` variant from `ua::DataTypeDefinition`.
 - Breaking: Return `Result` from `DataTypeExt::from_inner()`.
 - Breaking: Replace `ua::String::is_invalid()` with `ua::String::is_null()`.
@@ -42,9 +50,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Fix use-after-free when a `Server` is used after its `ServerRunner` has been dropped (e.g.
-  `let (server, _) = builder.build();`). The node lifecycle callbacks borrowed by
-  `config.nodeLifecycle` are now owned by the shared server and outlive every server handle.
 - Fix linker errors for build target `x86_64-linux-unknown-gnu` by updating `open62541-sys` to
   version 0.5.4 ([#288](https://github.com/HMIProject/open62541/issues/288)).
 - Improve handling of and recovery from connection loss in `AsyncClient`.
