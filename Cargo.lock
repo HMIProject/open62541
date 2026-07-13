@@ -586,7 +586,7 @@ checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
 name = "open62541"
-version = "0.10.1"
+version = "0.11.0"
 dependencies = [
  "anyhow",
  "derive_more",
