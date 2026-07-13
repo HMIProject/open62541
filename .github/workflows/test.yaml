@@ -158,8 +158,7 @@ jobs:
           --locked --all-features
           --doc
 
-      # FIXME: Re-enable this step after switching to open62541-sys v0.6.x.
-      #- name: Build package with all features enabled
-      #run: >-
-      #  cargo package
-      #  --locked --all-features
+      - name: Build package with all features enabled
+        run: >-
+          cargo package
+          --locked --all-features

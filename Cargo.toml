@@ -20,10 +20,7 @@ derive_more = { version = "2.0.1", features = ["debug"] }
 futures-channel = "0.3.30"
 futures-core = { version = "0.3.30", default-features = false }
 log = "0.4.20"
-# FIXME: Revert before merge.
-# FIXME: After depending on open62541-sys v0.6.x re-enable the final packaging step
-# in .github/workflows/test.yaml and .github/workflows/latest-dependencies.yaml.
-open62541-sys = { git = "https://github.com/HMIProject/open62541-sys.git", branch = "open62541-1.5" }
+open62541-sys = { version = "0.6.0" }
 parking_lot = "0.12.4"
 paste = "1.0.14"
 serde = { version = "1.0.194", optional = true }
