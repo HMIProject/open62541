@@ -417,6 +417,7 @@ impl Server {
     }
 
     unsafe fn as_mut_ptr(&self) -> *mut UA_Server {
+        // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
         unsafe { self.as_ptr().cast_mut() }
     }
 
