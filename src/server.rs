@@ -1181,7 +1181,9 @@ impl Server {
         });
         Error::verify_good(&status_code)?;
         let Some(event_id) = ua::EventId::new(out_event_id) else {
-            return Err(Error::internal("UA_Server_createEvent should return event ID"));
+            return Err(Error::internal(
+                "UA_Server_createEvent should return event ID",
+            ));
         };
         Ok(event_id)
     }
