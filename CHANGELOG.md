@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add back `Server::create_event()` with reordered and additional arguments. This new method
+  replaces both `Server::create_event()` and `Server::trigger_event()` that have been removed.
+
 ## [0.12.0] - 2026-07-14
 
 ### Changed

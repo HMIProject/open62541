@@ -19,10 +19,10 @@ use open62541_sys::{
     UA_Server, UA_Server_addCallbackValueSourceVariableNode, UA_Server_addDataTypeNode,
     UA_Server_addMethodNodeEx, UA_Server_addNamespace, UA_Server_addNode_begin,
     UA_Server_addNode_finish, UA_Server_addReference, UA_Server_browse, UA_Server_browseNext,
-    UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath, UA_Server_deleteNode,
-    UA_Server_deleteReference, UA_Server_getConfig, UA_Server_getNamespaceByIndex,
-    UA_Server_getNamespaceByName, UA_Server_getStatistics, UA_Server_read,
-    UA_Server_readObjectProperty, UA_Server_run_iterate, UA_Server_run_shutdown,
+    UA_Server_browseRecursive, UA_Server_browseSimplifiedBrowsePath, UA_Server_createEvent,
+    UA_Server_deleteNode, UA_Server_deleteReference, UA_Server_getConfig,
+    UA_Server_getNamespaceByIndex, UA_Server_getNamespaceByName, UA_Server_getStatistics,
+    UA_Server_read, UA_Server_readObjectProperty, UA_Server_run_iterate, UA_Server_run_shutdown,
     UA_Server_run_startup, UA_Server_runUntilInterrupt, UA_Server_translateBrowsePathToNodeIds,
     UA_Server_writeDataValue, UA_Server_writeObjectProperty, UA_Server_writeValue, UA_ServerConfig,
 };
@@ -1144,69 +1144,49 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    // FIXME: Fix implementation and add back.
-    //
-    // /// Creates an event.
-    // ///
-    // /// This returns the [`ua::NodeId`] of the created event.
-    // ///
-    // /// # Errors
-    // ///
-    // /// This fails when the event could not be created.
-    // pub fn create_event(&self, event_type: &ua::NodeId) -> Result<ua::NodeId> {
-    //     // This out variable must be initialized without memory allocation because the call below
-    //     // overwrites it in place, without releasing any held data first.
-    //     let mut out_node_id = ua::NodeId::init();
-    //     let status_code = ua::StatusCode::new(unsafe {
-    //         UA_Server_createEvent(
-    //             // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-    //             self.as_mut_ptr(),
-    //             // SAFETY: Passing as value is okay here, as event_type is only used for the scope
-    //             // of the function and does not get modified.
-    //             DataType::to_raw_copy(event_type),
-    //             out_node_id.as_mut_ptr(),
-    //         )
-    //     });
-    //     Error::verify_good(&status_code)?;
-    //     Ok(out_node_id)
-    // }
-
-    // FIXME: Fix implementation and add back.
-    //
-    // /// Triggers an event.
-    // ///
-    // /// This returns the [`ua::EventId`] of the new event.
-    // ///
-    // /// # Errors
-    // ///
-    // /// This fails when the event could not be triggered.
-    // pub fn trigger_event(
-    //     &self,
-    //     event_node_id: &ua::NodeId,
-    //     origin_id: &ua::NodeId,
-    //     delete_event_node: bool,
-    // ) -> Result<ua::EventId> {
-    //     // This out variable must be initialized without memory allocation because the call below
-    //     // overwrites it in place, without releasing any held data first.
-    //     let mut out_event_id = ua::ByteString::init();
-    //     let status_code = ua::StatusCode::new(unsafe {
-    //         UA_Server_triggerEvent(
-    //             // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
-    //             self.as_mut_ptr(),
-    //             // SAFETY: Passing as value is okay here, as the variables are only used for the
-    //             // scope of the function and do not get modified.
-    //             DataType::to_raw_copy(event_node_id),
-    //             DataType::to_raw_copy(origin_id),
-    //             out_event_id.as_mut_ptr(),
-    //             delete_event_node,
-    //         )
-    //     });
-    //     Error::verify_good(&status_code)?;
-    //     let Some(event_id) = ua::EventId::new(out_event_id) else {
-    //         return Err(Error::internal("trigger should return event ID"));
-    //     };
-    //     Ok(event_id)
-    // }
+    /// Creates an event.
+    ///
+    /// The order of the arguments matches that of `UA_Server_createEvent()`.
+    /// Additional event fields and event instance data are not set by this helper.
+    ///
+    /// This returns the [`ua::EventId`] of the new event.
+    ///
+    /// # Errors
+    ///
+    /// This fails when the event could not be created.
+    pub fn create_event(
+        &self,
+        origin_id: &ua::NodeId,
+        event_type: &ua::NodeId,
+        event_severity: u16,
+        event_message: &ua::LocalizedText,
+    ) -> Result<ua::EventId> {
+        // This out variable must be initialized without memory allocation because the call below
+        // overwrites it in place, without releasing any held data first.
+        let mut out_event_id = ua::ByteString::init();
+        let status_code = ua::StatusCode::new(unsafe {
+            UA_Server_createEvent(
+                // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
+                self.as_mut_ptr(),
+                // SAFETY: Passing as value is okay here, as the variables are only used for the
+                // scope of the function and do not get modified.
+                DataType::to_raw_copy(origin_id),
+                DataType::to_raw_copy(event_type),
+                event_severity,
+                DataType::to_raw_copy(event_message),
+                ptr::null(),
+                ptr::null(),
+                out_event_id.as_mut_ptr(),
+            )
+        });
+        Error::verify_good(&status_code)?;
+        let Some(event_id) = ua::EventId::new(out_event_id) else {
+            return Err(Error::internal(
+                "UA_Server_createEvent should return event ID",
+            ));
+        };
+        Ok(event_id)
+    }
 
     /// Browses specific node.
     ///
