@@ -1154,7 +1154,7 @@ impl Server {
     /// # Errors
     ///
     /// This fails when the event could not be created.
-    pub fn creates_event(
+    pub fn create_event(
         &self,
         origin_id: &ua::NodeId,
         event_type: &ua::NodeId,
