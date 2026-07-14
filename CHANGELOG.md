@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add back `Server::trigger_event()`.
+
 ## [0.12.0] - 2026-07-14
 
 ### Changed
