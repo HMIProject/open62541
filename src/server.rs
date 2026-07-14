@@ -1144,16 +1144,17 @@ impl Server {
         Error::verify_good(&status_code)
     }
 
-    /// Triggers an event.
+    /// Creates an event.
     ///
+    /// The order of the arguments matches that of `UA_Server_createEvent()`.
     /// Additional event fields and event instance data are not set by this helper.
     ///
     /// This returns the [`ua::EventId`] of the new event.
     ///
     /// # Errors
     ///
-    /// This fails when the event could not be triggered.
-    pub fn trigger_event(
+    /// This fails when the event could not be created.
+    pub fn creates_event(
         &self,
         origin_id: &ua::NodeId,
         event_type: &ua::NodeId,
