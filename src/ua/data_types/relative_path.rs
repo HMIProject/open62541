@@ -33,14 +33,18 @@ impl RelativePath {
         }
     }
 
+    /// Returns the number of elements in the relative path.
     pub fn len(&self) -> usize {
         self.0.elementsSize
     }
 
+    /// Returns true if the relative path has no elements.
     pub fn is_empty(&self) -> bool {
         self.0.elementsSize == 0
     }
 
+    /// Parses a relative path from a string, using the limited grammar implemented by open62541.
+    /// See [UA_RelativePath_parse](https://open62541.org/doc/master/util.html#example-relativepaths) docs.
     pub fn parse(path: &str) -> Result<Self, Error> {
         let path = ua::String::new(path)?;
         let mut slf = Self::init();
@@ -58,6 +62,8 @@ impl RelativePath {
         }
     }
 
+    /// Renders the relative path as a string.
+    /// See [UA_RelativePath_print](https://open62541.org/doc/master/util.html#example-relativepaths) docs.
     pub fn to_string(&self) -> Result<String, Error> {
         let mut str = ua::String::null();
 
