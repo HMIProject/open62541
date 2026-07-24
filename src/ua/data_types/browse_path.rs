@@ -14,4 +14,12 @@ impl BrowsePath {
         relative_path.clone_into_raw(&mut self.0.relativePath);
         self
     }
+
+    pub fn starting_node(&self) -> &ua::NodeId {
+        ua::NodeId::raw_ref(&self.0.startingNode)
+    }
+
+    pub fn relative_path(&self) -> &ua::RelativePath {
+        ua::RelativePath::raw_ref(&self.0.relativePath)
+    }
 }
