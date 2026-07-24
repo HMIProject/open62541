@@ -26,4 +26,20 @@ impl RelativePathElement {
         target_name.clone_into_raw(&mut self.0.targetName);
         self
     }
+
+    pub fn target_name(&self) -> &ua::QualifiedName {
+        ua::QualifiedName::raw_ref(&self.0.targetName)
+    }
+
+    pub const fn is_inverse(&self) -> bool {
+        self.0.isInverse
+    }
+
+    pub const fn include_subtypes(&self) -> bool {
+        self.0.includeSubtypes
+    }
+
+    pub fn reference_type_id(&self) -> &ua::NodeId {
+        ua::NodeId::raw_ref(&self.0.referenceTypeId)
+    }
 }
