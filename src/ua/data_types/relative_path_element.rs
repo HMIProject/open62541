@@ -27,18 +27,22 @@ impl RelativePathElement {
         self
     }
 
+    #[must_use]
     pub fn target_name(&self) -> &ua::QualifiedName {
         ua::QualifiedName::raw_ref(&self.0.targetName)
     }
 
+    #[must_use]
     pub const fn is_inverse(&self) -> bool {
         self.0.isInverse
     }
 
+    #[must_use]
     pub const fn include_subtypes(&self) -> bool {
         self.0.includeSubtypes
     }
 
+    #[must_use]
     pub fn reference_type_id(&self) -> &ua::NodeId {
         ua::NodeId::raw_ref(&self.0.referenceTypeId)
     }
