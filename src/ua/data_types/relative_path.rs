@@ -1,4 +1,5 @@
 use std::ptr;
+use std::str::FromStr;
 
 use open62541_sys::UA_RelativePath_parse;
 use open62541_sys::UA_RelativePath_print;
@@ -78,6 +79,14 @@ impl RelativePath {
         } else {
             Err(Error::new(status_code))
         }
+    }
+}
+
+impl FromStr for RelativePath {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
     }
 }
 
