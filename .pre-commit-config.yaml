@@ -24,15 +24,15 @@ repos:
       - id: mixed-line-ending
       - id: trailing-whitespace
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.22.1
+    rev: v0.23.3
     hooks:
       - id: markdownlint-cli2
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.2
+    rev: v2.4.3
     hooks:
       - id: codespell
   - repo: https://github.com/sirosen/check-jsonschema
-    rev: 0.37.2
+    rev: 0.38.2
     hooks:
       - id: check-github-actions
       - id: check-github-workflows
@@ -45,7 +45,7 @@ repos:
   #     - id: taplo-lint
   # Format code with oxfmt for supported file types.
   - repo: https://github.com/oxc-project/mirrors-oxfmt
-    rev: v0.45.0
+    rev: v0.71.0
     hooks:
       - id: oxfmt
         types_or:
