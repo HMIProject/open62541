@@ -175,3 +175,42 @@ impl fmt::Display for RelativePath {
         str.fmt(f)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::RelativePath;
+
+    #[test]
+    fn well_formed_path_parses_with_expected_output() {
+        let parsed = RelativePath::parse("/Objects/<!HasChild>Server").expect("well-formed `RelativePath` string should parse");
+
+        assert_eq!(parsed.len(), 2);
+
+        let elem = parsed.get(0).unwrap();
+        assert_eq!(elem.target_name().to_string(), "Objects");
+        assert!(!elem.is_inverse(), "`isInverse` wasn't specified for element 0");
+        assert!(!elem.include_subtypes(), "`includeSubtypes` wasn't specified for element 0");
+
+        let elem = parsed.get(1).unwrap();
+        assert_eq!(elem.target_name().to_string(), "Server");
+        assert!(elem.is_inverse(), "`isInverse` was specified for element 1");
+        assert_eq!(elem.reference_type_id().to_string(), "ns=0;i=34", "`HasChild` is a well-known `ReferenceType` with node ID of 'ns=0;i=34'");
+    }
+
+    #[test]
+    fn well_formed_path_survives_round_trip() {
+        const GOOD_PATH: &str = "/2:PLC1/<!Aggregates>2:GVL_MAIN";
+        let parsed = RelativePath::parse(GOOD_PATH).expect("well-formed `RelativePath` string should parse");
+
+        assert_eq!(parsed.len(), 2);
+        assert_eq!(parsed.to_string(), GOOD_PATH);
+    }
+
+    #[test]
+    fn malformed_path_fails_to_parse() {
+        const BAD_PATH: &str = "/!Bad!>/Path:1";
+        let result = RelativePath::parse(BAD_PATH);
+        assert!(result.is_err(), "parsing a bad path should fail");
+    }
+}
+
