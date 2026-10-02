@@ -1,4 +1,11 @@
-use std::{fmt, ops::{Index, IndexMut}, ptr, range::{Range, RangeInclusive}, slice::SliceIndex, str::FromStr};
+use std::{
+    fmt,
+    ops::{Index, IndexMut},
+    ptr,
+    range::{Range, RangeInclusive},
+    slice::SliceIndex,
+    str::FromStr,
+};
 
 use open62541_sys::{UA_RelativePath_parse, UA_RelativePath_print};
 
@@ -40,20 +47,21 @@ impl RelativePath {
     #[must_use]
     pub fn get<I>(&self, index: I) -> Option<&<I as SliceIndex<[ua::RelativePathElement]>>::Output>
     where
-        I: SliceIndex<[ua::RelativePathElement]>
+        I: SliceIndex<[ua::RelativePathElement]>,
     {
-
-        self.elements()
-            .and_then(|elements| elements.get(index))
+        self.elements().and_then(|elements| elements.get(index))
     }
 
     /// Attempts to access the element at `index` mutably.
     ///
     /// Returns [`Some`] if the array is valid and `index` < [`RelativePath::len()`], otherwise [`None`]
     #[must_use]
-    pub fn get_mut<I>(&mut self, index: I) -> Option<&mut <I as SliceIndex<[ua::RelativePathElement]>>::Output>
+    pub fn get_mut<I>(
+        &mut self,
+        index: I,
+    ) -> Option<&mut <I as SliceIndex<[ua::RelativePathElement]>>::Output>
     where
-        I: SliceIndex<[ua::RelativePathElement]>
+        I: SliceIndex<[ua::RelativePathElement]>,
     {
         self.elements_mut()
             .and_then(|elements| elements.get_mut(index))
@@ -93,12 +101,12 @@ impl RelativePath {
         }
     }
 
-    #[must_use]
+    
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &ua::RelativePathElement> {
         self.elements().unwrap_or(&[]).iter()
     }
 
-    #[must_use]
+    
     pub fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut ua::RelativePathElement> {
         self.elements_mut().unwrap_or(&mut []).iter_mut()
     }
@@ -178,12 +186,13 @@ impl fmt::Display for RelativePath {
 
 #[cfg(test)]
 mod tests {
-    use crate::{DataType as _, ua};
     use super::RelativePath;
+    use crate::{DataType as _, ua};
 
     #[test]
     fn well_formed_path_parses_with_expected_output() {
-        let parsed = RelativePath::parse("/Objects<#!HasChild>Server").expect("well-formed `RelativePath` string should parse");
+        let parsed = RelativePath::parse("/Objects<#!HasChild>Server")
+            .expect("well-formed `RelativePath` string should parse");
 
         assert_eq!(parsed.len(), 2);
 
@@ -209,7 +218,8 @@ mod tests {
     #[test]
     fn well_formed_path_survives_round_trip() {
         const GOOD_PATH: &str = "<!Aggregates>2:PLC1/2:GVL_MAIN";
-        let parsed = RelativePath::parse(GOOD_PATH).expect("well-formed `RelativePath` string should parse");
+        let parsed =
+            RelativePath::parse(GOOD_PATH).expect("well-formed `RelativePath` string should parse");
 
         assert_eq!(parsed.len(), 2);
         assert_eq!(parsed.to_string(), GOOD_PATH);
@@ -222,4 +232,3 @@ mod tests {
         assert!(result.is_err(), "parsing a bad path should fail");
     }
 }
-
