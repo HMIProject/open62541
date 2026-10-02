@@ -45,7 +45,7 @@ impl RelativePath {
     ///
     /// Returns [`Some`] if the array is valid and `index` < [`RelativePath::len()`], otherwise [`None`]
     #[must_use]
-    pub fn get<I>(&self, index: I) -> Option<&<I as SliceIndex<[ua::RelativePathElement]>>::Output>
+    pub fn get<I>(&self, index: I) -> Option<&I::Output>
     where
         I: SliceIndex<[ua::RelativePathElement]>,
     {
@@ -56,10 +56,7 @@ impl RelativePath {
     ///
     /// Returns [`Some`] if the array is valid and `index` < [`RelativePath::len()`], otherwise [`None`]
     #[must_use]
-    pub fn get_mut<I>(
-        &mut self,
-        index: I,
-    ) -> Option<&mut <I as SliceIndex<[ua::RelativePathElement]>>::Output>
+    pub fn get_mut<I>(&mut self, index: I) -> Option<&mut I::Output>
     where
         I: SliceIndex<[ua::RelativePathElement]>,
     {
@@ -112,44 +109,16 @@ impl RelativePath {
     }
 }
 
-impl Index<usize> for RelativePath {
-    type Output = ua::RelativePathElement;
+impl<I: SliceIndex<[ua::RelativePathElement]>> Index<I> for RelativePath {
+    type Output = I::Output;
 
-    fn index(&self, index: usize) -> &Self::Output {
+    fn index(&self, index: I) -> &Self::Output {
         &self.elements().unwrap()[index]
     }
 }
 
-impl IndexMut<usize> for RelativePath {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.elements_mut().unwrap()[index]
-    }
-}
-
-impl Index<Range<usize>> for RelativePath {
-    type Output = [ua::RelativePathElement];
-
-    fn index(&self, index: Range<usize>) -> &Self::Output {
-        &self.elements().unwrap()[index]
-    }
-}
-
-impl IndexMut<Range<usize>> for RelativePath {
-    fn index_mut(&mut self, index: Range<usize>) -> &mut Self::Output {
-        &mut self.elements_mut().unwrap()[index]
-    }
-}
-
-impl Index<RangeInclusive<usize>> for RelativePath {
-    type Output = [ua::RelativePathElement];
-
-    fn index(&self, index: RangeInclusive<usize>) -> &Self::Output {
-        &self.elements().unwrap()[index]
-    }
-}
-
-impl IndexMut<RangeInclusive<usize>> for RelativePath {
-    fn index_mut(&mut self, index: RangeInclusive<usize>) -> &mut Self::Output {
+impl<I: SliceIndex<[ua::RelativePathElement]>> IndexMut<I> for RelativePath {
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
         &mut self.elements_mut().unwrap()[index]
     }
 }
