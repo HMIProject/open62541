@@ -178,28 +178,37 @@ impl fmt::Display for RelativePath {
 
 #[cfg(test)]
 mod tests {
+    use crate::{DataType as _, ua};
     use super::RelativePath;
 
     #[test]
     fn well_formed_path_parses_with_expected_output() {
-        let parsed = RelativePath::parse("/Objects/<!HasChild>Server").expect("well-formed `RelativePath` string should parse");
+        let parsed = RelativePath::parse("/Objects<#!HasChild>Server").expect("well-formed `RelativePath` string should parse");
 
         assert_eq!(parsed.len(), 2);
 
         let elem = parsed.get(0).unwrap();
-        assert_eq!(elem.target_name().to_string(), "Objects");
-        assert!(!elem.is_inverse(), "`isInverse` wasn't specified for element 0");
-        assert!(!elem.include_subtypes(), "`includeSubtypes` wasn't specified for element 0");
+        let expected = ua::RelativePathElement::init()
+            .with_include_subtypes(true)
+            .with_is_inverse(false)
+            .with_target_name(&ua::QualifiedName::new(0, "Objects"))
+            .with_reference_type_id(&ua::NodeId::numeric(0, 33));
+
+        assert_eq!(elem, &expected);
 
         let elem = parsed.get(1).unwrap();
-        assert_eq!(elem.target_name().to_string(), "Server");
-        assert!(elem.is_inverse(), "`isInverse` was specified for element 1");
-        assert_eq!(elem.reference_type_id().to_string(), "ns=0;i=34", "`HasChild` is a well-known `ReferenceType` with node ID of 'ns=0;i=34'");
+        let expected = ua::RelativePathElement::init()
+            .with_include_subtypes(false)
+            .with_is_inverse(true)
+            .with_target_name(&ua::QualifiedName::new(0, "Server"))
+            .with_reference_type_id(&ua::NodeId::numeric(0, 34));
+
+        assert_eq!(elem, &expected);
     }
 
     #[test]
     fn well_formed_path_survives_round_trip() {
-        const GOOD_PATH: &str = "/2:PLC1/<!Aggregates>2:GVL_MAIN";
+        const GOOD_PATH: &str = "<!Aggregates>2:PLC1/2:GVL_MAIN";
         let parsed = RelativePath::parse(GOOD_PATH).expect("well-formed `RelativePath` string should parse");
 
         assert_eq!(parsed.len(), 2);
