@@ -1,9 +1,6 @@
-use std::fmt;
-use std::ptr;
-use std::str::FromStr;
+use std::{fmt, ptr, str::FromStr};
 
-use open62541_sys::UA_RelativePath_parse;
-use open62541_sys::UA_RelativePath_print;
+use open62541_sys::{UA_RelativePath_parse, UA_RelativePath_print};
 
 use crate::{DataType as _, Error, ua};
 
@@ -51,14 +48,15 @@ impl RelativePath {
     /// See [UA_RelativePath_parse](https://open62541.org/doc/master/util.html#example-relativepaths) docs.
     pub fn parse(path: &str) -> Result<Self, Error> {
         let path = ua::String::new(path)?;
-        let mut slf = Self::init();
+        let mut parsed_path = Self::init();
 
-        let result = unsafe { UA_RelativePath_parse(slf.as_mut_ptr(), ptr::read(path.as_ptr())) };
+        let result =
+            unsafe { UA_RelativePath_parse(parsed_path.as_mut_ptr(), ptr::read(path.as_ptr())) };
 
         let status_code = ua::StatusCode::new(result);
 
         if status_code.is_good() {
-            Ok(slf)
+            Ok(parsed_path)
         } else {
             Err(Error::new(status_code))
         }
@@ -91,6 +89,6 @@ impl fmt::Display for RelativePath {
             "failed to print relative path: {status_code}"
         );
 
-        write!(f, "{str}")
+        str.fmt(f)
     }
 }
