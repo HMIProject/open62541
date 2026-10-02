@@ -2,7 +2,6 @@ use std::{
     fmt,
     ops::{Index, IndexMut},
     ptr,
-    range::{Range, RangeInclusive},
     slice::SliceIndex,
     str::FromStr,
 };
@@ -98,12 +97,10 @@ impl RelativePath {
         }
     }
 
-    
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &ua::RelativePathElement> {
         self.elements().unwrap_or(&[]).iter()
     }
 
-    
     pub fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut ua::RelativePathElement> {
         self.elements_mut().unwrap_or(&mut []).iter_mut()
     }
