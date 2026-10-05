@@ -15,23 +15,12 @@ async fn main() -> anyhow::Result<()> {
         "/Root/0:Objects/2:DeviceSet/1:RFIDScanner/4:ScanActive",
     ];
 
-    // translate single browse path
-    let path_with_expected_nodes = paths.iter().zip(vec![
-        ua::NodeId::numeric(1, 1068),
-        ua::NodeId::string(1, "Pressure"),
-        ua::NodeId::string(1, "RFIDScanner-ScanActive"),
-    ]);
-
-    for (path, expected_node_id) in path_with_expected_nodes {
-        let result_node_id = translate_browse_path(&client, path).await?;
-        if result_node_id.node_id() != &expected_node_id {
-            Err(anyhow!(
-                "Expected browse path {path:?} to resolve to node_id {expected_node_id:?}, got {result_node_id:?}"
-            ))?;
-        }
+    // Translate single browse path.
+    for path in &paths {
+        translate_browse_path(&client, path).await?;
     }
 
-    // translate many browse paths
+    // Translate many browse paths.
     translate_many_browse_path(&client, paths).await?;
 
     Ok(())
@@ -53,10 +42,7 @@ async fn translate_many_browse_path(client: &AsyncClient, paths: Vec<&str>) -> a
     Ok(())
 }
 
-async fn translate_browse_path(
-    client: &AsyncClient,
-    path: &str,
-) -> anyhow::Result<ua::ExpandedNodeId> {
+async fn translate_browse_path(client: &AsyncClient, path: &str) -> anyhow::Result<()> {
     let browse_path = create_browse_path(path)?;
     let browse_targets = client.translate_browse_path(&browse_path).await?;
 
@@ -73,7 +59,7 @@ async fn translate_browse_path(
     let node_id = target.target_id();
     println!("translated browse path: {path:?} to node_id: {node_id:?}");
 
-    Ok(node_id.clone())
+    Ok(())
 }
 
 fn create_browse_path(path: &str) -> anyhow::Result<BrowsePath> {

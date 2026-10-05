@@ -11,6 +11,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Add back `Server::create_event()` with reordered and additional arguments. This new method
   replaces both `Server::create_event()` and `Server::trigger_event()` that have been removed.
+- Add `AsyncClient::translate_browse_path()` and `AsyncClient::translate_many_browse_paths()` for
+  the `TranslateBrowsePathsToNodeIds` service.
 
 ## [0.12.0] - 2026-07-14
 

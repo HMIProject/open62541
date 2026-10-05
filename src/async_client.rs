@@ -467,32 +467,25 @@ impl AsyncClient {
     /// to translate the browse path into corresponding `BrowsePathTarget` objects.
     ///
     /// # Errors
-    /// This fails only when the entire request fails. When a path does not exist or cannot be
-    /// translated, an inner `Err` is returned.
+    ///
+    /// This fails when the entire request fails or when the path does not exist or cannot be
+    /// translated.
     pub async fn translate_browse_path(
         &self,
         browse_path: &ua::BrowsePath,
     ) -> Result<Vec<ua::BrowsePathTarget>> {
-        let request = ua::TranslateBrowsePathsToNodeIdsRequest::init()
-            .with_browse_paths(slice::from_ref(browse_path));
-
-        let response = self.service_request(request).await?;
-
-        let Some(results) = response.results() else {
-            return Err(Error::internal(
-                "translate_browse_path should return results",
-            ));
-        };
-
-        let Some(result) = results.as_slice().first() else {
+        let Some(result) = self
+            .translate_many_browse_paths(slice::from_ref(browse_path))
+            .await?
+            .into_iter()
+            .next()
+        else {
             return Err(Error::internal(
                 "translate_browse_path should return a result",
             ));
         };
 
-        let targets = to_browse_path_result(result)?;
-
-        Ok(targets)
+        result
     }
 
     /// Translates multiple OPC UA browse paths into corresponding node IDs, if applicable.
@@ -526,9 +519,10 @@ impl AsyncClient {
             return Err(Error::internal("unexpected number of browse path results"));
         }
 
-        let targets: Vec<_> = results.iter().map(to_browse_path_result).collect();
-
-        Ok(targets)
+        Ok(results
+            .iter()
+            .map(to_browse_path_result)
+            .collect::<Vec<_>>())
     }
 
     /// Creates new [subscription](AsyncSubscription).
