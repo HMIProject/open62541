@@ -553,9 +553,6 @@ impl AsyncClient {
 
         log::trace!("Assigned ID {request_id} to {}", R::type_name());
 
-        // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
-        // is only dropped after placing a value into the channel and `rx.await` always finds this value
-        // there.
         rx.await
             .unwrap_or(Err(Error::internal("callback should send result")))
     }
