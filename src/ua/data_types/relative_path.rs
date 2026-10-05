@@ -1,10 +1,4 @@
-use std::{
-    fmt,
-    ops::{Index, IndexMut},
-    ptr,
-    slice::SliceIndex,
-    str::FromStr,
-};
+use std::{fmt, ptr, slice::SliceIndex, str::FromStr};
 
 use open62541_sys::{UA_RelativePath_parse, UA_RelativePath_print};
 
@@ -103,20 +97,6 @@ impl RelativePath {
 
     pub fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut ua::RelativePathElement> {
         self.elements_mut().unwrap_or(&mut []).iter_mut()
-    }
-}
-
-impl<I: SliceIndex<[ua::RelativePathElement]>> Index<I> for RelativePath {
-    type Output = I::Output;
-
-    fn index(&self, index: I) -> &Self::Output {
-        &self.elements().unwrap()[index]
-    }
-}
-
-impl<I: SliceIndex<[ua::RelativePathElement]>> IndexMut<I> for RelativePath {
-    fn index_mut(&mut self, index: I) -> &mut Self::Output {
-        &mut self.elements_mut().unwrap()[index]
     }
 }
 
