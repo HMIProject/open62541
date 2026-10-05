@@ -26,10 +26,7 @@ async fn main() -> anyhow::Result<()> {
         let result_node_id = translate_browse_path(&client, path).await?;
         if result_node_id.node_id() != &expected_node_id {
             Err(anyhow!(
-                "Expected browse path {:?} to resolve to node_id {:?}, got {:?}",
-                path,
-                expected_node_id,
-                result_node_id
+                "Expected browse path {path:?} to resolve to node_id {expected_node_id:?}, got {result_node_id:?}"
             ))?;
         }
     }

@@ -971,7 +971,7 @@ fn to_browse_path_result(result: &ua::BrowsePathResult) -> Result<Vec<ua::Browse
     let targets = if let Some(targets) = result.targets() {
         targets.into_vec()
     } else {
-        log::debug!("Translate browse paths returned unset targets, assuming none exist",);
+        log::debug!("Translate browse paths returned unset targets, assuming none exist");
         Vec::new()
     };
 
