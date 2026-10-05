@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use anyhow::Context as _;
 use open62541::{AsyncClient, DataType, ua};
-use rand::Rng as _;
+use rand::RngExt as _;
 
 const ATTRIBUTE_IDS: [ua::AttributeId; 11] = [
     ua::AttributeId::NODEID,
