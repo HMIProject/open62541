@@ -331,12 +331,10 @@ impl<T: DataType> Array<T> {
         }
     }
 
-    #[must_use]
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &T> {
         self.as_slice().iter()
     }
 
-    #[must_use]
     pub fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut T> {
         self.as_slice_mut().iter_mut()
     }
@@ -348,7 +346,6 @@ impl<T: DataType> Array<T> {
     ///
     /// Note: Other than [`Vec::drain()`], this method does _not_ shrink the array.
     // TODO: How to implement `IntoIterator` on `self` instead of `&mut self`?
-    #[must_use]
     pub(crate) fn drain_all(&mut self) -> impl ExactSizeIterator<Item = T> + '_ {
         // This looks more expensive than it is: `DataType::init()` uses `UA_init()` which
         // zero-initializes the memory region left in place of the moved-out element. This

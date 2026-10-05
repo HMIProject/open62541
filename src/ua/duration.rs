@@ -72,7 +72,11 @@ impl DataTypeExt for Duration {
 }
 
 #[cfg(test)]
-#[expect(clippy::float_cmp, reason = "exactly representable values for test")]
+#[expect(
+    clippy::allow_attributes,
+    reason = "false positive, obsolete with Rust 1.99"
+)]
+#[allow(clippy::float_cmp, reason = "exactly representable values for test")]
 mod tests {
     use super::*;
 
