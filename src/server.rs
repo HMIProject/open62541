@@ -1407,7 +1407,7 @@ impl Server {
         };
         Error::verify_good(&result.status_code())?;
         let targets = result
-            .targets()
+            .into_targets()
             .ok_or(Error::internal("browse should return targets"))?;
         Ok(targets)
     }
@@ -1473,7 +1473,7 @@ impl Server {
         };
         Error::verify_good(&result.status_code())?;
         let targets = result
-            .targets()
+            .into_targets()
             .ok_or(Error::internal("translation should return targets"))?;
         Ok(targets)
     }
