@@ -1,5 +1,3 @@
-use open62541_sys::UA_BrowsePathResult;
-
 use crate::ua;
 
 crate::data_type!(BrowsePathResult);
