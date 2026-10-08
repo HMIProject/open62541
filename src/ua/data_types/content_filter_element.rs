@@ -23,6 +23,7 @@ impl ContentFilterElement {
             .map(FilterOperand::to_extension_object)
             .collect_ua_array()
             .move_into_raw(&mut self.0.filterOperandsSize, &mut self.0.filterOperands);
+
         self
     }
 }
