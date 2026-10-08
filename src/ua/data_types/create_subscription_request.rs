@@ -2,7 +2,18 @@ use std::{num::NonZeroU32, time::Duration};
 
 use open62541_sys::UA_CreateSubscriptionRequest_default;
 
+use crate::ua;
+
 crate::data_type!(CreateSubscriptionRequest);
+crate::member_accessors!(CreateSubscriptionRequest {
+    requestHeader: &ua::RequestHeader,
+    requestedPublishingInterval: f64,
+    requestedLifetimeCount: u32,
+    requestedMaxKeepAliveCount: u32,
+    maxNotificationsPerPublish: u32,
+    publishingEnabled: bool,
+    priority: u8
+});
 
 impl CreateSubscriptionRequest {
     /// Sets requested publishing interval.

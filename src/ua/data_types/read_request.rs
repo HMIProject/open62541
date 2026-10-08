@@ -1,6 +1,14 @@
+use open62541_sys::UA_TimestampsToReturn;
+
 use crate::{DataType as _, ServiceRequest, ua};
 
 crate::data_type!(ReadRequest);
+crate::member_accessors!(ReadRequest {
+    #[enum(UA_TimestampsToReturn)]
+    timestampsToReturn: ua::TimestampsToReturn,
+    nodesToRead: [ua::ReadValueId],
+    requestHeader: &mut ua::RequestHeader
+});
 
 impl ReadRequest {
     #[must_use]

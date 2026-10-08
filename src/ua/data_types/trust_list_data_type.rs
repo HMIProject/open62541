@@ -1,6 +1,13 @@
 use crate::ua;
 
 crate::data_type!(TrustListDataType);
+crate::member_accessors!(TrustListDataType {
+    trustedCertificates: [ua::String],
+    trustedCrls: [ua::String],
+    issuerCertificates: [ua::String],
+    issuerCrls: [ua::String],
+    specifiedLists: u32
+});
 
 impl TrustListDataType {
     #[must_use]

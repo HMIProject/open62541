@@ -24,8 +24,9 @@ mod inner {
 }
 
 /// Wrapper for browse result mask from [`open62541_sys`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct BrowseResultMask(u32);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+pub struct BrowseResultMask(pub(crate) u32);
 
 crate::bitmask_ops!(BrowseResultMask);
 
@@ -45,7 +46,7 @@ impl BrowseResultMask {
         Self(mask)
     }
 
-    pub(crate) const fn as_u32(&self) -> u32 {
+    pub(crate) const fn as_u32(self) -> u32 {
         self.0
     }
 }

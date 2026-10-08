@@ -1,6 +1,12 @@
 use crate::{DataType as _, ua};
 
 crate::data_type!(RelativePathElement);
+crate::member_accessors!(RelativePathElement {
+    referenceTypeId: &ua::NodeId,
+    isInverse: bool,
+    includeSubtypes: bool,
+    targetName: &ua::QualifiedName
+});
 
 impl RelativePathElement {
     #[must_use]
@@ -25,25 +31,5 @@ impl RelativePathElement {
     pub fn with_target_name(mut self, target_name: &ua::QualifiedName) -> Self {
         target_name.clone_into_raw(&mut self.0.targetName);
         self
-    }
-
-    #[must_use]
-    pub fn target_name(&self) -> &ua::QualifiedName {
-        ua::QualifiedName::raw_ref(&self.0.targetName)
-    }
-
-    #[must_use]
-    pub const fn is_inverse(&self) -> bool {
-        self.0.isInverse
-    }
-
-    #[must_use]
-    pub const fn include_subtypes(&self) -> bool {
-        self.0.includeSubtypes
-    }
-
-    #[must_use]
-    pub fn reference_type_id(&self) -> &ua::NodeId {
-        ua::NodeId::raw_ref(&self.0.referenceTypeId)
     }
 }

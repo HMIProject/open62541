@@ -5,6 +5,10 @@ use open62541_sys::{UA_QUALIFIEDNAME_ALLOC, UA_QualifiedName_hash};
 use crate::{DataType as _, ua};
 
 crate::data_type!(QualifiedName);
+crate::member_accessors!(QualifiedName {
+    namespaceIndex: u16,
+    name: &ua::String
+});
 
 impl QualifiedName {
     /// Creates qualified name.
@@ -32,18 +36,6 @@ impl QualifiedName {
     #[must_use]
     pub fn ns0(name: &str) -> Self {
         Self::new(0, name)
-    }
-
-    /// Gets namespace index.
-    #[must_use]
-    pub const fn namespace_index(&self) -> u16 {
-        self.0.namespaceIndex
-    }
-
-    /// Gets name.
-    #[must_use]
-    pub fn name(&self) -> &ua::String {
-        ua::String::raw_ref(&self.0.name)
     }
 
     /// Gets name in namespace 0.

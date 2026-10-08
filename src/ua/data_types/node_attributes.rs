@@ -6,6 +6,15 @@ use open62541_sys::{UA_DataType, UA_NodeAttributes};
 use crate::{DataType as _, ua};
 
 crate::data_type!(NodeAttributes);
+crate::member_accessors!(NodeAttributes {
+    description: &ua::LocalizedText,
+    displayName: &ua::LocalizedText,
+    #[from_inner]
+    writeMask: ua::AttributeWriteMask,
+    #[from_inner]
+    userWriteMask: ua::AttributeWriteMask,
+    specifiedAttributes: u32
+});
 
 macro_rules! derived {
     ($( $name:ident ),* $(,)?) => {

@@ -3,6 +3,12 @@ use open62541_sys::UA_EnumDescription;
 use crate::{DataType as _, ua};
 
 crate::data_type!(EnumDescription);
+crate::member_accessors!(EnumDescription {
+    dataTypeId: &ua::NodeId,
+    name: &ua::QualifiedName,
+    enumDefinition: &ua::EnumDefinition,
+    builtInType: u8
+});
 
 impl EnumDescription {
     // TODO: Find abstraction for `built_in_type`.
@@ -19,27 +25,5 @@ impl EnumDescription {
             enumDefinition: definition.into_raw(),
             builtInType: built_in_type,
         })
-    }
-
-    #[must_use]
-    pub fn data_type_id(&self) -> &ua::NodeId {
-        ua::NodeId::raw_ref(&self.0.dataTypeId)
-    }
-
-    #[must_use]
-    pub fn name(&self) -> &ua::QualifiedName {
-        ua::QualifiedName::raw_ref(&self.0.name)
-    }
-
-    #[must_use]
-    pub fn enum_definition(&self) -> &ua::EnumDefinition {
-        ua::EnumDefinition::raw_ref(&self.0.enumDefinition)
-    }
-
-    // TODO: Encapsulate in better return type.
-    #[expect(dead_code, reason = "unused for now")]
-    #[must_use]
-    pub(crate) const fn built_in_type(&self) -> u8 {
-        self.0.builtInType
     }
 }

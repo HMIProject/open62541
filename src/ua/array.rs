@@ -159,7 +159,6 @@ impl<T: DataType> Array<T> {
     ///
     /// Ownership is transferred. There must not be any aliased references to the array elements, as
     /// they will be owned and freed when the returned value is dropped.
-    #[must_use]
     pub(crate) unsafe fn move_from_raw_parts(
         size: &mut usize,
         ptr: &mut *mut T::Inner,

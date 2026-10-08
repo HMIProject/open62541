@@ -1,6 +1,10 @@
 use crate::{DataType as _, ServiceRequest, ua};
 
 crate::data_type!(CallRequest);
+crate::member_accessors!(CallRequest {
+    methodsToCall: [ua::CallMethodRequest],
+    requestHeader: &mut ua::RequestHeader
+});
 
 impl CallRequest {
     #[must_use]

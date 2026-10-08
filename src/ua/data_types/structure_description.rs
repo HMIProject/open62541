@@ -3,6 +3,11 @@ use open62541_sys::UA_StructureDescription;
 use crate::{DataType as _, ua};
 
 crate::data_type!(StructureDescription);
+crate::member_accessors!(StructureDescription {
+    dataTypeId: &ua::NodeId,
+    name: &ua::QualifiedName,
+    structureDefinition: &ua::StructureDefinition
+});
 
 impl StructureDescription {
     pub(crate) fn new(
@@ -15,20 +20,5 @@ impl StructureDescription {
             name: name.into_raw(),
             structureDefinition: definition.into_raw(),
         })
-    }
-
-    #[must_use]
-    pub fn data_type_id(&self) -> &ua::NodeId {
-        ua::NodeId::raw_ref(&self.0.dataTypeId)
-    }
-
-    #[must_use]
-    pub fn name(&self) -> &ua::QualifiedName {
-        ua::QualifiedName::raw_ref(&self.0.name)
-    }
-
-    #[must_use]
-    pub fn structure_definition(&self) -> &ua::StructureDefinition {
-        ua::StructureDefinition::raw_ref(&self.0.structureDefinition)
     }
 }

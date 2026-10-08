@@ -1394,7 +1394,7 @@ impl Server {
         // until the end of this function.
         let (browse_path_size, browse_path_ptr) =
             unsafe { ua::Array::raw_parts_from_slice(browse_path) };
-        let result = unsafe {
+        let mut result = unsafe {
             ua::BrowsePathResult::from_raw(UA_Server_browseSimplifiedBrowsePath(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.as_mut_ptr(),
@@ -1406,10 +1406,10 @@ impl Server {
             ))
         };
         Error::verify_good(&result.status_code())?;
-        let targets = result
-            .into_targets()
-            .ok_or(Error::internal("browse should return targets"))?;
-        Ok(targets)
+
+        result
+            .take_targets()
+            .ok_or(Error::internal("browse should return targets"))
     }
 
     /// Translates browse path to node IDs.
@@ -1464,7 +1464,7 @@ impl Server {
         &self,
         browse_path: &ua::BrowsePath,
     ) -> Result<ua::Array<ua::BrowsePathTarget>> {
-        let result = unsafe {
+        let mut result = unsafe {
             ua::BrowsePathResult::from_raw(UA_Server_translateBrowsePathToNodeIds(
                 // SAFETY: Cast to `mut` pointer, function is marked `UA_THREADSAFE`.
                 self.as_mut_ptr(),
@@ -1472,10 +1472,10 @@ impl Server {
             ))
         };
         Error::verify_good(&result.status_code())?;
-        let targets = result
-            .into_targets()
-            .ok_or(Error::internal("translation should return targets"))?;
-        Ok(targets)
+
+        result
+            .take_targets()
+            .ok_or(Error::internal("translation should return targets"))
     }
 
     /// Reads node attribute.
@@ -1961,7 +1961,7 @@ fn to_browse_result(result: &ua::BrowseResult) -> BrowseResult {
         return Err(Error::internal("browse should return references"));
     };
 
-    Ok((references.into_vec(), result.continuation_point()))
+    Ok((references.to_vec(), result.continuation_point()))
 }
 
 /// Sets `config.nodeLifecycle` to the given value.

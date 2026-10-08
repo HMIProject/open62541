@@ -3,6 +3,17 @@ use open62541_sys::UA_NS0ID_HIERARCHICALREFERENCES;
 use crate::{DataType, ua};
 
 crate::data_type!(BrowseDescription);
+crate::member_accessors!(BrowseDescription {
+    nodeId: &ua::NodeId,
+    referenceTypeId: &ua::NodeId,
+    includeSubtypes: bool,
+    #[from_inner]
+    nodeClassMask: ua::NodeClassMask,
+    #[from_inner]
+    resultMask: ua::BrowseResultMask,
+    #[skip(uses = BrowseDescription::browse_direction)]
+    browseDirection: ua::BrowseDirection
+});
 
 impl BrowseDescription {
     #[must_use]
@@ -42,8 +53,9 @@ impl BrowseDescription {
     }
 
     #[must_use]
-    pub(crate) fn node_id(&self) -> &ua::NodeId {
-        ua::NodeId::raw_ref(&self.0.nodeId)
+    pub const fn browse_direction(&self) -> ua::BrowseDirection {
+        // this is cursed
+        ua::BrowseDirection(open62541_sys::UA_BrowseDirection(self.0.browseDirection.0))
     }
 }
 

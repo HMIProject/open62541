@@ -1,6 +1,11 @@
 use crate::{DataType as _, ua};
 
 crate::data_type!(IssuedIdentityToken);
+crate::member_accessors!(IssuedIdentityToken {
+    policyId: &ua::String,
+    tokenData: &ua::ByteString,
+    encryptionAlgorithm: &ua::String
+});
 
 impl IssuedIdentityToken {
     /// Sets policy ID.

@@ -251,9 +251,9 @@ impl AsyncClient {
             .with_timestamps_to_return(&ua::TimestampsToReturn::BOTH)
             .with_nodes_to_read(&nodes_to_read);
 
-        let response = self.service_request(request).await?;
+        let mut response = self.service_request(request).await?;
 
-        let Some(mut results) = response.results() else {
+        let Some(mut results) = response.take_results() else {
             return Err(Error::internal("read should return results"));
         };
 
@@ -290,7 +290,7 @@ impl AsyncClient {
             return Err(Error::internal("write should return results"));
         };
 
-        let Some(result) = results.as_slice().first() else {
+        let Some(result) = results.first() else {
             return Err(Error::internal("write should return a result"));
         };
 
@@ -323,14 +323,14 @@ impl AsyncClient {
             return Err(Error::internal("call should return results"));
         };
 
-        let Some(result) = results.as_slice().first() else {
+        let Some(result) = results.first() else {
             return Err(Error::internal("call should return a result"));
         };
 
         Error::verify_good(&result.status_code())?;
 
         let output_arguments = if let Some(output_arguments) = result.output_arguments() {
-            output_arguments.into_vec()
+            output_arguments.to_vec()
         } else {
             log::debug!("Calling {method_id} returned unset output arguments, assuming none exist");
             Vec::new()
@@ -873,7 +873,7 @@ fn to_browse_result(result: &ua::BrowseResult, node_id: Option<&ua::NodeId>) -> 
     Error::verify_good(&result.status_code())?;
 
     let references = if let Some(references) = result.references() {
-        references.into_vec()
+        references.to_vec()
     } else {
         // When no references exist, some OPC UA servers do not return an empty references array but
         // an invalid (unset) one instead, e.g. Siemens SIMOTION. We treat it as an empty array, and

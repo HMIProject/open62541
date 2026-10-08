@@ -8,6 +8,11 @@ use open62541_sys::{
 use crate::{DataType, Error, ua};
 
 crate::data_type!(NodeId);
+crate::member_accessors!(NodeId {
+    namespaceIndex: u16,
+    #[skip(uses = Self::identifier_type)]
+    identifierType: ua::NodeIdType
+});
 
 impl NodeId {
     /// Creates numeric node ID in namespace 0.
@@ -99,12 +104,6 @@ impl NodeId {
         Self::clone_raw(unsafe { &UA_NODEID_NULL })
     }
 
-    /// Gets namespace index.
-    #[must_use]
-    pub const fn namespace_index(&self) -> u16 {
-        self.0.namespaceIndex
-    }
-
     /// Checks if this node ID is in namespace 0.
     ///
     /// Namespace 0 is always the UA namespace `http://opcfoundation.org/UA/` itself and is used for
@@ -140,10 +139,9 @@ impl NodeId {
         self == Self::raw_ref(unsafe { &UA_NODEID_NULL })
     }
 
-    /// Gets node ID type.
     #[must_use]
-    pub fn identifier_type(&self) -> &ua::NodeIdType {
-        ua::NodeIdType::raw_ref(&self.0.identifierType)
+    pub const fn identifier_type(&self) -> ua::NodeIdType {
+        ua::NodeIdType(UA_NodeIdType(self.0.identifierType.0))
     }
 
     /// Gets identifier of numeric node ID in namespace 0.

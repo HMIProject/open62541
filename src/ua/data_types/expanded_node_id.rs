@@ -8,6 +8,11 @@ use open62541_sys::{
 use crate::{DataType as _, Error, ua};
 
 crate::data_type!(ExpandedNodeId);
+crate::member_accessors!(ExpandedNodeId {
+    namespaceUri: &ua::String,
+    serverIndex: u32,
+    nodeId: &ua::NodeId
+});
 
 impl ExpandedNodeId {
     /// Creates expanded node ID.
@@ -53,21 +58,6 @@ impl ExpandedNodeId {
         );
 
         Self(inner)
-    }
-
-    #[must_use]
-    pub fn node_id(&self) -> &ua::NodeId {
-        ua::NodeId::raw_ref(&self.0.nodeId)
-    }
-
-    #[must_use]
-    pub fn namespace_uri(&self) -> &ua::String {
-        ua::String::raw_ref(&self.0.namespaceUri)
-    }
-
-    #[must_use]
-    pub const fn server_index(&self) -> u32 {
-        self.0.serverIndex
     }
 }
 

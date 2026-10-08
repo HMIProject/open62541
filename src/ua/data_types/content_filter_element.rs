@@ -1,6 +1,13 @@
+use open62541_sys::UA_FilterOperator;
+
 use crate::{DataType, FilterOperand, UaIterExt as _, ua};
 
 crate::data_type!(ContentFilterElement);
+crate::member_accessors!(ContentFilterElement {
+    #[enum(UA_FilterOperator)]
+    filterOperator: ua::FilterOperator,
+    filterOperands: [ua::ExtensionObject]
+});
 
 impl ContentFilterElement {
     #[must_use]
