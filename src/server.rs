@@ -189,6 +189,7 @@ impl ServerBuilder {
             .map(|server_url| ua::String::new(server_url).unwrap())
             .collect_ua_array()
             .move_into_raw(&mut config.serverUrlsSize, &mut config.serverUrls);
+
         self
     }
 

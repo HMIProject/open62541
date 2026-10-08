@@ -24,6 +24,7 @@ impl DeleteMonitoredItemsRequest {
                 &mut self.0.monitoredItemIdsSize,
                 &mut self.0.monitoredItemIds,
             );
+
         self
     }
 

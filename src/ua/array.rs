@@ -377,7 +377,10 @@ impl<T: DataType> Array<T> {
         (size, ptr.cast_mut())
     }
 
-    /// Moves array into `dst`, giving up ownership.
+    /// Moves array into `dst`, giving up ownership. Soundness is contingent on the source and
+    /// destination pointers being produced by [`UA_Array_new`]/
+    /// [`UA_Array_copy`](open62541_sys::UA_Array_copy). Attempting to move from/to pointers with
+    /// any other provenance is UB, and likely will result in a crash.
     ///
     /// Existing data in `dst` is cleared with [`UA_Array_delete()`] before moving the value; it is
     /// safe to use this operation on already initialized target values.

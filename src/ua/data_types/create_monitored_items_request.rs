@@ -23,8 +23,9 @@ impl CreateMonitoredItemsRequest {
         mut self,
         items_to_create: &[ua::MonitoredItemCreateRequest],
     ) -> Self {
-        let array = ua::Array::from_slice(items_to_create);
-        array.move_into_raw(&mut self.0.itemsToCreateSize, &mut self.0.itemsToCreate);
+        ua::Array::from_slice(items_to_create)
+            .move_into_raw(&mut self.0.itemsToCreateSize, &mut self.0.itemsToCreate);
+
         self
     }
 

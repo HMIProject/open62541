@@ -12,8 +12,9 @@ crate::member_accessors!(RelativePath {
 impl RelativePath {
     #[must_use]
     pub fn with_elements(mut self, elements: &[ua::RelativePathElement]) -> Self {
-        let array = ua::Array::from_slice(elements);
-        array.move_into_raw(&mut self.0.elementsSize, &mut self.0.elements);
+        ua::Array::from_slice(elements)
+            .move_into_raw(&mut self.0.elementsSize, &mut self.0.elements);
+
         self
     }
 
@@ -26,18 +27,6 @@ impl RelativePath {
         I: SliceIndex<[ua::RelativePathElement]>,
     {
         self.elements().and_then(|elements| elements.get(index))
-    }
-
-    /// Attempts to access the element at `index` mutably.
-    ///
-    /// Returns [`Some`] if the array is valid and `index` < [`RelativePath::len()`], otherwise [`None`]
-    #[must_use]
-    pub fn get_mut<I>(&mut self, index: I) -> Option<&mut I::Output>
-    where
-        I: SliceIndex<[ua::RelativePathElement]>,
-    {
-        self.elements_mut()
-            .and_then(|elements| elements.get_mut(index))
     }
 
     /// Returns the number of elements in the relative path.
@@ -76,10 +65,6 @@ impl RelativePath {
 
     pub fn iter(&self) -> impl ExactSizeIterator<Item = &ua::RelativePathElement> {
         self.elements().unwrap_or(&[]).iter()
-    }
-
-    pub fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut ua::RelativePathElement> {
-        self.elements_mut().unwrap_or(&mut []).iter_mut()
     }
 }
 

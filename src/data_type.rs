@@ -483,23 +483,43 @@ macro_rules! data_type {
 
 pub(crate) use data_type;
 
+/// TT muncher that takes a struct-declaration-like syntax and expands into auto-implemented
+/// memory-sound accessor methods for fields.
+///
+/// # Example
+/// ```ignore
+/// # use crate::ua;
+/// # crate::data_type!(ReadRequest);
+/// crate::member_accessors!(ReadRequest {
+///     #[enum(UA_TimestampsToReturn)]
+///     timestampsToReturn: ua::TimestampsToReturn,
+///     nodesToRead: [ua::ReadValueId],
+///     requestHeader: &mut ua::RequestHeader
+/// });
+///
+/// impl ReadRequest {
+///     pub const fn timestamps_to_return(&self) -> ua::TimestampsToReturn { /* ... */ }
+///     pub fn nodes_to_read(&self) -> Option<&[ua::ReadValueId]> { /* ... */ }
+///     pub fn take_nodes_to_read(&self) -> Option<ua::Array<ua::ReadValueId>> { /* ... */ }
+///     pub const fn request_header(&self) -> &ua::RequestHeader { /* ... */ }
+///     pub const fn request_header_mut(&mut self) -> &mut ua::RequestHeader { /* ... */ }
+/// }
+/// ```
 macro_rules! member_accessors {
+    // munch munch munch
     ($t:ty { $($rest:tt)+ }) => {
         impl $t {
             $crate::member_accessors!($($rest)+);
         }
     };
 
+    // create array accessors, with convenience method to move items from arrays contained in the
+    // type
     ($raw_name:ident: [$arr_t:ty] $(, $($rest:tt)+)?) => {
         paste::paste! {
             #[must_use]
             pub fn [<$raw_name:snake>](&self) -> Option<&[$arr_t]> {
                 unsafe { $crate::ua::Array::slice_from_raw_parts(self.0.[<$raw_name Size>], self.0.$raw_name) }
-            }
-
-            #[must_use]
-            pub fn [<$raw_name:snake _mut>](&mut self) -> Option<&mut [$arr_t]> {
-                unsafe { $crate::ua::Array::slice_from_raw_parts_mut(self.0.[<$raw_name Size>], self.0.$raw_name) }
             }
 
             #[must_use]
@@ -511,6 +531,9 @@ macro_rules! member_accessors {
         $($crate::member_accessors!($($rest)+);)?
     };
 
+    // document the presence of the member on the C type, optionally document the trivial cast
+    // override like `#[skip(uses = Foo::bar)]`. Asserts that the field is present on the native
+    // struct, and if an accessor override is specified, the presence of the fn is asserted.
     (#[skip$((uses = $fn_name:path))?] $raw_name:ident: $field_t:ty $(, $($rest:tt)+)?) => {
         paste::paste! {
             const [<__ $raw_name:upper _ASSERT>]: () = {
@@ -522,6 +545,7 @@ macro_rules! member_accessors {
         $($crate::member_accessors!($($rest)+);)?
     };
 
+    // create an immutable reference accessor method for the field
     ($raw_name:ident: &$wrapper_t:ty $(, $($rest:tt)+)?) => {
         paste::paste! {
             pub const fn [<$raw_name:snake>](&self) -> &$wrapper_t {
@@ -532,6 +556,7 @@ macro_rules! member_accessors {
         $($crate::member_accessors!($($rest)+);)?
     };
 
+    // create both an immutable _and_ mutable reference accessor for the field
     ($raw_name:ident: &mut $wrapper_t:ty $(, $($rest:tt)+)?) => {
         $crate::member_accessors!($raw_name: &$wrapper_t);
 
@@ -544,6 +569,7 @@ macro_rules! member_accessors {
         $($crate::member_accessors!($($rest)+);)?
     };
 
+    // create a by-value copy of `$wrapper_t` with an implicit copy of its inner type
     (#[from_inner] $raw_name:ident: $wrapper_t:ty $(, $($rest:tt)+)?) => {
         paste::paste! {
             pub const fn [<$raw_name:snake>](&self) -> $wrapper_t {
@@ -554,6 +580,8 @@ macro_rules! member_accessors {
         $($crate::member_accessors!($($rest)+);)?
     };
 
+    // same thing as above, except bindgen enums are #[repr(transparent)] tuple structs containing
+    // their inner repr, so we need an additional access
     (#[enum($inner_t:ty)] $raw_name:ident: $wrapper_t:ty $(, $($rest:tt)+)?) => {
         paste::paste! {
             pub const fn [<$raw_name:snake>](&self) -> $wrapper_t {
@@ -564,6 +592,7 @@ macro_rules! member_accessors {
         $($crate::member_accessors!($($rest)+);)?
     };
 
+    // create a by-value copy of the field that doesn't have a wrapper
     ($raw_name:ident: $field_t:ty $(, $($rest:tt)+)?) => {
         paste::paste! {
             pub const fn [<$raw_name:snake>](&self) -> $field_t {

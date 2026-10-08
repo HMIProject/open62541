@@ -22,8 +22,8 @@ impl CallMethodRequest {
 
     #[must_use]
     pub fn with_input_arguments(mut self, input_arguments: &[ua::Variant]) -> Self {
-        let array = ua::Array::from_slice(input_arguments);
-        array.move_into_raw(&mut self.0.inputArgumentsSize, &mut self.0.inputArguments);
+        ua::Array::from_slice(input_arguments)
+            .move_into_raw(&mut self.0.inputArgumentsSize, &mut self.0.inputArguments);
         self
     }
 }

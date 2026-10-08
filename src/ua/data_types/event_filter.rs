@@ -9,8 +9,9 @@ crate::member_accessors!(EventFilter {
 impl EventFilter {
     #[must_use]
     pub fn with_select_clauses(mut self, select_clauses: &[ua::SimpleAttributeOperand]) -> Self {
-        let array = ua::Array::from_slice(select_clauses);
-        array.move_into_raw(&mut self.0.selectClausesSize, &mut self.0.selectClauses);
+        ua::Array::from_slice(select_clauses)
+            .move_into_raw(&mut self.0.selectClausesSize, &mut self.0.selectClauses);
+
         self
     }
 

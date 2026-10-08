@@ -100,6 +100,7 @@ impl ApplicationDescription {
             .map(|discovery_url| ua::String::new(discovery_url).unwrap())
             .collect_ua_array()
             .move_into_raw(&mut self.0.discoveryUrlsSize, &mut self.0.discoveryUrls);
+
         self
     }
 }
