@@ -1,6 +1,11 @@
 use crate::{UaIterExt as _, ua};
 
 crate::data_type!(DeleteMonitoredItemsRequest);
+crate::member_accessors!(DeleteMonitoredItemsRequest {
+    #[skip(uses = Self::subscription_id)]
+    subscriptionId: ua::SubscriptionId,
+    monitoredItemIds: [ua::UInt32]
+});
 
 impl DeleteMonitoredItemsRequest {
     #[must_use]
@@ -20,5 +25,14 @@ impl DeleteMonitoredItemsRequest {
                 &mut self.0.monitoredItemIds,
             );
         self
+    }
+
+    #[must_use]
+    pub const fn subscription_id(&self) -> Option<ua::SubscriptionId> {
+        if let Some(id) = ua::IntegerId::from_u32(self.0.subscriptionId) {
+            Some(ua::SubscriptionId::new(id))
+        } else {
+            None
+        }
     }
 }

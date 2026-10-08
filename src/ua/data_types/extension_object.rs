@@ -2,9 +2,16 @@ use std::ffi::c_void;
 
 use open62541_sys::{UA_ExtensionObject_setValueCopy, UA_ExtensionObjectEncoding};
 
-use crate::{DataType, ua};
+use crate::{
+    DataType,
+    ua::{self, data_types::extension_object_encoding::ExtensionObjectEncoding},
+};
 
 crate::data_type!(ExtensionObject);
+crate::member_accessors!(ExtensionObject {
+    #[skip(uses = Self::encoding)]
+    encoding: ua::ExtensionObjectEncoding
+});
 
 impl ExtensionObject {
     /// Creates extension object from value.
@@ -27,14 +34,19 @@ impl ExtensionObject {
         extension_object
     }
 
+    #[must_use]
+    pub const fn encoding(&self) -> ua::ExtensionObjectEncoding {
+        ua::ExtensionObjectEncoding(self.0.encoding.0)
+    }
+
     /// Gets encoded type ID.
     #[must_use]
     pub fn encoded_type_id(&self) -> Option<&ua::NodeId> {
         if !matches!(
-            self.0.encoding,
-            UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_NOBODY
-                | UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_BYTESTRING
-                | UA_ExtensionObjectEncoding::UA_EXTENSIONOBJECT_ENCODED_XML
+            self.0.encoding.0,
+            ExtensionObjectEncoding::ENCODED_NOBODY_U32
+                | ExtensionObjectEncoding::ENCODED_BYTESTRING_U32
+                | ExtensionObjectEncoding::ENCODED_XML_U32
         ) {
             return None;
         }

@@ -1,6 +1,10 @@
 use crate::{DataType as _, ua};
 
 crate::data_type!(X509IdentityToken);
+crate::member_accessors!(X509IdentityToken {
+    policyId: &ua::String,
+    certificateData: &ua::ByteString
+});
 
 impl X509IdentityToken {
     /// Sets policy ID.

@@ -2,7 +2,8 @@ use crate::ua;
 
 /// Wrapper for node class mask from [`open62541_sys`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct NodeClassMask(u32);
+#[repr(transparent)]
+pub struct NodeClassMask(pub(crate) u32);
 
 crate::bitmask_ops!(NodeClassMask);
 

@@ -6,7 +6,7 @@ use crate::ua;
 //
 // Newtype wrapper for [`ua::IntegerId`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SubscriptionId(ua::IntegerId);
+pub struct SubscriptionId(pub(crate) ua::IntegerId);
 
 impl SubscriptionId {
     #[must_use]

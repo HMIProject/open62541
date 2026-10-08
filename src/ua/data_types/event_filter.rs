@@ -1,6 +1,10 @@
 use crate::{DataType as _, MonitoringFilter, ua};
 
 crate::data_type!(EventFilter);
+crate::member_accessors!(EventFilter {
+    selectClauses: [ua::SimpleAttributeOperand],
+    whereClause: &ua::ContentFilter
+});
 
 impl EventFilter {
     #[must_use]

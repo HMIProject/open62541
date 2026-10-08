@@ -1,10 +1,16 @@
 use std::time::Duration;
 
-use open62541_sys::{UA_MonitoredItemCreateRequest_default, UA_NODEID_NUMERIC};
+use open62541_sys::{UA_MonitoredItemCreateRequest_default, UA_MonitoringMode, UA_NODEID_NUMERIC};
 
 use crate::{DataType as _, MonitoringFilter, ua};
 
 crate::data_type!(MonitoredItemCreateRequest);
+crate::member_accessors!(MonitoredItemCreateRequest {
+    itemToMonitor: &ua::ReadValueId,
+    #[enum(UA_MonitoringMode)]
+    monitoringMode: ua::MonitoringMode,
+    requestedParameters: &ua::MonitoringParameters
+});
 
 impl MonitoredItemCreateRequest {
     /// Sets item to monitor.

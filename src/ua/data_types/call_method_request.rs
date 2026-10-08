@@ -1,6 +1,11 @@
 use crate::{DataType as _, ua};
 
 crate::data_type!(CallMethodRequest);
+crate::member_accessors!(CallMethodRequest {
+    objectId: &ua::NodeId,
+    methodId: &ua::NodeId,
+    inputArguments: [ua::Variant]
+});
 
 impl CallMethodRequest {
     #[must_use]

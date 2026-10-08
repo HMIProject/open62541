@@ -100,29 +100,13 @@ pub unsafe trait DataType: Debug + Clone {
     /// Creates wrapper reference from value.
     #[must_use]
     fn raw_ref(src: &Self::Inner) -> &Self {
-        let src: *const Self::Inner = src;
-        // This transmutes between the inner type and `Self` through `cast()`. Types that implement
-        // `DataType` guarantee that we can transmute between them and their inner type, so this is
-        // okay.
-        let ptr = src.cast::<Self>();
-        // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
-        let ptr = unsafe { ptr.as_ref() };
-        // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
-        unsafe { ptr.unwrap_unchecked() }
+        data_type_ref(src)
     }
 
     /// Creates mutable wrapper reference from value.
     #[must_use]
     fn raw_mut(src: &mut Self::Inner) -> &mut Self {
-        let src: *mut Self::Inner = src;
-        // This transmutes between the inner type and `Self` through `cast()`. Types that implement
-        // `DataType` guarantee that we can transmute between them and their inner type, so this is
-        // okay.
-        let ptr = src.cast::<Self>();
-        // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
-        let ptr = unsafe { ptr.as_mut() };
-        // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
-        unsafe { ptr.unwrap_unchecked() }
+        data_type_ref_mut(src)
     }
 
     /// Creates wrapper by cloning value from `src`.
@@ -345,6 +329,30 @@ pub unsafe trait DataType: Debug + Clone {
     }
 }
 
+pub(crate) const fn data_type_ref<T: DataType>(value: &<T as DataType>::Inner) -> &T {
+    let src: *const T::Inner = value;
+    // This transmutes between the inner type and `Self` through `cast()`. Types that implement
+    // `DataType` guarantee that we can transmute between them and their inner type, so this is
+    // okay.
+    let ptr = src.cast::<T>();
+    // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
+    let ptr = unsafe { ptr.as_ref() };
+    // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
+    unsafe { ptr.unwrap_unchecked() }
+}
+
+pub(crate) const fn data_type_ref_mut<T: DataType>(value: &mut <T as DataType>::Inner) -> &mut T {
+    let src: *mut T::Inner = value;
+    // This transmutes between the inner type and `Self` through `cast()`. Types that implement
+    // `DataType` guarantee that we can transmute between them and their inner type, so this is
+    // okay.
+    let ptr = src.cast::<T>();
+    // SAFETY: `DataType` guarantees that we can transmute between `Self` and the inner type.
+    let ptr = unsafe { ptr.as_mut() };
+    // SAFETY: Pointer is valid (non-zero) because it comes from a reference.
+    unsafe { ptr.unwrap_unchecked() }
+}
+
 /// Defines wrapper for OPC UA data type from [`open62541_sys`].
 ///
 /// This provides the basic interface to convert from and back into the [`open62541_sys`] types. Use
@@ -374,7 +382,7 @@ macro_rules! data_type {
         #[repr(transparent)]
         pub struct $name(
             /// Inner value.
-            open62541_sys::$inner,
+            pub(crate) open62541_sys::$inner,
         );
 
         // SAFETY: The types in `open62541` can be sent across thread boundaries. They contain
@@ -474,6 +482,100 @@ macro_rules! data_type {
 }
 
 pub(crate) use data_type;
+
+macro_rules! member_accessors {
+    ($t:ty { $($rest:tt)+ }) => {
+        impl $t {
+            $crate::member_accessors!($($rest)+);
+        }
+    };
+
+    ($raw_name:ident: [$arr_t:ty] $(, $($rest:tt)+)?) => {
+        paste::paste! {
+            #[must_use]
+            pub fn [<$raw_name:snake>](&self) -> Option<&[$arr_t]> {
+                unsafe { $crate::ua::Array::slice_from_raw_parts(self.0.[<$raw_name Size>], self.0.$raw_name) }
+            }
+
+            #[must_use]
+            pub fn [<$raw_name:snake _mut>](&mut self) -> Option<&mut [$arr_t]> {
+                unsafe { $crate::ua::Array::slice_from_raw_parts_mut(self.0.[<$raw_name Size>], self.0.$raw_name) }
+            }
+
+            #[must_use]
+            pub fn [<take_ $raw_name:snake>](&mut self) -> Option<ua::Array<$arr_t>> {
+                unsafe { ua::Array::move_from_raw_parts(&mut self.0.[<$raw_name Size>], &mut self.0.$raw_name) }
+            }
+        }
+
+        $($crate::member_accessors!($($rest)+);)?
+    };
+
+    (#[skip$((uses = $fn_name:path))?] $raw_name:ident: $field_t:ty $(, $($rest:tt)+)?) => {
+        paste::paste! {
+            const [<__ $raw_name:upper _ASSERT>]: () = {
+                $(let _ = $fn_name;)?
+                let _ = ::std::mem::offset_of!(<Self as $crate::DataType>::Inner, $raw_name);
+            };
+        }
+
+        $($crate::member_accessors!($($rest)+);)?
+    };
+
+    ($raw_name:ident: &$wrapper_t:ty $(, $($rest:tt)+)?) => {
+        paste::paste! {
+            pub const fn [<$raw_name:snake>](&self) -> &$wrapper_t {
+                $crate::data_type::data_type_ref(&self.0.$raw_name)
+            }
+        }
+
+        $($crate::member_accessors!($($rest)+);)?
+    };
+
+    ($raw_name:ident: &mut $wrapper_t:ty $(, $($rest:tt)+)?) => {
+        $crate::member_accessors!($raw_name: &$wrapper_t);
+
+        paste::paste! {
+            pub const fn [<$raw_name:snake _mut>](&mut self) -> &mut $wrapper_t {
+                $crate::data_type::data_type_ref_mut(&mut self.0.$raw_name)
+            }
+        }
+
+        $($crate::member_accessors!($($rest)+);)?
+    };
+
+    (#[from_inner] $raw_name:ident: $wrapper_t:ty $(, $($rest:tt)+)?) => {
+        paste::paste! {
+            pub const fn [<$raw_name:snake>](&self) -> $wrapper_t {
+                $wrapper_t(self.0.$raw_name)
+            }
+        }
+
+        $($crate::member_accessors!($($rest)+);)?
+    };
+
+    (#[enum($inner_t:ty)] $raw_name:ident: $wrapper_t:ty $(, $($rest:tt)+)?) => {
+        paste::paste! {
+            pub const fn [<$raw_name:snake>](&self) -> $wrapper_t {
+                $wrapper_t($inner_t(self.0.$raw_name.0))
+            }
+        }
+
+        $($crate::member_accessors!($($rest)+);)?
+    };
+
+    ($raw_name:ident: $field_t:ty $(, $($rest:tt)+)?) => {
+        paste::paste! {
+            pub const fn [<$raw_name:snake>](&self) -> $field_t {
+                self.0.$raw_name
+            }
+        }
+
+        $($crate::member_accessors!($($rest)+);)?
+    };
+}
+
+pub(crate) use member_accessors;
 
 /// Defines known enum variants for wrapper.
 ///

@@ -1,6 +1,9 @@
 use crate::ua;
 
 crate::data_type!(ContentFilter);
+crate::member_accessors!(ContentFilter {
+    elements: [ua::ContentFilterElement]
+});
 
 impl ContentFilter {
     #[must_use]

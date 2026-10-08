@@ -1,6 +1,20 @@
 use crate::{DataType, DataTypeExt, ua};
 
 crate::data_type!(DataValue);
+crate::member_accessors!(DataValue {
+    #[skip(uses = Self::value)]
+    value: &ua::Variant,
+    #[skip(uses = Self::server_timestamp)]
+    serverTimestamp: ua::DateTime,
+    #[skip(uses = Self::source_timestamp)]
+    sourceTimestamp: ua::DateTime,
+    #[skip(uses = Self::server_picoseconds)]
+    serverPicoseconds: u16,
+    #[skip(uses = Self::source_picoseconds)]
+    sourcePicoseconds: u16,
+    #[skip(uses = Self::status)]
+    status: ua::StatusCode
+});
 
 impl DataValue {
     #[must_use]

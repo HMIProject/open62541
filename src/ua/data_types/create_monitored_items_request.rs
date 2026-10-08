@@ -1,6 +1,15 @@
+use open62541_sys::UA_TimestampsToReturn;
+
 use crate::ua;
 
 crate::data_type!(CreateMonitoredItemsRequest);
+crate::member_accessors!(CreateMonitoredItemsRequest {
+    itemsToCreate: [ua::MonitoredItemCreateRequest],
+    #[enum(UA_TimestampsToReturn)]
+    timestampsToReturn: ua::TimestampsToReturn,
+    #[skip(uses = Self::subscription_id)]
+    subscriptionId: ua::SubscriptionId
+});
 
 impl CreateMonitoredItemsRequest {
     #[must_use]
@@ -20,7 +29,11 @@ impl CreateMonitoredItemsRequest {
     }
 
     #[must_use]
-    pub(crate) fn items_to_create(&self) -> Option<&[ua::MonitoredItemCreateRequest]> {
-        unsafe { ua::Array::slice_from_raw_parts(self.0.itemsToCreateSize, self.0.itemsToCreate) }
+    pub const fn subscription_id(&self) -> Option<ua::SubscriptionId> {
+        if let Some(id) = ua::IntegerId::from_u32(self.0.subscriptionId) {
+            Some(ua::SubscriptionId(id))
+        } else {
+            None
+        }
     }
 }

@@ -9,7 +9,7 @@ pub enum DataTypeDescription {
 
 impl DataTypeDescription {
     #[must_use]
-    pub fn data_type_id(&self) -> &ua::NodeId {
+    pub const fn data_type_id(&self) -> &ua::NodeId {
         match self {
             Self::Structure(description) => description.data_type_id(),
             Self::Enum(description) => description.data_type_id(),
@@ -17,7 +17,7 @@ impl DataTypeDescription {
     }
 
     #[must_use]
-    pub fn name(&self) -> &ua::QualifiedName {
+    pub const fn name(&self) -> &ua::QualifiedName {
         match self {
             Self::Structure(description) => description.name(),
             Self::Enum(description) => description.name(),

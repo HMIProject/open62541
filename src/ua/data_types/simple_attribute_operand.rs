@@ -1,6 +1,15 @@
+use open62541_sys::UA_AttributeId;
+
 use crate::{DataType, FilterOperand, ua};
 
 crate::data_type!(SimpleAttributeOperand);
+crate::member_accessors!(SimpleAttributeOperand {
+    typeDefinitionId: &ua::NodeId,
+    browsePath: [ua::QualifiedName],
+    #[skip(uses = Self::attribute_id)]
+    attributeId: ua::AttributeId,
+    indexRange: &ua::String
+});
 
 impl SimpleAttributeOperand {
     #[must_use]
@@ -26,6 +35,11 @@ impl SimpleAttributeOperand {
     pub fn with_index_range(mut self, index_range: ua::String) -> Self {
         index_range.move_into_raw(&mut self.0.indexRange);
         self
+    }
+
+    #[must_use]
+    pub const fn attribute_id(&self) -> ua::AttributeId {
+        ua::AttributeId(UA_AttributeId(self.0.attributeId))
     }
 }
 

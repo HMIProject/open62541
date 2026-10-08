@@ -5,6 +5,9 @@ use open62541_sys::{UA_RelativePath_parse, UA_RelativePath_print};
 use crate::{DataType as _, Error, ua};
 
 crate::data_type!(RelativePath);
+crate::member_accessors!(RelativePath {
+    elements: [ua::RelativePathElement]
+});
 
 impl RelativePath {
     #[must_use]
@@ -12,26 +15,6 @@ impl RelativePath {
         let array = ua::Array::from_slice(elements);
         array.move_into_raw(&mut self.0.elementsSize, &mut self.0.elements);
         self
-    }
-
-    /// Returns a view of the elements that make up this relative path.
-    ///
-    /// Returns [`Some`] if the relative path element array is valid, otherwise [`None`].
-    #[must_use]
-    pub fn elements(&self) -> Option<&[ua::RelativePathElement]> {
-        // SAFETY: Lifetime of the slice is implicitly bound to the lifetime of the reference to self.
-        // Pointer validity is checked in `Array::slice_from_raw_parts()`.
-        unsafe { ua::Array::slice_from_raw_parts(self.0.elementsSize, self.0.elements) }
-    }
-
-    /// Returns a mutable view of the elements that make up this relative path.
-    ///
-    /// Returns [`Some`] if the relative path element array is valid, otherwise [`None`].
-    #[must_use]
-    pub fn elements_mut(&mut self) -> Option<&mut [ua::RelativePathElement]> {
-        // SAFETY: Lifetime of the slice is implicitly bound to the lifetime of the reference to self.
-        // Pointer validity is checked in `Array::slice_from_raw_parts_mut()`.
-        unsafe { ua::Array::slice_from_raw_parts_mut(self.0.elementsSize, self.0.elements) }
     }
 
     /// Attempts to access the element at `index`.

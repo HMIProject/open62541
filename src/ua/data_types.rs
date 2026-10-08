@@ -30,12 +30,14 @@ mod create_monitored_items_response;
 mod create_subscription_request;
 mod create_subscription_respones;
 mod data_change_filter;
+mod data_change_trigger;
 mod data_value;
 mod date_time;
 mod delete_monitored_items_request;
 mod delete_monitored_items_response;
 mod delete_subscriptions_request;
 mod delete_subscriptions_response;
+mod diagnostic_info;
 mod element_operand;
 mod endpoint_description;
 mod enum_definition;
@@ -46,6 +48,7 @@ mod eu_information;
 mod event_filter;
 mod expanded_node_id;
 mod extension_object;
+mod extension_object_encoding;
 mod filter_operator;
 mod guid;
 mod issued_identity_token;
@@ -85,6 +88,7 @@ mod translate_browse_paths_to_node_ids_response;
 mod trust_list_data_type;
 mod user_name_identity_token;
 mod variant;
+mod view_description;
 mod write_request;
 mod write_response;
 mod write_value;
@@ -121,12 +125,14 @@ pub use self::{
     create_subscription_request::CreateSubscriptionRequest,
     create_subscription_respones::CreateSubscriptionResponse,
     data_change_filter::DataChangeFilter,
+    data_change_trigger::DataChangeTrigger,
     data_value::DataValue,
     date_time::DateTime,
     delete_monitored_items_request::DeleteMonitoredItemsRequest,
     delete_monitored_items_response::DeleteMonitoredItemsResponse,
     delete_subscriptions_request::DeleteSubscriptionsRequest,
     delete_subscriptions_response::DeleteSubscriptionsResponse,
+    diagnostic_info::DiagnosticInfo,
     element_operand::ElementOperand,
     endpoint_description::EndpointDescription,
     enum_definition::EnumDefinition,
@@ -137,6 +143,7 @@ pub use self::{
     event_filter::EventFilter,
     expanded_node_id::ExpandedNodeId,
     extension_object::ExtensionObject,
+    extension_object_encoding::ExtensionObjectEncoding,
     filter_operator::FilterOperator,
     guid::Guid,
     issued_identity_token::IssuedIdentityToken,
@@ -180,6 +187,7 @@ pub use self::{
     trust_list_data_type::TrustListDataType,
     user_name_identity_token::UserNameIdentityToken,
     variant::Variant,
+    view_description::ViewDescription,
     write_request::WriteRequest,
     write_response::WriteResponse,
     write_value::WriteValue,
