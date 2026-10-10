@@ -1,4 +1,4 @@
-use crate::{DataType, FilterOperand, ua};
+use crate::{DataType, FilterOperand, UaIterExt as _, ua};
 
 crate::data_type!(ContentFilterElement);
 
@@ -11,12 +11,11 @@ impl ContentFilterElement {
 
     #[must_use]
     pub fn with_filter_operands(mut self, filter_operands: &[impl FilterOperand]) -> Self {
-        let array = ua::Array::from_iter(
-            filter_operands
-                .iter()
-                .map(FilterOperand::to_extension_object),
-        );
-        array.move_into_raw(&mut self.0.filterOperandsSize, &mut self.0.filterOperands);
+        filter_operands
+            .iter()
+            .map(FilterOperand::to_extension_object)
+            .collect_ua_array()
+            .move_into_raw(&mut self.0.filterOperandsSize, &mut self.0.filterOperands);
         self
     }
 }

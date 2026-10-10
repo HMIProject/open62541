@@ -85,22 +85,6 @@ impl<T: DataType> Array<T> {
 
     /// Creates new array from existing elements.
     ///
-    /// This takes ownership of the elements from the given iterator.
-    ///
-    /// # Panics
-    ///
-    /// Enough memory must be available to allocate array.
-    pub(crate) fn from_iter<I: Iterator<Item = T>>(iter: I) -> Self {
-        // This creates a temporary copy by first collecting all elements into a `Vec` and then once
-        // more by copying elements from the `Vec` into the new array from `UA_Array_new()`.
-        //
-        // TODO: Avoid temporary copy. How to deal with unknown size of iterator when initializing a
-        // new array to hold its elements?
-        Self::from_slice(&iter.collect::<Vec<_>>())
-    }
-
-    /// Creates new array from existing elements.
-    ///
     /// This copies over the elements from the given slice. The array will own the copies, and clean
     /// up when it is dropped. The original elements in the slice are left untouched.
     ///
@@ -401,8 +385,11 @@ impl<T: DataType> Array<T> {
     ///
     /// After this, it is the responsibility of `dst` to eventually clean up the data.
     pub(crate) fn move_into_raw(self, dst_size: &mut usize, dst: &mut *mut T::Inner) {
-        // Make sure to clean up any previous value in target.
-        let _unused = Self::from_raw_parts(*dst_size, *dst);
+        // Make sure to clean up any previous value in target. This must move out of (not copy) the
+        // existing array, otherwise its allocation would be leaked.
+        //
+        // SAFETY: `dst` is the sole owner of the previous array, which we take over and drop here.
+        let _unused = unsafe { Self::move_from_raw_parts(dst_size, dst) };
 
         let (size, ptr) = self.into_raw_parts();
         *dst_size = size;
@@ -454,6 +441,31 @@ impl<T: DataType> Array<T> {
             (slice.len(), slice.as_ptr().cast::<T::Inner>())
         }
     }
+}
+
+/// Internal-only helper for collection into [`Array`]s.
+/// Might be good to make this public as an impl of [`FromIterator`] once performance is optimized
+pub(crate) trait UaIterExt<T>
+where
+    Self: Iterator<Item = T> + Sized,
+    T: DataType,
+{
+    fn collect_ua_array(self) -> Array<T> {
+        // This creates a temporary copy by first collecting all elements into a `Vec` and then once
+        // more by copying elements from the `Vec` into the new array from `UA_Array_new()`.
+        //
+        // TODO: Avoid temporary copy. How to deal with unknown size of iterator when initializing a
+        // new array to hold its elements? (possible optimization opportunity with a specialized
+        // implementation for `ExactSizeIterator`)
+        Array::from_slice(&self.collect::<Vec<_>>())
+    }
+}
+
+impl<I, T> UaIterExt<T> for I
+where
+    I: Iterator<Item = T>,
+    T: DataType,
+{
 }
 
 // SAFETY: Arrays in `open62541` can be sent across thread boundaries: they may be dropped in other

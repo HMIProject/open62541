@@ -1,4 +1,4 @@
-use crate::{DataType as _, ua};
+use crate::{DataType as _, UaIterExt as _, ua};
 
 crate::data_type!(ApplicationDescription);
 
@@ -86,10 +86,10 @@ impl ApplicationDescription {
     /// The strings must not contain any NUL bytes.
     #[must_use]
     pub fn with_discovery_urls(mut self, discovery_urls: &[&str]) -> Self {
-        let discovery_urls = discovery_urls
+        discovery_urls
             .iter()
-            .map(|discovery_url| ua::String::new(discovery_url).unwrap());
-        ua::Array::from_iter(discovery_urls)
+            .map(|discovery_url| ua::String::new(discovery_url).unwrap())
+            .collect_ua_array()
             .move_into_raw(&mut self.0.discoveryUrlsSize, &mut self.0.discoveryUrls);
         self
     }

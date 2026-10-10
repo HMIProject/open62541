@@ -267,6 +267,9 @@ use self::{
     monitored_item::create_monitored_items_callback,
     value::{ArrayValue, NonScalarValue},
 };
+
+pub(crate) use ua::UaIterExt;
+
 #[cfg(feature = "mbedtls")]
 pub use self::{
     ssl::{Certificate, Password, PrivateKey, create_certificate},

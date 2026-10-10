@@ -1,4 +1,4 @@
-use crate::{DataType as _, ua};
+use crate::{DataType as _, UaIterExt as _, ua};
 
 impl super::VariableAttributes {
     #[must_use]
@@ -17,9 +17,11 @@ impl super::VariableAttributes {
 
     #[must_use]
     pub fn with_array_dimensions(mut self, array_dimensions: &[u32]) -> Self {
-        let array_dimensions =
-            ua::Array::from_iter(array_dimensions.iter().copied().map(ua::UInt32::new));
         array_dimensions
+            .iter()
+            .copied()
+            .map(ua::UInt32::new)
+            .collect_ua_array()
             .move_into_raw(&mut self.0.arrayDimensionsSize, &mut self.0.arrayDimensions);
         self.0.specifiedAttributes |= ua::SpecifiedAttributes::ARRAYDIMENSIONS.as_u32();
         self
