@@ -162,3 +162,49 @@ jobs:
         run: >-
           cargo package
           --locked --all-features
+
+  asan:
+    strategy:
+      # Don't give up on the whole matrix if one variant fails.
+      fail-fast: false
+      matrix:
+        # Only native targets: the sanitizer runtime must run on the build host.
+        include:
+          - target: aarch64-apple-darwin
+            runner_os: macos-15
+
+          - target: x86_64-unknown-linux-gnu
+            runner_os: ubuntu-24.04
+
+    runs-on: ${{ matrix.runner_os }}
+
+    steps:
+      - name: Install Rust toolchain
+        # Sanitizers are only available on nightly Rust.
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
+
+      - name: Install Cargo helpers
+        run: >-
+          cargo binstall just
+
+      # Check out the repository before the remaining steps that depend on it.
+      # All preceding steps are independent of the repository contents.
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Cache Rust toolchain and build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          # The cache should not be shared between different workflows, jobs, and targets.
+          shared-key: ${{ github.workflow }}-${{ github.job }}-${{ matrix.target }}-${{ matrix.runner_os }}
+
+      # The recipe sets the target explicitly, which keeps the sanitizer flags
+      # away from build scripts and proc macros.
+      - name: Run tests (bins/lib/tests/examples) with AddressSanitizer
+        run: >-
+          just test-asan
