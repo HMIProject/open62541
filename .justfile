@@ -26,6 +26,21 @@ test:
     # would exclude the doctests. Specifying none of them gives the desired result.
     RUST_BACKTRACE=1 cargo test --locked --all-features -- --nocapture
 
+# Run unit tests under AddressSanitizer with leak detection (requires nightly toolchain)
+test-asan:
+    # Doctests are excluded, because they would also need `RUSTDOCFLAGS` to be instrumented.
+    just _asan test --locked --all-features --bins --lib --tests --examples
+
+# Run cargo command under AddressSanitizer with leak detection (requires nightly toolchain)
+_asan +args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # An explicit target keeps `RUSTFLAGS` from applying to build scripts and proc macros.
+    export CARGO_BUILD_TARGET="$(rustc +nightly -vV | sed -n 's/^host: //p')"
+    export RUSTFLAGS="-Zsanitizer=address"
+    export ASAN_OPTIONS="detect_leaks=1"
+    cargo +nightly {{ args }}
+
 # Set up (and update) development tools
 setup:
     # Ignore rustup failures, because not everyone might use it
