@@ -447,7 +447,14 @@ impl<T: DataType> Array<T> {
 /// Might be good to make this public as an impl of [`FromIterator`] once performance is optimized
 pub(crate) trait UaIterExt<T>
 where
-    Self: Iterator<Item = T> + Sized,
+    T: DataType,
+{
+    fn collect_ua_array(self) -> Array<T>;
+}
+
+impl<I, T> UaIterExt<T> for I
+where
+    I: Iterator<Item = T>,
     T: DataType,
 {
     fn collect_ua_array(self) -> Array<T> {
@@ -459,13 +466,6 @@ where
         // implementation for `ExactSizeIterator`)
         Array::from_slice(&self.collect::<Vec<_>>())
     }
-}
-
-impl<I, T> UaIterExt<T> for I
-where
-    I: Iterator<Item = T>,
-    T: DataType,
-{
 }
 
 // SAFETY: Arrays in `open62541` can be sent across thread boundaries: they may be dropped in other
