@@ -5,7 +5,7 @@ use open62541::{AsyncClient, AsyncSubscription, ua};
 use open62541_sys::{
     UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME,
 };
-use rand::Rng as _;
+use rand::RngExt as _;
 use tokio::time::{self, error::Elapsed};
 
 #[tokio::main]
