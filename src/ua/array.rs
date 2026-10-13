@@ -443,8 +443,15 @@ impl<T: DataType> Array<T> {
     }
 }
 
-/// Internal-only helper for collection into [`Array`]s.
-/// Might be good to make this public as an impl of [`FromIterator`] once performance is optimized
+/// Internal-only helper for collection of iterators into [`Array`]s.
+///
+/// This takes ownership of the elements from the given iterator.
+///
+/// # Panics
+///
+/// Enough memory must be available to allocate array.
+///
+// Might be good to make this public as an impl of [`FromIterator`] once performance is optimized
 pub(crate) trait UaIterExt<T>
 where
     T: DataType,
