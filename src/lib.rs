@@ -268,7 +268,7 @@ use self::{
     value::{ArrayValue, NonScalarValue},
 };
 
-pub(crate) use ua::UaIterExt;
+pub(crate) use self::ua::UaIterExt;
 
 #[cfg(feature = "mbedtls")]
 pub use self::{
