@@ -233,6 +233,7 @@ mod value;
 
 #[cfg(feature = "tokio")]
 pub use self::async_monitored_item::AsyncMonitoredItem;
+pub(crate) use self::ua::UaIterExt;
 pub use self::{
     async_client::AsyncClient,
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
@@ -267,9 +268,6 @@ use self::{
     monitored_item::create_monitored_items_callback,
     value::{ArrayValue, NonScalarValue},
 };
-
-pub(crate) use self::ua::UaIterExt;
-
 #[cfg(feature = "mbedtls")]
 pub use self::{
     ssl::{Certificate, Password, PrivateKey, create_certificate},
