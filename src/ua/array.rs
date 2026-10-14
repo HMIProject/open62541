@@ -699,10 +699,6 @@ mod tests {
 
     // simple probe to verify that the behavior of `Array::move_into_raw` doesn't leak.
     // only valuable when run with `-Zsanitizer=address`, so it's being gated behind an explicit cfg
-    #[expect(
-        unexpected_cfgs,
-        reason = "`--cfg asan` passed to run this test when address sanitizer is used"
-    )]
     #[cfg(asan)]
     #[test]
     fn move_into_raw_leak_probe() {

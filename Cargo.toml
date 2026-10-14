@@ -75,6 +75,7 @@ unsafe_code = "allow"
 unsafe_op_in_unsafe_fn = "warn"
 unused = { level = "warn", priority = -1 }
 warnings = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(asan)'] }
 
 [lints.clippy]
 # We use absolute paths where we require some item only once. Most often, these
