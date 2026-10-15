@@ -37,7 +37,7 @@ impl MethodCallbackError {
         })
     }
 
-    pub(crate) fn into_status_code(self) -> ua::StatusCode {
+    pub(crate) const fn into_status_code(self) -> ua::StatusCode {
         match self {
             MethodCallbackError::StatusCode(status_code) => status_code,
             MethodCallbackError::Error(err) => err.status_code(),

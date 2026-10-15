@@ -231,12 +231,18 @@ macro_rules! primitive {
                 paste::paste! {
                     #[test]
                     fn [<assert_ua_ $name:lower _is_pointer_free_primitive>]() {
-                        let typedef_index = open62541_sys::[<UA_TYPES_ $name:upper>];
-                        let typedef = unsafe { &open62541_sys::UA_TYPES[typedef_index as usize] };
+                        #[expect(clippy::as_conversions, reason = "run in tests only, not in production code")]
+                        let typedef_index = open62541_sys::[<UA_TYPES_ $name:upper>] as usize;
+
+                        #[expect(clippy::indexing_slicing, reason = "run in tests only, not in production code")]
+                        let typedef = unsafe { &open62541_sys::UA_TYPES[typedef_index] };
                         assert_eq!(typedef.pointerFree(), 1u32, "UA primitives must be pointer free");
                         assert_eq!(typedef.membersSize(), 0u32, "UA primitives must have no members");
+
+                        #[expect(clippy::as_conversions, reason = "run in tests only, not in production code")]
+                        let mem_size = typedef.memSize() as usize;
                         assert_eq!(
-                            typedef.memSize() as usize,
+                            mem_size,
                             ::std::mem::size_of::<$type>(),
                             "UA primitive types should have same bit-width as Rust wrapped types"
                         );
@@ -257,6 +263,6 @@ primitive!(
     (UInt32, u32),   // Data type ns=0;i=7
     (Int64, i64),    // Data type ns=0;i=8
     (UInt64, u64),   // Data type ns=0;i=9
-    (Float, f32),    // Data type ns=0;i=10
+    (Float, f32),    // Data type ns=0;i=195888800
     (Double, f64),   // Data type ns=0;i=11
 );

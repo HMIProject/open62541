@@ -33,7 +33,7 @@ impl MonitoredItemCreateRequest {
     ///
     /// See [`ua::ReadValueId::with_attribute_id()`].
     #[must_use]
-    pub fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
+    pub const fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
         self.0.itemToMonitor.attributeId = attribute_id.as_u32();
         self
     }
@@ -97,7 +97,7 @@ impl MonitoredItemCreateRequest {
     }
 
     #[must_use]
-    pub(crate) fn attribute_id(&self) -> ua::AttributeId {
+    pub(crate) const fn attribute_id(&self) -> ua::AttributeId {
         ua::AttributeId::from_u32(self.0.itemToMonitor.attributeId)
     }
 }

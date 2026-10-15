@@ -353,12 +353,11 @@ pub(crate) const fn data_type_ref_mut<T: DataType>(value: &mut <T as DataType>::
     unsafe { ptr.unwrap_unchecked() }
 }
 
-/// Defines the wrapper for OPC UA data type from [`open62541_sys`]. Implements basic traits by
-/// mapping them to `open62541-sys` calls. If the type holds any dynamically-allocated resources,
-/// the type should use the `data_type!` macro instead.
+/// Defines the wrappers for OPC UA data types from [`open62541_sys`], as well as their conversions
+/// to/from those wrapped types.
 ///
-/// This provides the basic interface to convert from and back into the [`open62541_sys`] types. Use
-/// another `impl` block to add additional methods to each type if necessary.
+/// Implements basic traits by mapping them to [`open62541_sys`] calls. If the type holds any
+/// dynamically-allocated resources, the type should use the [`data_type!`] macro instead.
 macro_rules! data_type_baseline {
     ($(#[$derives:meta])* $name:ident) => {
         paste::paste! {
@@ -484,7 +483,7 @@ macro_rules! data_type {
             }
         }
 
-        // only 
+        // only
         impl Drop for $name {
             fn drop(&mut self) {
                 // `UA_clear()` resets the data structure, freeing any dynamically allocated memory
@@ -675,7 +674,7 @@ macro_rules! enum_variants {
             pub(crate) const fn as_u32(&self) -> u32 {
                 let value = self.0.0;
 
-                #[cfg_attr(not(target_os = "windows"), expect(trivial_numeric_casts))]
+                #[cfg(target_os = "windows")]
                 let value = value as u32;
 
                 value

@@ -23,8 +23,7 @@ impl ViewDescription {
 
     #[must_use]
     pub const fn with_timestamp(mut self, ts: ua::DateTime) -> Self {
-        // SAFETY: repr(transparent) guarantees that DateTime has identical bit-pattern
-        self.0.timestamp = unsafe { std::mem::transmute(ts) };
+        self.0.timestamp = ts.as_i64();
         self
     }
 }

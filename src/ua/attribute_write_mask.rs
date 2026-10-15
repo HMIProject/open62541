@@ -27,10 +27,12 @@ crate::data_type::data_type_baseline! {
 
 // See <https://reference.opcfoundation.org/Core/Part3/v105/docs/8.60> for bit values.
 impl AttributeWriteMask {
+    #[must_use]
     pub const fn from_u32(mask: u32) -> Self {
         Self(mask)
     }
 
+    #[must_use]
     pub const fn as_u32(&self) -> u32 {
         self.0
     }
