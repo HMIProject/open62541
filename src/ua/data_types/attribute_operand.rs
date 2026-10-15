@@ -13,7 +13,7 @@ crate::member_accessors!(AttributeOperand {
 impl AttributeOperand {
     #[must_use]
     pub const fn attribute_id(&self) -> ua::AttributeId {
-        ua::AttributeId(open62541_sys::UA_AttributeId(self.0.attributeId))
+        ua::AttributeId::from_u32(self.0.attributeId)
     }
 }
 

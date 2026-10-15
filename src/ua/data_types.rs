@@ -197,7 +197,7 @@ pub use self::{
 macro_rules! primitive {
     ($( ($name:ident, $type:ty) ),* $(,)?) => {
         $(
-            $crate::data_type!($name);
+            $crate::data_type::data_type_baseline!(#[derive(Clone, Copy)] $name);
 
             impl $name {
                 #[must_use]
@@ -222,7 +222,28 @@ macro_rules! primitive {
                     }
                 }
             }
+
         )*
+
+        #[cfg(test)]
+        mod primitive_assertions {
+            $(
+                paste::paste! {
+                    #[test]
+                    fn [<assert_ua_ $name:lower _is_pointer_free_primitive>]() {
+                        let typedef_index = open62541_sys::[<UA_TYPES_ $name:upper>];
+                        let typedef = unsafe { &open62541_sys::UA_TYPES[typedef_index as usize] };
+                        assert_eq!(typedef.pointerFree(), 1u32, "UA primitives must be pointer free");
+                        assert_eq!(typedef.membersSize(), 0u32, "UA primitives must have no members");
+                        assert_eq!(
+                            typedef.memSize() as usize,
+                            ::std::mem::size_of::<$type>(),
+                            "UA primitive types should have same bit-width as Rust wrapped types"
+                        );
+                    }
+                }
+            )*
+        }
     };
 }
 

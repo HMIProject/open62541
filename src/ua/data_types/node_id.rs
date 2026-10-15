@@ -10,7 +10,7 @@ use crate::{DataType, Error, ua};
 crate::data_type!(NodeId);
 crate::member_accessors!(NodeId {
     namespaceIndex: u16,
-    #[skip(uses = Self::identifier_type)]
+    #[enum]
     identifierType: ua::NodeIdType
 });
 
@@ -139,11 +139,6 @@ impl NodeId {
         self == Self::raw_ref(unsafe { &UA_NODEID_NULL })
     }
 
-    #[must_use]
-    pub const fn identifier_type(&self) -> ua::NodeIdType {
-        ua::NodeIdType(UA_NodeIdType(self.0.identifierType.0))
-    }
-
     /// Gets identifier of numeric node ID in namespace 0.
     ///
     /// Namespace 0 is always the UA namespace `http://opcfoundation.org/UA/` itself and is used for
@@ -224,7 +219,7 @@ impl str::FromStr for NodeId {
             let str = unsafe { ua::String::to_raw_copy(&str) };
             unsafe { UA_NodeId_parse(node_id.as_mut_ptr(), str) }
         });
-        Error::verify_good(&status_code)?;
+        Error::verify_good(status_code)?;
 
         Ok(node_id)
     }
@@ -234,7 +229,7 @@ impl fmt::Display for NodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut output = ua::String::init();
 
-        let status_code = &ua::StatusCode::new({
+        let status_code = ua::StatusCode::new({
             // This mirrors the behavior of `UA_NodeId_parse()` above.
             unsafe { UA_NodeId_print(self.as_ptr(), output.as_mut_ptr()) }
         });

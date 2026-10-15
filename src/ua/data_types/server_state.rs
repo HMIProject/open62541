@@ -6,6 +6,7 @@ crate::enum_variants!(
         FAILED,
         NOCONFIGURATION,
         SUSPENDED,
+        RUNNING,
         SHUTDOWN,
         TEST,
         COMMUNICATIONFAULT,

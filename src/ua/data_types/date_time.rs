@@ -2,7 +2,10 @@ use open62541_sys::{UA_DATETIME_UNIX_EPOCH, UA_DATETIME_USEC};
 
 use crate::Error;
 
-crate::data_type!(DateTime);
+crate::data_type::data_type_baseline! {
+    #[derive(Copy, Clone)]
+    DateTime
+}
 
 impl DateTime {
     /// Creates [`DateTime`] from a UNIX timestamp with nanosecond precision.

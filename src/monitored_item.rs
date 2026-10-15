@@ -363,7 +363,7 @@ where
     let results = results
         .drain_all()
         .filter_map(|result| {
-            if let Err(err) = crate::Error::verify_good(&result.status_code()) {
+            if let Err(err) = crate::Error::verify_good(result.status_code()) {
                 return Some(Err(err));
             }
 

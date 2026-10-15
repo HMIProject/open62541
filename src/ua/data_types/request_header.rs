@@ -4,11 +4,12 @@ use crate::ua;
 
 crate::data_type!(RequestHeader);
 crate::member_accessors!(RequestHeader {
-    timestamp: i64,
     auditEntryId: &ua::String,
     #[skip(uses = Self::timeout_hint)]
     timeoutHint: Duration,
     requestHandle: u32,
+    #[from_inner]
+    timestamp: ua::DateTime,
     authenticationToken: &ua::NodeId,
     additionalHeader: &ua::ExtensionObject,
     returnDiagnostics: u32

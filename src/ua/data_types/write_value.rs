@@ -1,5 +1,3 @@
-use open62541_sys::UA_AttributeId;
-
 use crate::{DataType as _, ua};
 
 crate::data_type!(WriteValue);
@@ -32,6 +30,6 @@ impl WriteValue {
 
     #[must_use]
     pub const fn attribute_id(&self) -> ua::AttributeId {
-        ua::AttributeId(UA_AttributeId(self.0.attributeId))
+        ua::AttributeId::from_u32(self.0.attributeId)
     }
 }

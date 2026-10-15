@@ -65,7 +65,7 @@ impl Drop for Server {
             // SAFETY: We retain ownership of `self`.
             UA_Server_delete(self.as_mut_ptr())
         });
-        if let Err(error) = Error::verify_good(&status_code) {
+        if let Err(error) = Error::verify_good(status_code) {
             log::warn!("Error while dropping server: {error}");
         }
     }

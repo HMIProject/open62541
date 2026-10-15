@@ -11,22 +11,27 @@ use open62541_sys::{
     UA_ATTRIBUTEWRITEMASK_ROLEPERMISSIONS, UA_ATTRIBUTEWRITEMASK_SYMMETRIC,
     UA_ATTRIBUTEWRITEMASK_USERACCESSLEVEL, UA_ATTRIBUTEWRITEMASK_USEREXECUTABLE,
     UA_ATTRIBUTEWRITEMASK_USERWRITEMASK, UA_ATTRIBUTEWRITEMASK_VALUEFORVARIABLETYPE,
-    UA_ATTRIBUTEWRITEMASK_VALUERANK, UA_ATTRIBUTEWRITEMASK_WRITEMASK, UA_AttributeWriteMask,
+    UA_ATTRIBUTEWRITEMASK_VALUERANK, UA_ATTRIBUTEWRITEMASK_WRITEMASK,
 };
 
-use crate::{DataTypeExt, Result, ua};
-
-/// Wrapper for [`UA_AttributeWriteMask`] from [`open62541_sys`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct AttributeWriteMask(pub(crate) UA_AttributeWriteMask);
+crate::data_type::data_type_baseline! {
+    #[expect(
+        clippy::derived_hash_with_manual_eq,
+        reason = "open62541 numeric equality impl satisfies `Hash`s identity invariant"
+    )]
+    #[derive(Clone, Copy, Hash)]
+    AttributeWriteMask,
+    #[uses_inner]
+    UInt32
+}
 
 // See <https://reference.opcfoundation.org/Core/Part3/v105/docs/8.60> for bit values.
 impl AttributeWriteMask {
-    pub(crate) const fn from_u32(mask: u32) -> Self {
+    pub const fn from_u32(mask: u32) -> Self {
         Self(mask)
     }
 
-    pub(crate) const fn as_u32(&self) -> u32 {
+    pub const fn as_u32(&self) -> u32 {
         self.0
     }
 
@@ -187,17 +192,5 @@ impl AttributeWriteMask {
     #[must_use]
     pub const fn access_level_ex(&self) -> bool {
         self.0 & UA_ATTRIBUTEWRITEMASK_ACCESSLEVELEX != 0
-    }
-}
-
-impl DataTypeExt for AttributeWriteMask {
-    type Inner = ua::UInt32;
-
-    fn from_inner(value: Self::Inner) -> Result<Self> {
-        Ok(Self::from_u32(value.value()))
-    }
-
-    fn into_inner(self) -> Self::Inner {
-        Self::Inner::new(self.as_u32())
     }
 }

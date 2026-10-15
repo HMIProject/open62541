@@ -1,12 +1,10 @@
-use open62541_sys::UA_StructureType;
-
 use crate::ua;
 
 crate::data_type!(StructureDefinition);
 crate::member_accessors!(StructureDefinition {
     defaultEncodingId: &ua::NodeId,
     baseDataType: &ua::NodeId,
-    #[enum(UA_StructureType)]
+    #[enum]
     structureType: ua::StructureType,
     fields: [ua::StructureField]
 });

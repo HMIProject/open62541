@@ -1,5 +1,3 @@
-use open62541_sys::UA_AttributeId;
-
 use crate::{DataType as _, ua};
 
 crate::data_type!(ReadValueId);
@@ -26,6 +24,11 @@ impl ReadValueId {
 
     #[must_use]
     pub const fn attribute_id(&self) -> ua::AttributeId {
-        ua::AttributeId(UA_AttributeId(self.0.attributeId))
+        let value = self.0.attributeId;
+
+        #[cfg_attr(not(target_os = "windows"), expect(trivial_numeric_casts))]
+        let value = value as u32;
+
+        ua::AttributeId::from_u32(value)
     }
 }

@@ -353,36 +353,43 @@ pub(crate) const fn data_type_ref_mut<T: DataType>(value: &mut <T as DataType>::
     unsafe { ptr.unwrap_unchecked() }
 }
 
-/// Defines wrapper for OPC UA data type from [`open62541_sys`].
+/// Defines the wrapper for OPC UA data type from [`open62541_sys`]. Implements basic traits by
+/// mapping them to `open62541-sys` calls. If the type holds any dynamically-allocated resources,
+/// the type should use the `data_type!` macro instead.
 ///
 /// This provides the basic interface to convert from and back into the [`open62541_sys`] types. Use
 /// another `impl` block to add additional methods to each type if necessary.
-macro_rules! data_type {
-    ($name:ident) => {
+macro_rules! data_type_baseline {
+    ($(#[$derives:meta])* $name:ident) => {
         paste::paste! {
-            $crate::data_type!($name, [<UA_ $name>], [<UA_TYPES_ $name:upper>]);
+            $crate::data_type::data_type_baseline!($(#[$derives])* $name, [<UA_ $name>], [<UA_TYPES_ $name:upper>]);
         }
     };
 
-    ($name:ident, $inner:ident) => {
+    ($(#[$derives:meta])* $name:ident, $inner:ident) => {
         paste::paste! {
-            $crate::data_type!($name, [<UA_ $name>], [<UA_TYPES_ $inner:upper>]);
+            $crate::data_type::data_type_baseline!($(#[$derives])* $name, [<UA_ $name>], [<UA_TYPES_ $inner:upper>]);
         }
     };
 
-    ($name:ident, $inner:ident, $index:ident) => {
-        /// Wrapper for
-        #[doc = concat!("[`", stringify!($inner), "`](open62541_sys::", stringify!($inner), ")")]
-        /// from [`open62541_sys`].
+    ($(#[$derives:meta])* $name:ident, #[uses_inner] $inner:ident) => {
+        paste::paste! {
+            $crate::data_type::data_type_baseline!($(#[$derives])* $name, [<UA_ $inner>], [<UA_TYPES_ $inner:upper>]);
+        }
+    };
+
+    ($(#[$derives:meta])* $name:ident, $inner:ident, $index:ident) => {
+        #[doc = concat!("Wrapper for [`", stringify!($inner), "`](open62541_sys::", stringify!($inner), ") from [`open62541_sys`].")]
         ///
-        /// This owns the wrapped data. When the wrapper is dropped, the inner value is cleaned up
-        /// with [`UA_clear()`] to release dynamically allocated memory held by the value.
+        /// This owns the wrapped data. If the wrapped value holds any allocations that need to be
+        /// released, [`UA_clear()`] will be called on drop.
         ///
         /// [`UA_clear()`]: open62541_sys::UA_clear
         #[repr(transparent)]
+        $(#[$derives])*
         pub struct $name(
             /// Inner value.
-            pub(crate) open62541_sys::$inner,
+            open62541_sys::$inner,
         );
 
         // SAFETY: The types in `open62541` can be sent across thread boundaries. They contain
@@ -395,19 +402,6 @@ macro_rules! data_type {
         // allow this (because pointers are used to pass ownership) but we must unwrap our wrapper
         // types in this case which is only implemented for owned values.
         unsafe impl Sync for $name {}
-
-        impl Drop for $name {
-            fn drop(&mut self) {
-                // `UA_clear()` resets the data structure, freeing any dynamically allocated memory
-                // in it, no matter how deeply nested.
-                unsafe {
-                    open62541_sys::UA_clear(
-                        (&raw mut self.0).cast::<std::ffi::c_void>(),
-                        <Self as $crate::DataType>::data_type(),
-                    )
-                }
-            }
-        }
 
         // SAFETY: We can transmute between our wrapper type and the inner type. This is ensured by
         // using `#[repr(transparent)]` on the type definition.
@@ -431,12 +425,6 @@ macro_rules! data_type {
                 // SAFETY: We can transmute with `#[repr(transparent)]` on the type definition. (We
                 // cannot simply unwrap due to an implementation of `Drop`.)
                 unsafe { std::mem::transmute(self) }
-            }
-        }
-
-        impl Clone for $name {
-            fn clone(&self) -> Self {
-                <Self as $crate::DataType>::clone_raw(&self.0)
             }
         }
 
@@ -481,6 +469,37 @@ macro_rules! data_type {
     };
 }
 
+pub(crate) use data_type_baseline;
+
+/// Safe catch-all for any UA data type. Needs to be implemented for types that have resource
+/// allocations, but can and should be swapped out for [`data_type_baseline`] for primitive,
+/// trivially-copyable where not calling [`UA_clear`] remains sound.
+macro_rules! data_type {
+    ($name:ident $(, $($tok:tt)+)?) => {
+        $crate::data_type::data_type_baseline!($name $(, $($tok)+)?);
+
+        impl Clone for $name {
+            fn clone(&self) -> Self {
+                <Self as $crate::DataType>::clone_raw(&self.0)
+            }
+        }
+
+        // only 
+        impl Drop for $name {
+            fn drop(&mut self) {
+                // `UA_clear()` resets the data structure, freeing any dynamically allocated memory
+                // in it, no matter how deeply nested.
+                unsafe {
+                    open62541_sys::UA_clear(
+                        (&raw mut self.0).cast::<std::ffi::c_void>(),
+                        <Self as $crate::DataType>::data_type(),
+                    )
+                }
+            }
+        }
+    };
+}
+
 pub(crate) use data_type;
 
 /// TT muncher that takes a struct-declaration-like syntax and expands into auto-implemented
@@ -491,7 +510,7 @@ pub(crate) use data_type;
 /// # use crate::ua;
 /// # crate::data_type!(ReadRequest);
 /// crate::member_accessors!(ReadRequest {
-///     #[enum(UA_TimestampsToReturn)]
+///     #[enum]
 ///     timestampsToReturn: ua::TimestampsToReturn,
 ///     nodesToRead: [ua::ReadValueId],
 ///     requestHeader: &mut ua::RequestHeader
@@ -524,7 +543,7 @@ macro_rules! member_accessors {
 
             #[must_use]
             pub fn [<take_ $raw_name:snake>](&mut self) -> Option<ua::Array<$arr_t>> {
-                unsafe { ua::Array::move_from_raw_parts(&mut self.0.[<$raw_name Size>], &mut self.0.$raw_name) }
+                unsafe { $crate::ua::Array::move_from_raw_parts(&mut self.0.[<$raw_name Size>], &mut self.0.$raw_name) }
             }
         }
 
@@ -573,19 +592,18 @@ macro_rules! member_accessors {
     (#[from_inner] $raw_name:ident: $wrapper_t:ty $(, $($rest:tt)+)?) => {
         paste::paste! {
             pub const fn [<$raw_name:snake>](&self) -> $wrapper_t {
-                $wrapper_t(self.0.$raw_name)
+                *$crate::data_type::data_type_ref(&self.0.$raw_name)
             }
         }
 
         $($crate::member_accessors!($($rest)+);)?
     };
 
-    // same thing as above, except bindgen enums are #[repr(transparent)] tuple structs containing
-    // their inner repr, so we need an additional access
-    (#[enum($inner_t:ty)] $raw_name:ident: $wrapper_t:ty $(, $($rest:tt)+)?) => {
+    // Copy a bindgen enum through its specific raw type, checking that the field and wrapper match.
+    (#[enum] $raw_name:ident: $wrapper_t:ty $(, $($rest:tt)+)?) => {
         paste::paste! {
             pub const fn [<$raw_name:snake>](&self) -> $wrapper_t {
-                $wrapper_t($inner_t(self.0.$raw_name.0))
+                $wrapper_t::from_ua(&self.0.$raw_name)
             }
         }
 
@@ -635,16 +653,32 @@ macro_rules! enum_variants {
 
             #[expect(clippy::allow_attributes, reason = "not required for all variants")]
             #[allow(dead_code, reason = "not used for all variants")]
-            pub(crate) fn from_u32(value: u32) -> Self {
-                // This cast is necessary on Windows builds with inner type `i32`.
-                Self(open62541_sys::$inner(value.try_into().expect("should convert from u32")))
+            pub(crate) const fn from_ua(value: &open62541_sys::$inner) -> Self {
+                Self(open62541_sys::$inner(value.0))
             }
 
-            pub(crate) fn as_u32(&self) -> u32 {
-                // This cast is necessary on Windows builds with inner type `i32`.
-                #[expect(clippy::allow_attributes, reason = "dynamic condition")]
-                #[allow(clippy::useless_conversion, reason = "bindgen i32")]
-                u32::try_from((self.0).0).expect("should convert to u32")
+            #[expect(clippy::allow_attributes, reason = "not required for all variants")]
+            #[allow(dead_code, reason = "not used for all variants")]
+            pub(crate) const fn from_u32(value: u32) -> Self {
+                // positive i32s are bit-compatible with u32.
+                // all we need to check here is if the value exceeds i32::MAX
+                #[cfg(target_os = "windows")]
+                let value = if value > i32::MAX as u32 {
+                    panic!("u32 should've been convertible to i32, but value exceeded i32::MAX")
+                } else {
+                    value as i32
+                };
+
+                Self(open62541_sys::$inner(value))
+            }
+
+            pub(crate) const fn as_u32(&self) -> u32 {
+                let value = self.0.0;
+
+                #[cfg_attr(not(target_os = "windows"), expect(trivial_numeric_casts))]
+                let value = value as u32;
+
+                value
             }
         }
 

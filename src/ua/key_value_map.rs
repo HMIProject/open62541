@@ -88,7 +88,7 @@ impl KeyValueMap {
             )
         });
 
-        Error::verify_good(&status_code).expect("should add value");
+        Error::verify_good(status_code).expect("should add value");
     }
 
     /// Removes key's value from map.

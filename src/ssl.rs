@@ -239,7 +239,7 @@ pub fn create_certificate(
             certificate.as_mut_ptr(),
         )
     });
-    Error::verify_good(&status_code)?;
+    Error::verify_good(status_code)?;
 
     // SAFETY: The function is expected to return valid strings in its output arguments.
     let certificate = unsafe { Certificate::from_string_unchecked(certificate) };

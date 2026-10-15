@@ -1,11 +1,9 @@
-use open62541_sys::UA_ServerState;
-
 use crate::ua;
 
 crate::data_type!(ServerStatusDataType);
 crate::member_accessors!(ServerStatusDataType {
     buildInfo: &ua::BuildInfo,
-    #[enum(UA_ServerState)]
+    #[enum]
     state: ua::ServerState,
     #[from_inner]
     startTime: ua::DateTime,

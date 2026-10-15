@@ -11,7 +11,7 @@ crate::member_accessors!(BrowseDescription {
     nodeClassMask: ua::NodeClassMask,
     #[from_inner]
     resultMask: ua::BrowseResultMask,
-    #[skip(uses = BrowseDescription::browse_direction)]
+    #[enum]
     browseDirection: ua::BrowseDirection
 });
 
@@ -50,12 +50,6 @@ impl BrowseDescription {
     pub const fn with_result_mask(mut self, result_mask: &ua::BrowseResultMask) -> Self {
         self.0.resultMask = result_mask.as_u32();
         self
-    }
-
-    #[must_use]
-    pub const fn browse_direction(&self) -> ua::BrowseDirection {
-        // this is cursed
-        ua::BrowseDirection(open62541_sys::UA_BrowseDirection(self.0.browseDirection.0))
     }
 }
 
