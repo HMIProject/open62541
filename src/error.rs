@@ -38,7 +38,7 @@ impl Error {
         if status_code.is_good() {
             Ok(())
         } else {
-            Err(Self::new(status_code.clone()))
+            Err(Self::new(status_code))
         }
     }
 
@@ -47,10 +47,10 @@ impl Error {
     /// This returns the original status code except for internal errors where the generic status
     /// code [`ua::StatusCode::BAD`] is returned instead.
     #[must_use]
-    pub fn status_code(&self) -> ua::StatusCode {
+    pub const fn status_code(&self) -> ua::StatusCode {
         match self {
             // TODO: Avoid clone and make `ua::StatusCode` derive `Copy`.
-            Error::Server(status_code) => status_code.clone(),
+            Error::Server(status_code) => *status_code,
             Error::Internal(_) => ua::StatusCode::BAD,
         }
     }

@@ -38,10 +38,7 @@ impl TrustListDataType {
             self.0.specifiedLists |= ua::TrustListMasks::TRUSTEDCRLS.as_u32();
         }
 
-        array.move_into_raw(
-            &mut self.0.trustedCrlsSize,
-            &mut self.0.trustedCrls
-        );
+        array.move_into_raw(&mut self.0.trustedCrlsSize, &mut self.0.trustedCrls);
 
         self
     }
@@ -74,10 +71,7 @@ impl TrustListDataType {
             self.0.specifiedLists |= ua::TrustListMasks::ISSUERCRLS.as_u32();
         }
 
-        array.move_into_raw(
-            &mut self.0.issuerCrlsSize,
-            &mut self.0.issuerCrls
-        );
+        array.move_into_raw(&mut self.0.issuerCrlsSize, &mut self.0.issuerCrls);
 
         self
     }

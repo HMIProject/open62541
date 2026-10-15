@@ -1227,7 +1227,7 @@ impl Server {
             ))
         };
         Error::verify_good(result.status_code())?;
-        to_browse_result(&result)
+        to_browse_result(result)
     }
 
     /// Browses continuation point for more references.
@@ -1251,7 +1251,7 @@ impl Server {
             ))
         };
         Error::verify_good(result.status_code())?;
-        to_browse_result(&result)
+        to_browse_result(result)
     }
 
     /// Browses nodes recursively.
@@ -1953,16 +1953,16 @@ impl Drop for ServerRunner {
 }
 
 /// Converts [`ua::BrowseResult`] to our public result type.
-fn to_browse_result(result: &ua::BrowseResult) -> BrowseResult {
+fn to_browse_result(mut result: ua::BrowseResult) -> BrowseResult {
     // Make sure to verify the inner status code inside `BrowseResult`. The service request finishes
     // without error, even when browsing the node has failed.
     Error::verify_good(result.status_code())?;
 
-    let Some(references) = result.references() else {
+    let Some(references) = result.take_references() else {
         return Err(Error::internal("browse should return references"));
     };
 
-    Ok((references.to_vec(), result.continuation_point()))
+    Ok((references.into_vec(), result.continuation_point()))
 }
 
 /// Sets `config.nodeLifecycle` to the given value.

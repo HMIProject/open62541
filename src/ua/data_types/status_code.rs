@@ -5,7 +5,10 @@ use open62541_sys::{
     UA_StatusCode_name,
 };
 
-crate::data_type::data_type_baseline!(#[derive(Copy, Clone)] StatusCode);
+crate::data_type::data_type_baseline!(
+    #[derive(Copy, Clone)]
+    StatusCode
+);
 
 impl StatusCode {
     /// Creates wrapper by taking ownership of `src`.

@@ -317,20 +317,20 @@ impl AsyncClient {
                 .with_method_id(method_id)
                 .with_input_arguments(input_arguments)]);
 
-        let response = self.service_request(request).await?;
+        let mut response = self.service_request(request).await?;
 
-        let Some(results) = response.results() else {
+        let Some(mut results) = response.take_results() else {
             return Err(Error::internal("call should return results"));
         };
 
-        let Some(result) = results.first() else {
+        let Some(result) = results.as_slice_mut().first_mut() else {
             return Err(Error::internal("call should return a result"));
         };
 
         Error::verify_good(result.status_code())?;
 
-        let output_arguments = if let Some(output_arguments) = result.output_arguments() {
-            output_arguments.to_vec()
+        let output_arguments = if let Some(output_arguments) = result.take_output_arguments() {
+            output_arguments.into_vec()
         } else {
             log::debug!("Calling {method_id} returned unset output arguments, assuming none exist");
             Vec::new()
@@ -364,9 +364,9 @@ impl AsyncClient {
         let request =
             ua::BrowseRequest::init().with_nodes_to_browse(slice::from_ref(browse_description));
 
-        let response = self.service_request(request).await?;
+        let mut response = self.service_request(request).await?;
 
-        let Some(results) = response.results() else {
+        let Some(results) = response.take_results() else {
             return Err(Error::internal("browse should return results"));
         };
 
@@ -829,7 +829,7 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
 
         if let Err(error) = Error::verify_good(connect_status) {
             let not_connected = matches!(
-                connect_status.clone().into_raw(),
+                connect_status.code(),
                 UA_STATUSCODE_BADDISCONNECT
                     | UA_STATUSCODE_BADCONNECTIONCLOSED
                     | UA_STATUSCODE_BADCONNECTIONREJECTED

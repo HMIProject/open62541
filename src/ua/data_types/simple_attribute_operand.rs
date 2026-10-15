@@ -25,7 +25,7 @@ impl SimpleAttributeOperand {
     }
 
     #[must_use]
-    pub fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
+    pub const fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
         self.0.attributeId = attribute_id.as_u32();
         self
     }
@@ -40,7 +40,7 @@ impl SimpleAttributeOperand {
     pub const fn attribute_id(&self) -> ua::AttributeId {
         let value = self.0.attributeId;
 
-        #[cfg_attr(not(target_os = "windows"), expect(trivial_numeric_casts))]
+        #[cfg(target_os = "windows")]
         let value = value as u32;
 
         ua::AttributeId::from_u32(value)

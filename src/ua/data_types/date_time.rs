@@ -45,6 +45,11 @@ impl DateTime {
 
         unix_ticks * i128::from(1000 / UA_DATETIME_USEC)
     }
+
+    #[must_use]
+    pub(crate) const fn as_i64(self) -> i64 {
+        self.0
+    }
 }
 
 #[cfg(feature = "time")]

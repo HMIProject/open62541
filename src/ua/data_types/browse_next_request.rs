@@ -3,6 +3,7 @@ use crate::{DataType as _, ServiceRequest, UaIterExt as _, ua};
 crate::data_type!(BrowseNextRequest);
 crate::member_accessors!(BrowseNextRequest {
     continuationPoints: [ua::ContinuationPoint],
+    requestHeader: &mut ua::RequestHeader,
     releaseContinuationPoints: bool
 });
 
