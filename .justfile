@@ -37,7 +37,7 @@ _asan +args:
     set -euo pipefail
     # An explicit target keeps `RUSTFLAGS` from applying to build scripts and proc macros.
     export CARGO_BUILD_TARGET="$(rustc +nightly -vV | sed -n 's/^host: //p')"
-    export RUSTFLAGS="-Zsanitizer=address"
+    export RUSTFLAGS="-Zsanitizer=address --cfg asan"
     export ASAN_OPTIONS="detect_leaks=1"
     cargo +nightly {{ args }}
 
