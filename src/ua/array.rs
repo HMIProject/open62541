@@ -703,8 +703,7 @@ mod tests {
     #[test]
     fn move_into_raw_leak_probe() {
         let array_src = ua::Array::<ua::UInt32>::new(42);
-        let array_dst = ua::Array::<ua::UInt32>::new(24);
-        let (mut size, ptr) = unsafe { array_dst.as_raw_parts() };
+        let (mut size, ptr) = unsafe { ua::Array::<ua::UInt32>::new(24).into_raw_parts() };
         // this would fail under ASAN with previous impl, now succeeds
         array_src.move_into_raw(&mut size, &mut ptr.cast_mut());
     }
