@@ -103,7 +103,7 @@ impl ClientConfig {
         let status_code =
             ua::StatusCode::new(unsafe { UA_ClientConfig_setDefault(config.as_mut_ptr()) });
         // PANIC: The only possible errors here are out-of-memory.
-        Error::verify_good(&status_code).expect("should set default client config");
+        Error::verify_good(status_code).expect("should set default client config");
 
         config
     }
@@ -134,7 +134,7 @@ impl ClientConfig {
                 0,
             )
         });
-        Error::verify_good(&status_code)?;
+        Error::verify_good(status_code)?;
 
         Ok(config)
     }

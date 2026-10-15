@@ -1,5 +1,3 @@
-use open62541_sys::UA_NodeClass;
-
 use crate::ua;
 
 crate::data_type!(ReferenceDescription);
@@ -10,6 +8,6 @@ crate::member_accessors!(ReferenceDescription {
     browseName: &ua::QualifiedName,
     displayName: &ua::LocalizedText,
     typeDefinition: &ua::ExpandedNodeId,
-    #[enum(UA_NodeClass)]
+    #[enum]
     nodeClass: ua::NodeClass
 });

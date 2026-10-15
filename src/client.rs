@@ -291,7 +291,7 @@ impl ClientBuilder {
             );
             result
         });
-        Error::verify_good(&status_code)?;
+        Error::verify_good(status_code)?;
 
         let Some(endpoint_descriptions) = endpoint_descriptions else {
             return Err(Error::internal("expected array of endpoint descriptions"));
@@ -400,7 +400,7 @@ impl Client {
             // SAFETY: The method does not take ownership of `client`.
             UA_Client_connect(self.0.as_mut_ptr(), endpoint_url.as_ptr())
         });
-        Error::verify_good(&status_code)
+        Error::verify_good(status_code)
     }
 
     /// Disconnects from endpoint.

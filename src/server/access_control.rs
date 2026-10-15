@@ -107,7 +107,7 @@ unsafe impl AccessControl for DefaultAccessControl<'_> {
                 username_password_login.as_ptr(),
             )
         });
-        Error::verify_good(&status_code)
+        Error::verify_good(status_code)
     }
 }
 
@@ -221,7 +221,7 @@ where
                 login_callback_sentinel.as_ptr(),
             )
         });
-        Error::verify_good(&status_code)?;
+        Error::verify_good(status_code)?;
 
         // Compile-time assertion to make sure that the strings were still alive at this point. This
         // includes the branch above when exiting early with `?`.

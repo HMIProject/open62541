@@ -2,16 +2,16 @@ use crate::ua;
 
 crate::data_type!(TrustListDataType);
 crate::member_accessors!(TrustListDataType {
-    trustedCertificates: [ua::String],
-    trustedCrls: [ua::String],
-    issuerCertificates: [ua::String],
-    issuerCrls: [ua::String],
+    trustedCertificates: [ua::ByteString],
+    trustedCrls: [ua::ByteString],
+    issuerCertificates: [ua::ByteString],
+    issuerCrls: [ua::ByteString],
     specifiedLists: u32
 });
 
 impl TrustListDataType {
     #[must_use]
-    pub fn with_trusted_certificates(mut self, trusted_certificates: &[ua::String]) -> Self {
+    pub fn with_trusted_certificates(mut self, trusted_certificates: &[ua::ByteString]) -> Self {
         let array = ua::Array::from_slice(trusted_certificates);
 
         if array.is_empty() {
@@ -29,7 +29,7 @@ impl TrustListDataType {
     }
 
     #[must_use]
-    pub fn with_trusted_crls(mut self, trusted_crls: &[ua::String]) -> Self {
+    pub fn with_trusted_crls(mut self, trusted_crls: &[ua::ByteString]) -> Self {
         let array = ua::Array::from_slice(trusted_crls);
 
         if array.is_empty() {
@@ -47,7 +47,7 @@ impl TrustListDataType {
     }
 
     #[must_use]
-    pub fn with_issuer_certificates(mut self, issuer_certificates: &[ua::String]) -> Self {
+    pub fn with_issuer_certificates(mut self, issuer_certificates: &[ua::ByteString]) -> Self {
         let array = ua::Array::from_slice(issuer_certificates);
 
         if array.is_empty() {
@@ -65,7 +65,7 @@ impl TrustListDataType {
     }
 
     #[must_use]
-    pub fn with_issuer_crls(mut self, issuer_crls: &[ua::String]) -> Self {
+    pub fn with_issuer_crls(mut self, issuer_crls: &[ua::ByteString]) -> Self {
         let array = ua::Array::from_slice(issuer_crls);
 
         if array.is_empty() {

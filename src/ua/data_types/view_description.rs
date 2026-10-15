@@ -4,7 +4,8 @@ crate::data_type!(ViewDescription);
 crate::member_accessors!(ViewDescription {
     viewId: &ua::NodeId,
     viewVersion: u32,
-    timestamp: i64
+    #[from_inner]
+    timestamp: ua::DateTime
 });
 
 impl ViewDescription {
@@ -21,8 +22,9 @@ impl ViewDescription {
     }
 
     #[must_use]
-    pub const fn with_timestamp(mut self, ts: i64) -> Self {
-        self.0.timestamp = ts;
+    pub const fn with_timestamp(mut self, ts: ua::DateTime) -> Self {
+        // SAFETY: repr(transparent) guarantees that DateTime has identical bit-pattern
+        self.0.timestamp = unsafe { std::mem::transmute(ts) };
         self
     }
 }

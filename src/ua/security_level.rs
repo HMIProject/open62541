@@ -1,10 +1,18 @@
+//! Wrapper for security level from [`open62541_sys`].
 use open62541_sys::UA_Byte;
 
 use crate::ua;
 
-/// Wrapper for security level from [`open62541_sys`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SecurityLevel(pub(crate) UA_Byte);
+crate::data_type::data_type_baseline! {
+    #[expect(
+        clippy::derived_hash_with_manual_eq,
+        reason = "open62541 numeric equality impl satisfies `Hash`s identity invariant"
+    )]
+    #[derive(Clone, Copy, Hash)]
+    SecurityLevel,
+    #[uses_inner]
+    Byte
+}
 
 impl SecurityLevel {
     #[must_use]

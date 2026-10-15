@@ -1,9 +1,15 @@
 use crate::ua;
 
-/// Wrapper for node class mask from [`open62541_sys`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[repr(transparent)]
-pub struct NodeClassMask(pub(crate) u32);
+crate::data_type::data_type_baseline! {
+    #[expect(
+        clippy::derived_hash_with_manual_eq,
+        reason = "open62541 numeric equality impl satisfies `Hash`s identity invariant"
+    )]
+    #[derive(Clone, Copy, Hash)]
+    NodeClassMask,
+    #[uses_inner]
+    UInt32
+}
 
 crate::bitmask_ops!(NodeClassMask);
 
@@ -21,7 +27,7 @@ impl NodeClassMask {
         Self(mask)
     }
 
-    pub(crate) const fn as_u32(&self) -> u32 {
+    pub(crate) const fn as_u32(self) -> u32 {
         self.0
     }
 }

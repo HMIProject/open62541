@@ -96,7 +96,7 @@ impl str::FromStr for ExpandedNodeId {
             let str = unsafe { ua::String::to_raw_copy(&str) };
             unsafe { UA_ExpandedNodeId_parse(node_id.as_mut_ptr(), str) }
         });
-        Error::verify_good(&status_code)?;
+        Error::verify_good(status_code)?;
 
         Ok(node_id)
     }
@@ -106,7 +106,7 @@ impl fmt::Display for ExpandedNodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut output = ua::String::init();
 
-        let status_code = &ua::StatusCode::new({
+        let status_code = ua::StatusCode::new({
             // This mirrors the behavior of `UA_ExpandedNodeId_parse()` above.
             unsafe { UA_ExpandedNodeId_print(self.as_ptr(), output.as_mut_ptr()) }
         });

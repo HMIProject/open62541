@@ -34,7 +34,7 @@ impl Error {
         Self::Server(status_code)
     }
 
-    pub(crate) fn verify_good(status_code: &ua::StatusCode) -> Result<()> {
+    pub(crate) fn verify_good(status_code: ua::StatusCode) -> Result<()> {
         if status_code.is_good() {
             Ok(())
         } else {

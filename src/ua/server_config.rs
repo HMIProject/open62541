@@ -49,7 +49,7 @@ impl ServerConfig {
             )
         });
         // PANIC: The only possible errors here are out-of-memory.
-        Error::verify_good(&status_code).expect("should set minimal server config");
+        Error::verify_good(status_code).expect("should set minimal server config");
 
         config
     }
@@ -82,7 +82,7 @@ impl ServerConfig {
                 0,
             )
         });
-        Error::verify_good(&status_code)?;
+        Error::verify_good(status_code)?;
 
         Ok(config)
     }
@@ -115,7 +115,7 @@ impl ServerConfig {
                 0,
             )
         });
-        Error::verify_good(&status_code)?;
+        Error::verify_good(status_code)?;
 
         Ok(config)
     }

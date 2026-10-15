@@ -121,7 +121,7 @@ impl AsyncClient {
                 self.client.as_ptr().cast_mut(),
             )
         });
-        if let Err(error) = Error::verify_good(&status_code) {
+        if let Err(error) = Error::verify_good(status_code) {
             log::warn!("Error while disconnecting client: {error}");
         }
 
@@ -294,7 +294,7 @@ impl AsyncClient {
             return Err(Error::internal("write should return a result"));
         };
 
-        Error::verify_good(result)?;
+        Error::verify_good(*result)?;
 
         Ok(())
     }
@@ -327,7 +327,7 @@ impl AsyncClient {
             return Err(Error::internal("call should return a result"));
         };
 
-        Error::verify_good(&result.status_code())?;
+        Error::verify_good(result.status_code())?;
 
         let output_arguments = if let Some(output_arguments) = result.output_arguments() {
             output_arguments.to_vec()
@@ -547,7 +547,7 @@ impl AsyncClient {
         // The request itself fails when the client is not connected (or the secure session has not been
         // established). In all other cases, `open62541` processes the request first and then may reject
         // it only through the response when executing our callback above.
-        Error::verify_good(&status_code).inspect_err(|_| {
+        Error::verify_good(status_code).inspect_err(|_| {
             log::warn!("{} failed: {status_code:?}", R::type_name());
         })?;
 
@@ -827,7 +827,7 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
         let time_taken = start_of_iteration.elapsed();
         log::trace!("Iterate run took {time_taken:?}");
 
-        if let Err(error) = Error::verify_good(&connect_status) {
+        if let Err(error) = Error::verify_good(connect_status) {
             let not_connected = matches!(
                 connect_status.clone().into_raw(),
                 UA_STATUSCODE_BADDISCONNECT
@@ -870,7 +870,7 @@ fn background_task(client: &ua::Client, state: &AtomicU8) {
 fn to_browse_result(result: &ua::BrowseResult, node_id: Option<&ua::NodeId>) -> BrowseResult {
     // Make sure to verify the inner status code inside `BrowseResult`. The service request finishes
     // without error, even when browsing the node has failed.
-    Error::verify_good(&result.status_code())?;
+    Error::verify_good(result.status_code())?;
 
     let references = if let Some(references) = result.references() {
         references.to_vec()
