@@ -233,7 +233,7 @@ mod value;
 
 #[cfg(feature = "tokio")]
 pub use self::async_monitored_item::AsyncMonitoredItem;
-pub(crate) use self::ua::UaIterExt;
+use self::ua::UaIterExt;
 pub use self::{
     async_client::AsyncClient,
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
