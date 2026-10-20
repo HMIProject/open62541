@@ -233,7 +233,6 @@ mod value;
 
 #[cfg(feature = "tokio")]
 pub use self::async_monitored_item::AsyncMonitoredItem;
-use self::ua::UaIterExt;
 pub use self::{
     async_client::AsyncClient,
     async_subscription::{AsyncSubscription, SubscriptionBuilder},
@@ -266,6 +265,7 @@ use self::{
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
     monitored_item::create_monitored_items_callback,
+    ua::UaIterExt,
     value::{ArrayValue, NonScalarValue},
 };
 #[cfg(feature = "mbedtls")]
