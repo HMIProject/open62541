@@ -443,8 +443,9 @@ impl<T: DataType> Array<T> {
     }
 }
 
-// Might be good to make this public as an impl of [`FromIterator`] once performance is optimized
 /// Internal-only helper for collection of iterators into [`Array`]s.
+//
+// Might be good to make this public as an impl of [`FromIterator`] once performance is optimized.
 pub(crate) trait UaIterExt<T>
 where
     T: DataType,
@@ -697,14 +698,14 @@ mod tests {
         .expect("join thread");
     }
 
-    // simple probe to verify that the behavior of `Array::move_into_raw` doesn't leak.
-    // only valuable when run with `-Zsanitizer=address`, so it's being gated behind an explicit cfg
+    // Simple probe to verify that the behavior of `Array::move_into_raw()` doesn't leak.
+    // Only valuable when run with `-Zsanitizer=address`, so it's being gated behind an explicit cfg.
     #[cfg(asan)]
     #[test]
     fn move_into_raw_leak_probe() {
         let array_src = ua::Array::<ua::UInt32>::new(42);
         let (mut size, mut ptr) = ua::Array::<ua::UInt32>::new(24).into_raw_parts();
-        // this would fail under ASAN with previous impl, now succeeds
+        // This would fail under ASAN with previous impl, now succeeds.
         array_src.move_into_raw(&mut size, &mut ptr);
         unsafe { ua::Array::<ua::UInt32>::move_from_raw_parts(&mut size, &mut ptr) }.unwrap();
     }

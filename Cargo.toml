@@ -75,7 +75,14 @@ unsafe_code = "allow"
 unsafe_op_in_unsafe_fn = "warn"
 unused = { level = "warn", priority = -1 }
 warnings = "warn"
+trivial_numeric_casts = "warn"
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(asan)'] }
+unreachable_pub = "warn"
+# Writing unsafe code is a necessity for FFI wrappers.
+unsafe_code = "allow"
+unsafe_op_in_unsafe_fn = "warn"
+unused = { level = "warn", priority = -1 }
+warnings = "warn"
 
 [lints.clippy]
 # We use absolute paths where we require some item only once. Most often, these

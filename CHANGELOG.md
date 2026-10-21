@@ -16,7 +16,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Fix a memory leak triggered when using `with_*` builder methods on data types for array members
   (e.g. `ua::RelativePath::with_elements()` would leak the elements that were previously owned by
-  the instance)
+  the instance).
 
 ## [0.12.0] - 2026-07-14
 
