@@ -25,6 +25,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Prevent use-after-free when a `Server` is used after its `ServerRunner` has been dropped (e.g.
   `let (server, _) = builder.build();`). The node lifecycle callbacks borrowed by
   `config.nodeLifecycle` are now owned by the shared server and outlive every server handle.
+- Upgrade to open62541-sys v0.6.5 for ASAN instrumentation required for testing.
 
 ## [0.11.0] - 2026-07-13
 
