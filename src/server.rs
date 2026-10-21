@@ -30,7 +30,7 @@ use parking_lot::{Condvar, Mutex, MutexGuard};
 
 use crate::{
     Attribute, Attributes, BrowseResult, DEFAULT_PORT_NUMBER, DataType, DataValue, Error, Result,
-    ua,
+    UaIterExt as _, ua,
 };
 
 pub(crate) use self::node_context::NodeContext;
@@ -184,10 +184,10 @@ impl ServerBuilder {
     #[must_use]
     pub fn server_urls(mut self, server_urls: &[&str]) -> Self {
         let config = self.config_mut();
-        let server_urls = server_urls
+        server_urls
             .iter()
-            .map(|server_url| ua::String::new(server_url).unwrap());
-        ua::Array::from_iter(server_urls)
+            .map(|server_url| ua::String::new(server_url).unwrap())
+            .collect_ua_array()
             .move_into_raw(&mut config.serverUrlsSize, &mut config.serverUrls);
         self
     }

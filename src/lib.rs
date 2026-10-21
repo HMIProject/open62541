@@ -265,6 +265,7 @@ use self::{
     client::ClientContext,
     data_type::{bitmask_ops, data_type, enum_variants},
     monitored_item::create_monitored_items_callback,
+    ua::UaIterExt,
     value::{ArrayValue, NonScalarValue},
 };
 #[cfg(feature = "mbedtls")]
