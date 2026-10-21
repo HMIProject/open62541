@@ -9,7 +9,7 @@ use crate::{
 
 crate::data_type!(ExtensionObject);
 crate::member_accessors!(ExtensionObject {
-    #[skip(uses = Self::encoding)]
+    #[enum]
     encoding: ua::ExtensionObjectEncoding
 });
 
@@ -34,16 +34,11 @@ impl ExtensionObject {
         extension_object
     }
 
-    #[must_use]
-    pub const fn encoding(&self) -> ua::ExtensionObjectEncoding {
-        ua::ExtensionObjectEncoding(self.0.encoding.0)
-    }
-
     /// Gets encoded type ID.
     #[must_use]
-    pub fn encoded_type_id(&self) -> Option<&ua::NodeId> {
+    pub const fn encoded_type_id(&self) -> Option<&ua::NodeId> {
         if !matches!(
-            self.0.encoding.0,
+            self.encoding().as_u32(),
             ExtensionObjectEncoding::ENCODED_NOBODY_U32
                 | ExtensionObjectEncoding::ENCODED_BYTESTRING_U32
                 | ExtensionObjectEncoding::ENCODED_XML_U32
@@ -54,7 +49,7 @@ impl ExtensionObject {
         // SAFETY: Encoding indicates encoded object, union variant is valid.
         let encoded_content = unsafe { self.0.content.encoded.as_ref() };
 
-        Some(ua::NodeId::raw_ref(&encoded_content.typeId))
+        Some(crate::data_type::data_type_ref(&encoded_content.typeId))
     }
 
     /// Gets encoded byte string content.
