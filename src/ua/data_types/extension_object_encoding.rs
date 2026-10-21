@@ -1,7 +1,28 @@
 use open62541_sys::UA_ExtensionObjectEncoding;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ExtensionObjectEncoding(pub(crate) u32);
+crate::data_type::data_type_baseline!(
+    #[derive(Clone, Copy)]
+    ExtensionObjectEncoding,
+    #[uses_inner]
+    UInt32
+);
+
+impl ExtensionObjectEncoding {
+    #[must_use]
+    pub const fn from_ua(value: &UA_ExtensionObjectEncoding) -> Self {
+        let value = value.0;
+
+        #[cfg(target_os = "windows")]
+        let value = value as u32;
+
+        Self(value)
+    }
+
+    #[must_use]
+    pub const fn as_u32(&self) -> u32 {
+        self.0
+    }
+}
 
 macro_rules! impl_variants {
     ($t:ty, $($rest:tt)+) => {
@@ -12,8 +33,10 @@ macro_rules! impl_variants {
 
     ($variant:ident = $discriminant:expr $(, $($rest:tt)+)?) => {
         paste::paste! {
-            pub const $variant: Self = Self($discriminant);
-            pub const [<$variant _U32>]: u32 = $discriminant;
+            pub const $variant: Self = Self(Self::[<$variant _U32>]);
+            #[expect(clippy::as_conversions, reason = "cross-platform enum implementation, all values are >= 0")]
+            #[cfg_attr(not(target_os = "windows"), expect(trivial_numeric_casts, reason = "windows enum repr is i32"))]
+            pub const [<$variant _U32>]: u32 = $discriminant as u32;
             #[must_use]
             pub const fn [<is_ $variant:lower>](&self) -> bool {
                 self.0 == Self::[<$variant _U32>]
