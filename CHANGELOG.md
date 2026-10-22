@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-10-22
+
 ### Added
 
 - Add back `Server::create_event()` with reordered and additional arguments. This new method
@@ -615,7 +617,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
-[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/HMIProject/open62541/compare/v0.12.0...v0.12.1
+[0.12.0]: https://github.com/HMIProject/open62541/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/HMIProject/open62541/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/HMIProject/open62541/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/HMIProject/open62541/compare/v0.9.4...v0.10.0
