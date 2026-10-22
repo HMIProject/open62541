@@ -271,6 +271,53 @@ impl AsyncClient {
         Ok(results)
     }
 
+    /// Reads historizied values of a node for a given period of time.
+    ///
+    /// # Errors
+    ///
+    /// This fails only when the entire request fails (e.g. communication error). When the node does
+    /// not exist or its value attribute cannot be read, the server returns a corresponding
+    /// [`DataValue`] with the appropriate [`status()`] and with [`value()`] unset.
+    ///
+    /// [`status()`]: DataValue::status
+    /// [`value()`]: DataValue::value
+    pub async fn read_history_raw(
+        &self,
+        node_id: &ua::NodeId,
+        start_time: ua::DateTime,
+        end_time: ua::DateTime,
+    ) -> Result<ua::HistoryReadResult> {
+        let nodes_to_read = [node_id]
+            .iter()
+            .map(|node_id| ua::HistoryReadValueId::init().with_node_id(node_id))
+            .collect::<Vec<_>>();
+
+        let history_read_details = ua::ReadRawModifiedDetails::init()
+            .with_is_read_modified(ua::Boolean::new(false))
+            .with_start_time(start_time)
+            .with_end_time(end_time)
+            .with_num_values_per_node(ua::UInt32::new(0))
+            .with_return_bounds(ua::Boolean::new(false));
+        let request = ua::HistoryReadRequest::init()
+            // TODO: Add method argument for this? We return timestamps in `DataValue` and they
+            // should not end up always being `None` by default.
+            .with_timestamps_to_return(&ua::TimestampsToReturn::BOTH)
+            .with_history_read_details(&history_read_details)
+            .with_nodes_to_read(&nodes_to_read);
+
+        let response = self.service_request(request).await?;
+
+        let Some(results) = response.results() else {
+            return Err(Error::internal("read should return results"));
+        };
+
+        results
+            .as_slice()
+            .first()
+            .map(std::borrow::ToOwned::to_owned)
+            .ok_or(Error::internal("unexpected number of read results"))
+    }
+
     /// Writes node value.
     ///
     /// # Errors
