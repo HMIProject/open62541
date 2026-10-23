@@ -1,6 +1,6 @@
 use crate::ua;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum UserIdentityToken {
     /// No user information is available.
     Anonymous(ua::AnonymousIdentityToken),
