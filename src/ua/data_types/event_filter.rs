@@ -1,12 +1,17 @@
 use crate::{DataType as _, MonitoringFilter, ua};
 
 crate::data_type!(EventFilter);
+crate::member_accessors!(EventFilter {
+    selectClauses: [ua::SimpleAttributeOperand],
+    whereClause: &ua::ContentFilter
+});
 
 impl EventFilter {
     #[must_use]
     pub fn with_select_clauses(mut self, select_clauses: &[ua::SimpleAttributeOperand]) -> Self {
-        let array = ua::Array::from_slice(select_clauses);
-        array.move_into_raw(&mut self.0.selectClausesSize, &mut self.0.selectClauses);
+        ua::Array::from_slice(select_clauses)
+            .move_into_raw(&mut self.0.selectClausesSize, &mut self.0.selectClauses);
+
         self
     }
 

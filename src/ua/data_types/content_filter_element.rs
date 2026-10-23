@@ -1,6 +1,11 @@
 use crate::{DataType, FilterOperand, UaIterExt as _, ua};
 
 crate::data_type!(ContentFilterElement);
+crate::member_accessors!(ContentFilterElement {
+    #[enum]
+    filterOperator: ua::FilterOperator,
+    filterOperands: [ua::ExtensionObject]
+});
 
 impl ContentFilterElement {
     #[must_use]
@@ -16,6 +21,7 @@ impl ContentFilterElement {
             .map(FilterOperand::to_extension_object)
             .collect_ua_array()
             .move_into_raw(&mut self.0.filterOperandsSize, &mut self.0.filterOperands);
+
         self
     }
 }

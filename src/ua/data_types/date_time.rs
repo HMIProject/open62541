@@ -2,7 +2,10 @@ use open62541_sys::{UA_DATETIME_UNIX_EPOCH, UA_DATETIME_USEC};
 
 use crate::Error;
 
-crate::data_type!(DateTime);
+crate::data_type::data_type_baseline! {
+    #[derive(Copy, Clone)]
+    DateTime
+}
 
 impl DateTime {
     /// Creates [`DateTime`] from a UNIX timestamp with nanosecond precision.
@@ -41,6 +44,11 @@ impl DateTime {
         let unix_ticks = ua_ticks - i128::from(UA_DATETIME_UNIX_EPOCH);
 
         unix_ticks * i128::from(1000 / UA_DATETIME_USEC)
+    }
+
+    #[must_use]
+    pub(crate) const fn as_i64(self) -> i64 {
+        self.0
     }
 }
 

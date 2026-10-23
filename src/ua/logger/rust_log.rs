@@ -117,7 +117,7 @@ fn format_message(msg: *const c_char, args: open62541_sys::va_list_) -> Result<u
             }
         }
     } else {
-        Error::verify_good(&status_code)?;
+        Error::verify_good(status_code)?;
     }
 
     Ok(msg_buffer)

@@ -1,8 +1,16 @@
 use std::time::Duration;
 
-use crate::{DataType as _, MonitoringFilter};
+use crate::{DataType as _, MonitoringFilter, ua};
 
 crate::data_type!(MonitoringParameters);
+crate::member_accessors!(MonitoringParameters {
+    filter: &ua::ExtensionObject,
+    #[skip(uses = Self::sampling_interval)]
+    samplingInterval: f64,
+    queueSize: u32,
+    discardOldest: bool,
+    clientHandle: u32
+});
 
 impl MonitoringParameters {
     /// Sets sampling interval.
@@ -47,5 +55,10 @@ impl MonitoringParameters {
     pub const fn with_discard_oldest(mut self, discard_oldest: bool) -> Self {
         self.0.discardOldest = discard_oldest;
         self
+    }
+
+    #[must_use]
+    pub fn sampling_interval(&self) -> Option<Duration> {
+        Duration::try_from_secs_f64(self.0.samplingInterval / 1e3).ok()
     }
 }

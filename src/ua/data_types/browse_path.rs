@@ -1,6 +1,10 @@
 use crate::{DataType as _, ua};
 
 crate::data_type!(BrowsePath);
+crate::member_accessors!(BrowsePath {
+    startingNode: &ua::NodeId,
+    relativePath: &ua::RelativePath
+});
 
 impl BrowsePath {
     #[must_use]

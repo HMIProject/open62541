@@ -1,8 +1,6 @@
-use crate::ua;
+use crate::{DataType, ua};
 
-/// Wrapper for continuation point from [`open62541_sys`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ContinuationPoint(ua::ByteString);
+crate::data_type!(ContinuationPoint);
 
 impl ContinuationPoint {
     /// Creates continuation point from raw string.
@@ -23,17 +21,18 @@ impl ContinuationPoint {
         // this is not an invalid string (as defined by OPC UA) but it might indicate an error.
         debug_assert!(!continuation_point.is_empty());
 
-        Some(Self(continuation_point))
+        Some(Self(continuation_point.into_raw()))
     }
 
     /// Gets underlying representation.
     #[must_use]
     pub(crate) const fn as_byte_string(&self) -> &ua::ByteString {
-        &self.0
+        // SAFETY: `repr(transparent)` means that we can transmute safely between wrapper types
+        unsafe { std::mem::transmute(self) }
     }
 
     /// Gets underlying representation.
     pub(crate) fn to_byte_string(&self) -> ua::ByteString {
-        self.0.clone()
+        self.as_byte_string().clone()
     }
 }

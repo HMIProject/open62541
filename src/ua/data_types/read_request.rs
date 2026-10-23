@@ -1,6 +1,12 @@
 use crate::{DataType as _, ServiceRequest, ua};
 
 crate::data_type!(ReadRequest);
+crate::member_accessors!(ReadRequest {
+    #[enum]
+    timestampsToReturn: ua::TimestampsToReturn,
+    nodesToRead: [ua::ReadValueId],
+    requestHeader: &mut ua::RequestHeader
+});
 
 impl ReadRequest {
     #[must_use]
@@ -14,8 +20,9 @@ impl ReadRequest {
 
     #[must_use]
     pub fn with_nodes_to_read(mut self, nodes_to_read: &[ua::ReadValueId]) -> Self {
-        let array = ua::Array::from_slice(nodes_to_read);
-        array.move_into_raw(&mut self.0.nodesToReadSize, &mut self.0.nodesToRead);
+        ua::Array::from_slice(nodes_to_read)
+            .move_into_raw(&mut self.0.nodesToReadSize, &mut self.0.nodesToRead);
+
         self
     }
 }

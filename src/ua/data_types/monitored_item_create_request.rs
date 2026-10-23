@@ -5,6 +5,12 @@ use open62541_sys::{UA_MonitoredItemCreateRequest_default, UA_NODEID_NUMERIC};
 use crate::{DataType as _, MonitoringFilter, ua};
 
 crate::data_type!(MonitoredItemCreateRequest);
+crate::member_accessors!(MonitoredItemCreateRequest {
+    itemToMonitor: &ua::ReadValueId,
+    #[enum]
+    monitoringMode: ua::MonitoringMode,
+    requestedParameters: &ua::MonitoringParameters
+});
 
 impl MonitoredItemCreateRequest {
     /// Sets item to monitor.
@@ -27,7 +33,7 @@ impl MonitoredItemCreateRequest {
     ///
     /// See [`ua::ReadValueId::with_attribute_id()`].
     #[must_use]
-    pub fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
+    pub const fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
         self.0.itemToMonitor.attributeId = attribute_id.as_u32();
         self
     }
@@ -91,7 +97,7 @@ impl MonitoredItemCreateRequest {
     }
 
     #[must_use]
-    pub(crate) fn attribute_id(&self) -> ua::AttributeId {
+    pub(crate) const fn attribute_id(&self) -> ua::AttributeId {
         ua::AttributeId::from_u32(self.0.itemToMonitor.attributeId)
     }
 }

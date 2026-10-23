@@ -1,6 +1,13 @@
 use crate::{DataType as _, ua};
 
 crate::data_type!(ReadValueId);
+crate::member_accessors!(ReadValueId {
+    nodeId: &ua::NodeId,
+    #[skip(uses = Self::attribute_id)]
+    attributeId: ua::AttributeId,
+    dataEncoding: &ua::QualifiedName,
+    indexRange: &ua::String
+});
 
 impl ReadValueId {
     #[must_use]
@@ -10,8 +17,18 @@ impl ReadValueId {
     }
 
     #[must_use]
-    pub fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
+    pub const fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
         self.0.attributeId = attribute_id.as_u32();
         self
+    }
+
+    #[must_use]
+    pub const fn attribute_id(&self) -> ua::AttributeId {
+        let value = self.0.attributeId;
+
+        #[cfg(target_os = "windows")]
+        let value = value as u32;
+
+        ua::AttributeId::from_u32(value)
     }
 }

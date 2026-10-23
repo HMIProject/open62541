@@ -1,1 +1,15 @@
 crate::data_type!(ServerState);
+crate::enum_variants!(
+    ServerState,
+    UA_ServerState,
+    [
+        FAILED,
+        NOCONFIGURATION,
+        SUSPENDED,
+        RUNNING,
+        SHUTDOWN,
+        TEST,
+        COMMUNICATIONFAULT,
+        UNKNOWN,
+    ]
+);

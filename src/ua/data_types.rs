@@ -30,12 +30,14 @@ mod create_monitored_items_response;
 mod create_subscription_request;
 mod create_subscription_respones;
 mod data_change_filter;
+mod data_change_trigger;
 mod data_value;
 mod date_time;
 mod delete_monitored_items_request;
 mod delete_monitored_items_response;
 mod delete_subscriptions_request;
 mod delete_subscriptions_response;
+mod diagnostic_info;
 mod element_operand;
 mod endpoint_description;
 mod enum_definition;
@@ -46,6 +48,7 @@ mod eu_information;
 mod event_filter;
 mod expanded_node_id;
 mod extension_object;
+mod extension_object_encoding;
 mod filter_operator;
 mod guid;
 mod issued_identity_token;
@@ -80,9 +83,14 @@ mod structure_description;
 mod structure_field;
 mod structure_type;
 mod timestamps_to_return;
+mod translate_browse_paths_to_node_ids_request;
+mod translate_browse_paths_to_node_ids_response;
 mod trust_list_data_type;
 mod user_name_identity_token;
+mod user_token_policy;
+mod user_token_type;
 mod variant;
+mod view_description;
 mod write_request;
 mod write_response;
 mod write_value;
@@ -119,12 +127,14 @@ pub use self::{
     create_subscription_request::CreateSubscriptionRequest,
     create_subscription_respones::CreateSubscriptionResponse,
     data_change_filter::DataChangeFilter,
+    data_change_trigger::DataChangeTrigger,
     data_value::DataValue,
     date_time::DateTime,
     delete_monitored_items_request::DeleteMonitoredItemsRequest,
     delete_monitored_items_response::DeleteMonitoredItemsResponse,
     delete_subscriptions_request::DeleteSubscriptionsRequest,
     delete_subscriptions_response::DeleteSubscriptionsResponse,
+    diagnostic_info::DiagnosticInfo,
     element_operand::ElementOperand,
     endpoint_description::EndpointDescription,
     enum_definition::EnumDefinition,
@@ -135,6 +145,7 @@ pub use self::{
     event_filter::EventFilter,
     expanded_node_id::ExpandedNodeId,
     extension_object::ExtensionObject,
+    extension_object_encoding::ExtensionObjectEncoding,
     filter_operator::FilterOperator,
     guid::Guid,
     issued_identity_token::IssuedIdentityToken,
@@ -173,9 +184,14 @@ pub use self::{
     structure_field::StructureField,
     structure_type::StructureType,
     timestamps_to_return::TimestampsToReturn,
+    translate_browse_paths_to_node_ids_request::TranslateBrowsePathsToNodeIdsRequest,
+    translate_browse_paths_to_node_ids_response::TranslateBrowsePathsToNodeIdsResponse,
     trust_list_data_type::TrustListDataType,
     user_name_identity_token::UserNameIdentityToken,
+    user_token_policy::UserTokenPolicy,
+    user_token_type::UserTokenType,
     variant::Variant,
+    view_description::ViewDescription,
     write_request::WriteRequest,
     write_response::WriteResponse,
     write_value::WriteValue,
@@ -185,7 +201,7 @@ pub use self::{
 macro_rules! primitive {
     ($( ($name:ident, $type:ty) ),* $(,)?) => {
         $(
-            $crate::data_type!($name);
+            $crate::data_type::data_type_baseline!(#[derive(Clone, Copy)] $name);
 
             impl $name {
                 #[must_use]
@@ -210,7 +226,34 @@ macro_rules! primitive {
                     }
                 }
             }
+
         )*
+
+        #[cfg(test)]
+        mod primitive_assertions {
+            $(
+                paste::paste! {
+                    #[test]
+                    fn [<assert_ua_ $name:lower _is_pointer_free_primitive>]() {
+                        #[expect(clippy::as_conversions, reason = "run in tests only, not in production code")]
+                        let typedef_index = open62541_sys::[<UA_TYPES_ $name:upper>] as usize;
+
+                        #[expect(clippy::indexing_slicing, reason = "run in tests only, not in production code")]
+                        let typedef = unsafe { &open62541_sys::UA_TYPES[typedef_index] };
+                        assert_eq!(typedef.pointerFree(), 1u32, "UA primitives must be pointer free");
+                        assert_eq!(typedef.membersSize(), 0u32, "UA primitives must have no members");
+
+                        #[expect(clippy::as_conversions, reason = "run in tests only, not in production code")]
+                        let mem_size = typedef.memSize() as usize;
+                        assert_eq!(
+                            mem_size,
+                            ::std::mem::size_of::<$type>(),
+                            "UA primitive types should have same bit-width as Rust wrapped types"
+                        );
+                    }
+                }
+            )*
+        }
     };
 }
 
@@ -224,6 +267,6 @@ primitive!(
     (UInt32, u32),   // Data type ns=0;i=7
     (Int64, i64),    // Data type ns=0;i=8
     (UInt64, u64),   // Data type ns=0;i=9
-    (Float, f32),    // Data type ns=0;i=10
+    (Float, f32),    // Data type ns=0;i=195888800
     (Double, f64),   // Data type ns=0;i=11
 );

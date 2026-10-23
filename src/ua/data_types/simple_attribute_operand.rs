@@ -1,6 +1,13 @@
 use crate::{DataType, FilterOperand, ua};
 
 crate::data_type!(SimpleAttributeOperand);
+crate::member_accessors!(SimpleAttributeOperand {
+    typeDefinitionId: &ua::NodeId,
+    browsePath: [ua::QualifiedName],
+    #[skip(uses = Self::attribute_id)]
+    attributeId: ua::AttributeId,
+    indexRange: &ua::String
+});
 
 impl SimpleAttributeOperand {
     #[must_use]
@@ -11,13 +18,14 @@ impl SimpleAttributeOperand {
 
     #[must_use]
     pub fn with_browse_path(mut self, browse_path: &[ua::QualifiedName]) -> Self {
-        let array = ua::Array::from_slice(browse_path);
-        array.move_into_raw(&mut self.0.browsePathSize, &mut self.0.browsePath);
+        ua::Array::from_slice(browse_path)
+            .move_into_raw(&mut self.0.browsePathSize, &mut self.0.browsePath);
+
         self
     }
 
     #[must_use]
-    pub fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
+    pub const fn with_attribute_id(mut self, attribute_id: &ua::AttributeId) -> Self {
         self.0.attributeId = attribute_id.as_u32();
         self
     }
@@ -26,6 +34,16 @@ impl SimpleAttributeOperand {
     pub fn with_index_range(mut self, index_range: ua::String) -> Self {
         index_range.move_into_raw(&mut self.0.indexRange);
         self
+    }
+
+    #[must_use]
+    pub const fn attribute_id(&self) -> ua::AttributeId {
+        let value = self.0.attributeId;
+
+        #[cfg(target_os = "windows")]
+        let value = value as u32;
+
+        ua::AttributeId::from_u32(value)
     }
 }
 

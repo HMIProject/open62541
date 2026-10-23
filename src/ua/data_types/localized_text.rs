@@ -1,6 +1,10 @@
 use crate::{DataType as _, Error, ua};
 
 crate::data_type!(LocalizedText);
+crate::member_accessors!(LocalizedText {
+    locale: &ua::String,
+    text: &ua::String
+});
 
 impl LocalizedText {
     /// Creates localized text from locale and text.
@@ -26,15 +30,5 @@ impl LocalizedText {
     pub fn with_text(mut self, text: &str) -> Result<Self, Error> {
         ua::String::new(text)?.move_into_raw(&mut self.0.text);
         Ok(self)
-    }
-
-    #[must_use]
-    pub fn locale(&self) -> &ua::String {
-        ua::String::raw_ref(&self.0.locale)
-    }
-
-    #[must_use]
-    pub fn text(&self) -> &ua::String {
-        ua::String::raw_ref(&self.0.text)
     }
 }

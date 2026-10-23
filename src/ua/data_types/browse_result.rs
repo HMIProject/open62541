@@ -1,19 +1,16 @@
 use crate::{DataType as _, ua};
 
 crate::data_type!(BrowseResult);
+crate::member_accessors!(BrowseResult {
+    #[from_inner]
+    statusCode: ua::StatusCode,
+    references: [ua::ReferenceDescription],
+
+    #[skip(uses = BrowseResult::continuation_point)]
+    continuationPoint: &ua::ContinuationPoint
+});
 
 impl BrowseResult {
-    #[must_use]
-    pub const fn status_code(&self) -> ua::StatusCode {
-        ua::StatusCode::new(self.0.statusCode)
-    }
-
-    #[must_use]
-    pub fn references(&self) -> Option<ua::Array<ua::ReferenceDescription>> {
-        // TODO: Adjust signature to return non-owned value instead.
-        ua::Array::from_raw_parts(self.0.referencesSize, self.0.references)
-    }
-
     /// Gets continuation point.
     ///
     /// Browse results include a continuation point when not all references could be returned. Pass

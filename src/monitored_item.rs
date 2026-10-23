@@ -330,10 +330,10 @@ where
 {
     let request = request_builder.build(subscription_id);
     let result_count = request.items_to_create().map_or(0, <[_]>::len);
-    let response =
+    let mut response =
         create_monitored_items::call::<K, _>(client, &request, create_value_callback_fn).await?;
 
-    let Some(mut results) = response.into_results() else {
+    let Some(mut results) = response.take_results() else {
         return Err(crate::Error::internal("expected monitoring item results"));
     };
 
@@ -363,7 +363,7 @@ where
     let results = results
         .drain_all()
         .filter_map(|result| {
-            if let Err(err) = crate::Error::verify_good(&result.status_code()) {
+            if let Err(err) = crate::Error::verify_good(result.status_code()) {
                 return Some(Err(err));
             }
 

@@ -1,6 +1,12 @@
 use crate::{DataType as _, ua};
 
 crate::data_type!(RelativePathElement);
+crate::member_accessors!(RelativePathElement {
+    referenceTypeId: &ua::NodeId,
+    isInverse: bool,
+    includeSubtypes: bool,
+    targetName: &ua::QualifiedName
+});
 
 impl RelativePathElement {
     #[must_use]

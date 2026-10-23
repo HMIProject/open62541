@@ -1,6 +1,9 @@
 use crate::{DataType as _, ua};
 
 crate::data_type!(AnonymousIdentityToken);
+crate::member_accessors!(AnonymousIdentityToken {
+    policyId: &ua::String
+});
 
 impl AnonymousIdentityToken {
     /// Sets policy ID.

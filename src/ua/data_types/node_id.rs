@@ -8,6 +8,11 @@ use open62541_sys::{
 use crate::{DataType, Error, ua};
 
 crate::data_type!(NodeId);
+crate::member_accessors!(NodeId {
+    namespaceIndex: u16,
+    #[enum]
+    identifierType: ua::NodeIdType
+});
 
 impl NodeId {
     /// Creates numeric node ID in namespace 0.
@@ -99,12 +104,6 @@ impl NodeId {
         Self::clone_raw(unsafe { &UA_NODEID_NULL })
     }
 
-    /// Gets namespace index.
-    #[must_use]
-    pub const fn namespace_index(&self) -> u16 {
-        self.0.namespaceIndex
-    }
-
     /// Checks if this node ID is in namespace 0.
     ///
     /// Namespace 0 is always the UA namespace `http://opcfoundation.org/UA/` itself and is used for
@@ -138,12 +137,6 @@ impl NodeId {
     pub fn is_null(&self) -> bool {
         // SAFETY: Read-only access of static.
         self == Self::raw_ref(unsafe { &UA_NODEID_NULL })
-    }
-
-    /// Gets node ID type.
-    #[must_use]
-    pub fn identifier_type(&self) -> &ua::NodeIdType {
-        ua::NodeIdType::raw_ref(&self.0.identifierType)
     }
 
     /// Gets identifier of numeric node ID in namespace 0.
@@ -226,7 +219,7 @@ impl str::FromStr for NodeId {
             let str = unsafe { ua::String::to_raw_copy(&str) };
             unsafe { UA_NodeId_parse(node_id.as_mut_ptr(), str) }
         });
-        Error::verify_good(&status_code)?;
+        Error::verify_good(status_code)?;
 
         Ok(node_id)
     }
@@ -236,7 +229,7 @@ impl fmt::Display for NodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut output = ua::String::init();
 
-        let status_code = &ua::StatusCode::new({
+        let status_code = ua::StatusCode::new({
             // This mirrors the behavior of `UA_NodeId_parse()` above.
             unsafe { UA_NodeId_print(self.as_ptr(), output.as_mut_ptr()) }
         });

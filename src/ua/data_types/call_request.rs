@@ -1,12 +1,17 @@
 use crate::{DataType as _, ServiceRequest, ua};
 
 crate::data_type!(CallRequest);
+crate::member_accessors!(CallRequest {
+    methodsToCall: [ua::CallMethodRequest],
+    requestHeader: &mut ua::RequestHeader
+});
 
 impl CallRequest {
     #[must_use]
     pub fn with_methods_to_call(mut self, methods_to_call: &[ua::CallMethodRequest]) -> Self {
-        let array = ua::Array::from_slice(methods_to_call);
-        array.move_into_raw(&mut self.0.methodsToCallSize, &mut self.0.methodsToCall);
+        ua::Array::from_slice(methods_to_call)
+            .move_into_raw(&mut self.0.methodsToCallSize, &mut self.0.methodsToCall);
+
         self
     }
 }
