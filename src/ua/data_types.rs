@@ -87,6 +87,8 @@ mod translate_browse_paths_to_node_ids_request;
 mod translate_browse_paths_to_node_ids_response;
 mod trust_list_data_type;
 mod user_name_identity_token;
+mod user_token_policy;
+mod user_token_type;
 mod variant;
 mod view_description;
 mod write_request;
@@ -186,6 +188,8 @@ pub use self::{
     translate_browse_paths_to_node_ids_response::TranslateBrowsePathsToNodeIdsResponse,
     trust_list_data_type::TrustListDataType,
     user_name_identity_token::UserNameIdentityToken,
+    user_token_policy::UserTokenPolicy,
+    user_token_type::UserTokenType,
     variant::Variant,
     view_description::ViewDescription,
     write_request::WriteRequest,

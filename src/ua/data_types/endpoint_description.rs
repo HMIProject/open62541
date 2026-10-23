@@ -10,5 +10,6 @@ crate::member_accessors!(EndpointDescription {
     #[enum]
     securityMode: ua::MessageSecurityMode,
     #[from_inner]
-    securityLevel: ua::SecurityLevel
+    securityLevel: ua::SecurityLevel,
+    userIdentityTokens: [ua::UserTokenPolicy]
 });
