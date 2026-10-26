@@ -7,16 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-###
+### Added
 
-- Implemented accessor/utility methods for `ua::RelativePath`:
-  - `get`/`get_mut` methods for safe indexing/slicing of the underlying `ua::RelativePathElement`
-    array
-  - `elements`/`elements_mut` to access the `ua::Array` as an slice
-  - `iter`/`iter_mut` for iteration over the contained `ua::RelativePathElement`s
-  - `FromStr`/`Display` implementations that defer to native `UA_RelativePath_parse`/`_print`
-    implementations
-- Implemented member accessor methods for `ua::BrowsePath` & `ua::RelativePathElement`
+- Implemented accessor/utility methods for `ua::RelativePath`, `ua::BrowsePath` &
+  `ua::RelativePathElement`
 
 ## [0.12.1] - 2026-10-22
 
