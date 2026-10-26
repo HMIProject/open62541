@@ -80,6 +80,8 @@ mod structure_description;
 mod structure_field;
 mod structure_type;
 mod timestamps_to_return;
+mod translate_browse_paths_to_node_ids_request;
+mod translate_browse_paths_to_node_ids_response;
 mod trust_list_data_type;
 mod user_name_identity_token;
 mod variant;
@@ -173,6 +175,8 @@ pub use self::{
     structure_field::StructureField,
     structure_type::StructureType,
     timestamps_to_return::TimestampsToReturn,
+    translate_browse_paths_to_node_ids_request::TranslateBrowsePathsToNodeIdsRequest,
+    translate_browse_paths_to_node_ids_response::TranslateBrowsePathsToNodeIdsResponse,
     trust_list_data_type::TrustListDataType,
     user_name_identity_token::UserNameIdentityToken,
     variant::Variant,
