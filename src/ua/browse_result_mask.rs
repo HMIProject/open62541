@@ -23,9 +23,16 @@ mod inner {
     );
 }
 
-/// Wrapper for browse result mask from [`open62541_sys`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct BrowseResultMask(u32);
+crate::data_type::data_type_baseline! {
+    #[expect(
+        clippy::derived_hash_with_manual_eq,
+        reason = "open62541 numeric equality impl satisfies `Hash`s identity invariant"
+    )]
+    #[derive(Clone, Copy, Hash)]
+    BrowseResultMask,
+    #[uses_inner]
+    UInt32
+}
 
 crate::bitmask_ops!(BrowseResultMask);
 
@@ -45,7 +52,7 @@ impl BrowseResultMask {
         Self(mask)
     }
 
-    pub(crate) const fn as_u32(&self) -> u32 {
+    pub(crate) const fn as_u32(self) -> u32 {
         self.0
     }
 }

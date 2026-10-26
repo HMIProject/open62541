@@ -43,7 +43,7 @@ pub(super) async fn call(
             )
         }
     });
-    Error::verify_good(&status_code)?;
+    Error::verify_good(status_code)?;
 
     // PANIC: When `callback` is called (which owns `tx`), we always call `tx.send()`. So the sender
     // is only dropped after placing a value into the channel and `rx.await` always finds this value
@@ -104,7 +104,7 @@ pub(super) fn send_request(
             )
         }
     });
-    Error::verify_good(&status_code)?;
+    Error::verify_good(status_code)?;
 
     Ok(())
 }
@@ -122,7 +122,7 @@ unsafe extern "C" fn callback_log_response_c(
     let response = unsafe { response.as_ref() }.expect("response should be set");
     let status_code = ua::StatusCode::new(response.responseHeader.serviceResult);
 
-    if let Err(error) = Error::verify_good(&status_code) {
+    if let Err(error) = Error::verify_good(status_code) {
         log::warn!("Error in response when deleting monitored items: {error}");
     }
 }

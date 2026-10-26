@@ -37,7 +37,7 @@ impl DataSourceError {
         })
     }
 
-    pub(crate) fn into_status_code(self) -> ua::StatusCode {
+    pub(crate) const fn into_status_code(self) -> ua::StatusCode {
         match self {
             DataSourceError::StatusCode(status_code) => status_code,
             DataSourceError::Error(err) => err.status_code(),

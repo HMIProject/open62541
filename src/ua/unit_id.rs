@@ -1,12 +1,17 @@
+//! Wrapper for [`ua::EUInformation::unit_id`](crate::ua::EUInformation::unit_id).
 use std::fmt;
 
-/// Wrapper for [`ua::EUInformation::unit_id`](crate::ua::EUInformation::unit_id).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct UnitId(i32);
+crate::data_type::data_type_baseline!(
+    #[expect(clippy::derived_hash_with_manual_eq)]
+    #[derive(Clone, Copy, Hash)]
+    UnitId,
+    #[uses_inner]
+    Int32
+);
 
 impl UnitId {
     #[must_use]
-    pub(crate) const fn new(unit_id: i32) -> Self {
+    pub const fn new(unit_id: i32) -> Self {
         Self(unit_id)
     }
 

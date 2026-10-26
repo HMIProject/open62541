@@ -1,6 +1,11 @@
 use crate::{DataType as _, ua};
 
 crate::data_type!(CallMethodRequest);
+crate::member_accessors!(CallMethodRequest {
+    objectId: &ua::NodeId,
+    methodId: &ua::NodeId,
+    inputArguments: [ua::Variant]
+});
 
 impl CallMethodRequest {
     #[must_use]
@@ -17,8 +22,8 @@ impl CallMethodRequest {
 
     #[must_use]
     pub fn with_input_arguments(mut self, input_arguments: &[ua::Variant]) -> Self {
-        let array = ua::Array::from_slice(input_arguments);
-        array.move_into_raw(&mut self.0.inputArgumentsSize, &mut self.0.inputArguments);
+        ua::Array::from_slice(input_arguments)
+            .move_into_raw(&mut self.0.inputArgumentsSize, &mut self.0.inputArguments);
         self
     }
 }

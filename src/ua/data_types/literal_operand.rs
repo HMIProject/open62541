@@ -1,6 +1,9 @@
 use crate::{DataType as _, FilterOperand, ua};
 
 crate::data_type!(LiteralOperand);
+crate::member_accessors!(LiteralOperand {
+    value: &ua::Variant
+});
 
 impl LiteralOperand {
     #[must_use]

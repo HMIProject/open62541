@@ -1,6 +1,10 @@
 use crate::{DataType as _, ua};
 
 crate::data_type!(BrowsePath);
+crate::member_accessors!(BrowsePath {
+    startingNode: &ua::NodeId,
+    relativePath: &ua::RelativePath
+});
 
 impl BrowsePath {
     #[must_use]
@@ -13,15 +17,5 @@ impl BrowsePath {
     pub fn with_relative_path(mut self, relative_path: &ua::RelativePath) -> Self {
         relative_path.clone_into_raw(&mut self.0.relativePath);
         self
-    }
-
-    #[must_use]
-    pub fn starting_node(&self) -> &ua::NodeId {
-        ua::NodeId::raw_ref(&self.0.startingNode)
-    }
-
-    #[must_use]
-    pub fn relative_path(&self) -> &ua::RelativePath {
-        ua::RelativePath::raw_ref(&self.0.relativePath)
     }
 }

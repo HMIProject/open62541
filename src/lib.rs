@@ -263,7 +263,7 @@ pub use self::{
 use self::{
     callback_fn::CallbackMut,
     client::ClientContext,
-    data_type::{bitmask_ops, data_type, enum_variants},
+    data_type::{bitmask_ops, data_type, enum_variants, member_accessors},
     monitored_item::create_monitored_items_callback,
     ua::UaIterExt,
     value::{ArrayValue, NonScalarValue},

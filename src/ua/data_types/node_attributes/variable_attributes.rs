@@ -23,7 +23,9 @@ impl super::VariableAttributes {
             .map(ua::UInt32::new)
             .collect_ua_array()
             .move_into_raw(&mut self.0.arrayDimensionsSize, &mut self.0.arrayDimensions);
+
         self.0.specifiedAttributes |= ua::SpecifiedAttributes::ARRAYDIMENSIONS.as_u32();
+
         self
     }
 

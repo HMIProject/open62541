@@ -106,7 +106,7 @@ impl Client {
             // SAFETY: We retain ownership of `self`.
             UA_Client_disconnect(self.as_mut_ptr())
         });
-        if let Err(error) = Error::verify_good(&status_code) {
+        if let Err(error) = Error::verify_good(status_code) {
             log::warn!("Error while disconnecting client: {error}");
         }
     }

@@ -1,14 +1,11 @@
 use crate::{DataType as _, ServiceResponse, ua};
 
 crate::data_type!(BrowseResponse);
-
-impl BrowseResponse {
-    #[must_use]
-    pub fn results(&self) -> Option<ua::Array<ua::BrowseResult>> {
-        // TODO: Adjust signature to return non-owned value instead.
-        ua::Array::from_raw_parts(self.0.resultsSize, self.0.results)
-    }
-}
+crate::member_accessors!(BrowseResponse {
+    results: [ua::BrowseResult],
+    responseHeader: &ua::ResponseHeader,
+    diagnosticInfos: [ua::DiagnosticInfo]
+});
 
 impl ServiceResponse for BrowseResponse {
     type Request = ua::BrowseRequest;

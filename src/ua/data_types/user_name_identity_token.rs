@@ -1,6 +1,12 @@
 use crate::{DataType as _, ua};
 
 crate::data_type!(UserNameIdentityToken);
+crate::member_accessors!(UserNameIdentityToken {
+    policyId: &ua::String,
+    userName: &ua::String,
+    password: &ua::ByteString,
+    encryptionAlgorithm: &ua::String
+});
 
 impl UserNameIdentityToken {
     /// Creates token with user name and password.

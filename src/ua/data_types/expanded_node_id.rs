@@ -8,6 +8,11 @@ use open62541_sys::{
 use crate::{DataType as _, Error, ua};
 
 crate::data_type!(ExpandedNodeId);
+crate::member_accessors!(ExpandedNodeId {
+    namespaceUri: &ua::String,
+    serverIndex: u32,
+    nodeId: &ua::NodeId
+});
 
 impl ExpandedNodeId {
     /// Creates expanded node ID.
@@ -54,21 +59,6 @@ impl ExpandedNodeId {
 
         Self(inner)
     }
-
-    #[must_use]
-    pub fn node_id(&self) -> &ua::NodeId {
-        ua::NodeId::raw_ref(&self.0.nodeId)
-    }
-
-    #[must_use]
-    pub fn namespace_uri(&self) -> &ua::String {
-        ua::String::raw_ref(&self.0.namespaceUri)
-    }
-
-    #[must_use]
-    pub const fn server_index(&self) -> u32 {
-        self.0.serverIndex
-    }
 }
 
 impl From<ua::NodeId> for ExpandedNodeId {
@@ -106,7 +96,7 @@ impl str::FromStr for ExpandedNodeId {
             let str = unsafe { ua::String::to_raw_copy(&str) };
             unsafe { UA_ExpandedNodeId_parse(node_id.as_mut_ptr(), str) }
         });
-        Error::verify_good(&status_code)?;
+        Error::verify_good(status_code)?;
 
         Ok(node_id)
     }
@@ -116,7 +106,7 @@ impl fmt::Display for ExpandedNodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut output = ua::String::init();
 
-        let status_code = &ua::StatusCode::new({
+        let status_code = ua::StatusCode::new({
             // This mirrors the behavior of `UA_ExpandedNodeId_parse()` above.
             unsafe { UA_ExpandedNodeId_print(self.as_ptr(), output.as_mut_ptr()) }
         });
