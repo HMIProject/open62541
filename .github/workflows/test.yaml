@@ -38,27 +38,21 @@ jobs:
 
           - target: aarch64-unknown-linux-gnu
             runner_os: ubuntu-24.04-arm
-          # Build on Ubuntu 26.04 fails with "unknown type name 'atomic_uintptr_t'".
-          # TODO: Re-enable when fixed.
-          #- target: aarch64-unknown-linux-gnu
-          #  runner_os: ubuntu-26.04-arm
+          - target: aarch64-unknown-linux-gnu
+            runner_os: ubuntu-26.04-arm
 
           - target: aarch64-unknown-linux-musl
             runner_os: ubuntu-24.04-arm
-          # Build on Ubuntu 26.04 fails with "unknown type name 'atomic_uintptr_t'".
-          # TODO: Re-enable when fixed.
-          #- target: aarch64-unknown-linux-musl
-          #  runner_os: ubuntu-26.04-arm
+          - target: aarch64-unknown-linux-musl
+            runner_os: ubuntu-26.04-arm
 
           - target: aarch64-pc-windows-msvc
             runner_os: windows-11-arm
 
           - target: armv7-unknown-linux-gnueabihf
             runner_os: ubuntu-24.04
-          # Build on Ubuntu 26.04 fails: <https://github.com/Mbed-TLS/mbedtls/issues/9875>
-          # TODO: Re-enable when fixed.
-          #- target: armv7-unknown-linux-gnueabihf
-          #  runner_os: ubuntu-26.04
+          - target: armv7-unknown-linux-gnueabihf
+            runner_os: ubuntu-26.04
 
           - target: x86_64-apple-darwin
             runner_os: macos-15-intel
@@ -72,17 +66,13 @@ jobs:
 
           - target: x86_64-unknown-linux-gnu
             runner_os: ubuntu-24.04
-          # Build on Ubuntu 26.04 fails with "unknown type name 'atomic_uintptr_t'".
-          # TODO: Re-enable when fixed.
-          #- target: x86_64-unknown-linux-gnu
-          #  runner_os: ubuntu-26.04
+          - target: x86_64-unknown-linux-gnu
+            runner_os: ubuntu-26.04
 
           - target: x86_64-unknown-linux-musl
             runner_os: ubuntu-24.04
-          # Build on Ubuntu 26.04 fails with "unknown type name 'atomic_uintptr_t'".
-          # TODO: Re-enable when fixed.
-          #- target: x86_64-unknown-linux-musl
-          #  runner_os: ubuntu-26.04
+          - target: x86_64-unknown-linux-musl
+            runner_os: ubuntu-26.04
 
     runs-on: ${{ matrix.runner_os }}
 

@@ -12,6 +12,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Implemented accessor/utility methods for `ua::RelativePath`, `ua::BrowsePath`, and
   `ua::RelativePathElement`.
 
+### Fixed
+
+- Fix build on Ubuntu 26.04.
+
 ## [0.12.1] - 2026-10-22
 
 ### Added
