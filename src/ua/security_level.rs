@@ -3,7 +3,7 @@ use open62541_sys::UA_Byte;
 
 use crate::ua;
 
-crate::data_type::data_type_baseline! {
+crate::data_type_baseline! {
     #[expect(
         clippy::derived_hash_with_manual_eq,
         reason = "open62541 numeric equality impl satisfies `Hash`s identity invariant"

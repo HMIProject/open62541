@@ -1,7 +1,7 @@
 //! Wrapper for [`ua::EUInformation::unit_id`](crate::ua::EUInformation::unit_id).
 use std::fmt;
 
-crate::data_type::data_type_baseline!(
+crate::data_type_baseline!(
     #[expect(clippy::derived_hash_with_manual_eq)]
     #[derive(Clone, Copy, Hash)]
     UnitId,

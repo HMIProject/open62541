@@ -723,6 +723,99 @@ macro_rules! bitmask_ops {
 
 pub(crate) use bitmask_ops;
 
+macro_rules! enum_bitmask {
+    // need this to disambiguate literal `enum`
+    (enum $($rest:tt)+) => {
+        $crate::data_type::enum_bitmask!($($rest)+);
+    };
+
+    ($name:ty : $inner_t:ty { $($(#[doc = $doc:literal])* $variant:ident),+ $(,)?}) => {
+        paste::paste! {
+            impl std::ops::BitAnd for $name {
+                type Output = Self;
+
+                fn bitand(self, rhs: Self) -> Self {
+                    Self(self.0 & rhs.0)
+                }
+            }
+
+            impl std::ops::BitOr for $name {
+                type Output = Self;
+
+                fn bitor(self, rhs: Self) -> Self {
+                    Self(self.0 | rhs.0)
+                }
+            }
+
+            #[expect(clippy::allow_attributes, reason = "some implementers may be u32")]
+            impl $name {
+                #[allow(unused, reason = "not used by all implementers")]
+                pub(crate) const fn [<as_ $inner_t>](self) -> $inner_t {
+                    self.0
+                }
+
+                #[allow(unused, reason = "not used by all implementers")]
+                pub(crate) const fn [<from_ $inner_t>](inner: $inner_t) -> Self {
+                    Self(inner)
+                }
+
+                #[doc = "Indicates that no fields are set."]
+                #[allow(trivial_numeric_casts, reason = "some implementers may be u32")]
+                pub const fn none(self) -> bool {
+                    self.0 == Self::NONE.0
+                }
+
+                #[allow(trivial_numeric_casts, reason = "some implementers may be u32")]
+                #[allow(clippy::cast_possible_truncation, clippy::as_conversions, reason = "variant `" UA_ $name:upper _NONE "` must be representable as `" $inner_t "`")]
+                pub const NONE: Self = Self(::open62541_sys::[<UA_ $name:upper _NONE>] as $inner_t);
+                #[allow(trivial_numeric_casts, reason = "some implementers may be u32")]
+                #[allow(clippy::cast_possible_truncation, clippy::as_conversions, reason = "variant `" UA_ $name:upper _NONE "` must be representable as `u32`")]
+                pub const NONE_U32: u32 = Self::NONE.0 as u32;
+
+                $(
+                    #[allow(trivial_numeric_casts, reason = "some implementers may be u32")]
+                    #[allow(clippy::cast_possible_truncation, clippy::as_conversions, reason = "variant `" UA_ $name:upper _ $variant:upper "` must be representable as `" $inner_t "`")]
+                    pub const [<$variant:upper>]: Self = Self(::open62541_sys::[<UA_ $name:upper _ $variant:upper>] as $inner_t);
+                    #[allow(trivial_numeric_casts, reason = "some implementers may be u32")]
+                    #[allow(clippy::cast_possible_truncation, clippy::as_conversions, reason = "variant `" UA_ $name:upper _ $variant:upper "` must be representable as `u32`")]
+                    pub const [<$variant:upper _U32>]: u32 = Self::[<$variant:upper>].0 as u32;
+
+                    #[must_use]
+                    $(
+                        #[doc = $doc]
+                    )*
+                    pub const fn [<$variant:snake>](self) -> bool {
+                        self.0 & Self::[<$variant:upper>].0 == 0
+                    }
+
+                    #[must_use]
+                    pub const fn [<with_ $variant:snake>](self, value: bool) -> Self {
+                        Self(if value {
+                            self.0 | Self::[<$variant:upper>].0
+                        } else {
+                            self.0 & !Self::[<$variant:upper>].0
+                        })
+                    }
+                )+
+            }
+
+            #[cfg(test)]
+            #[expect(clippy::allow_attributes, reason = "not all variants are u32")]
+            mod [<$name:snake _bitmask_variant_assertions>] {
+                $(
+                    #[test]
+                    fn [<assert_ $variant:snake _safely_casts_to_ $inner_t>]() {
+                        #[allow(clippy::cast_possible_truncation, clippy::as_conversions, trivial_numeric_casts, reason = "some implementers may be u32")]
+                        $inner_t::try_from(::open62541_sys::[<UA_ $name:upper _ $variant:upper>] as $inner_t).expect(&("variant ".to_string() + stringify!([<UA_ $name:upper _ $variant:upper>]) + " must be representable as " + stringify!($inner_t)));
+                    }
+                )+
+            }
+        }
+    }
+}
+
+pub(crate) use enum_bitmask;
+
 #[cfg(test)]
 mod tests {
     use std::thread;
