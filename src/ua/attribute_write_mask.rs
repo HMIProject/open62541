@@ -25,6 +25,48 @@ crate::data_type::data_type_baseline! {
     UInt32
 }
 
+macro_rules! impl_variant {
+    ($($mask:ident),+ $(,)?) => {
+        paste::paste! {
+            impl AttributeWriteMask {
+                $(
+                    pub const $mask: Self = Self([<UA_ATTRIBUTEWRITEMASK_ $mask>]);
+                    pub const [<$mask _U32>]: u32 = Self::$mask.0;
+                )+
+            }
+        }
+    }
+}
+
+impl_variant! {
+    ACCESSLEVEL,
+    ACCESSLEVELEX,
+    ACCESSRESTRICTIONS,
+    ARRAYDIMENSIONS,
+    BROWSENAME,
+    CONTAINSNOLOOPS,
+    DATATYPE,
+    DATATYPEDEFINITION,
+    DESCRIPTION,
+    DISPLAYNAME,
+    EVENTNOTIFIER,
+    EXECUTABLE,
+    HISTORIZING,
+    INVERSENAME,
+    ISABSTRACT,
+    MINIMUMSAMPLINGINTERVAL,
+    NODECLASS,
+    NODEID,
+    ROLEPERMISSIONS,
+    SYMMETRIC,
+    USERACCESSLEVEL,
+    USEREXECUTABLE,
+    USERWRITEMASK,
+    VALUEFORVARIABLETYPE,
+    VALUERANK,
+    WRITEMASK,
+}
+
 // See <https://reference.opcfoundation.org/Core/Part3/v105/docs/8.60> for bit values.
 impl AttributeWriteMask {
     #[must_use]

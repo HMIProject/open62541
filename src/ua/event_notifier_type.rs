@@ -1,6 +1,10 @@
 use std::ops::{BitAnd, BitOr};
 
 crate::data_type::data_type_baseline!(
+    #[expect(
+        clippy::derived_hash_with_manual_eq,
+        reason = "open62541 numeric equality impl satisfies `Hash`s identity invariant"
+    )]
     #[derive(Clone, Copy, Hash)]
     EventNotifierType
 );
@@ -26,8 +30,10 @@ macro_rules! impl_event_type {
         paste::paste! {
             impl EventNotifierType {
                 $(
-                    #[expect(clippy::as_conversion, reason = "well known variant must be representable as u8")]
+                    #[expect(clippy::cast_possible_truncation, reason = "well known variant must be representable as u8")]
+                    #[expect(clippy::as_conversions, reason = "safe u8 to u32 cast")]
                     pub const $event_t: Self = Self::from_u8(::open62541_sys::[<UA_EVENTNOTIFIERTYPE_ $event_t>] as u8);
+                    #[expect(clippy::as_conversions, reason = "safe u8 to u32 cast")]
                     pub const [<$event_t _U32>]: u32 = Self::$event_t.0 as u32;
                 )+
             }
