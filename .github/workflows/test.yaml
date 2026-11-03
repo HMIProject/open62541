@@ -32,8 +32,6 @@ jobs:
         # `latest-dependencies.yaml`.
         include:
           - target: aarch64-apple-darwin
-            runner_os: macos-14
-          - target: aarch64-apple-darwin
             runner_os: macos-15
           - target: aarch64-apple-darwin
             runner_os: macos-26
