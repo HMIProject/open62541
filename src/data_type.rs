@@ -747,20 +747,31 @@ macro_rules! enum_bitmask {
                 }
             }
 
+            impl std::ops::Not for $name {
+                type Output = Self;
+
+                fn not(self) -> Self {
+                    Self(!self.0)
+                }
+            }
+
             #[expect(clippy::allow_attributes, reason = "some implementers may be u32")]
             impl $name {
                 #[allow(unused, reason = "not used by all implementers")]
+                #[must_use]
                 pub(crate) const fn [<as_ $inner_t>](self) -> $inner_t {
                     self.0
                 }
 
                 #[allow(unused, reason = "not used by all implementers")]
+                #[must_use]
                 pub(crate) const fn [<from_ $inner_t>](inner: $inner_t) -> Self {
                     Self(inner)
                 }
 
                 #[doc = "Indicates that no fields are set."]
                 #[allow(trivial_numeric_casts, reason = "some implementers may be u32")]
+                #[must_use]
                 pub const fn none(self) -> bool {
                     self.0 == Self::NONE.0
                 }
@@ -768,14 +779,40 @@ macro_rules! enum_bitmask {
                 #[allow(trivial_numeric_casts, reason = "some implementers may be u32")]
                 #[allow(clippy::cast_possible_truncation, clippy::as_conversions, reason = "variant `" UA_ $name:upper _NONE "` must be representable as `" $inner_t "`")]
                 pub const NONE: Self = Self(::open62541_sys::[<UA_ $name:upper _NONE>] as $inner_t);
+
                 #[allow(trivial_numeric_casts, reason = "some implementers may be u32")]
                 #[allow(clippy::cast_possible_truncation, clippy::as_conversions, reason = "variant `" UA_ $name:upper _NONE "` must be representable as `u32`")]
                 pub const NONE_U32: u32 = Self::NONE.0 as u32;
+
+                #[doc = "Determines if `self`'s bit pattern contains the exact bit pattern of `other`."]
+                #[must_use]
+                pub const fn contains(self, other: Self) -> bool {
+                    self.0 & other.0 == other.0
+                }
+
+                #[doc = "Yields the bitwise-or of `self` with `rhs`."]
+                #[must_use]
+                pub const fn or(self, rhs: Self) -> Self {
+                    Self(self.0 | rhs.0)
+                }
+
+                #[doc = "Yields the bitwise-and of `self` with `rhs`."]
+                #[must_use]
+                pub const fn and(self, rhs: Self) -> Self {
+                    Self(self.0 & rhs.0)
+                }
+
+                #[doc = "Yields the bitwise-not of `self`."]
+                #[must_use]
+                pub const fn not(self) -> Self {
+                    Self(!self.0)
+                }
 
                 $(
                     #[allow(trivial_numeric_casts, reason = "some implementers may be u32")]
                     #[allow(clippy::cast_possible_truncation, clippy::as_conversions, reason = "variant `" UA_ $name:upper _ $variant:upper "` must be representable as `" $inner_t "`")]
                     pub const [<$variant:upper>]: Self = Self(::open62541_sys::[<UA_ $name:upper _ $variant:upper>] as $inner_t);
+
                     #[allow(trivial_numeric_casts, reason = "some implementers may be u32")]
                     #[allow(clippy::cast_possible_truncation, clippy::as_conversions, reason = "variant `" UA_ $name:upper _ $variant:upper "` must be representable as `u32`")]
                     pub const [<$variant:upper _U32>]: u32 = Self::[<$variant:upper>].0 as u32;
@@ -785,16 +822,16 @@ macro_rules! enum_bitmask {
                         #[doc = $doc]
                     )*
                     pub const fn [<$variant:snake>](self) -> bool {
-                        self.0 & Self::[<$variant:upper>].0 == 0
+                        self.contains(Self::[<$variant:upper>])
                     }
 
                     #[must_use]
                     pub const fn [<with_ $variant:snake>](self, value: bool) -> Self {
-                        Self(if value {
-                            self.0 | Self::[<$variant:upper>].0
+                        if value {
+                            self.or(Self::[<$variant:upper>])
                         } else {
-                            self.0 & !Self::[<$variant:upper>].0
-                        })
+                            self.and(Self::not(Self::[<$variant:upper>]))
+                        }
                     }
                 )+
             }
