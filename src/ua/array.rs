@@ -601,15 +601,17 @@ mod tests {
 
         // Create array in `open62541`, delete locally.
         //
-        let size = LEN;
-        let ptr = unsafe { UA_Array_new(size, T::data_type()) }.cast::<<T as DataType>::Inner>();
+        let mut size = LEN;
+        let mut ptr =
+            unsafe { UA_Array_new(size, T::data_type()) }.cast::<<T as DataType>::Inner>();
         // Copy value with allocated data into array to catch double free.
         let string = CString::new(STRING).unwrap();
         *unsafe { ptr.add(POS).as_mut() }.unwrap() =
             unsafe { UA_NODEID_STRING_ALLOC(0, string.as_ptr()) };
         drop(string);
 
-        let array: Array<T> = Array::from_raw_parts(size, ptr).unwrap();
+        // Take ownership; copying with `from_raw_parts()` would leak the original allocation.
+        let array: Array<T> = unsafe { Array::move_from_raw_parts(&mut size, &mut ptr) }.unwrap();
         assert_eq!(array.len(), LEN);
 
         drop(array);
