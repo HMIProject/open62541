@@ -28,6 +28,7 @@ macro_rules! impl_event_type {
                 $(
                     #[expect(clippy::as_conversion, reason = "well known variant must be representable as u8")]
                     pub const $event_t: Self = Self::from_u8(::open62541_sys::[<UA_EVENTNOTIFIERTYPE_ $event_t>] as u8);
+                    pub const [<$event_t _U32>]: u32 = Self::$event_t.0 as u32;
                 )+
             }
 
@@ -81,4 +82,3 @@ impl EventNotifierType {
         self.0 & Self::HISTORYWRITE.0 != 0
     }
 }
-
