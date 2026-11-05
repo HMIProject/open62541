@@ -9,10 +9,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Implemented accessor/utility methods for `ua::RelativePath`, `ua::BrowsePath`, and
+  `ua::RelativePathElement`.
+
+## [0.12.1] - 2026-10-22
+
+### Added
+
 - Add back `Server::create_event()` with reordered and additional arguments. This new method
   replaces both `Server::create_event()` and `Server::trigger_event()` that have been removed.
 - Add `AsyncClient::translate_browse_path()` and `AsyncClient::translate_many_browse_paths()` for
   the `TranslateBrowsePathsToNodeIds` service.
+
+### Fixed
+
+- Fix a memory leak triggered when using `with_*` builder methods on data types for array members
+  (e.g. `ua::RelativePath::with_elements()` would leak the elements that were previously owned by
+  the instance).
 
 ## [0.12.0] - 2026-07-14
 
@@ -27,6 +40,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Prevent use-after-free when a `Server` is used after its `ServerRunner` has been dropped (e.g.
   `let (server, _) = builder.build();`). The node lifecycle callbacks borrowed by
   `config.nodeLifecycle` are now owned by the shared server and outlive every server handle.
+- Upgrade to open62541-sys v0.6.5 for ASAN instrumentation required for testing.
 
 ## [0.11.0] - 2026-07-13
 
@@ -610,7 +624,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - First public release.
 
-[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/HMIProject/open62541/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/HMIProject/open62541/compare/v0.12.0...v0.12.1
+[0.12.0]: https://github.com/HMIProject/open62541/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/HMIProject/open62541/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/HMIProject/open62541/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/HMIProject/open62541/compare/v0.9.4...v0.10.0

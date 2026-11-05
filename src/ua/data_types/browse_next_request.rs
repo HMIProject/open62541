@@ -1,4 +1,4 @@
-use crate::{DataType as _, ServiceRequest, ua};
+use crate::{DataType as _, ServiceRequest, UaIterExt as _, ua};
 
 crate::data_type!(BrowseNextRequest);
 
@@ -8,15 +8,14 @@ impl BrowseNextRequest {
         mut self,
         continuation_points: &[ua::ContinuationPoint],
     ) -> Self {
-        let array = ua::Array::from_iter(
-            continuation_points
-                .iter()
-                .map(ua::ContinuationPoint::to_byte_string),
-        );
-        array.move_into_raw(
-            &mut self.0.continuationPointsSize,
-            &mut self.0.continuationPoints,
-        );
+        continuation_points
+            .iter()
+            .map(ua::ContinuationPoint::to_byte_string)
+            .collect_ua_array()
+            .move_into_raw(
+                &mut self.0.continuationPointsSize,
+                &mut self.0.continuationPoints,
+            );
         self
     }
 

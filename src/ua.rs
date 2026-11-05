@@ -73,4 +73,6 @@ pub use self::{
     unit_id::UnitId,
     user_identity_token::UserIdentityToken,
 };
-pub(crate) use self::{client_config::ClientConfig, logger::Logger, server_config::ServerConfig};
+pub(crate) use self::{
+    array::UaIterExt, client_config::ClientConfig, logger::Logger, server_config::ServerConfig,
+};
